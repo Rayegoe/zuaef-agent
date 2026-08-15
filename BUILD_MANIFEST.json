@@ -1,0 +1,225 @@
+{
+  "artifact": "zuaef-agent-core-refactor-v1.1",
+  "version": "0.1.1",
+  "validation": {
+    "pytest": "see latest run",
+    "gate": "spec/capability-proof-gate.md"
+  },
+  "files": [
+    {
+      "path": ".agents/skills/evidence-first/SKILL.md",
+      "bytes": 748,
+      "sha256": "a1bb82950e1b74d775b5ce3fb418a60877a945f9a766e2d4d1073fb43791de2b"
+    },
+    {
+      "path": ".agents/skills/knowledge-ingestion/SKILL.md",
+      "bytes": 997,
+      "sha256": "ce6aca36408eed48fc169397030ec071e11be04e7e94de395a34639c2a8a6c73"
+    },
+    {
+      "path": ".env.example",
+      "bytes": 992,
+      "sha256": "f727926f9edf96f85e902ae0574af17120b3cd116d8ac16b5a7fa7cab08fbd7c"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 95,
+      "sha256": "f5e50b0d3560a9410b9623d7d72b9baf5c31402a1528bac144a7b34fae98f33c"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 1800,
+      "sha256": "ac4372d301164003e990420d5387582b7f3ac5861415f1c17c601fb2982b5eee"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 844,
+      "sha256": "e578f2073bfea8e006d03fb7e39ffe42e29987f3b2e388d788fd92fd24dbdbff"
+    },
+    {
+      "path": "DESIGN_REFERENCES.md",
+      "bytes": 1757,
+      "sha256": "01cf35429bd7c25ff183a21b4706efa03392e4ee66f6494038bd37f3983dc8fc"
+    },
+    {
+      "path": "Outcome-First PydanticAI Agent Engineering Guide v2.0.md",
+      "bytes": 35823,
+      "sha256": "5419ff2b994d836e8c2eac1198566c1d391e0b43817cdad4567699d4ef9baa28"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5720,
+      "sha256": "fadc6233bf3aa13fa7a54c7d7e3fd14ba93918e7d8105b876410efed78bd9429"
+    },
+    {
+      "path": "REFACTOR_NOTES.md",
+      "bytes": 2576,
+      "sha256": "58f854fba04a39d22e915d610d3f29af0d0f983e4dd016ef1205cd04e8a6418c"
+    },
+    {
+      "path": "V1_1_VALIDATION.md",
+      "bytes": 1455,
+      "sha256": "e6f8426a9c46f321446c8f78b0623c2021da488d0886af1cddcd6ac5f13b9ddf"
+    },
+    {
+      "path": "examples/approval_toolset.py",
+      "bytes": 639,
+      "sha256": "659bf241585356ba7d358c532de3cc90a8b90b552a62f1499980ca1df40629b8"
+    },
+    {
+      "path": "examples/capability_proof.py",
+      "bytes": 11627,
+      "sha256": "5594c1d6bac10a8da69fdba58331b555c64d23795b8ca1f3eade93b3205e23d1"
+    },
+    {
+      "path": "examples/research_toolset.py",
+      "bytes": 3831,
+      "sha256": "bc8657009dc4fa619912e578e95f7fe8a27cc17ab9f9f1540a0baa50fc689f53"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 736,
+      "sha256": "2e60a39c5f17f88e12f4499f10300035428c7ff780fc1a2499c0ff72c740a309"
+    },
+    {
+      "path": "uv.lock",
+      "bytes": 398344,
+      "sha256": "c5bd1f41c3a21f5561ccad5af2a16a3112c46c09624405bd59a5e2971378b328"
+    },
+    {
+      "path": "spec/SPEC.md",
+      "bytes": 6238,
+      "sha256": "9ad087e263cf99db6003820dbd97849099a8f1d36a1c54cda19761237064d534"
+    },
+    {
+      "path": "spec/brownfield.md",
+      "bytes": 7540,
+      "sha256": "8a0421db17fb7d0733117fdb8308c456914ea4799aaef1f5a9180fc6a72e9898"
+    },
+    {
+      "path": "spec/capability-proof-gate.md",
+      "bytes": 3995,
+      "sha256": "5564109b9dcf9c86c3c217a4a06775017ef6ac0dd1d248defc63102d3696c6af"
+    },
+    {
+      "path": "src/zuaef_agent/__init__.py",
+      "bytes": 263,
+      "sha256": "8e7121893dcdbe67cdd1431410ce403cbebf194b97527c066889aa6dbc080d18"
+    },
+    {
+      "path": "src/zuaef_agent/cli.py",
+      "bytes": 5763,
+      "sha256": "f55ab1a74da678bfb9d8aa376e3959435786acf34c3c86ba466ad61480eb818e"
+    },
+    {
+      "path": "src/zuaef_agent/config.py",
+      "bytes": 6046,
+      "sha256": "4245362d1473ae49d3806d722db628d2fe2d1c2d3dc6239ac5672f4847630102"
+    },
+    {
+      "path": "src/zuaef_agent/core.py",
+      "bytes": 4484,
+      "sha256": "b4e30258d6a2211c5ae1a52afc0abcff2010f18f05ce5ef43980634bb6b52959"
+    },
+    {
+      "path": "src/zuaef_agent/effects.py",
+      "bytes": 713,
+      "sha256": "eb2fe4f2cd3a1b4d0013dc8ea3d01c9315ad9b108f71b183a927ab16e834fda9"
+    },
+    {
+      "path": "src/zuaef_agent/knowledge_capability.py",
+      "bytes": 2615,
+      "sha256": "9449341dc505c20417d50cc94f18fd59dbf05d66017c5df97668d8789ae79c15"
+    },
+    {
+      "path": "src/zuaef_agent/knowledge_store.py",
+      "bytes": 6680,
+      "sha256": "13027a9ece2c431fb8c65890ec8a699529f9a87b15c1ac5a834a1afa6f7e429d"
+    },
+    {
+      "path": "src/zuaef_agent/models.py",
+      "bytes": 3505,
+      "sha256": "c8d8654903fef010cf5e5f95bf56898c8790b6acbb0818b328a57d24f7e5c2c3"
+    },
+    {
+      "path": "src/zuaef_agent/providers.py",
+      "bytes": 2307,
+      "sha256": "5341fb029976d966327b0adcc9126d9f7309cee5be6cdc11f9a983fb9b13c561"
+    },
+    {
+      "path": "src/zuaef_agent/receipt_store.py",
+      "bytes": 1612,
+      "sha256": "01f8e53f0c33dd4bad0c49a95d84a92d3695dbbde6e876a85eadd708a6842e11"
+    },
+    {
+      "path": "src/zuaef_agent/runtime.py",
+      "bytes": 20388,
+      "sha256": "7a08863c35eb41028127e498d91bfcd18b72601f8eb183e803177db778db592b"
+    },
+    {
+      "path": "src/zuaef_agent/verification.py",
+      "bytes": 6864,
+      "sha256": "50669f13292fb1554a47683007a47af144e6d6e20148327890e57c9b093931e5"
+    },
+    {
+      "path": "tests/test_cli_and_providers.py",
+      "bytes": 7552,
+      "sha256": "c4e9efbdf584e3fd2cf6ce0fd9ff33f84aa4f28c376d95c2458b31a315aafbc2"
+    },
+    {
+      "path": "tests/test_config.py",
+      "bytes": 1348,
+      "sha256": "60821d5b35342d88deb1aac40b64fdb64adc809be7bd3c56e82fe0aee3b4bdda"
+    },
+    {
+      "path": "tests/test_core_contract_static.py",
+      "bytes": 684,
+      "sha256": "fffd65468a982225fb61b3b4abb0fd21cf5b6aa160dc5057832831feaa458809"
+    },
+    {
+      "path": "tests/test_effects.py",
+      "bytes": 375,
+      "sha256": "fed17172ddb3de6c3af4e71d3848d9610d30223b339183aba87c904445eedd46"
+    },
+    {
+      "path": "tests/test_execute_run_seam.py",
+      "bytes": 18730,
+      "sha256": "076b053be9255d5ac1b92aeff05f0f146e62b495ac40668f3d547f6556dc1636"
+    },
+    {
+      "path": "tests/test_knowledge_invariants.py",
+      "bytes": 3496,
+      "sha256": "d56b976038e2611b96de56f6d8cfdb69800e1f1d89ca5901c0142f84d7a86c31"
+    },
+    {
+      "path": "tests/test_knowledge_store.py",
+      "bytes": 1361,
+      "sha256": "0cbc59bec1bc71a8dd3b90e779ecc0492f006859a8a6ef44389d330f66e23a69"
+    },
+    {
+      "path": "tests/test_manifest_integrity.py",
+      "bytes": 1744,
+      "sha256": "332f99337702eb98415c35976de4c84f95c4979ba55943d9914004fd1628594d"
+    },
+    {
+      "path": "tests/test_receipt_store.py",
+      "bytes": 1232,
+      "sha256": "7a1d6f0250182d782341df0c41a2eedaaa3b2ce62b1d104b276459274620d115"
+    },
+    {
+      "path": "tests/test_verification.py",
+      "bytes": 4936,
+      "sha256": "9ac8e41ae684d63f387eb44ae6bcc229e59c09d2b6cd4e02f5815d3679fa5921"
+    },
+    {
+      "path": "tools/regen_manifest.py",
+      "bytes": 1811,
+      "sha256": "7900c88663bb2c7060692ba69bb593dc66850a75ca02c3e079f6f841cfdb1f90"
+    },
+    {
+      "path": "workspace/knowledge/index.md",
+      "bytes": 134,
+      "sha256": "46e066ed5b7305c4ddd83cf702298ebb172bbd1d7813cd989595bf8d70191e74"
+    }
+  ]
+}

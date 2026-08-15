@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-agent"
+version = "0.1.1"
+description = "Thin outcome-owning PydanticAI agent core with bounded context, durable step receipts, native approval policy, and file-native knowledge."
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.28",
+  "openai>=1.0",
+  "pydantic>=2.10",
+  "python-dotenv>=1.0",
+  "pyyaml>=6.0",
+  "pydantic-ai>=2.27,<3",
+  "pydantic-ai-harness[skills]>=0.1",
+]
+
+[project.scripts]
+zuaef-agent = "zuaef_agent.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/zuaef_agent"]

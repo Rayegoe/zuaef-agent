@@ -1,0 +1,8 @@
+.venv/
+.env
+__pycache__/
+.pytest_cache/
+*.pyc
+.zuaef-state/
+workspace/artifacts/
+.state-proof/
