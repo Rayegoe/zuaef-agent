@@ -40,6 +40,8 @@ def test_manifest_covers_all_delivery_source_files():
         "tests/fixture_plugins/**/*.md",
         "tests/fixture_plugins/*.toml",
         "examples/*.py",
+        "examples/budget_lib/*.py",
+        "examples/data/*.csv",
         "spec/*.md",
         "tools/*.py",
     ):

@@ -19,6 +19,8 @@ INCLUDE_GLOBS = [
     ".gitignore",
     "*.md",
     "examples/*.py",
+    "examples/budget_lib/*.py",
+    "examples/data/*.csv",
     "pyproject.toml",
     "uv.lock",
     "spec/*.md",

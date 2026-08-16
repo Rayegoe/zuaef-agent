@@ -33,8 +33,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 4800,
-      "sha256": "9b727f151193ed5132a346862f1e38ff7fdd8fc8f17de48a3ee6ff90a492d792"
+      "bytes": 6664,
+      "sha256": "d882a83a0e7fb738bf25315708d8c647417893ac8fbd6dc57fabfde803ddc71f"
     },
     {
       "path": "DESIGN_REFERENCES.md",
@@ -48,8 +48,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 7777,
-      "sha256": "e3f5c1742792f61d87c96ec1ccd404b420cd9459752ba97b569169c16a6aa653"
+      "bytes": 9046,
+      "sha256": "69d3ee4aedb3227e5fdadcfac13c74e1824d3765eef0040a327cbec9053ef972"
     },
     {
       "path": "REFACTOR_NOTES.md",
@@ -72,6 +72,16 @@
       "sha256": "659bf241585356ba7d358c532de3cc90a8b90b552a62f1499980ca1df40629b8"
     },
     {
+      "path": "examples/budget_case.py",
+      "bytes": 10256,
+      "sha256": "9c074a30b857f736118c761e68ca9b8bb42e1181990dfd174e71c9ac8c226ec2"
+    },
+    {
+      "path": "examples/budget_toolset.py",
+      "bytes": 8576,
+      "sha256": "9a398f3d1229ed515c9db3477ee07179c83153fbb22793f0cb4af19659074528"
+    },
+    {
       "path": "examples/capability_proof.py",
       "bytes": 11627,
       "sha256": "5594c1d6bac10a8da69fdba58331b555c64d23795b8ca1f3eade93b3205e23d1"
@@ -90,6 +100,66 @@
       "path": "examples/writing_toolset.py",
       "bytes": 21539,
       "sha256": "1b2d553f816e87a690331610341a3d8c80c64b974629eb1fd0c45fb10afff30d"
+    },
+    {
+      "path": "examples/budget_lib/__init__.py",
+      "bytes": 1709,
+      "sha256": "dd985231905ed76c48a6b3ae34dc86d2ac92b1b48d41aa5acb4cd2d1cc13dad2"
+    },
+    {
+      "path": "examples/budget_lib/budget_consistency.py",
+      "bytes": 4735,
+      "sha256": "34ec51cc4053df74e71f59c8ac95a971b7bc6f6e52f6ef0b246a494cd203e05e"
+    },
+    {
+      "path": "examples/budget_lib/budget_diff.py",
+      "bytes": 5298,
+      "sha256": "86fb8011efc7c44ded675dc92c4c010ebc3a07efb113b111d30849b763cb36b1"
+    },
+    {
+      "path": "examples/budget_lib/budget_health.py",
+      "bytes": 5939,
+      "sha256": "a1f88b509f5dd28f8d5218c1c2c7379c03758bb80042dcfe7c043236dbe1700e"
+    },
+    {
+      "path": "examples/budget_lib/budget_query.py",
+      "bytes": 3250,
+      "sha256": "dfdff130b6c15a5ba831393bfb05beee2e240c40bd24836bcb7a704d6cd0df3f"
+    },
+    {
+      "path": "examples/budget_lib/budget_summary.py",
+      "bytes": 3141,
+      "sha256": "5698b1b0e8dd22df993c08d4845ea6e53d909f6929c656a8c1be92411bfd10c6"
+    },
+    {
+      "path": "examples/budget_lib/budget_variance.py",
+      "bytes": 2152,
+      "sha256": "7874c05c2e1ead2ad51fdb95b2afa1dcd303a846cea28fa3431771a1f8c02cf5"
+    },
+    {
+      "path": "examples/budget_lib/csv_parser.py",
+      "bytes": 4185,
+      "sha256": "d7942fc801194a873dbbb92bd920ec66ffbeb980be30048a1a85ba80104fd94a"
+    },
+    {
+      "path": "examples/budget_lib/models.py",
+      "bytes": 11544,
+      "sha256": "9b3e927867ff70ebb891cc2f9be0b15920f8835a1645513beb8f7af2e099b312"
+    },
+    {
+      "path": "examples/budget_lib/significant_changes.py",
+      "bytes": 2356,
+      "sha256": "ee073378e32bed27bbfd37c936f328682f126046c7d2b909bdde43f8354140ce"
+    },
+    {
+      "path": "examples/budget_lib/utils.py",
+      "bytes": 897,
+      "sha256": "c781e9ba0be49da9e59a3131826d67afefad1686c87d50b81d52af203733d6ab"
+    },
+    {
+      "path": "examples/data/emtb_budget_sample.csv",
+      "bytes": 648,
+      "sha256": "5c5bf85a2472fc929c07db028953403abcc1fb56979cca990b9c4b4b6b1bcf95"
     },
     {
       "path": "pyproject.toml",
@@ -178,8 +248,8 @@
     },
     {
       "path": "src/zuaef_agent/providers.py",
-      "bytes": 2307,
-      "sha256": "5341fb029976d966327b0adcc9126d9f7309cee5be6cdc11f9a983fb9b13c561"
+      "bytes": 3169,
+      "sha256": "026219299a5b653a2d2a040b9d18041a06379acf1b874005160f686a16f73e61"
     },
     {
       "path": "src/zuaef_agent/receipt_store.py",
@@ -195,6 +265,11 @@
       "path": "src/zuaef_agent/verification.py",
       "bytes": 6864,
       "sha256": "50669f13292fb1554a47683007a47af144e6d6e20148327890e57c9b093931e5"
+    },
+    {
+      "path": "tests/test_budget_slice.py",
+      "bytes": 14100,
+      "sha256": "601528b76cc42cb8f449922e3a7f72dd500f3bcddae3df59182aa4fe9c3cf593"
     },
     {
       "path": "tests/test_cli_and_providers.py",
@@ -233,8 +308,8 @@
     },
     {
       "path": "tests/test_manifest_integrity.py",
-      "bytes": 2001,
-      "sha256": "6796f71b3a3240307632f6373606105560c30eda813feaf0e8e03b755b6e06e8"
+      "bytes": 2068,
+      "sha256": "aa82aa0cd95f34b47d8c995ac7230824e648994cf2710ac09afad8d522084519"
     },
     {
       "path": "tests/test_plugin_composition.py",
@@ -303,8 +378,8 @@
     },
     {
       "path": "tools/regen_manifest.py",
-      "bytes": 1921,
-      "sha256": "e28f66c752f19fc35f6b90da06c478ce4c9d016d96fc7f1ad0ef4d3c30063273"
+      "bytes": 1980,
+      "sha256": "7746d1453730b8e58d615093bc5ac5376a3f02918d9a842a6a076af464ec5298"
     },
     {
       "path": "workspace/knowledge/index.md",

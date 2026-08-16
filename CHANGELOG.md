@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Proof — EMTB budget slice (example2) through the production seam (PASS)
+
+- `examples/budget_lib/`: faithful extraction of zesenticai finance_agent deterministic commands (bilingual CSV parsing + summary / variance / consistency / health / query / significant-change). Zero agent / LLM dependency; unit-pinned to source behavior.
+- `examples/budget_toolset.py`: `FunctionToolset` adapter over budget_lib; observe tools + `local_write` artifact save; bounded JSON returns.
+- `examples/budget_case.py`: drives one real core agent over one real EMTB budget CSV (Chinese + English headers) via `build_agent(settings, extra_toolsets=[...])` — the first business domain through the production seam. Final run `2639102722814111b9b9be253a50d8be` (`deepseek-v4-flash`): receipt `completed`, host-verified artifact, all machine checks PASS, unknowns none.
+- `tests/test_budget_slice.py`: 18 deterministic tests — budget_lib extraction pinned to original behavior, toolset functions via TestModel context, and the `extra_toolsets` composition seam driven through `execute_run` with FunctionModel.
+- `tests/test_manifest_integrity.py` / `tools/regen_manifest.py`: manifest scope extended to `examples/budget_lib/*.py` and `examples/data/*.csv`.
+
+### Changed — provider networking on proxied hosts
+
+- `src/zuaef_agent/providers.py`: `resolve_model` now honors an http(s) proxy from the environment (`HTTPS_PROXY`/`HTTP_PROXY`) while ignoring `socks://` entries. Fixes `Connection error` on hosts whose system resolver is SERVFAIL behind a TUN/transparent proxy (`trust_env=False` alone could not reach the model endpoint).
+
+### Docs — example2 narrative
+
+- `README.md`: added `Second vertical slice: EMTB budget (example2)` (proof run, what it proved / did not prove); `Next` updated to the third-slice question (Hardware Scout / WordPress adapter as candidate).
+
 ### Docs — layer model & elevation rule made explicit
 
 - `AGENTS.md`: added Layer model (Toolset = domain action surface + local call policy; Capability = reusable unit bundling tools/instructions/hooks/settings/lifecycle semantics, may serve a subset of agents; Core = cross-domain Harness invariants; Skill = deferred guidance) and an Elevation rule: a mechanism floats up only on a **stable, domain-agnostic repeated mechanism needing unified lifecycle semantics** — not on code complexity, not on mere two-domain reuse (reuse twice = start abstracting, e.g. a shared `BudgetedToolset`/wrapper). Knowledge/FileSystem protection documented as paired design, not hook injection.

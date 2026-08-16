@@ -172,12 +172,42 @@ An earlier run (`article_id=vs-hw951-20260815`,
 path and is retained as comparison evidence. CAP-1..CAP-4, the receipt requirements,
 and the stop rule are fixed in `spec/writing-slice-gate.md`.
 
+## Second vertical slice: EMTB budget (example2)
+
+The production seam — `build_agent(settings, extra_toolsets=[...])` — is now
+exercised by a second business domain without touching core.
+`examples/budget_lib/` is a faithful extraction of zesenticai's finance_agent
+deterministic commands (bilingual CSV parsing + summary / variance /
+consistency / health / query / significant-change); `examples/budget_toolset.py`
+adapts it to a PydanticAI `FunctionToolset`; `examples/budget_case.py` drives one
+real core agent over one real EMTB budget CSV (Chinese + English headers).
+
+Final proof run:
+
+```text
+model           deepseek-v4-flash
+run             2639102722814111b9b9be253a50d8be
+receipt         completed
+artifacts       artifacts/…/emtb_budget-report.md (host-verified)
+machine checks  all PASS
+unknown         none
+```
+
+What this proved (and did not prove):
+
+- A deterministic business domain composes through `extra_toolsets` with zero
+  core changes; the host still owns artifact ownership (SHA-256 snapshot) and
+  receipt settlement.
+- Tool-effect refs: the host settles completed effects automatically; the
+  slice's instructions teach the model to declare only `artifact:` refs.
+- Not proved: multi-toolset composition, budget caps, pause/resume inside a
+  budget run. Those stay deferred until a real run needs them.
+
 ## Next
 
-The contract is proven on one business slice via task-local composition
-(`examples/writing_case.py` builds its own minimal Agent). The production
-extension seam — `build_agent(settings, extra_toolsets=[...])` — is not yet
-exercised by a business domain. Before adding any more Harness machinery,
-**repeat the same contract with a second business slice or a second runtime
-through the `extra_toolsets`/Skill seam, without touching core**, to test
-whether the core is actually generic.
+The shared seam is now proven on two business slices: writing (task-local
+composition, external ACE engine) and EMTB budget (`extra_toolsets` through
+`build_agent`). The remaining open question from v1.1 is unchanged: is the core
+generic enough for a third slice without touching core? Candidates: a
+Hardware Scout / WordPress adapter (business adapter swap, no new machinery), or
+a second runtime through the same seam.
