@@ -174,6 +174,10 @@ and the stop rule are fixed in `spec/writing-slice-gate.md`.
 
 ## Next
 
-The contract is proven on one business slice. Before adding any more Harness
-machinery, **repeat the same contract with a second business slice or a second
-runtime** to test whether the core is actually generic.
+The contract is proven on one business slice via task-local composition
+(`examples/writing_case.py` builds its own minimal Agent). The production
+extension seam — `build_agent(settings, extra_toolsets=[...])` — is not yet
+exercised by a business domain. Before adding any more Harness machinery,
+**repeat the same contract with a second business slice or a second runtime
+through the `extra_toolsets`/Skill seam, without touching core**, to test
+whether the core is actually generic.

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Docs — layer model & elevation rule made explicit
+
+- `AGENTS.md`: added Layer model (Toolset = domain action surface + local call policy; Capability = reusable unit bundling tools/instructions/hooks/settings/lifecycle semantics, may serve a subset of agents; Core = cross-domain Harness invariants; Skill = deferred guidance) and an Elevation rule: a mechanism floats up only on a **stable, domain-agnostic repeated mechanism needing unified lifecycle semantics** — not on code complexity, not on mere two-domain reuse (reuse twice = start abstracting, e.g. a shared `BudgetedToolset`/wrapper). Knowledge/FileSystem protection documented as paired design, not hook injection.
+- `README.md` `Next`: sharpened to the verified gap — the writing proof used task-local composition and did **not** exercise the production seam `build_agent(settings, extra_toolsets=[...])`; the second slice must prove that seam (or a second runtime) without touching core.
+
 ### Docs — project narrative: proof PASS fixed as repo fact
 
 - `README.md`: `Next vertical slice` → `Proven vertical slice`. The final proof run

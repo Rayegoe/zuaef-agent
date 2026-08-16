@@ -28,13 +28,13 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 1800,
-      "sha256": "ac4372d301164003e990420d5387582b7f3ac5861415f1c17c601fb2982b5eee"
+      "bytes": 3681,
+      "sha256": "52776d09a2e11fae762d30e97f258cda87aa5ab06fc4dff23240b2e8496b4e91"
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 3838,
-      "sha256": "dce7b9351cf2f0644e010a7c71abc76c7a18c98dc5b35667596cb65335bed4ab"
+      "bytes": 4800,
+      "sha256": "9b727f151193ed5132a346862f1e38ff7fdd8fc8f17de48a3ee6ff90a492d792"
     },
     {
       "path": "DESIGN_REFERENCES.md",
@@ -53,8 +53,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 7501,
-      "sha256": "0ecf512a32f45559de422a772bea669adcab7f23757ca63640b4af0ca512009e"
+      "bytes": 7777,
+      "sha256": "e3f5c1742792f61d87c96ec1ccd404b420cd9459752ba97b569169c16a6aa653"
     },
     {
       "path": "REFACTOR_NOTES.md",
