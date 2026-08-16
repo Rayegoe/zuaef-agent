@@ -33,8 +33,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 844,
-      "sha256": "e578f2073bfea8e006d03fb7e39ffe42e29987f3b2e388d788fd92fd24dbdbff"
+      "bytes": 3258,
+      "sha256": "b0040258136747a19ead96fb660e662244d562ac073d3738a3e0720575c73be9"
     },
     {
       "path": "DESIGN_REFERENCES.md",
@@ -48,18 +48,18 @@
     },
     {
       "path": "README.md",
-      "bytes": 5720,
-      "sha256": "fadc6233bf3aa13fa7a54c7d7e3fd14ba93918e7d8105b876410efed78bd9429"
+      "bytes": 6501,
+      "sha256": "e6464738daf187fc63a455db33200e0e0db26611e918015bfbdef6ee14ba3258"
     },
     {
       "path": "REFACTOR_NOTES.md",
-      "bytes": 2576,
-      "sha256": "58f854fba04a39d22e915d610d3f29af0d0f983e4dd016ef1205cd04e8a6418c"
+      "bytes": 2578,
+      "sha256": "77710157c268cf5479764272da6bd395def979fd9281a4c7258a642087fb7fbf"
     },
     {
       "path": "V1_1_VALIDATION.md",
-      "bytes": 1455,
-      "sha256": "e6f8426a9c46f321446c8f78b0623c2021da488d0886af1cddcd6ac5f13b9ddf"
+      "bytes": 1469,
+      "sha256": "511bcd43cdc6ef0bd287c1a74dbfbd0d3a32ed870e99aaf68c6505a87314b8ea"
     },
     {
       "path": "examples/approval_toolset.py",
@@ -75,6 +75,16 @@
       "path": "examples/research_toolset.py",
       "bytes": 3831,
       "sha256": "bc8657009dc4fa619912e578e95f7fe8a27cc17ab9f9f1540a0baa50fc689f53"
+    },
+    {
+      "path": "examples/writing_case.py",
+      "bytes": 18453,
+      "sha256": "ea4b460436295d9a1c9f069dd65e39a98ba1c5610edad91dc92920a6a1a2df82"
+    },
+    {
+      "path": "examples/writing_toolset.py",
+      "bytes": 21539,
+      "sha256": "1b2d553f816e87a690331610341a3d8c80c64b974629eb1fd0c45fb10afff30d"
     },
     {
       "path": "pyproject.toml",
@@ -93,13 +103,18 @@
     },
     {
       "path": "spec/brownfield.md",
-      "bytes": 7540,
-      "sha256": "8a0421db17fb7d0733117fdb8308c456914ea4799aaef1f5a9180fc6a72e9898"
+      "bytes": 7474,
+      "sha256": "dda292d3b2229c98f57206e90576df5956cacb78dce1889628426998e3d24b3c"
     },
     {
       "path": "spec/capability-proof-gate.md",
-      "bytes": 3995,
-      "sha256": "5564109b9dcf9c86c3c217a4a06775017ef6ac0dd1d248defc63102d3696c6af"
+      "bytes": 3973,
+      "sha256": "42fabb4598abc552ae8e3d4a0730788a07a3c09deccc250b5d6b2da213f4fed4"
+    },
+    {
+      "path": "spec/writing-slice-gate.md",
+      "bytes": 5416,
+      "sha256": "ea5d900385d3f2c79f025e3749da92947a6567c01977d8f3a1e9979b117117c7"
     },
     {
       "path": "src/zuaef_agent/__init__.py",
@@ -153,8 +168,8 @@
     },
     {
       "path": "src/zuaef_agent/runtime.py",
-      "bytes": 20388,
-      "sha256": "7a08863c35eb41028127e498d91bfcd18b72601f8eb183e803177db778db592b"
+      "bytes": 20779,
+      "sha256": "1038fc6f78db9868998b3f270b6d27095d7d640b27c50d95792151ccfbb72b9c"
     },
     {
       "path": "src/zuaef_agent/verification.py",
@@ -198,8 +213,8 @@
     },
     {
       "path": "tests/test_manifest_integrity.py",
-      "bytes": 1744,
-      "sha256": "332f99337702eb98415c35976de4c84f95c4979ba55943d9914004fd1628594d"
+      "bytes": 1879,
+      "sha256": "7598ca9b3ffb58d8cb3142eef56f352bce2881aa358701839c6844a0d1509908"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -210,6 +225,11 @@
       "path": "tests/test_verification.py",
       "bytes": 4936,
       "sha256": "9ac8e41ae684d63f387eb44ae6bcc229e59c09d2b6cd4e02f5815d3679fa5921"
+    },
+    {
+      "path": "tests/test_writing_slice.py",
+      "bytes": 21183,
+      "sha256": "1b1f2e0a8e82dc18e5f9bfa061dc04994775dda88a0bad0154e033b8057a9d7b"
     },
     {
       "path": "tools/regen_manifest.py",

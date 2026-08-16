@@ -126,4 +126,18 @@ The current search is lexical on purpose. Add embeddings only after a measured r
 
 ## Next vertical slice
 
-Now stop extending the core and run one real case: **YouTube URL -> metadata/transcript -> spilled evidence when large -> source node -> reusable concept nodes -> RunSummary + RunReceipt**. Only after that evaluation should Bilibili/PDF/Podcast adapters be generalized.
+The capability proof gate is settled; the current slice is the **Harness-neutral
+Context Delivery Proof** with article-context-engine. `examples/writing_case.py`
+starts one real autonomous ZUAEF agent; `examples/writing_toolset.py` is a thin
+adapter over ACE capabilities (`list_materials`, `read_material`,
+`retrieve_exemplars`, `retrieve_knowledge`, `check_claim`, `save_artifact`).
+The acceptance question is whether the running agent actually pulls raw material,
+writing corpus, knowledge/evidence policy, and claim validation from ACE — with
+receipts — rather than merely finishing an article.
+
+An earlier run (`article_id=vs-hw951-20260815`,
+`run_id=bd023f87347f4ef98b50485c00c22ebe`) proved the basic writing + evidence gate
+path and is retained as comparison evidence. Human editorial trace is an optional
+long-term corpus loop, not a blocking completion condition. See
+`spec/writing-slice-gate.md` for CAP-1..CAP-4, receipt requirements, and the stop
+rule; only after this proof should adapters or corpus ON/OFF comparisons be discussed.

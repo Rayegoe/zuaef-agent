@@ -49,7 +49,9 @@ def _verify_inherited_artifact(
     """Re-read a pause-settled artifact and require its bytes to remain unchanged."""
     current = verify_artifact(recorded.path, workspace_root=workspace_root, snapshot={})
     if current.size != recorded.size or current.sha256 != recorded.sha256:
-        raise VerificationError(f"inherited artifact changed after pause: {recorded.path!r}")
+        raise VerificationError(
+            f"inherited artifact changed after pause: {recorded.path!r}"
+        )
     return current
 
 
@@ -163,7 +165,11 @@ def finalize_terminal(
                 degraded.append(str(exc))
         for knowledge_id in prior_pause_receipt.verified_knowledge:
             try:
-                verify_knowledge(knowledge_id, store=knowledge_store, run_id=prior_pause_receipt.run_id)
+                verify_knowledge(
+                    knowledge_id,
+                    store=knowledge_store,
+                    run_id=prior_pause_receipt.run_id,
+                )
                 inherited_knowledge.add(knowledge_id)
                 verified_knowledge.append(knowledge_id)
             except VerificationError as exc:
@@ -178,7 +184,12 @@ def finalize_terminal(
         call_id = record.get("tool_call_id")
         tool_name = record.get("tool_name")
         status = record.get("status")
-        if not isinstance(call_id, str) or not call_id or not isinstance(tool_name, str) or not tool_name:
+        if (
+            not isinstance(call_id, str)
+            or not call_id
+            or not isinstance(tool_name, str)
+            or not tool_name
+        ):
             degraded.append("malformed tool-effect ledger record")
         elif status not in {"started", "completed", "failed"}:
             degraded.append(f"invalid tool-effect status for {call_id!r}: {status!r}")
@@ -193,7 +204,9 @@ def finalize_terminal(
         if snapshot.get(path) == digest:
             continue
         try:
-            verified = verify_artifact(path, workspace_root=workspace, snapshot=snapshot)
+            verified = verify_artifact(
+                path, workspace_root=workspace, snapshot=snapshot
+            )
             if all(existing.path != verified.path for existing in verified_artifacts):
                 verified_artifacts.append(verified)
         except VerificationError as exc:
@@ -220,7 +233,9 @@ def finalize_terminal(
                     workspace_root=workspace,
                     snapshot=snapshot,
                 )
-                if all(existing.path != verified.path for existing in verified_artifacts):
+                if all(
+                    existing.path != verified.path for existing in verified_artifacts
+                ):
                     verified_artifacts.append(verified)
             elif kind == "knowledge":
                 knowledge_id = value.removesuffix(".md")
@@ -230,7 +245,12 @@ def finalize_terminal(
                     verified_knowledge.append(knowledge_id)
                 verified_evidence_refs.append(f"knowledge:{knowledge_id}")
             else:
-                record = verify_tool_effect(value, step_store_dir=settings.step_store_dir, run_id=run_id, records=effect_records)
+                record = verify_tool_effect(
+                    value,
+                    step_store_dir=settings.step_store_dir,
+                    run_id=run_id,
+                    records=effect_records,
+                )
                 verification = ToolEffectVerification(
                     tool_call_id=record["tool_call_id"],
                     tool_name=record["tool_name"],
@@ -246,7 +266,10 @@ def finalize_terminal(
     for record in effect_records:
         if record.get("status") != "completed":
             continue
-        if any(existing.tool_call_id == record["tool_call_id"] for existing in verified_tool_effects):
+        if any(
+            existing.tool_call_id == record["tool_call_id"]
+            for existing in verified_tool_effects
+        ):
             continue
         verified_tool_effects.append(
             ToolEffectVerification(
@@ -257,7 +280,9 @@ def finalize_terminal(
         )
         verified_evidence_refs.append(f"tool-effect:{record['tool_call_id']}")
 
-    verified_evidence_refs = [f"artifact:{v.path}" for v in verified_artifacts] + verified_evidence_refs
+    verified_evidence_refs = [
+        f"artifact:{v.path}" for v in verified_artifacts
+    ] + verified_evidence_refs
 
     # Host-discovered knowledge written by this run, even when the model forgot to claim it.
     knowledge_updates = knowledge_store.list_generated_by_run(run_id)
@@ -272,7 +297,9 @@ def finalize_terminal(
             degraded.append(str(exc))
 
     unresolved = [
-        ToolEffectVerification(tool_call_id=r["tool_call_id"], tool_name=r["tool_name"], status=r["status"])
+        ToolEffectVerification(
+            tool_call_id=r["tool_call_id"], tool_name=r["tool_name"], status=r["status"]
+        )
         for r in effect_records
         if r.get("status") == "started"
     ]
@@ -302,7 +329,9 @@ def finalize_terminal(
     receipt = RunReceipt(
         run_id=run_id,
         conversation_id=conversation_id,
-        continued_from_run_id=prior_pause_receipt.run_id if prior_pause_receipt is not None else None,
+        continued_from_run_id=prior_pause_receipt.run_id
+        if prior_pause_receipt is not None
+        else None,
         model=model_label,
         started_at=started_at,
         finished_at=datetime.now(UTC),
@@ -317,8 +346,12 @@ def finalize_terminal(
         unresolved_effects=unresolved,
         degraded=degraded,
         error=error,
-        step_store=str(settings.step_store_dir) if settings.enable_step_persistence else None,
-        tool_result_store=str(settings.tool_result_dir) if settings.enable_tool_output_limits else None,
+        step_store=str(settings.step_store_dir)
+        if settings.enable_step_persistence
+        else None,
+        tool_result_store=str(settings.tool_result_dir)
+        if settings.enable_tool_output_limits
+        else None,
     )
     receipt_store.write(receipt)
     return TerminalRun(summary=final_summary, receipt=receipt)
@@ -374,8 +407,12 @@ def _build_paused(
         verified_knowledge=verified_knowledge,
         usage=usage,
         usage_complete=_usage_complete(usage),
-        step_store=str(settings.step_store_dir) if settings.enable_step_persistence else None,
-        tool_result_store=str(settings.tool_result_dir) if settings.enable_tool_output_limits else None,
+        step_store=str(settings.step_store_dir)
+        if settings.enable_step_persistence
+        else None,
+        tool_result_store=str(settings.tool_result_dir)
+        if settings.enable_tool_output_limits
+        else None,
     )
     ReceiptStore(settings.state_root).write(pause_receipt)
     return PausedRun(
@@ -397,6 +434,7 @@ def execute_run(
     message_history: Sequence[Any] | None = None,
     deferred_tool_results: DeferredToolResults | None = None,
     prior_pause_receipt: PauseReceipt | None = None,
+    retries: int | dict[str, int] | None = None,
 ) -> RuntimeOutcome:
     """Shared execution seam: run an already-composed agent through the common runtime.
 
@@ -404,6 +442,11 @@ def execute_run(
     host outcome verification and receipt settlement. It never builds agents —
     composition (build_agent + deps + business toolsets) is the caller's job.
     Run acceptance happens here: any failure after this point leaves a receipt.
+
+    ``retries`` is passed through to ``agent.run`` as the tool-retry budget
+    (a bare int, or ``{"tools": N}`` / ``{"output": N}``). It only raises the
+    ceiling for how many times the model may retry a failing or withdrawn
+    tool call before the run is blocked — it never re-offers withdrawn tools.
     """
     settings = settings or AgentSettings.from_env()
     run_id = run_id or deps.run_id
@@ -417,7 +460,9 @@ def execute_run(
         if conversation_id is None:
             conversation_id = prior_pause_receipt.conversation_id
         elif conversation_id != prior_pause_receipt.conversation_id:
-            raise ValueError("continuation conversation_id must match the pause receipt")
+            raise ValueError(
+                "continuation conversation_id must match the pause receipt"
+            )
     conversation_id = conversation_id or uuid4().hex
     model_label = _model_label(settings)
     started_at = datetime.now(UTC)
@@ -451,11 +496,14 @@ def execute_run(
             agent.run(
                 prompt,
                 deps=deps,
-                message_history=list(message_history) if message_history is not None else None,
+                message_history=list(message_history)
+                if message_history is not None
+                else None,
                 deferred_tool_results=deferred_tool_results,
                 conversation_id=conversation_id,
                 usage_limits=limits,
                 usage=usage_tracker,
+                retries=retries,
             )
         )
     except UsageLimitExceeded as exc:
@@ -493,7 +541,11 @@ def execute_run(
             usage=usage,
             snapshot=snapshot,
         )
-    summary = output if isinstance(output, RunSummary) else RunSummary(status="partial", outcome=str(output))
+    summary = (
+        output
+        if isinstance(output, RunSummary)
+        else RunSummary(status="partial", outcome=str(output))
+    )
     return finalize_terminal(
         summary,
         settings=settings,
@@ -507,13 +559,19 @@ def execute_run(
     )
 
 
-def decide(paused: PausedRun, *, approve: bool, message: str | None = None) -> DeferredToolResults:
+def decide(
+    paused: PausedRun, *, approve: bool, message: str | None = None
+) -> DeferredToolResults:
     """Build the DeferredToolResults resolving a paused run's pending approvals."""
     results = DeferredToolResults()
     for call in paused.requests.approvals:
-        results.approvals[call.tool_call_id] = True if approve else ToolDenied(message or "denied by operator")
+        results.approvals[call.tool_call_id] = (
+            True if approve else ToolDenied(message or "denied by operator")
+        )
     for call in paused.requests.calls:
-        results.calls[call.tool_call_id] = ToolFailed("no external executor configured in this process")
+        results.calls[call.tool_call_id] = ToolFailed(
+            "no external executor configured in this process"
+        )
     return results
 
 

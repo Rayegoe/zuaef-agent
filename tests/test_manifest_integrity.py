@@ -25,20 +25,28 @@ def test_manifest_paths_exist_with_matching_bytes_and_hash():
         assert path.is_file(), f"manifest file missing: {entry['path']}"
         data = path.read_bytes()
         assert len(data) == entry["bytes"], f"size drift: {entry['path']}"
-        assert hashlib.sha256(data).hexdigest() == entry["sha256"], f"hash drift: {entry['path']}"
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"], (
+            f"hash drift: {entry['path']}"
+        )
 
 
-def test_manifest_covers_all_committed_source_and_tests():
-    """No unlisted runtime-required file: source, tests, examples, spec."""
-    tracked = sorted(
-        str(p.relative_to(REPO_ROOT))
-        for p in (REPO_ROOT / "src").rglob("*.py")
-    ) + sorted(
-        str(p.relative_to(REPO_ROOT))
-        for p in (REPO_ROOT / "tests").rglob("*.py")
-    )
+def test_manifest_covers_all_delivery_source_files():
+    """No unlisted runtime-required file: source, tests, examples, spec, tools."""
+    tracked: list[str] = []
+    for pattern in (
+        "src/zuaef_agent/*.py",
+        "tests/*.py",
+        "examples/*.py",
+        "spec/*.md",
+        "tools/*.py",
+    ):
+        tracked.extend(
+            str(path.relative_to(REPO_ROOT))
+            for path in sorted(REPO_ROOT.glob(pattern))
+            if path.is_file()
+        )
     listed = {entry["path"] for entry in _manifest()["files"]}
-    missing = [p for p in tracked if p not in listed]
+    missing = sorted(set(tracked) - listed)
     assert not missing, f"files missing from manifest: {missing}"
 
 
