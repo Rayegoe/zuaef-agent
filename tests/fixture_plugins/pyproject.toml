@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = ["pydantic-ai>=2.27"]
 
 [project.entry-points."zuaef.plugins"]
-ace-writing = "fixture_plugins.writing:create_plugin"
+fixture-ace-writing = "fixture_plugins.writing:create_plugin"
 hardware-scout = "fixture_plugins.hardware:create_plugin"
 capability-plugin = "fixture_plugins.capability:create_plugin"
 conflict-plugin = "fixture_plugins.conflict:create_plugin"

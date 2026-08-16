@@ -1,0 +1,13 @@
+# Example profile: ACE Writing plugin (SPEC §34).
+# Install: cp profiles/ace-writing.toml ~/.config/zuaef/profiles/ace-writing.toml
+# (config root: $ZUAEF_CONFIG_ROOT, default ~/.config/zuaef). "ace-writing"
+# must match the file name. Config keys are non-secret only.
+schema = 1
+name = "ace-writing"
+
+[[plugins]]
+id = "ace-writing"
+
+[plugins.config]
+# Explicit config wins over ACE_ROOT / the compiled default path.
+ace_root = "~/projects/article-context-engine/article-context-engine"

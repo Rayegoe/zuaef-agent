@@ -82,3 +82,13 @@ Agent 拥有**有界自主轨迹**（bounded autonomous trajectory）：调用�
 - 收敛机制在真实 run 中生效：knowledge 与 exemplars 均精确停在 per-run cap（4），无超量；probe 发生在最终 save_artifact 之后且未触发再次 save（non-authoritative 合约成立）。
 - 该 workspace 内历史 receipt（旧无 run_id 时代的 22 条 knowledge pulls）被 `context_usage(run_id)` 完全忽略。
 - 结论：Context Engine 提供可追溯能力；Agent 自主选择 context；Harness 不规定写作流程，只限制合法动作并保证执行最终收敛。
+
+## 完成记录：Plugin Composition Layer parity（SPEC v0.2 §35，PASS）
+
+- 插件：`zuaef-ace-writing` 0.1.0（`zuaef.plugins` entry point `ace-writing` = `zuaef_ace_writing:create_plugin`），profile `ace-writing`（config: ace_root → article-context-engine）。
+- article_id：`vs-hw951-parity2-20260816`（同一份 2 素材，M001/M002）；run_id：`35cfd8bb043248a2b29804476a3a66b6`。
+- 命令：`python examples/writing_case.py --profile ace-writing --request-limit 30 ...`——agent 由 `build_profile_agent`（resolve → freeze → compose）构造，非手写 toolsets；`--profile` 缺省时原直连路径不变（§33 proof evidence 保持不动）。
+- 结果：receipt **completed**（21 requests）；settlement ok（canonical final.md 与 run snapshot SHA256 一致，字节级相等 4392 B）；probe `purpose=integration_probe ok=True checked=['C4']` 发生在最终 save_artifact 之后。
+- 插件化未降低原 proof：同一份 writing domain adapter（byte-identical 副本），全部 machine check 与历史 proof 同构（run-isolated deliveries / bounded retrieval / claim probe / canonical artifact / snapshot equality）。
+- 首次运行（`vs-hw951-parity-20260816`）因默认 `request_limit=12` 触顶为 partial（`The next request would exceed the request_limit of 12`），未到 save_artifact；`--request-limit` 放宽后 completed——parity 差异是预算边界，不是能力边界。
+- Composition 已随 receipt 持久化（CAP-P4）：profile=ace-writing、plugin ace-writing/0.1.0、composition_id `7e8a90ff…`。

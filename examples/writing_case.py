@@ -39,6 +39,7 @@ from examples.writing_toolset import (
     build_writing_toolset,
     machine_ready_or_complete,
 )
+from zuaef_agent.composition import build_profile_agent
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.models import CoreDeps, RunSummary
 from zuaef_agent.providers import resolve_model
@@ -281,9 +282,25 @@ def main() -> int:
     ap.add_argument(
         "--focus", nargs="*", default=[], help="topic hints for the writing task"
     )
+    ap.add_argument(
+        "--profile",
+        default=None,
+        help="compose the agent via a ZUAEF profile (plugin path) instead of "
+        "the direct toolset assembly; the frozen snapshot lands in the "
+        "receipt (CAP-P4) and resume stays exact",
+    )
+    ap.add_argument(
+        "--request-limit",
+        type=int,
+        default=None,
+        help="override AgentSettings.request_limit (the recorded proof used 22 "
+        "requests; default is 12)",
+    )
     args = ap.parse_args()
 
     settings = AgentSettings.from_env()
+    if args.request_limit is not None:
+        settings = settings.with_overrides(request_limit=args.request_limit)
     has_credentials = bool(
         settings.openai_base_url and settings.openai_api_key
     ) or bool(os.getenv("OPENAI_API_KEY"))
@@ -307,7 +324,16 @@ def main() -> int:
     )
 
     run_id = uuid4().hex
-    agent = build_writing_agent(settings, run_id=run_id, ace_root=ace_root)
+    composition = None
+    if args.profile:
+        # Plugin Composition Layer path: resolve -> freeze -> compose. The
+        # snapshot is threaded into the receipt so CAP-P4/P5 hold; the
+        # direct-toolset path below is unchanged proof evidence (SPEC §33).
+        agent, composition = build_profile_agent(
+            settings, run_id=run_id, profile=args.profile
+        )
+    else:
+        agent = build_writing_agent(settings, run_id=run_id, ace_root=ace_root)
     deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
 
     outcome = execute_run(
@@ -316,6 +342,7 @@ def main() -> int:
         prompt=build_prompt(args.article_id, args.focus, args.account),
         settings=settings,
         run_id=run_id,
+        composition=composition,
         retries={"tools": 5},
     )
 

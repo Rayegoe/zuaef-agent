@@ -93,8 +93,8 @@
     },
     {
       "path": "examples/writing_case.py",
-      "bytes": 18453,
-      "sha256": "ea4b460436295d9a1c9f069dd65e39a98ba1c5610edad91dc92920a6a1a2df82"
+      "bytes": 19541,
+      "sha256": "ad6b343c15e16ef126f9f6bb1fe06033a85163800571297de7a55f247896b12e"
     },
     {
       "path": "examples/writing_toolset.py",
@@ -163,8 +163,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 761,
-      "sha256": "56328572154a5dc17ddf68602be7753ea9a4acd5c4a92456a231e46059f8da87"
+      "bytes": 790,
+      "sha256": "e5fba42fa54a751683f69ae72c31ad3fc53d7fa672cc77f10af11c8b3f29fff7"
     },
     {
       "path": "uv.lock",
@@ -188,8 +188,8 @@
     },
     {
       "path": "spec/writing-slice-gate.md",
-      "bytes": 5416,
-      "sha256": "ea5d900385d3f2c79f025e3749da92947a6567c01977d8f3a1e9979b117117c7"
+      "bytes": 6994,
+      "sha256": "986400d6af1515a6645e504c7a3bc962bd655b7d330b1f4dfe0c4daadf95e66b"
     },
     {
       "path": "src/zuaef_agent/__init__.py",
@@ -267,6 +267,11 @@
       "sha256": "50669f13292fb1554a47683007a47af144e6d6e20148327890e57c9b093931e5"
     },
     {
+      "path": "tests/test_ace_writing_plugin.py",
+      "bytes": 3707,
+      "sha256": "34c5d36c2d50d2eb1caf7527a0d326bf8d6118a7912a4b057f066857876cfae5"
+    },
+    {
       "path": "tests/test_budget_slice.py",
       "bytes": 14100,
       "sha256": "601528b76cc42cb8f449922e3a7f72dd500f3bcddae3df59182aa4fe9c3cf593"
@@ -308,13 +313,13 @@
     },
     {
       "path": "tests/test_manifest_integrity.py",
-      "bytes": 2068,
-      "sha256": "aa82aa0cd95f34b47d8c995ac7230824e648994cf2710ac09afad8d522084519"
+      "bytes": 2184,
+      "sha256": "f7db26179ad1de8c9cdc5043234a53158352f16e89facf417178e483a9da132c"
     },
     {
       "path": "tests/test_plugin_composition.py",
-      "bytes": 22388,
-      "sha256": "4e6de099c920187875203534115c9b0d4a7dcc5dd23161811f01b24b2c185e0d"
+      "bytes": 22556,
+      "sha256": "f9848c16ae431e903bb25c7c3bc8d858d53afcd3411e37fdea393a2782586fd1"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -373,13 +378,38 @@
     },
     {
       "path": "tests/fixture_plugins/pyproject.toml",
-      "bytes": 708,
-      "sha256": "f8d81bbe0e6c61bbb9eb3bcbf809b8037b1d0f622a29dad7e777a2f539a67e3c"
+      "bytes": 716,
+      "sha256": "263b5147b1dc987521f905eb1248dcf4917faa8e7457c153fec44b15e3151817"
+    },
+    {
+      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/__init__.py",
+      "bytes": 670,
+      "sha256": "f38d9cbd25a9f6f2613d08ad96b94b6a8c5d1a6e67773f62d81e5fc495f16242"
+    },
+    {
+      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/plugin.py",
+      "bytes": 1622,
+      "sha256": "e2b5374eaa33e0b840ffb63ccd964fd23d6f227bae12cbcd9b354ba79b03b926"
+    },
+    {
+      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/writing_toolset.py",
+      "bytes": 21767,
+      "sha256": "ca9f4f60c693c9f8cd3afd86668c90c7eb1983e17519df79222eb69eb0dd75f4"
+    },
+    {
+      "path": "plugins/zuaef-ace-writing/pyproject.toml",
+      "bytes": 698,
+      "sha256": "157785d5fec18cb8ce7396c82e108571543b871e85b184823a1722747229bf67"
+    },
+    {
+      "path": "profiles/ace-writing.toml",
+      "bytes": 488,
+      "sha256": "bafcf228f064b1670628be9c02d9dbfdfd621f36c645d424d2248fd7332f54f8"
     },
     {
       "path": "tools/regen_manifest.py",
-      "bytes": 1980,
-      "sha256": "7746d1453730b8e58d615093bc5ac5376a3f02918d9a842a6a076af464ec5298"
+      "bytes": 2084,
+      "sha256": "d201067780bf6280033c7733148bc47092f388d02c7e00977e876aa9c00ef642"
     },
     {
       "path": "workspace/knowledge/index.md",

@@ -46,7 +46,7 @@ schema = 1
 name = "writing"
 
 [[plugins]]
-id = "ace-writing"
+id = "fixture-ace-writing"
 allow_capabilities = false
 
 [plugins.config]
@@ -63,7 +63,7 @@ def _ep(module: str, name: str, factory: str = "create_plugin") -> EntryPoint:
 
 
 DISCOVER = {
-    "ace-writing": _ep("writing", "ace-writing"),
+    "fixture-ace-writing": _ep("writing", "fixture-ace-writing"),
     "hardware-scout": _ep("hardware", "hardware-scout"),
     "capability-plugin": _ep("capability", "capability-plugin"),
     "conflict-plugin": _ep("conflict", "conflict-plugin"),
@@ -73,7 +73,7 @@ DISCOVER = {
 }
 
 VERSIONS = {
-    "ace-writing": "0.2.1",
+    "fixture-ace-writing": "0.2.1",
     "hardware-scout": "0.1.0",
     "capability-plugin": "0.3.0",
     "conflict-plugin": "0.0.1",
@@ -248,7 +248,7 @@ def test_secret_config_rejected(tmp_path):
     config_root = _write_profile(
         tmp_path,
         "leaky",
-        text='schema = 1\nname = "leaky"\n\n[[plugins]]\nid = "ace-writing"\n\n[plugins.config]\napi_key = "sk-leak"\n',
+        text='schema = 1\nname = "leaky"\n\n[[plugins]]\nid = "fixture-ace-writing"\n\n[plugins.config]\napi_key = "sk-leak"\n',
     )
     with pytest.raises(CompositionError, match="secret-named"):
         load_profile("leaky", config_root)
@@ -275,7 +275,7 @@ def test_one_id_resolves_to_exactly_one_entry_point(tmp_path):
         "writing", settings, config_root=config_root, discover=lambda: DISCOVER, version_for=_vf
     )
     assert snapshot.profile == "writing"
-    assert [ref.id for ref in snapshot.plugins] == ["ace-writing"]
+    assert [ref.id for ref in snapshot.plugins] == ["fixture-ace-writing"]
     ref = snapshot.plugins[0]
     assert ref.version == "0.2.1"
     assert ref.entry_point == "fixture_plugins.writing:create_plugin"
@@ -301,7 +301,7 @@ def test_duplicate_plugin_id_fails(tmp_path):
     config_root = _write_profile(
         tmp_path,
         "dup",
-        text='schema = 1\nname = "dup"\n\n[[plugins]]\nid = "ace-writing"\n\n[[plugins]]\nid = "ace-writing"\n',
+        text='schema = 1\nname = "dup"\n\n[[plugins]]\nid = "fixture-ace-writing"\n\n[[plugins]]\nid = "fixture-ace-writing"\n',
     )
     with pytest.raises(CompositionError, match="duplicate plugin id"):
         load_profile("dup", config_root)
@@ -324,17 +324,17 @@ def test_deterministic_ordering_and_hash_sensitivity(tmp_path):
     two_plugins = (
         'schema = 1\nname = "mix"\n\n'
         '[[plugins]]\nid = "hardware-scout"\n\n'
-        '[[plugins]]\nid = "ace-writing"\n'
+        '[[plugins]]\nid = "fixture-ace-writing"\n'
     )
     config_root = _write_profile(tmp_path, "mix", text=two_plugins)
     snapshot = resolve_profile(
         "mix", settings, config_root=config_root, discover=lambda: DISCOVER, version_for=_vf
     )
-    assert [ref.id for ref in snapshot.plugins] == ["hardware-scout", "ace-writing"]
+    assert [ref.id for ref in snapshot.plugins] == ["hardware-scout", "fixture-ace-writing"]
     reverted = _write_profile(
         tmp_path,
         "mix",
-        text='schema = 1\nname = "mix"\n\n[[plugins]]\nid = "ace-writing"\n\n[[plugins]]\nid = "hardware-scout"\n',
+        text='schema = 1\nname = "mix"\n\n[[plugins]]\nid = "fixture-ace-writing"\n\n[[plugins]]\nid = "hardware-scout"\n',
     )
     snapshot_reverted = resolve_profile(
         "mix", settings, config_root=reverted, discover=lambda: DISCOVER, version_for=_vf
@@ -384,7 +384,7 @@ def test_plugin_toolsets_reach_agent(tmp_path):
     )
     names = _user_tool_names(agent)
     assert {"list_materials", "save_artifact", "publish_article"} <= names
-    assert snapshot.plugins[0].id == "ace-writing"
+    assert snapshot.plugins[0].id == "fixture-ace-writing"
 
 
 def test_plugin_skill_dirs_reach_skills_capability(tmp_path):
@@ -416,7 +416,7 @@ def test_duplicate_tool_fails_no_silent_override(tmp_path):
     config_root = _write_profile(
         tmp_path,
         "clash",
-        text='schema = 1\nname = "clash"\n\n[[plugins]]\nid = "ace-writing"\n\n[[plugins]]\nid = "conflict-plugin"\n',
+        text='schema = 1\nname = "clash"\n\n[[plugins]]\nid = "fixture-ace-writing"\n\n[[plugins]]\nid = "conflict-plugin"\n',
     )
     with pytest.raises(CompositionError, match="tool conflict"):
         resolve_profile(
@@ -446,16 +446,16 @@ def test_composition_id_sensitive_to_all_identity_facts(tmp_path):
     _write_profile(
         tmp_path,
         "writing",
-        text='schema = 1\nname = "writing"\n\n[[plugins]]\nid = "ace-writing"\n\n[plugins.config]\nace_root = "/v2"\n',
+        text='schema = 1\nname = "writing"\n\n[[plugins]]\nid = "fixture-ace-writing"\n\n[plugins.config]\nace_root = "/v2"\n',
     )
     assert resolve_with(_vf).composition_id != baseline.composition_id
     _write_profile(tmp_path, "writing")
 
-    bumped = lambda ep: "0.2.2" if ep.name == "ace-writing" else _vf(ep)
+    bumped = lambda ep: "0.2.2" if ep.name == "fixture-ace-writing" else _vf(ep)
     assert resolve_with(bumped).composition_id != baseline.composition_id
 
     alias_ep = dict(DISCOVER)
-    alias_ep["ace-writing"] = _ep("writing", "ace-writing", "create_plugin_alias")
+    alias_ep["fixture-ace-writing"] = _ep("writing", "fixture-ace-writing", "create_plugin_alias")
     assert resolve_with(_vf, discover=lambda: alias_ep).composition_id != baseline.composition_id
 
 
@@ -545,7 +545,7 @@ def test_resume_uses_frozen_composition_ignoring_mutable_profile(tmp_path):
     _write_profile(
         tmp_path,
         "writing",
-        text='schema = 1\nname = "writing"\n\n[[plugins]]\nid = "ace-writing"\n\n[plugins.config]\nace_root = "/mutated"\n',
+        text='schema = 1\nname = "writing"\n\n[[plugins]]\nid = "fixture-ace-writing"\n\n[plugins.config]\nace_root = "/mutated"\n',
     )
 
     run_id2 = uuid4().hex
@@ -581,7 +581,7 @@ def test_resume_version_mismatch_fails_before_model_request(tmp_path):
     snapshot = resolve_profile(
         "writing", settings, config_root=config_root, discover=lambda: DISCOVER, version_for=_vf
     )
-    bumped = lambda ep: "0.2.2" if ep.name == "ace-writing" else _vf(ep)
+    bumped = lambda ep: "0.2.2" if ep.name == "fixture-ace-writing" else _vf(ep)
     with pytest.raises(CompositionError, match="composition requires version"):
         build_agent_from_snapshot(
             settings,
@@ -599,7 +599,7 @@ def test_resume_entry_point_mismatch_fails_before_model_request(tmp_path):
         "writing", settings, config_root=config_root, discover=lambda: DISCOVER, version_for=_vf
     )
     moved = dict(DISCOVER)
-    moved["ace-writing"] = _ep("writing", "ace-writing", "create_plugin_alias")
+    moved["fixture-ace-writing"] = _ep("writing", "fixture-ace-writing", "create_plugin_alias")
     with pytest.raises(CompositionError, match="requires entry point"):
         build_agent_from_snapshot(
             settings,
