@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Docs — project narrative: proof PASS fixed as repo fact
+
+- `README.md`: `Next vertical slice` → `Proven vertical slice`. The final proof run
+  (`c58bf8cc62534cb3b991d47b6b5f404c`, `deepseek-v4-flash`, 22 requests, receipt
+  `completed`) is now stated as fact, with the pull/receipt/settlement dataflow
+  diagram and the convergence fixes (resume-safe quota, tool withdrawal, run
+  isolation, probe non-authoritative). `Next` now reads: repeat the same contract
+  with a second business slice or a second runtime.
+- `LICENSE`: added MIT license for the public repository.
+
 ### Proof — Harness-neutral pull-based Context execution (PASS)
 
 - article_id `vs-hw951-context-proof-20260815`, run `c58bf8cc62534cb3b991d47b6b5f404c`, `deepseek-v4-flash`, 22 requests, receipt **completed**; all machine checks PASS; historical unstamped receipts ignored; knowledge/exemplars stopped exactly at per-run caps; probe ran after final save without triggering another save. Details in `spec/writing-slice-gate.md`.

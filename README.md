@@ -85,7 +85,7 @@ def publish_product(product_id: int) -> str:
 Default policy:
 
 | Effect | Default |
-|---|---|
+| --- | --- |
 | `observe` | automatic |
 | `local_write` | automatic |
 | `external_write` | approval required |
@@ -124,20 +124,56 @@ The current search is lexical on purpose. Add embeddings only after a measured r
 - A generic source-ingestion framework.
 - A custom steering/inbox runtime.
 
-## Next vertical slice
+## Proven vertical slice
 
-The capability proof gate is settled; the current slice is the **Harness-neutral
-Context Delivery Proof** with article-context-engine. `examples/writing_case.py`
-starts one real autonomous ZUAEF agent; `examples/writing_toolset.py` is a thin
-adapter over ACE capabilities (`list_materials`, `read_material`,
-`retrieve_exemplars`, `retrieve_knowledge`, `check_claim`, `save_artifact`).
-The acceptance question is whether the running agent actually pulls raw material,
-writing corpus, knowledge/evidence policy, and claim validation from ACE — with
-receipts — rather than merely finishing an article.
+The **Harness-neutral Context Delivery Proof** has PASSED and is fixed repo fact,
+not a design conclusion. `examples/writing_case.py` runs one real autonomous ZUAEF
+agent against `examples/writing_toolset.py`, a thin adapter over ACE capabilities
+(`list_materials`, `read_material`, `retrieve_exemplars`, `retrieve_knowledge`,
+`check_claim`, `save_artifact`). The gate proved the running agent actually pulls
+raw material, writing corpus, knowledge/evidence policy, and claim validation from
+ACE — with receipts — rather than merely finishing an article.
+
+Final proof run:
+
+```text
+model           deepseek-v4-flash
+run             c58bf8cc62534cb3b991d47b6b5f404c
+requests        22
+receipt         completed
+machine checks  all PASS
+```
+
+```text
+Agent
+  ↓ pull
+ACE Context Engine
+  ↓ receipts
+ZUAEF Harness
+  ↓ settlement
+Artifact
+```
+
+Convergence fixes proven in this run:
+
+- **Resume-safe quota** — `BudgetedWritingToolset` seeds per-run delivery counts from
+  this run's ACE receipts (durable truth, read once per process); a rebuilt toolset
+  after pause/crash/resume re-reads the receipts, so quota is never reset by process
+  reconstruction.
+- **Tool withdrawal** — exhausted tools are refused at call time AND withdrawn from
+  the next model step's action space via `get_tools()`.
+- **Run isolation** — budgets are enforced per `(run_id, tool)`; prior runs can no
+  longer exhaust a new run's budget or satisfy its acceptance.
+- **Probe non-authoritative** — the `integration_probe` can never trigger another
+  save.
 
 An earlier run (`article_id=vs-hw951-20260815`,
 `run_id=bd023f87347f4ef98b50485c00c22ebe`) proved the basic writing + evidence gate
-path and is retained as comparison evidence. Human editorial trace is an optional
-long-term corpus loop, not a blocking completion condition. See
-`spec/writing-slice-gate.md` for CAP-1..CAP-4, receipt requirements, and the stop
-rule; only after this proof should adapters or corpus ON/OFF comparisons be discussed.
+path and is retained as comparison evidence. CAP-1..CAP-4, the receipt requirements,
+and the stop rule are fixed in `spec/writing-slice-gate.md`.
+
+## Next
+
+The contract is proven on one business slice. Before adding any more Harness
+machinery, **repeat the same contract with a second business slice or a second
+runtime** to test whether the core is actually generic.

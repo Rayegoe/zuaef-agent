@@ -33,13 +33,18 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 3258,
-      "sha256": "b0040258136747a19ead96fb660e662244d562ac073d3738a3e0720575c73be9"
+      "bytes": 3838,
+      "sha256": "dce7b9351cf2f0644e010a7c71abc76c7a18c98dc5b35667596cb65335bed4ab"
     },
     {
       "path": "DESIGN_REFERENCES.md",
       "bytes": 1757,
       "sha256": "01cf35429bd7c25ff183a21b4706efa03392e4ee66f6494038bd37f3983dc8fc"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1062,
+      "sha256": "d240b16fa0641a0e177db43a7497758796e7992ef8e365139d8d37a8edcff462"
     },
     {
       "path": "Outcome-First PydanticAI Agent Engineering Guide v2.0.md",
@@ -48,8 +53,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 6501,
-      "sha256": "e6464738daf187fc63a455db33200e0e0db26611e918015bfbdef6ee14ba3258"
+      "bytes": 7501,
+      "sha256": "0ecf512a32f45559de422a772bea669adcab7f23757ca63640b4af0ca512009e"
     },
     {
       "path": "REFACTOR_NOTES.md",
@@ -168,8 +173,8 @@
     },
     {
       "path": "src/zuaef_agent/runtime.py",
-      "bytes": 20779,
-      "sha256": "1038fc6f78db9868998b3f270b6d27095d7d640b27c50d95792151ccfbb72b9c"
+      "bytes": 21403,
+      "sha256": "6fd627c158865f4f24371076bc7539777780dac36ef0e50d9ca04d975082859f"
     },
     {
       "path": "src/zuaef_agent/verification.py",
