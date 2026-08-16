@@ -24,6 +24,9 @@ INCLUDE_GLOBS = [
     "spec/*.md",
     "src/zuaef_agent/*.py",
     "tests/*.py",
+    "tests/fixture_plugins/**/*.py",
+    "tests/fixture_plugins/**/*.md",
+    "tests/fixture_plugins/*.toml",
     "tools/*.py",
     "workspace/knowledge/index.md",
 ]

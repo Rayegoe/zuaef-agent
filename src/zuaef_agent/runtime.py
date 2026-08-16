@@ -22,6 +22,7 @@ from .core import build_agent
 from .knowledge_store import KnowledgeStore
 from .models import (
     ArtifactVerification,
+    CompositionSnapshot,
     CoreDeps,
     PauseReceipt,
     RunReceipt,
@@ -137,6 +138,7 @@ def finalize_terminal(
     snapshot: dict[str, str],
     prior_pause_receipt: PauseReceipt | None = None,
     error: str | None = None,
+    composition: CompositionSnapshot | None = None,
 ) -> TerminalRun:
     """Host verification boundary: verify model claims, degrade, and settle the receipt.
 
@@ -352,6 +354,7 @@ def finalize_terminal(
         tool_result_store=str(settings.tool_result_dir)
         if settings.enable_tool_output_limits
         else None,
+        composition=composition,
     )
     receipt_store.write(receipt)
     return TerminalRun(summary=final_summary, receipt=receipt)
@@ -368,6 +371,7 @@ def _build_paused(
     started_at: datetime,
     usage: dict[str, Any],
     snapshot: dict[str, str],
+    composition: CompositionSnapshot | None = None,
 ) -> PausedRun:
     effect_records = (
         latest_tool_effects(read_tool_effects(settings.step_store_dir, run_id))
@@ -413,6 +417,7 @@ def _build_paused(
         tool_result_store=str(settings.tool_result_dir)
         if settings.enable_tool_output_limits
         else None,
+        composition=composition,
     )
     ReceiptStore(settings.state_root).write(pause_receipt)
     return PausedRun(
@@ -435,6 +440,7 @@ def execute_run(
     deferred_tool_results: DeferredToolResults | None = None,
     prior_pause_receipt: PauseReceipt | None = None,
     retries: int | dict[str, int] | None = None,
+    composition: CompositionSnapshot | None = None,
 ) -> RuntimeOutcome:
     """Shared execution seam: run an already-composed agent through the common runtime.
 
@@ -442,6 +448,9 @@ def execute_run(
     host outcome verification and receipt settlement. It never builds agents —
     composition (build_agent + deps + business toolsets) is the caller's job.
     Run acceptance happens here: any failure after this point leaves a receipt.
+
+    ``composition`` is frozen into the receipt; a continuation must pass the
+    pause receipt's own snapshot.
 
     ``retries`` is passed through to ``agent.run`` as the tool-retry budget
     (a bare int, or ``{"tools": N}`` / ``{"output": N}``). It only raises the
@@ -489,6 +498,7 @@ def execute_run(
             snapshot=snapshot,
             prior_pause_receipt=prior_pause_receipt,
             error=error,
+            composition=composition,
         )
 
     try:
@@ -540,6 +550,7 @@ def execute_run(
             started_at=started_at,
             usage=usage,
             snapshot=snapshot,
+            composition=composition,
         )
     summary = (
         output
@@ -556,6 +567,7 @@ def execute_run(
         usage=usage,
         snapshot=snapshot,
         prior_pause_receipt=prior_pause_receipt,
+        composition=composition,
     )
 
 

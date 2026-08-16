@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from pathlib import Path
 
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.capabilities import AbstractCapability
@@ -55,8 +56,14 @@ def build_agent(
     run_id: str | None = None,
     extra_capabilities: Sequence[AbstractCapability[CoreDeps]] = (),
     extra_toolsets: Sequence[AbstractToolset[CoreDeps]] = (),
+    extra_skill_dirs: Sequence[Path] = (),
 ) -> Agent[CoreDeps, RunSummary | DeferredToolRequests]:
-    """Build one core agent through explicit composition; there is intentionally no registry."""
+    """Build one core agent through explicit composition; there is intentionally no registry.
+
+    ``extra_skill_dirs`` extends the Skills capability's source directories
+    (plugin skill dirs; the base ``settings.skills_dir`` stays first, so a
+    local skill wins a duplicate id over an installed plugin's).
+    """
     settings.workspace_root.mkdir(parents=True, exist_ok=True)
     settings.state_root.mkdir(parents=True, exist_ok=True)
 
@@ -89,8 +96,14 @@ def build_agent(
     capabilities.append(Knowledge())
     if settings.enable_planning:
         capabilities.append(Planning[CoreDeps]())
-    if settings.enable_skills and settings.skills_dir.exists():
-        capabilities.append(Skills[CoreDeps](settings.skills_dir))
+    if settings.enable_skills:
+        skill_dirs = [
+            directory
+            for directory in (settings.skills_dir, *extra_skill_dirs)
+            if directory.exists()
+        ]
+        if skill_dirs:
+            capabilities.append(Skills[CoreDeps](skill_dirs))
     capabilities.extend(extra_capabilities)
 
     return Agent(

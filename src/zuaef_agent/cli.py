@@ -16,9 +16,16 @@ from pydantic_ai import (
 from pydantic_ai.exceptions import UserError
 from pydantic_ai.messages import ToolCallPart
 
+from .composition import (
+    build_profile_agent,
+    inspect_plugin,
+    installed_plugins,
+    resolve_profile,
+)
 from .config import AgentSettings
 from .core import build_agent
 from .models import CoreDeps
+from .profiles import list_profiles, load_profile
 from .receipt_store import ReceiptStore
 from .runtime import PausedRun, RuntimeOutcome, execute_run, run_task
 
@@ -40,6 +47,10 @@ def _parser() -> argparse.ArgumentParser:
 
     run = sub.add_parser("run", help="Run a task through the shared runtime")
     run.add_argument("task", help="Outcome/task for the agent")
+    run.add_argument(
+        "--profile",
+        help="explicit plugin composition profile under $ZUAEF_CONFIG_ROOT/profiles/",
+    )
     run.add_argument("--model")
     run.add_argument("--workspace", type=Path)
     run.add_argument("--request-limit", type=int)
@@ -53,6 +64,34 @@ def _parser() -> argparse.ArgumentParser:
     resume.add_argument("--reason", help="message shown to the model when denying")
     resume.add_argument("--model")
     resume.add_argument("--workspace", type=Path)
+
+    plugin = sub.add_parser(
+        "plugin",
+        help="inspect installed plugins — installed/discoverable, never enabled",
+    )
+    plugin_sub = plugin.add_subparsers(dest="plugin_command", required=True)
+    plugin_sub.add_parser("list", help="list installed plugin entry points")
+    plugin_inspect = plugin_sub.add_parser(
+        "inspect", help="show one installed plugin's metadata"
+    )
+    plugin_inspect.add_argument("plugin_id", help="plugin id (zuaef.plugins entry point name)")
+
+    profile = sub.add_parser("profile", help="manage explicit plugin compositions")
+    profile_sub = profile.add_subparsers(dest="profile_command", required=True)
+    profile_list = profile_sub.add_parser("list", help="list profiles under the config root")
+    profile_list.add_argument("--config-root", type=Path)
+    profile_show = profile_sub.add_parser(
+        "show", help="show one profile's declared (non-secret) configuration"
+    )
+    profile_show.add_argument("name")
+    profile_check = profile_sub.add_parser(
+        "check",
+        help="fully resolve one profile (loads factories, validates bundles,"
+        " detects conflicts) without any model request",
+    )
+    profile_check.add_argument("name")
+    for command in (profile_show, profile_check):
+        command.add_argument("--config-root", type=Path)
     return p
 
 
@@ -89,7 +128,25 @@ def _print_outcome(outcome: RuntimeOutcome) -> None:
 
 def _run(args: argparse.Namespace) -> int:
     settings = _settings_from_args(args)
-    outcome = run_task(args.task, settings)
+    profile = getattr(args, "profile", None)
+    if profile is None:
+        outcome = run_task(args.task, settings)
+    else:
+        run_id = uuid4().hex
+        agent, snapshot = build_profile_agent(
+            settings, run_id=run_id, profile=profile
+        )
+        deps = CoreDeps(
+            workspace_root=settings.workspace_root.resolve(), run_id=run_id
+        )
+        outcome = execute_run(
+            agent,
+            deps,
+            prompt=args.task,
+            settings=settings,
+            run_id=run_id,
+            composition=snapshot,
+        )
     _print_outcome(outcome)
     return _outcome_exit_code(outcome)
 
@@ -127,7 +184,16 @@ def _resume(args: argparse.Namespace) -> int:
         results.calls[entry["tool_call_id"]] = ToolFailed("no external executor configured")
 
     run_id = uuid4().hex
-    agent = build_agent(settings, run_id=run_id)
+    composition = getattr(receipt, "composition", None)
+    if composition is not None:
+        # The pause receipt is the composition authority; the mutable
+        # current profile is ignored, and an installed version/entry point
+        # that drifted from the frozen snapshot fails here (process error).
+        agent, _ = build_profile_agent(
+            settings, run_id=run_id, snapshot=composition
+        )
+    else:
+        agent = build_agent(settings, run_id=run_id)
     deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
     outcome = execute_run(
         agent,
@@ -138,9 +204,50 @@ def _resume(args: argparse.Namespace) -> int:
         message_history=history,
         deferred_tool_results=results,
         prior_pause_receipt=receipt,
+        composition=composition,
     )
     _print_outcome(outcome)
     return _outcome_exit_code(outcome)
+
+
+def _plugin(args: argparse.Namespace) -> int:
+    if args.plugin_command == "list":
+        rows = installed_plugins()
+        if not rows:
+            print("(no plugins installed)")
+            return 0
+        for plugin_id, version in rows:
+            print(f"{plugin_id:<20}{version}")
+        return 0
+    plugin_id, version, entry_point = inspect_plugin(args.plugin_id)
+    print(f"id: {plugin_id}")
+    print(f"version: {version}")
+    print(f"entry_point: {entry_point}")
+    return 0
+
+
+def _profile(args: argparse.Namespace) -> int:
+    if args.profile_command == "list":
+        names = list_profiles(args.config_root)
+        if not names:
+            print("(no profiles)")
+            return 0
+        for name in names:
+            print(name)
+        return 0
+    config_root = args.config_root
+    if args.profile_command == "show":
+        profile = load_profile(args.name, config_root)
+        print(
+            json.dumps(profile.model_dump(), ensure_ascii=False, indent=2)
+        )
+        return 0
+    settings = AgentSettings.from_env()
+    snapshot = resolve_profile(args.name, settings, config_root=config_root)
+    print(
+        json.dumps(snapshot.model_dump(), ensure_ascii=False, indent=2)
+    )
+    return 0
 
 
 def main() -> None:
@@ -153,7 +260,14 @@ def main() -> None:
         sys.exit(EXIT_PROCESS_ERROR)
 
     try:
-        code = _run(args) if args.command == "run" else _resume(args)
+        if args.command == "run":
+            code = _run(args)
+        elif args.command == "resume":
+            code = _resume(args)
+        elif args.command == "plugin":
+            code = _plugin(args)
+        else:
+            code = _profile(args)
     except (ValueError, FileNotFoundError, LookupError, UserError) as exc:
         print(f"process error: {exc}", file=sys.stderr)
         sys.exit(EXIT_PROCESS_ERROR)

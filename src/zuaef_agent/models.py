@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from .plugin_api import CompositionSnapshot
+
 
 class SourceRef(BaseModel):
     """A source actually observed by the system."""
@@ -53,9 +55,14 @@ class ToolEffectVerification(BaseModel):
 
 
 class RunReceipt(BaseModel):
-    """Machine-readable index over one terminal run's durable evidence."""
+    """Machine-readable index over one terminal run's durable evidence.
 
-    schema_version: Literal["1.1"] = "1.1"
+    ``composition`` freezes the plugin composition (profile, plugin refs,
+    composition_id) for receipts of composed runs; runs without a profile
+    keep ``composition = None``.
+    """
+
+    schema_version: Literal["1.2"] = "1.2"
     state: Literal["terminal"] = "terminal"
     run_id: str
     conversation_id: str | None = None
@@ -76,12 +83,17 @@ class RunReceipt(BaseModel):
     error: str | None = None
     step_store: str | None = None
     tool_result_store: str | None = None
+    composition: CompositionSnapshot | None = None
 
 
 class PauseReceipt(BaseModel):
-    """Receipt for a run that paused awaiting approval — not a terminal state."""
+    """Receipt for a run that paused awaiting approval — not a terminal state.
 
-    schema_version: Literal["1.1"] = "1.1"
+    ``composition`` is the resume authority: a continuation must reconstruct
+    the exact frozen composition and must ignore the mutable current profile.
+    """
+
+    schema_version: Literal["1.2"] = "1.2"
     state: Literal["paused"] = "paused"
     run_id: str
     conversation_id: str
@@ -97,6 +109,7 @@ class PauseReceipt(BaseModel):
     usage_complete: bool = False
     step_store: str | None = None
     tool_result_store: str | None = None
+    composition: CompositionSnapshot | None = None
 
 
 AnyReceipt = RunReceipt | PauseReceipt

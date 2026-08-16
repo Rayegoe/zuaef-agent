@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-fixture-plugins"
+version = "0.1.0"
+description = "Installable fixture plugins proving the zuaef.plugins entry-point contract (spec §6)."
+requires-python = ">=3.11"
+dependencies = ["pydantic-ai>=2.27"]
+
+[project.entry-points."zuaef.plugins"]
+ace-writing = "fixture_plugins.writing:create_plugin"
+hardware-scout = "fixture_plugins.hardware:create_plugin"
+capability-plugin = "fixture_plugins.capability:create_plugin"
+conflict-plugin = "fixture_plugins.conflict:create_plugin"
+never-enabled = "fixture_plugins.never_enabled:create_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fixture_plugins"]

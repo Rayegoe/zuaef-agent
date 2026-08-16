@@ -42,11 +42,6 @@
       "sha256": "01cf35429bd7c25ff183a21b4706efa03392e4ee66f6494038bd37f3983dc8fc"
     },
     {
-      "path": "LICENSE",
-      "bytes": 1062,
-      "sha256": "d240b16fa0641a0e177db43a7497758796e7992ef8e365139d8d37a8edcff462"
-    },
-    {
       "path": "Outcome-First PydanticAI Agent Engineering Guide v2.0.md",
       "bytes": 35823,
       "sha256": "5419ff2b994d836e8c2eac1198566c1d391e0b43817cdad4567699d4ef9baa28"
@@ -65,6 +60,11 @@
       "path": "V1_1_VALIDATION.md",
       "bytes": 1469,
       "sha256": "511bcd43cdc6ef0bd287c1a74dbfbd0d3a32ed870e99aaf68c6505a87314b8ea"
+    },
+    {
+      "path": "ZUAEF Plugin Composition Layer — SPEC v0.2.md",
+      "bytes": 24318,
+      "sha256": "3ac89fe3cde85543c7d7feb8d8284580ed3440e30d48eeb1887697e45e9a48e2"
     },
     {
       "path": "examples/approval_toolset.py",
@@ -93,8 +93,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 736,
-      "sha256": "2e60a39c5f17f88e12f4499f10300035428c7ff780fc1a2499c0ff72c740a309"
+      "bytes": 761,
+      "sha256": "56328572154a5dc17ddf68602be7753ea9a4acd5c4a92456a231e46059f8da87"
     },
     {
       "path": "uv.lock",
@@ -128,8 +128,13 @@
     },
     {
       "path": "src/zuaef_agent/cli.py",
-      "bytes": 5763,
-      "sha256": "f55ab1a74da678bfb9d8aa376e3959435786acf34c3c86ba466ad61480eb818e"
+      "bytes": 9825,
+      "sha256": "f90f1eea99426f7434a320a3efbed76bd9db9d8f20019da0a684c593f68f3daa"
+    },
+    {
+      "path": "src/zuaef_agent/composition.py",
+      "bytes": 12629,
+      "sha256": "0a06c1d4006ccb32de6d3d41051b669d008aa463ac8ef27f19b4bbf0b0b6f40f"
     },
     {
       "path": "src/zuaef_agent/config.py",
@@ -138,8 +143,8 @@
     },
     {
       "path": "src/zuaef_agent/core.py",
-      "bytes": 4484,
-      "sha256": "b4e30258d6a2211c5ae1a52afc0abcff2010f18f05ce5ef43980634bb6b52959"
+      "bytes": 4918,
+      "sha256": "2ed851f60c781ec8b742fb237a9e1e9099c0c2faf8472efb266c2911ba9b9c08"
     },
     {
       "path": "src/zuaef_agent/effects.py",
@@ -158,8 +163,18 @@
     },
     {
       "path": "src/zuaef_agent/models.py",
-      "bytes": 3505,
-      "sha256": "c8d8654903fef010cf5e5f95bf56898c8790b6acbb0818b328a57d24f7e5c2c3"
+      "bytes": 4000,
+      "sha256": "cbbd66c3552ab70b722c266275640951d6f06a85e14948fe400c6cc3d49e6684"
+    },
+    {
+      "path": "src/zuaef_agent/plugin_api.py",
+      "bytes": 4450,
+      "sha256": "5e1b81d6d39c0afadcdf589f16ae73269e4811d1fb9dbf47426022c87ce10606"
+    },
+    {
+      "path": "src/zuaef_agent/profiles.py",
+      "bytes": 4881,
+      "sha256": "c5ad3caa2547034410a05ef03b669a5d321ffd74e04f20e64a6a0193ed706035"
     },
     {
       "path": "src/zuaef_agent/providers.py",
@@ -173,8 +188,8 @@
     },
     {
       "path": "src/zuaef_agent/runtime.py",
-      "bytes": 21403,
-      "sha256": "6fd627c158865f4f24371076bc7539777780dac36ef0e50d9ca04d975082859f"
+      "bytes": 21869,
+      "sha256": "3f43b6c369ca0bf2009ea624981db279562dd3ac949783fc7405bfef782d3092"
     },
     {
       "path": "src/zuaef_agent/verification.py",
@@ -218,8 +233,13 @@
     },
     {
       "path": "tests/test_manifest_integrity.py",
-      "bytes": 1879,
-      "sha256": "7598ca9b3ffb58d8cb3142eef56f352bce2881aa358701839c6844a0d1509908"
+      "bytes": 2001,
+      "sha256": "6796f71b3a3240307632f6373606105560c30eda813feaf0e8e03b755b6e06e8"
+    },
+    {
+      "path": "tests/test_plugin_composition.py",
+      "bytes": 22388,
+      "sha256": "4e6de099c920187875203534115c9b0d4a7dcc5dd23161811f01b24b2c185e0d"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -237,9 +257,54 @@
       "sha256": "1b1f2e0a8e82dc18e5f9bfa061dc04994775dda88a0bad0154e033b8057a9d7b"
     },
     {
+      "path": "tests/fixture_plugins/fixture_plugins/__init__.py",
+      "bytes": 289,
+      "sha256": "67914bc1d856236dec0221598ecfe5bd15a0d296175533de398e41579078cdf3"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/broken.py",
+      "bytes": 378,
+      "sha256": "5ffcda36e3c3f1f5d7f531fd2ba7d408f00e1e990d0173fa1cb242fa0f2e64fd"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/capability.py",
+      "bytes": 1003,
+      "sha256": "8357f092bcbdc54d534018ea2b267398151aa8adaff8fa47a448a200ac5e8d80"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/conflict.py",
+      "bytes": 603,
+      "sha256": "4961b1a8fc4b1bb86917853f4055e4e5cbd3f2143d238b0da3f4211000941220"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/hardware.py",
+      "bytes": 637,
+      "sha256": "aae8fb365f8dba74b3cdaf49fce0b2668c5f0e85ecc12f38711165d6578bf835"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/never_enabled.py",
+      "bytes": 595,
+      "sha256": "3474090b962ad1e1b134bb4c9f66c8659840a3679bbd5aabcfe457c9debba194"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/writing.py",
+      "bytes": 1601,
+      "sha256": "0ad5ce7fb6de3725f74d62d615c3ba311bb62c7304b709155116b572717bb92f"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/skills/writing/SKILL.md",
+      "bytes": 249,
+      "sha256": "a7f242be4cc173d9aad579a241d7546be4b38138ba3d33d123ef3fac90394269"
+    },
+    {
+      "path": "tests/fixture_plugins/pyproject.toml",
+      "bytes": 708,
+      "sha256": "f8d81bbe0e6c61bbb9eb3bcbf809b8037b1d0f622a29dad7e777a2f539a67e3c"
+    },
+    {
       "path": "tools/regen_manifest.py",
-      "bytes": 1811,
-      "sha256": "7900c88663bb2c7060692ba69bb593dc66850a75ca02c3e079f6f841cfdb1f90"
+      "bytes": 1921,
+      "sha256": "e28f66c752f19fc35f6b90da06c478ce4c9d016d96fc7f1ad0ef4d3c30063273"
     },
     {
       "path": "workspace/knowledge/index.md",
