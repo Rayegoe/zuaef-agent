@@ -33,8 +33,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 6664,
-      "sha256": "d882a83a0e7fb738bf25315708d8c647417893ac8fbd6dc57fabfde803ddc71f"
+      "bytes": 8066,
+      "sha256": "b1501b24e1f8de2acb55886444f8e482bf9a79e0ca731e9a31753fe84bbc992f"
     },
     {
       "path": "DESIGN_REFERENCES.md",
@@ -48,8 +48,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 9046,
-      "sha256": "69d3ee4aedb3227e5fdadcfac13c74e1824d3765eef0040a327cbec9053ef972"
+      "bytes": 10490,
+      "sha256": "52210ad8717175369a13533ec2360713fb2fef30dbeb55de9a5a2b9440c4e165"
     },
     {
       "path": "REFACTOR_NOTES.md",
@@ -73,13 +73,8 @@
     },
     {
       "path": "examples/budget_case.py",
-      "bytes": 10256,
-      "sha256": "9c074a30b857f736118c761e68ca9b8bb42e1181990dfd174e71c9ac8c226ec2"
-    },
-    {
-      "path": "examples/budget_toolset.py",
-      "bytes": 8576,
-      "sha256": "9a398f3d1229ed515c9db3477ee07179c83153fbb22793f0cb4af19659074528"
+      "bytes": 12621,
+      "sha256": "bcfef64ecb86abe69685462b35e361f33ddf0b1e8bc8b392f65622ebfbe4f14d"
     },
     {
       "path": "examples/capability_proof.py",
@@ -102,69 +97,9 @@
       "sha256": "1b2d553f816e87a690331610341a3d8c80c64b974629eb1fd0c45fb10afff30d"
     },
     {
-      "path": "examples/budget_lib/__init__.py",
-      "bytes": 1709,
-      "sha256": "dd985231905ed76c48a6b3ae34dc86d2ac92b1b48d41aa5acb4cd2d1cc13dad2"
-    },
-    {
-      "path": "examples/budget_lib/budget_consistency.py",
-      "bytes": 4735,
-      "sha256": "34ec51cc4053df74e71f59c8ac95a971b7bc6f6e52f6ef0b246a494cd203e05e"
-    },
-    {
-      "path": "examples/budget_lib/budget_diff.py",
-      "bytes": 5298,
-      "sha256": "86fb8011efc7c44ded675dc92c4c010ebc3a07efb113b111d30849b763cb36b1"
-    },
-    {
-      "path": "examples/budget_lib/budget_health.py",
-      "bytes": 5939,
-      "sha256": "a1f88b509f5dd28f8d5218c1c2c7379c03758bb80042dcfe7c043236dbe1700e"
-    },
-    {
-      "path": "examples/budget_lib/budget_query.py",
-      "bytes": 3250,
-      "sha256": "dfdff130b6c15a5ba831393bfb05beee2e240c40bd24836bcb7a704d6cd0df3f"
-    },
-    {
-      "path": "examples/budget_lib/budget_summary.py",
-      "bytes": 3141,
-      "sha256": "5698b1b0e8dd22df993c08d4845ea6e53d909f6929c656a8c1be92411bfd10c6"
-    },
-    {
-      "path": "examples/budget_lib/budget_variance.py",
-      "bytes": 2152,
-      "sha256": "7874c05c2e1ead2ad51fdb95b2afa1dcd303a846cea28fa3431771a1f8c02cf5"
-    },
-    {
-      "path": "examples/budget_lib/csv_parser.py",
-      "bytes": 4185,
-      "sha256": "d7942fc801194a873dbbb92bd920ec66ffbeb980be30048a1a85ba80104fd94a"
-    },
-    {
-      "path": "examples/budget_lib/models.py",
-      "bytes": 11544,
-      "sha256": "9b3e927867ff70ebb891cc2f9be0b15920f8835a1645513beb8f7af2e099b312"
-    },
-    {
-      "path": "examples/budget_lib/significant_changes.py",
-      "bytes": 2356,
-      "sha256": "ee073378e32bed27bbfd37c936f328682f126046c7d2b909bdde43f8354140ce"
-    },
-    {
-      "path": "examples/budget_lib/utils.py",
-      "bytes": 897,
-      "sha256": "c781e9ba0be49da9e59a3131826d67afefad1686c87d50b81d52af203733d6ab"
-    },
-    {
-      "path": "examples/data/emtb_budget_sample.csv",
-      "bytes": 648,
-      "sha256": "5c5bf85a2472fc929c07db028953403abcc1fb56979cca990b9c4b4b6b1bcf95"
-    },
-    {
       "path": "pyproject.toml",
-      "bytes": 790,
-      "sha256": "e5fba42fa54a751683f69ae72c31ad3fc53d7fa672cc77f10af11c8b3f29fff7"
+      "bytes": 824,
+      "sha256": "c8a94876c40a7bf430c95c425a95c8f4e55f86234637609775aae21c4fe055c9"
     },
     {
       "path": "uv.lock",
@@ -273,8 +208,8 @@
     },
     {
       "path": "tests/test_budget_slice.py",
-      "bytes": 14100,
-      "sha256": "601528b76cc42cb8f449922e3a7f72dd500f3bcddae3df59182aa4fe9c3cf593"
+      "bytes": 17055,
+      "sha256": "00f10e3d3aa29d46f8281bad0205e7fa00953cc6d8419b987b856086d35784eb"
     },
     {
       "path": "tests/test_cli_and_providers.py",
@@ -313,8 +248,8 @@
     },
     {
       "path": "tests/test_manifest_integrity.py",
-      "bytes": 2184,
-      "sha256": "f7db26179ad1de8c9cdc5043234a53158352f16e89facf417178e483a9da132c"
+      "bytes": 2176,
+      "sha256": "86c999cb5004e869be840b0f23bef0d532149f20ae4d6b9752383a914bc5b760"
     },
     {
       "path": "tests/test_plugin_composition.py",
@@ -397,9 +332,114 @@
       "sha256": "ca9f4f60c693c9f8cd3afd86668c90c7eb1983e17519df79222eb69eb0dd75f4"
     },
     {
-      "path": "plugins/zuaef-ace-writing/pyproject.toml",
-      "bytes": 698,
-      "sha256": "157785d5fec18cb8ce7396c82e108571543b871e85b184823a1722747229bf67"
+      "path": "plugins/zuaef-client-service/zuaef_client_service/__init__.py",
+      "bytes": 987,
+      "sha256": "9931415661dea40461b60c40abbe6db8b303992e87e09eaca9a8381b9b7c9274"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/canonical.py",
+      "bytes": 17364,
+      "sha256": "6fad72b04958781669b14bd71ab800905ad7589d8f7689527daa064434934650"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/models.py",
+      "bytes": 7854,
+      "sha256": "37c6c5b0d9c4d653609b273fe3cf2ba2e0c5f653a6106f556d4729d63f2bc1ad"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/plugin.py",
+      "bytes": 2444,
+      "sha256": "3a61a1ec9c1c36cb5f63f932f6caa4af2617deb5d5888209aba06ea3de48b005"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/policy.py",
+      "bytes": 3885,
+      "sha256": "18da5a2ff76a879c98c8e202df125d34ac646b4924daaa28d08fcbd464696785"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/store.py",
+      "bytes": 8732,
+      "sha256": "5fd8825ddc55b68af70eb6f85dcc492ab7f8ecbdcb78d40e13ad7d48bca62642"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/toolset.py",
+      "bytes": 17023,
+      "sha256": "480ed79a0fe23c7fe42bc1ee7f698e21c5f8bddacda9ff2f647c6e6e93d13254"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/__init__.py",
+      "bytes": 731,
+      "sha256": "6f8d13337c18ab0a2e8890b4171ba7e004cbdba8b2533d47e73c4abc3c685695"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/__init__.py",
+      "bytes": 1709,
+      "sha256": "dd985231905ed76c48a6b3ae34dc86d2ac92b1b48d41aa5acb4cd2d1cc13dad2"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_consistency.py",
+      "bytes": 4735,
+      "sha256": "34ec51cc4053df74e71f59c8ac95a971b7bc6f6e52f6ef0b246a494cd203e05e"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_diff.py",
+      "bytes": 5298,
+      "sha256": "86fb8011efc7c44ded675dc92c4c010ebc3a07efb113b111d30849b763cb36b1"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_health.py",
+      "bytes": 5939,
+      "sha256": "a1f88b509f5dd28f8d5218c1c2c7379c03758bb80042dcfe7c043236dbe1700e"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_query.py",
+      "bytes": 3250,
+      "sha256": "dfdff130b6c15a5ba831393bfb05beee2e240c40bd24836bcb7a704d6cd0df3f"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_summary.py",
+      "bytes": 3141,
+      "sha256": "5698b1b0e8dd22df993c08d4845ea6e53d909f6929c656a8c1be92411bfd10c6"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_variance.py",
+      "bytes": 2152,
+      "sha256": "7874c05c2e1ead2ad51fdb95b2afa1dcd303a846cea28fa3431771a1f8c02cf5"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/csv_parser.py",
+      "bytes": 4185,
+      "sha256": "d7942fc801194a873dbbb92bd920ec66ffbeb980be30048a1a85ba80104fd94a"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/models.py",
+      "bytes": 11544,
+      "sha256": "9b3e927867ff70ebb891cc2f9be0b15920f8835a1645513beb8f7af2e099b312"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/significant_changes.py",
+      "bytes": 2356,
+      "sha256": "ee073378e32bed27bbfd37c936f328682f126046c7d2b909bdde43f8354140ce"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/utils.py",
+      "bytes": 897,
+      "sha256": "c781e9ba0be49da9e59a3131826d67afefad1686c87d50b81d52af203733d6ab"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/plugin.py",
+      "bytes": 1126,
+      "sha256": "3395f6852daa8bdd205348473fb8095c6f7ab46eb6db45d57b720c5c58a3fc2f"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/toolset.py",
+      "bytes": 8594,
+      "sha256": "f29efbd50d1a03f09bb8049907fb2e26bed168baadffaf97225ef790bd600577"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/data/emtb_budget_sample.csv",
+      "bytes": 648,
+      "sha256": "5c5bf85a2472fc929c07db028953403abcc1fb56979cca990b9c4b4b6b1bcf95"
     },
     {
       "path": "profiles/ace-writing.toml",
@@ -407,9 +447,14 @@
       "sha256": "bafcf228f064b1670628be9c02d9dbfdfd621f36c645d424d2248fd7332f54f8"
     },
     {
+      "path": "profiles/emtb-budget.toml",
+      "bytes": 339,
+      "sha256": "ccf603130855213707084b51a53bd356c0b66bacbc269665fe96c23aea300e1f"
+    },
+    {
       "path": "tools/regen_manifest.py",
-      "bytes": 2084,
-      "sha256": "d201067780bf6280033c7733148bc47092f388d02c7e00977e876aa9c00ef642"
+      "bytes": 2072,
+      "sha256": "f34128506713aad1a66e785a8817ddcd19e8636fb003c99c5df4f83784f1abb6"
     },
     {
       "path": "workspace/knowledge/index.md",

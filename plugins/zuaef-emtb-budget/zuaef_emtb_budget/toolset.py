@@ -24,7 +24,8 @@ from typing import Any
 
 from pydantic_ai import FunctionToolset, RunContext
 
-from examples.budget_lib import (
+from zuaef_agent.models import CoreDeps
+from zuaef_emtb_budget.budget_lib import (
     EMTBBudgetDataPoint,
     analyze_budget_variance,
     budget_health_check,
@@ -34,7 +35,7 @@ from examples.budget_lib import (
     query_period_end_budget,
     validate_budget_consistency,
 )
-from examples.budget_lib.models import (
+from zuaef_emtb_budget.budget_lib.models import (
     BudgetConsistencyInput,
     BudgetHealthGoal,
     BudgetSummaryInput,
@@ -42,7 +43,6 @@ from examples.budget_lib.models import (
     QueryPeriodEndBudgetInput,
     SignificantChangeDetectionInput,
 )
-from zuaef_agent.models import CoreDeps
 
 BUDGET_RULES = (
     "EMTB 预算分析工具集。先用 parse_budget_csv 把 CSV 解析为结构化数据点，"

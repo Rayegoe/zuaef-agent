@@ -1,0 +1,9 @@
+# Example profile: EMTB budget plugin (Stage 6A).
+# Install: cp profiles/emtb-budget.toml ~/.config/zuaef/profiles/emtb-budget.toml
+# (config root: $ZUAEF_CONFIG_ROOT, default ~/.config/zuaef). "emtb-budget"
+# must match the file name. Config keys are non-secret only.
+schema = 1
+name = "emtb-budget"
+
+[[plugins]]
+id = "zuaef-emtb-budget"

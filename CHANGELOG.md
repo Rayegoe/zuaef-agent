@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Proof — EMTB budget as second plugin (Stage 6A) PASS
+
+- `plugins/zuaef-emtb-budget/`: installed distribution (0.1.0) exposing `zuaef.plugins` entry point `zuaef-emtb-budget = zuaef_emtb_budget:create_plugin`; factory returns one `PluginBundle` (toolset only); domain library + data CSV moved here from `examples/` (faithful zesenticai extraction, zero agent/LLM deps).
+- `profiles/emtb-budget.toml`: example profile (schema 1, non-secret).
+- `examples/budget_case.py`: `--profile` composes via `build_profile_agent` (resolve → freeze → compose) and threads the snapshot into the receipt; `--config-root` defaults to the repo. Final run `8a8a5b539cb14144994298edd455f4a7` (`deepseek-v4-flash`, profile `emtb-budget`): receipt `completed`, CompositionSnapshot present (`plugins=[zuaef-emtb-budget]`), host-verified artifact, all machine checks PASS, unknowns none.
+- `tests/test_budget_slice.py`: imports migrated to `zuaef_emtb_budget.*`; added `TestPluginContract` (bundle shape, tool names, factory env/config record, parity with direct assembly). 120 tests total pass.
+- `tests/test_manifest_integrity.py` / `tools/regen_manifest.py`: manifest globs generalized to `plugins/**`.
+- `pyproject.toml`: pytest `pythonpath` gains the two plugin dirs + repo root so `examples` resolves for all test modules.
+- Constraint verified: `core.py`, `runtime.py`, `composition.py` unchanged (git diff).
+
 ### Proof — EMTB budget slice (example2) through the production seam (PASS)
 
 - `examples/budget_lib/`: faithful extraction of zesenticai finance_agent deterministic commands (bilingual CSV parsing + summary / variance / consistency / health / query / significant-change). Zero agent / LLM dependency; unit-pinned to source behavior.

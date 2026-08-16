@@ -1,23 +1,32 @@
-"""ZUAEF x EMTB budget slice: second business proof through the shared seam.
+"""ZUAEF x EMTB budget: Stage 6A — second plugin generalization proof.
 
 The question is not "can the agent produce a number" but:
 
-    Can a business domain arrive as a Toolset and run through the shared
-    production seam — build_agent(settings, extra_toolsets=[...]) — with
-    zero core changes, while the host owns artifact verification and receipt
-    settlement?
+    Can a business domain arrive as an installed ``zuaef.plugins`` entry point
+    and run through the Plugin Composition Layer — resolve profile -> freeze
+    CompositionSnapshot -> compose -> execute — with zero core changes, while
+    the host owns artifact verification and receipt settlement?
 
-``examples/budget_lib`` is a faithful extraction of zesenticai's
+``zuaef_emtb_budget.budget_lib`` is a faithful extraction of zesenticai's
 finance_agent deterministic commands (bilingual CSV parsing + summary /
-variance / consistency / health / query / significant-change). This case
-drives ONE real core agent over ONE real EMTB budget CSV (Chinese + English
-column headers) and checks machine facts only — nothing here depends on the
-model's taste or style.
+variance / consistency / health / query / significant-change). The plugin
+factory wires one toolset; the profile ``emtb-budget`` enables it.
+
+Two composition paths (both proven, both unchanged in core):
+
+  --profile emtb-budget      plugin path: build_profile_agent resolves the
+                             profile, freezes the CompositionSnapshot, and
+                             threads it into the receipt (exact resume).
+  (no --profile)             direct path: build_agent(extra_toolsets=[...])
+                             using the SAME plugin toolset — proof evidence
+                             from example2, kept as parity baseline.
 
 Acceptance is the harness contract, not the analysis's business verdict:
   - run completed with a terminal receipt on disk
   - save_budget_report artifact verified by the host (SHA-256 ownership)
   - parse_budget_csv and save_budget_report settled as completed tool effects
+  - with --profile: receipt.composition present, plugins include
+    zuaef-emtb-budget, composition_id non-empty
   - host-side deterministic expectations over the same CSV are printed for
     cross-check (counts / inconsistency / significant changes / health state)
 """
@@ -35,7 +44,9 @@ PROJECT_ROOT = HERE.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from examples.budget_toolset import build_budget_toolset
+from zuaef_emtb_budget.toolset import build_budget_toolset
+
+from zuaef_agent.composition import build_profile_agent
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.core import build_agent
 from zuaef_agent.models import CoreDeps
@@ -82,13 +93,13 @@ def host_expectations(csv_path: Path) -> dict:
     These do NOT depend on the model — they are the cross-check the operator
     can verify against the agent's report.
     """
-    from examples.budget_lib import (
+    from zuaef_emtb_budget.budget_lib import (
         budget_health_check,
         detect_significant_changes,
         parse_emtb_budget_csv,
         validate_budget_consistency,
     )
-    from examples.budget_lib.models import (
+    from zuaef_emtb_budget.budget_lib.models import (
         BudgetConsistencyInput,
         BudgetHealthGoal,
         SignificantChangeDetectionInput,
@@ -116,11 +127,29 @@ def host_expectations(csv_path: Path) -> dict:
 
 
 def main() -> int:
+    default_csv = (
+        Path(__file__).resolve().parent.parent
+        / "plugins"
+        / "zuaef-emtb-budget"
+        / "zuaef_emtb_budget"
+        / "data"
+        / "emtb_budget_sample.csv"
+    )
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--csv", default=str(default_csv),
+                    help="path to an EMTB budget CSV (Chinese or English headers)")
     ap.add_argument(
-        "--csv",
-        default=str(HERE / "data" / "emtb_budget_sample.csv"),
-        help="path to an EMTB budget CSV (Chinese or English headers)",
+        "--profile",
+        default=None,
+        help="compose the agent via a ZUAEF profile (plugin path) instead of "
+        "the direct toolset assembly; the frozen snapshot lands in the receipt",
+    )
+    ap.add_argument(
+        "--config-root",
+        type=Path,
+        default=PROJECT_ROOT,
+        help="config root whose profiles/ holds <profile>.toml "
+        "(default: this repository, where profiles/emtb-budget.toml lives)",
     )
     ap.add_argument(
         "--question",
@@ -153,11 +182,23 @@ def main() -> int:
     )
 
     run_id = uuid4().hex
-    agent = build_agent(
-        settings,
-        run_id=run_id,
-        extra_toolsets=[build_budget_toolset()],
-    )
+    composition = None
+    if args.profile:
+        # Plugin Composition Layer path: resolve -> freeze -> compose. The
+        # snapshot threads into the receipt; resume stays exact.
+        agent, composition = build_profile_agent(
+            settings,
+            run_id=run_id,
+            profile=args.profile,
+            config_root=args.config_root,
+        )
+    else:
+        # Direct-toolset path (example2 proof evidence, same plugin toolset).
+        agent = build_agent(
+            settings,
+            run_id=run_id,
+            extra_toolsets=[build_budget_toolset()],
+        )
     deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
 
     prompt = (
@@ -177,6 +218,7 @@ def main() -> int:
         settings=settings,
         run_id=run_id,
         retries={"tools": 5},
+        composition=composition,
     )
 
     if isinstance(outcome, PausedRun):
@@ -193,9 +235,22 @@ def main() -> int:
     parsed_ok = "parse_budget_csv" in effect_names
     saved_ok = "save_budget_report" in effect_names
 
-    # Host-side artifact cross-check: at least one verified artifact under this run.
     artifact_paths = [v.path for v in receipt.verified_artifacts]
     report_artifacts = [p for p in artifact_paths if p.endswith("-report.md")]
+
+    snapshot_ok = False
+    snapshot_detail = "composition=None (direct path)"
+    if composition is not None:
+        comp = receipt.composition
+        snapshot_ok = bool(
+            comp is not None
+            and comp.composition_id
+            and any(p.id == "zuaef-emtb-budget" for p in comp.plugins)
+        )
+        snapshot_detail = (
+            f"composition_id={comp.composition_id[:12]}… "
+            f"plugins={[p.id for p in comp.plugins]}"
+        )
 
     machine_checks = [
         (
@@ -225,6 +280,11 @@ def main() -> int:
                 for a in outcome.summary.artifacts
             ),
             f"summary.artifacts={outcome.summary.artifacts}",
+        ),
+        (
+            "CompositionSnapshot present in receipt",
+            snapshot_ok,
+            snapshot_detail,
         ),
         (
             "ZUAEF receipt on disk",
@@ -260,6 +320,7 @@ def main() -> int:
     print(f"  receipt    {outcome.summary.receipt}")
     print(f"  artifacts  {report_artifacts}")
     print(f"  csv        {csv_path}")
+    print(f"  composition {snapshot_detail}")
     print(f"  unknown    {receipt.summary.unknowns or 'none'}")
 
     if test_complete:

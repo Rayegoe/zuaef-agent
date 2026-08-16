@@ -203,6 +203,44 @@ What this proved (and did not prove):
 - Not proved: multi-toolset composition, budget caps, pause/resume inside a
   budget run. Those stay deferred until a real run needs them.
 
+## Stage 6A: EMTB budget as the second plugin (generalization proof)
+
+The budget domain now ships as an installed distribution exposing the
+`zuaef-emtb-budget` `zuaef.plugins` entry point
+(`plugins/zuaef-emtb-budget/`), enabled by the example profile
+`profiles/emtb-budget.toml`. `examples/budget_case.py --profile emtb-budget`
+runs the real model through the Plugin Composition Layer — resolve profile →
+freeze CompositionSnapshot → compose → execute — with the snapshot threaded
+into the receipt.
+
+Stage 6A proof run (`--profile emtb-budget`):
+
+```text
+model           deepseek-v4-flash
+run             8a8a5b539cb14144994298edd455f4a7
+receipt         completed
+composition     present (plugins=[zuaef-emtb-budget])
+artifact        emtb_budget-report.md (host-verified)
+machine checks  all PASS
+unknown         none
+```
+
+CLI surface (real entry points, no imports until enabled):
+
+```text
+$ zuaef-agent plugin list
+ace-writing         0.1.0
+zuaef-emtb-budget   0.1.0
+$ zuaef-agent plugin inspect zuaef-emtb-budget
+id: zuaef-emtb-budget   version: 0.1.0   entry_point: zuaef_emtb_budget:create_plugin
+$ zuaef-agent profile check emtb-budget --config-root <repo>
+…composition_id d4fcb62e…  plugins=[zuaef-emtb-budget]
+```
+
+Zero core change: `core.py`, `runtime.py`, `composition.py` untouched (diff
+verified). The direct-toolset path stays as proof evidence and the plugin
+toolset is tool-for-tool identical to it (parity test).
+
 ## Next
 
 The shared seam is now proven on two business slices: writing (task-local

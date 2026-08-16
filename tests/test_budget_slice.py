@@ -1,15 +1,16 @@
-"""Deterministic branches of the EMTB budget slice (example2).
+"""Deterministic branches of the EMTB budget slice (Stage 6A plugin).
 
-budget_lib is a faithful extraction of zesenticai finance_agent commands;
-these tests pin the extraction to the original behavior on the real sample
-CSV (Chinese + English headers). Real-model execution is exercised by
-``examples/budget_case.py`` itself, never faked with TestModel — but the
-``build_agent`` composition seam IS driven here with FunctionModel so the
-shared execution path stays covered in CI without network or credentials.
+budget_lib is a faithful extraction of zesenticai finance_agent commands; these
+tests pin the extraction to the original behavior on the real sample CSV
+(Chinese + English headers). Real-model execution is exercised by
+``examples/budget_case.py`` itself, never faked with TestModel — but the plugin
+composition seam IS driven here with FunctionModel so the shared execution
+path stays covered in CI without network or credentials.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 import tempfile
@@ -27,7 +28,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from examples.budget_lib import (
+from zuaef_emtb_budget import create_plugin
+from zuaef_emtb_budget import plugin as plugin_module
+from zuaef_emtb_budget.budget_lib import (
     EMTBBudgetDataPoint,
     analyze_budget_variance,
     budget_health_check,
@@ -37,7 +40,7 @@ from examples.budget_lib import (
     query_period_end_budget,
     validate_budget_consistency,
 )
-from examples.budget_lib.models import (
+from zuaef_emtb_budget.budget_lib.models import (
     BudgetConsistencyInput,
     BudgetHealthGoal,
     BudgetSummaryInput,
@@ -45,14 +48,23 @@ from examples.budget_lib.models import (
     QueryPeriodEndBudgetInput,
     SignificantChangeDetectionInput,
 )
-from examples.budget_toolset import build_budget_toolset
+from zuaef_emtb_budget.toolset import build_budget_toolset
+
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.core import build_agent
 from zuaef_agent.models import CoreDeps
+from zuaef_agent.plugin_api import PluginBundle, PluginEnv
 from zuaef_agent.runtime import TerminalRun, execute_run
 from zuaef_agent.verification import sha256_file
 
-SAMPLE = PROJECT_ROOT / "examples" / "data" / "emtb_budget_sample.csv"
+SAMPLE = (
+    PROJECT_ROOT
+    / "plugins"
+    / "zuaef-emtb-budget"
+    / "zuaef_emtb_budget"
+    / "data"
+    / "emtb_budget_sample.csv"
+)
 
 ENGLISH_CSV = """\
 line_item,category,period_start_amount,current_period_change,period_end_amount,actual_amount,currency,department
@@ -340,6 +352,74 @@ class TestCompositionSeam(unittest.TestCase):
             effect_names = [e.tool_name for e in outcome.receipt.verified_tool_effects]
             self.assertIn("parse_budget_csv", effect_names)
             self.assertIn("save_budget_report", effect_names)
+
+
+EXPECTED_PLUGIN_TOOLS = {
+    "parse_budget_csv",
+    "budget_summary",
+    "budget_variance",
+    "budget_consistency",
+    "budget_health",
+    "budget_query",
+    "significant_changes",
+    "save_budget_report",
+}
+
+
+def _tool_names(bundle: PluginBundle, tmp: Path) -> set[str]:
+    deps = CoreDeps(workspace_root=tmp, run_id="r1")
+    ctx = RunContext(deps=deps, usage=RunUsage(), prompt="", model=None)
+    return set(asyncio.run(bundle.toolsets[0].get_tools(ctx)))
+
+
+class TestPluginContract(unittest.TestCase):
+    """Pin the Stage 6A plugin factory contract (mirrors test_ace_writing_plugin)."""
+
+    def _env(self, tmp: Path) -> PluginEnv:
+        return PluginEnv(
+            plugin_id="zuaef-emtb-budget",
+            plugin_version="0.1.0",
+            workspace_root=tmp / "workspace",
+            state_root=tmp / "state",
+        )
+
+    def test_bundle_is_one_toolset_only(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            bundle = create_plugin(self._env(tmp), {})
+            self.assertIsInstance(bundle, PluginBundle)
+            self.assertEqual(len(bundle.toolsets), 1)
+            self.assertEqual(bundle.skill_dirs, ())
+            self.assertEqual(bundle.capabilities, ())
+
+    def test_expected_tool_names(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            bundle = create_plugin(self._env(tmp), {})
+            self.assertEqual(_tool_names(bundle, tmp), EXPECTED_PLUGIN_TOOLS)
+
+    def test_factory_records_env_and_config(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            create_plugin(self._env(tmp), {"a": 1})
+            self.assertIsNotNone(plugin_module.last_env)
+            self.assertEqual(plugin_module.last_env.plugin_id, "zuaef-emtb-budget")
+            self.assertEqual(plugin_module.last_env.workspace_root, tmp / "workspace")
+            self.assertEqual(plugin_module.last_config, {"a": 1})
+
+    def test_toolset_parity_with_direct_assembly(self) -> None:
+        """Plugin toolset exposes exactly the direct-assembly tool surface
+        (Stage 6A must not reduce the example2 proof)."""
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            plugin_ts = create_plugin(self._env(tmp), {}).toolsets[0]
+            direct_ts = build_budget_toolset()
+            deps = CoreDeps(workspace_root=tmp, run_id="r1")
+            ctx = RunContext(deps=deps, usage=RunUsage(), prompt="", model=None)
+            self.assertEqual(
+                set(asyncio.run(plugin_ts.get_tools(ctx))),
+                set(asyncio.run(direct_ts.get_tools(ctx))),
+            )
 
 
 if __name__ == "__main__":

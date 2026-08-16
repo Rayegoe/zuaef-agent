@@ -25,7 +25,7 @@ dev = ["pytest>=8.3", "ruff>=0.8"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "tests/fixture_plugins", "plugins/zuaef-ace-writing"]
+pythonpath = ["src", "tests/fixture_plugins", "plugins/zuaef-ace-writing", "plugins/zuaef-emtb-budget", "."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zuaef_agent"]

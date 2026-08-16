@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-emtb-budget"
+version = "0.1.0"
+description = "EMTB budget analysis plugin for the ZUAEF Plugin Composition Layer: deterministic bilingual CSV parsing + summary/variance/consistency/health/query/significant-change."
+requires-python = ">=3.11"
+# zuaef-agent itself is not on PyPI; install this package into the same
+# environment that provides the zuaef_agent distribution (peer dependency).
+dependencies = [
+  "pydantic-ai>=2.27,<3",
+]
+
+[project.entry-points."zuaef.plugins"]
+zuaef-emtb-budget = "zuaef_emtb_budget:create_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["zuaef_emtb_budget"]
