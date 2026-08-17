@@ -1,0 +1,62 @@
+{
+  "task_id": "T07",
+  "sequence": 7,
+  "source": "tetra",
+  "language": "en",
+  "domain": "acl_paper",
+  "material": {
+    "prompt_excerpt": "TETRA professional editing task (paper P01-1044, editor A). The BEFORE text is reconstructed by reverting the editor's tracked edits; AFTER applies them.",
+    "sha256": "b008e07e745697750d404bc3060ac49ab25a26a13b264557a8a8bc2c8ceb9822"
+  },
+  "before": {
+    "excerpt": "Parsing with Treebank Grammars: Empirical Bounds, Theoretical Models, and the Structure of the Penn TreebankThis paper presents empirical studies and closely corresponding theoretical models ofthe performance of a chart parserexhaustively parsing the Penn Treebank with the Treebank's ownCFG grammar.We show how performance is dramatically affected by rule representation and tree transformations, but little by top-down vs. bottom-up strategies. We discuss grammatical saturation, includinganalysis of the strongly connected components of the phrasal nonterminals in the Treebank, and model how, as sentence length increases,the effective grammar rule size increases as regions of the grammar are unlocked,yieldingsuper-cubicobserved time behavior in some configurations.This paper originated fromexaminingthe empirical performance of an exhaustive active chart parser using an untransformed treebank grammar over the Penn Treebank. Our initial experiments yielded the surprising result thatfor many configurations empirical parsing speed was super-cubic in the sentence length.This led us to look more closely at the structure of the treebank grammar. The resulting analysis builds on the presentation of Charniak (1996), but extends it by elucidating the structure of nonterminal interrelationships in the Penn Treebank grammar. On the basis of these studies, we build simple theoretical models which closely predict observed parser performance, and, in particular, explain the originally observed",
+    "sha256": "fdf281fa425b047344c50217294c231b36850c83c0cc63d6d12bbcc56349a75c",
+    "origin": "tetra_reconstructed_original"
+  },
+  "after": {
+    "excerpt": "Parsing with Treebank Grammars: Empirical Bounds, Theoretical Models, and the Structure of the Penn TreebankThis paper presents empirical studies and closely corresponding theoretical models ofa chart parser's performance whileexhaustively parsing the Penn Treebank with the Treebank's owncontext-free grammar (CFG).We show how performance is dramatically affected by rule representation and tree transformations, but little by top-down vs. bottom-up strategies. We discuss grammatical saturation, provide ananalysis of the strongly connected components of the phrasal nonterminals in the Treebank, and model how, as sentence length increases,regions of the grammar are unlocked, increasing the effective grammar rule sizeandyieldingsupercubicobserved time behavior in some configurations.This paper originated fromour examination ofthe empirical performance of an exhaustive active chart parser using an untransformed treebank grammar over the Penn Treebank. Our initial experiments yielded the surprising result thatempirical parsing speed was supercubic in the sentence length for many configurations.This led us to look more closely at the structure of the treebank grammar. The resulting analysis builds on the presentation of Charniak (1996), but extends it by elucidating the structure of nonterminal interrelationships in the Penn Treebank grammar. On the basis of these studies, we build simple theoretical models which closely predict observed parser performance, and, in particular, explai",
+    "sha256": "8408deb17562136dad373e387eb1c5b475baef02b728453a91aeac9060c6b9c0",
+    "origin": "tetra_professional_edit"
+  },
+  "delta": {
+    "intent": "redundancy",
+    "spans": [
+      {
+        "before": "CFG grammar.",
+        "after": "context-free grammar (CFG).",
+        "type": "redundancy;clarity",
+        "comment": "redundancy, clarity - CFG grammar is redundant."
+      }
+    ],
+    "operations": [
+      "redundancy;clarity"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ]
+  },
+  "provenance": {
+    "dataset": "TETRA (professional edits of ACL papers)",
+    "record_id": "P01-1044-A",
+    "license": "CC BY 4.0",
+    "selection_rule": "max edits matching ('redundancy',) among editor-A files; tie-break doc_id"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": true,
+    "evidence_ids": [
+      "human.tetra.P01-1044.A.0"
+    ]
+  }
+}

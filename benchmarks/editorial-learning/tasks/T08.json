@@ -1,0 +1,88 @@
+{
+  "task_id": "T08",
+  "sequence": 8,
+  "source": "tetra",
+  "language": "en",
+  "domain": "acl_paper",
+  "material": {
+    "prompt_excerpt": "TETRA professional editing task (paper W13-4603, editor A). The BEFORE text is reconstructed by reverting the editor's tracked edits; AFTER applies them.",
+    "sha256": "f4e3d8774c8edd8ba4500db67c20f4ef2aac806b10b81b1d3cc03e760335ede3"
+  },
+  "before": {
+    "excerpt": "Developing ML-based Systems to Extract Medical Information from Japanese Medical History SummariesWith the increase of the number of medical records written in an electronic format, natural language processing techniques in the medical domain have become more and more important. For the purpose ofthe development and evaluation ofmachine learning-based systems to extract medical information, we recently participated in the NTCIR-10 MedNLP task. The task focused on Japanese medical records andaimed at evaluating different information extraction techniques on the common data set provided by the organizers. We implemented our baseline system based ongrammar - need an article here since we're referring to a specific model/structurestructured perceptron and have developedits extensions. In this paper, we describe our systems and report on the evaluationand the analysis ontheir performance.In recent years, medical records have been increasingly written in an electronic format, which leads to a growing need for natural language processing (NLP) techniques in the medical domain. Specifically, information extraction (IE) techniques, such as named entity recognition (NER), are crucial as they serve as the basis of more intellectual and/or application-oriented tasks, including information retrieval and question answering.\\n\\n Giventhebackground, the NTCIR-10 MedNLP task (Morita et al., 2013) was recently held as a shared task to fostertheNLP research for medical texts, specifically targe",
+    "sha256": "c5be2ff3a88e35777bc67d94887abf750352fe07f94d8a2223f0a5f4ecdb4861",
+    "origin": "tetra_reconstructed_original"
+  },
+  "after": {
+    "excerpt": "Developing ML-based Systems to Extract Medical Information from Japanese Medical History SummariesWith the increase of the number of medical records written in an electronic format, natural language processing techniques in the medical domain have become more and more important. For the purpose ofdeveloping and evaluatingmachine learning-based systems to extract medical information, we recently participated in the NTCIR-10 MedNLP task. The task focused on Japanese medical records andwasaimed at evaluating different information extraction techniques on the common data set provided by the organizers. We implemented our baseline system based onthestructured perceptron and have developedextensions for it. In this paper, we describe our systems and report on the evaluationand analysis oftheir performance.In recent years, medical records have been increasingly written in an electronic format, which leads to a growing need for natural language processing (NLP) techniques in the medical domain. Specifically, information extraction (IE) techniques, such as named entity recognition (NER), are crucial as they serve as the basis of more intellectual and/or application-oriented tasks, including information retrieval and question answering.\\n\\n Giventhisbackground, the NTCIR-10 MedNLP task (Morita et al., 2013) was recently held as a shared task to fosterNLP research for medical texts, specifically targeting Japanese. The participants of the task were provided with an annotated corpus cons",
+    "sha256": "9719f6148ecf81e62d2b6e73c091f63a5b56863ba236b81f9451fa30bc1edcb3",
+    "origin": "tetra_professional_edit"
+  },
+  "delta": {
+    "intent": "readability",
+    "spans": [
+      {
+        "before": "the development and evaluation of",
+        "after": "developing and evaluating",
+        "type": "conciseness;readability",
+        "comment": "conciseness and readability - this seems less stilted to me"
+      },
+      {
+        "before": "",
+        "after": "was",
+        "type": "readability",
+        "comment": "readability - not strictly necessary, but this aids the flow"
+      },
+      {
+        "before": "its extensions",
+        "after": "extensions for it",
+        "type": "readability",
+        "comment": "readability - this is more natural English and also more clear as the previous implies the authors developed the only extensions for the model.. I would really need to review the whole paper to be sure this is the correc"
+      },
+      {
+        "before": "the deidentification subtask and the complaint and diagnosis subtask summarized shortly",
+        "after": "two subtasks: 1) deidentification and 2) complaint and diagnosis, which are summarized below",
+        "type": "readability",
+        "comment": "readability - rewrote this sentence for better flow"
+      },
+      {
+        "before": "their analysis.",
+        "after": "an analysis of those results.",
+        "type": "clarity;readability",
+        "comment": "clarity and readability - it took me a while to figure out what 'their' referred to."
+      }
+    ],
+    "operations": [
+      "clarity;readability",
+      "conciseness;readability",
+      "readability"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ]
+  },
+  "provenance": {
+    "dataset": "TETRA (professional edits of ACL papers)",
+    "record_id": "W13-4603-A",
+    "license": "CC BY 4.0",
+    "selection_rule": "max edits matching ('readability',) among editor-A files; tie-break doc_id"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": true,
+    "evidence_ids": [
+      "human.tetra.W13-4603.A.4"
+    ]
+  }
+}

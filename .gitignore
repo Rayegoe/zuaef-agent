@@ -10,3 +10,7 @@ workspace/artifacts/
 # untracks them). Blocks future untracked real knowledge from git add.
 workspace/knowledge/
 .state-proof/
+# Editorial-learning benchmark: raw datasets (hundreds of MB, fetched by
+# benchmarks/editorial-learning/scripts/fetch_sources.py) and derived full
+# texts are local-only; committed assets carry bounded excerpts + hashes.
+data/

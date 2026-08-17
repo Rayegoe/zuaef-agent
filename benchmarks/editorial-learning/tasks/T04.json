@@ -1,0 +1,95 @@
+{
+  "task_id": "T04",
+  "sequence": 4,
+  "source": "iterater",
+  "language": "en",
+  "domain": "news",
+  "material": {
+    "prompt_excerpt": "IteraTeR document revision task (domain: news, revision depth 1). Revise the BEFORE document. The human revision primarily addressed style.",
+    "sha256": "eb3a92d74fa1249c374a262e936c0e7b949d680d9e4cb83244b906f55a72a264"
+  },
+  "before": {
+    "excerpt": "Italian police officers and guardians are going on trial for alleged abuse of anti-globalization protesters during the G8 meeting in Genoa in 2001. Reports made by over 250 participants in the event detail verbal and physical abuse. The police allegedly took detainees to a holding center outside the city, where they say they were verbally and physically abused, threatened with rape , and spat at . In one alleged incident, the guards forced a woman's head down a toilet. Another allegation is that asphyxiating gas was sprayed at protesters in their cells. Over 60 people were injured while being taken into custody, three critically. One 23-year old protester was shot dead. Twenty-five of the 250 were brought up on minor charges of looting and ransacking. The police alleged that 93 protesters were in possession of dangerous weapons and resisted arrest, yet Genoa prosecutors dropped all charges against them. Meanwhile, the police face accusations of planting evidence , and fabricating charges against the demonstrators. Unfortunately, due to delays in bringing the authorities to justice, the 5-year statute of limitations has expired on the major charges .",
+    "sha256": "2fac70a22d79c92b68957b4edf3288c25440b7da181c0b636ec153bb73aa9e54",
+    "origin": "iterater_before_revision"
+  },
+  "after": {
+    "excerpt": "Italian police officers and prison guards have been ordered to stand trial for the alleged abuse of anti-globalization protesters during the G8 summit in Genoa in 2001. Over 250 people people who attended the event have detailed verbal and physical abuse. The police took detainees to a holding center outside the city, where they say they were verbally and physically abused, spat at and threatened with rape . In one alleged incident, the guards forced a woman's head down a toilet. Another allegation is that asphyxiating gas was sprayed at protesters in their cells. Over 60 people were injured while being taken into custody, three critically. One 23-year old protester was shot dead. Twenty-five demostrators are standing trial on minor charges of looting and ransacking. The police alleged that 93 protesters were in possession of dangerous weapons and resisted arrest, yet Genoa prosecutors have dropped all charges against them. Meanwhile, the police have been charged with planting evidence and fabricating charges against the demonstrators. Unfortunately, due to delays in bringing the authorities to justice, the five-year statute of limitations is expectd to expire on most of the more serious charges before rulings are given .",
+    "sha256": "b76d8460eddd7a2acfd7bb9d8057c7f45019063138cd48d16a537286a0a7e063",
+    "origin": "iterater_human_after_revision"
+  },
+  "delta": {
+    "intent": "style",
+    "spans": [
+      {
+        "before": "participants in the event detail",
+        "after": "people people who attended the event have detailed",
+        "intent": "style",
+        "raw_intents": [
+          "style",
+          "style",
+          "clarity"
+        ]
+      },
+      {
+        "before": "face accusations of planting evidence ,",
+        "after": "have been charged with planting evidence",
+        "intent": "style",
+        "raw_intents": [
+          "style",
+          "style",
+          "style"
+        ]
+      },
+      {
+        "before": "5-year",
+        "after": "five-year",
+        "intent": "style",
+        "raw_intents": [
+          "style",
+          "style",
+          "style"
+        ]
+      },
+      {
+        "before": "has expired on the major charges",
+        "after": "is expectd to expire on most of the more serious charges before rulings are given",
+        "intent": "style",
+        "raw_intents": [
+          "style",
+          "style",
+          "style"
+        ]
+      }
+    ],
+    "operations": [
+      "style"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "edit_action_count": 12
+  },
+  "provenance": {
+    "dataset": "IteraTeR (human_doc_level)",
+    "record_id": "10439",
+    "license": "Apache-2.0 (repository)",
+    "selection_rule": "max usable style actions; tie-break by doc_id; pass 1"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": false,
+    "evidence_ids": []
+  }
+}

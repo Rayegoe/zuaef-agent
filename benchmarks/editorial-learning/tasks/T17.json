@@ -1,0 +1,110 @@
+{
+  "task_id": "T17",
+  "sequence": 17,
+  "source": "re3",
+  "language": "en",
+  "domain": "scientific_paper",
+  "material": {
+    "prompt_excerpt": "Re3-Sci collaborative revision task (paper 39-ARR). The passage below is a real peer-review excerpt that triggered the author's revision; revise the BEFORE passage accordingly. --- REVIEWER REPORT (excerpt) --- paper_summary. This paper deals with the Cross-Lingual Event Detection (CLED) task where only source language data is available for training but the model is then tested on a target language. The paper claims that their intuition is using unlabelled data in training (line 097-101). They use adversarial language adaptation (ALA) to learn language-invariant representations out of unlabeled bilingual text data. The main contribution of the paper is it proposes to use Optimal Transport (OT) for selecting samples for ALA training. Introducing ALA into CLED itself can be seen as a minor contribution. summary_of_strengths. 1. The paper proposes to leverage Optimal Transport (OT) to find similar samples. This is new knowledge to me. Previously I only know Optimal Transport (OT) or Wasserstein Distance is used in Wasserstein GAN (WGAN) which aligns real and fake image spaces. I did not see papers that use OT to search similar data samples before. I also appreciate the way that the paper draw samples in equation (3) and calculate p(s) and p(t) in 2.4.2 which is clever. 2. The main results in 3.2 looks promising. summary_of_weaknesses. 1. The paper claims that it exploits unlabelled target language data. However, in line 363, it seems that the paper actually uses event-presence l",
+    "sha256": "838bd209ae622d9094ea6eba680e8dd6d3ee64754fe6048fd6b3d0c0db86d450"
+  },
+  "before": {
+    "excerpt": "Our goal is to define a model able to generate language-invariant word representations that are refined enough so that cross-lingual issues, such as the ones described previously, are properly handled. Here we briefly describe the BERT-CRF model (M'hamdi et al., 2019) which was the previous state-of-the-art and serves as our baseline. Using mBERT (Devlin et al., 2019) as its encoder, BERT-CRF generates robust, contextualized representations for words from different languages. Thus, we propose using Optimal Transport as a solution to naturally combine these two distinct information sources into the selection process. Extensive experiments on 8 different language pairs, using 4 languages from unrelated families, show the flexibility and effectiveness of our model that achieves new state-of-the-art results. One challenge of using these two criteria for ALA sample selection process is that they come with two different measures which are hard to combine. We propose using Optimal Transport (OT) (Villani, 2008) as a natural way to combine these two metrics into a single framework for sample selection. To include an additional language in our experiments, we also evaluate on the ERE version of ACE05 which has annotated data in English and Spanish. The ACE05 and ACE05-ERE versions, however, do not share the same label set: ACE05 involves 33 distinct event types while ACE05-ERE involves 38 event types. The Chinese-Spanish, Spanish-Chinese, Arabic-Spanish, and Spanish-Arabic language co",
+    "sha256": "c01ba922b0c9f964a125041f8eeaba880f4d1d3e0981850cf5e7096c129db732",
+    "origin": "re3_v1_old_sentences"
+  },
+  "after": {
+    "excerpt": "Our goal is to define a model able to generate language-invariant word representations that are refined enough so that cross-lingual issues, such as the ones described in section 1, are properly handled. Here, we briefly describe the BERT-CRF model proposed by M'hamdi et al. ( 2019) which was the previous state-of-the-art and serves as our main baseline. Using multilingual BERT (mBERT, (Devlin et al., 2019)) as its encoder, BERT-CRF generates robust, contextualized representations for words from different languages. Thus, we propose leveraging Optimal Transport as a solution to naturally combine these two distinct information sources into the selection process. Extensive experiments on 8 different language pairs, using 4 languages from unrelated families, show the flexibility and effectiveness of our model that achieves state-of-the-art results. One challenge of using the two mentioned criteria for the ALA sample selection process is that they come with two different measures which are hard to combine. To address this, we propose using Optimal Transport (OT) (Villani, 2008) as a natural way to combine these two metrics into a single framework for sample selection. To include an additional language in our experiments, we also evaluate on the ERE dataset which has annotated data in English and Spanish. Note that the ACE05 and ERE datasets do not share the same label set: ACE05 involves 33 distinct event types while ERE involves 38 event types. The Chinese-Spanish, Spanish-Chine",
+    "sha256": "97929c56a64182d051f6df70add4bdc84b6abea784bb483946df5c3246804770",
+    "origin": "re3_v2_new_sentences"
+  },
+  "delta": {
+    "intent": "review_triggered_clarity",
+    "spans": [
+      {
+        "before": "Our goal is to define a model able to generate language-invariant word representations that are refined enough so that cross-lingual issues, such as the ones described previously, are properly handled.",
+        "after": "Our goal is to define a model able to generate language-invariant word representations that are refined enough so that cross-lingual issues, such as the ones described in section 1, are properly handled.",
+        "gold": "Modify,Clarity",
+        "section": "Problem Definition"
+      },
+      {
+        "before": "Here we briefly describe the BERT-CRF model (M'hamdi et al., 2019) which was the previous state-of-the-art and serves as our baseline.",
+        "after": "Here, we briefly describe the BERT-CRF model proposed by M'hamdi et al. ( 2019) which was the previous state-of-the-art and serves as our main baseline.",
+        "gold": "Modify,Clarity",
+        "section": "Baseline Model"
+      },
+      {
+        "before": "Using mBERT (Devlin et al., 2019) as its encoder, BERT-CRF generates robust, contextualized representations for words from different languages.",
+        "after": "Using multilingual BERT (mBERT, (Devlin et al., 2019)) as its encoder, BERT-CRF generates robust, contextualized representations for words from different languages.",
+        "gold": "Modify,Clarity",
+        "section": "Baseline Model"
+      },
+      {
+        "before": "Thus, we propose using Optimal Transport as a solution to naturally combine these two distinct information sources into the selection process.",
+        "after": "Thus, we propose leveraging Optimal Transport as a solution to naturally combine these two distinct information sources into the selection process.",
+        "gold": "Modify,Clarity",
+        "section": "Abstract"
+      },
+      {
+        "before": "Extensive experiments on 8 different language pairs, using 4 languages from unrelated families, show the flexibility and effectiveness of our model that achieves new state-of-the-art results.",
+        "after": "Extensive experiments on 8 different language pairs, using 4 languages from unrelated families, show the flexibility and effectiveness of our model that achieves state-of-the-art results.",
+        "gold": "Modify,Clarity",
+        "section": "Abstract"
+      },
+      {
+        "before": "One challenge of using these two criteria for ALA sample selection process is that they come with two different measures which are hard to combine.",
+        "after": "One challenge of using the two mentioned criteria for the ALA sample selection process is that they come with two different measures which are hard to combine.",
+        "gold": "Modify,Clarity",
+        "section": "Optimal Transport"
+      },
+      {
+        "before": "We propose using Optimal Transport (OT) (Villani, 2008) as a natural way to combine these two metrics into a single framework for sample selection.",
+        "after": "To address this, we propose using Optimal Transport (OT) (Villani, 2008) as a natural way to combine these two metrics into a single framework for sample selection.",
+        "gold": "Modify,Clarity",
+        "section": "Optimal Transport"
+      },
+      {
+        "before": "To include an additional language in our experiments, we also evaluate on the ERE version of ACE05 which has annotated data in English and Spanish.",
+        "after": "To include an additional language in our experiments, we also evaluate on the ERE dataset which has annotated data in English and Spanish.",
+        "gold": "Modify,Clarity",
+        "section": "Datasets"
+      }
+    ],
+    "operations": [
+      "Modify,Clarity"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "note": "src=NEW/v2, tgt=OLD/v1 per data_human README; edits are sentence-aligned human annotations (3-annotator majority)."
+  },
+  "provenance": {
+    "dataset": "Re3-Sci",
+    "record_id": "39-ARR",
+    "license": "CC BY 4.0 (DataLib item)",
+    "selection_rule": "doc with most ('Modify,Clarity',) both-span edits, review text present; tie-break doc_name"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": true,
+    "evidence_ids": [
+      "human.re3.39-ARR.clarity.3979",
+      "human.re3.39-ARR.clarity.3980",
+      "human.re3.39-ARR.clarity.3981",
+      "human.re3.39-ARR.clarity.3984",
+      "human.re3.39-ARR.clarity.3985",
+      "human.re3.39-ARR.clarity.3986"
+    ]
+  }
+}

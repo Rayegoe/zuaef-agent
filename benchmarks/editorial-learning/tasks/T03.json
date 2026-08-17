@@ -1,0 +1,85 @@
+{
+  "task_id": "T03",
+  "sequence": 3,
+  "source": "iterater",
+  "language": "en",
+  "domain": "wiki",
+  "material": {
+    "prompt_excerpt": "IteraTeR document revision task (domain: wiki, revision depth 1). Revise the BEFORE document. The human revision primarily addressed coherence.",
+    "sha256": "dee4fc98d939c72bcfd441a25df883fad1606b8eeb5c42cd23613afda8df85d3"
+  },
+  "before": {
+    "excerpt": "The world's population is around 7,800,000,000U.S. & World Population Clocks. Census.gov. Retrieved on December 10, 2011. and Earth's total area (including land and water) is 510,000,000km2 (197,000,000 sq. mi.).World. CIA World Handbook Therefore, the worldwide human population density is around 7,500,000,000 510,000,000 = 14.7 per km2 (38 per sq. mi.). If only the Earth's land area of 150,000,000km2 (58,000,000 sq. mi.) is taken into account, then human population density is 50 per km2 (129 per sq. mi.). This includes all continental and island land area, including Antarctica. If Antarctica is also excluded, then population density rises to over 55 people per km2 (over 142 per sq. mi.). However, over half of the Earth's land mass consists of areas inhospitable to human habitation, such as deserts and high mountains, and population tends to cluster around seaports and fresh-water sources. Thus , additional criteria are needed to make simple population density values useful. In comparison, based on a world population of 7.8 billion, the world's inhabitants, as a loose crowd taking up almost 1 m2 (10 sq. ft) per person (cf. Jacobs Method), would occupy a space a little larger than Delaware's land area.",
+    "sha256": "e810d5b50d16c6890e9bf61719bf64a9d84cb6a9f6616b70b9a3ba5d87394a1f",
+    "origin": "iterater_before_revision"
+  },
+  "after": {
+    "excerpt": "The world's population is around 7,800,000,000U.S. & World Population Clocks. Census.gov. Retrieved on December 10, 2011. and Earth's total area (including land and water) is 510,000,000km2 (197,000,000 sq. mi.).World. CIA World Handbook Therefore, from this very crude type of calculation, the worldwide human population density is approximately 7,500,000,000 510,000,000 = 14.7 per km2 (38 per sq. mi.). However, if only the Earth's land area of 150,000,000km2 (58,000,000 sq. mi.) is taken into account, then human population density is 50 per km2 (129 per sq. mi.). This includes all continental and island land area, including Antarctica. Furthermore, if Antarctica is also excluded, then population density rises to over 55 people per km2 (over 142 per sq. mi.). However, over half of the Earth's land mass consists of areas inhospitable to human habitation, such as deserts and high mountains, and population tends to cluster around seaports and fresh-water sources. Therefore , additional criteria are needed to make simple population density values meaningful and useful. In comparison, based on a world population of 7.8 billion, the world's inhabitants, if conceptualized as a loose crowd occupying just under 1 m2 (10 sq. ft) per person (cf. Jacobs Method), would occupy a space a little larger than Delaware's land area.",
+    "sha256": "c51d81841ef133d991a652b8a9691142c6f25dce2f86abd106dac05b2aeef1bc",
+    "origin": "iterater_human_after_revision"
+  },
+  "delta": {
+    "intent": "coherence",
+    "spans": [
+      {
+        "before": "If",
+        "after": "However, if",
+        "intent": "coherence",
+        "raw_intents": [
+          "coherence",
+          "coherence",
+          "style"
+        ]
+      },
+      {
+        "before": "If",
+        "after": "Furthermore, if",
+        "intent": "coherence",
+        "raw_intents": [
+          "coherence",
+          "coherence",
+          "style"
+        ]
+      },
+      {
+        "before": "Thus",
+        "after": "Therefore",
+        "intent": "coherence",
+        "raw_intents": [
+          "clarity",
+          "coherence",
+          "coherence"
+        ]
+      }
+    ],
+    "operations": [
+      "coherence"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "edit_action_count": 8
+  },
+  "provenance": {
+    "dataset": "IteraTeR (human_doc_level)",
+    "record_id": "128608",
+    "license": "Apache-2.0 (repository)",
+    "selection_rule": "max usable coherence actions; tie-break by doc_id; pass 1"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": false,
+    "evidence_ids": []
+  }
+}

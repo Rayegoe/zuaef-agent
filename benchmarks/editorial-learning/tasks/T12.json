@@ -1,0 +1,62 @@
+{
+  "task_id": "T12",
+  "sequence": 12,
+  "source": "wpb",
+  "language": "zh",
+  "domain": "promotional_communication",
+  "material": {
+    "prompt_excerpt": "WritingPreferenceBench 中文任务（类别：广告文案-营销邮件）。写作要求原文如下。 请为咖啡店写四条风格各异、引人注目的广告文案，需要突出介绍咖啡店的新品“桃子气泡美式”，这是一款酸甜可口的咖啡，加上气泡的口感，让整体的酸甜平和达到了完美平衡，用富有想象力的语言激发顾客的味蕾，将新品与夏日、清凉、活力、美好时光等场景联系起来。咖啡店的名字叫做米奇咖啡店，所以要与咖啡店的名字融合，突出品牌效应。并且要达到情感共鸣或生活场景代入",
+    "sha256": "6e74db7a1fef84b4acb040924aee901dc99064f62b06df4dec8bfabcc50196c1"
+  },
+  "before": {
+    "excerpt": "### 文艺清新风 在米奇咖啡店的一隅，邂逅夏日专属的浪漫——桃子气泡美式。当鲜嫩多汁的桃子遇上醇香咖啡，再融入活泼跳跃的气泡，一场酸甜与苦涩的奇妙邂逅就此展开。每一口，都像是在舌尖上炸开一朵夏日繁花，气泡在口腔中欢快起舞，将暑气一扫而空。在这个炎热的季节，与桃子气泡美式相伴，在米奇咖啡店开启一段充满诗意的清凉时光。 ### 活力动感风 嘿，活力满满的小伙伴们！米奇咖啡店重磅推出新品——桃子气泡美式，带你嗨翻整个夏天！想象一下，清甜的桃子果香与浓郁咖啡交织，再加上那滋滋冒泡的活力气泡，瞬间让你活力值满格！就像给你的味蕾来了一场激情四射的派对，每一口都能感受到夏日的无限活力。别再犹豫，快来米奇咖啡店，一起畅享这酸甜可口的美好滋味！ ### 幽默风趣风 哟呵，夏天热得像太上老君的炼丹炉？别怕，米奇咖啡店给你送来“灭火神器”——桃子气泡美式！这玩意儿，就像是咖啡界的调皮小精灵，桃子的酸甜和咖啡的醇厚勾肩搭背，还拉上气泡来捣乱，在你嘴里噼里啪啦地开起了派对！喝上一口，那感觉，就像给燥热的夏天来了个透心凉的“冰桶挑战”，瞬间让你神清气爽。还等啥，赶紧来米奇咖啡店，让这杯桃子气泡美式把你的夏天变得有趣又清凉！ ### 情感治愈风 生活有时候就像炎热的夏天，让人感到疲惫和烦躁。但在米奇咖啡店，一杯桃子气泡美式就能治愈你的所有不开心。当你轻轻抿上一口，清甜的桃子味瞬间在舌尖散开，那酸甜的滋味仿佛是夏日里的一阵微风，轻柔地拂过你的心田。气泡在口腔中跳跃，就像生活中的小确幸，给你带来满满的惊喜。在这个快节奏的世界里，不妨放慢脚步，来米奇咖啡店，与桃子气泡美式相伴，享受这份夏日的宁静与美好。",
+    "sha256": "512e5f92c26676696bcc4240a27aaec6342b4727308cd820d9a0f2d08f82d4d9",
+    "origin": "human_preference_rejected"
+  },
+  "after": {
+    "excerpt": "1. **夏日清凉新宠 | 米奇咖啡店·桃子气泡美式** 阳光炙热，心跳加速，不如来一杯桃子气泡美式，酸甜的桃香像夏日的清风轻拂，每一口气泡都在舌尖跳跃，带来沁人心脾的活力与清凉。在米奇咖啡店，享受属于你的清爽夏日美好时光，让味蕾与心情一同焕然新生。 2. **桃子气泡美式，米奇咖啡店的夏之魅力** 当浓郁的美式遇上桃子的酸甜，轻盈气泡舞动其间，米奇咖啡店献上的这杯桃子气泡美式，将烈日里的疲惫一扫而空。邀你在夏日午后，坐享一份美好与活力的碰撞，清凉气泡唤醒沉睡的味蕾，一杯入心，沁凉入魂。 3. **米奇咖啡店 · 把夏天装进桃子气泡美式** 夏日的午后，总需要一点特别的清凉。米奇咖啡店新品桃子气泡美式，用酸甜桃香与活泼气泡打造全新口感，轻盈却不失深度。每一杯，都是一段属于夏天的故事，散发着青春的活力与生活的美好，邀你一同感受那份清新与甜蜜。 4. **活力桃气，夏日新享 | 米奇咖啡店桃子气泡美式** 在米奇咖啡店，夏日的不只是阳光，还有一杯桃子气泡美式！酸甜桃味与咔滋气泡完美融合，带来前所未有的清爽体验，无论街角流动的微风，还是沐浴阳光的午后，都能感受到活力满满的美好时光。和米奇一起，开启你的夏季气泡之旅。",
+    "sha256": "2106d9a4d564c52da1662571bd1d3dc180569f084e8d24ec97cfa40ae942d37a",
+    "origin": "human_preference_chosen"
+  },
+  "delta": {
+    "intent": "human_preference",
+    "spans": [],
+    "operations": [
+      "low_concrete_anchor_density"
+    ],
+    "preserve": [
+      "claims"
+    ],
+    "signals_before": {
+      "uniform_paragraphs": 0.716,
+      "low_concrete_anchor_density": 0.285
+    },
+    "signals_after": {
+      "uniform_paragraphs": 0.85
+    },
+    "note": "No edit spans exist in preference pairs; operations are the sensor differences between rejected and chosen (deterministic)."
+  },
+  "provenance": {
+    "dataset": "WritingPreferenceBench (Chinese)",
+    "record_id": "9eeb2070-dd69-4846-ad31-f04178c01ec0",
+    "license": "ODC-BY",
+    "selection_rule": "for tag 广告文案-营销邮件: first file-order record with chosen.score > rejected.score, both responses >=500 chars, and >=1 sensor the chosen text drops; fallback first long, then first scored"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": true,
+    "evidence_ids": [
+      "human.wpbench.9eeb2070-dd69-4846-ad31-f04178c01ec0.low_concrete_anchor_density"
+    ]
+  }
+}

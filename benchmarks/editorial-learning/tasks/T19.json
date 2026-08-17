@@ -1,0 +1,103 @@
+{
+  "task_id": "T19",
+  "sequence": 19,
+  "source": "re3",
+  "language": "en",
+  "domain": "scientific_paper",
+  "material": {
+    "prompt_excerpt": "Re3-Sci collaborative revision task (paper 1-62). The passage below is a real peer-review excerpt that triggered the author's revision; revise the BEFORE passage accordingly. --- REVIEWER REPORT (excerpt) --- - The overall content of this work is very poor. It contains: growth of bacteria in medium, PCR, sequencing, sequence alignment and a homology model. It is what is done today in a student practicum.- The homology model (structure of subunit α, Supplementary Figure 3) is a homology model based on a model (this was NO real structure), which basically also means, one could just take 4 random alpha helices and put them together in a bundle. - The authors should mention in the methods section which genes from F o were amplified by PCR.- Supplementary material figure 1: The window ledge and the arm of the photographer is visible on the picture.- Supplementary material figure 2: The quality of the left EM micrograph is poor, the picture is not in focus. The picture on the right side is distorted, I cannot see anything there.- Page 5 line 1: The Cook lab did not use Bacillus pseudofirmus OF4 but rather Bacillus TA2.A1- Figure 2 and Figure 3: The alignment should contain Bacillus TA2 because the authors refer to it in the text on Reference 25 (McMillan et al. ). - Figures 2 and 3 appear to be very similar. It may have made more sense to include all the information in one figure to avoid redundancies and save space. The scientific value of this work is questionable. It is a good s",
+    "sha256": "b403d12515638a5b03521ca4f5fcd1bca427368c94c3a021d80d50aaff699b02"
+  },
+  "before": {
+    "excerpt": "Across the pH gradient, growth of morphologically different bacterial colonies was observed. The orange pigmented bacterium was identified as Stenotrophomonas species based on BLAST analysis of 16S rRNA gene sequence and titled as Stenotrophomonas species DL18 (GenBank Accession number: JN995612 ). The amino acid residue arginine, which was found to be conserved in almost all bacterial species in the a -subunit, was observed at position 200 (Arg 200 ) (Supplementary figure 3) . It was observed that the most conserved arginine residue of the a -subunit (Arg 200 of Stenotrophomonas species DL18) was aligned with the expected position of the facultative alkaliphile Bacillus pseudofirmus OF4 (i.e. Arg 172 ; GenBank Accession number: YP_003426326 ). In addition, a glycine residue was observed at the same position in other alkaliphiles, T. cyclicum (Gly 206 ; GenBank Accession number: YP_004537849 ), and same amino acid family Ala 230 in Theoalkalivibrio species K90mix (GenBank Accession number: YP_003461818 ) as shown in Figure 2 . Lys 180 and corresponding amino acids were located in transmembrane helix-4 ( a TMH-4) in Bacillus pseudofirmus OF4 and other alkaliphiles <REF-23> , <REF-24> . In the Stenotrophomonas species DL 18, a histidine residue, which is conserved in other reference species of the same genus ( S. maltophilia K279a GenBank Accession number: YP_001973793 ; and S . sp. SKA14) and other alkaliphiles T. cyclicum (His244), and Theoalkalivibrio species K90mix (His 262",
+    "sha256": "f7d22398184ebfd4fd0e8db63eeefda2a11eb0a6d1426255431c5c1e7208aa6b",
+    "origin": "re3_v1_old_sentences"
+  },
+  "after": {
+    "excerpt": "Across the pH gradient, morphologically different pink, orange and white bacterial colonies were observed. The orange pigmented bacterium was identified as Stenotrophomonas sp. based on a NCBI BLAST analysis of the 16S rRNA gene sequence and titled Stenotrophomonas sp. DL18 (GenBank Accession number: JN995612 ). The amino acid residue arginine, which was found to be conserved in almost all bacterial species in the a -subunit, was observed at position 200 (Arg 200 ) in DL18. It was observed that the most conserved arginine residue of the a -subunit (Arg 200 of Stenotrophomonas sp. DL18) was aligned with the expected position of the facultative alkaliphile Bacillus pseudofirmus OF4 (i.e. Arg 172 ). In addition, glycine and alanine residues were observed at the same position in other alkaliphiles including Gly 206 in Thioalkalimicrobium cyclicum ALM1, and Ala 230 in Theoalkalivibrio sp. K90mix, as shown in Figure 1 . As reported by Ivey DM et al. , Lys 180 and corresponding amino acids were located in a TMH-4 in Bacillus pseudofirmus OF4 and other alkaliphiles <REF-12> , <REF-13> . In the DL18 strain, a histidine residue, which is conserved in other reference species of the same genus (e.g. Stenotrophomonas species K279a, Stenotrophomonas sp. SKA14 and other alkaliphiles including T. cyclicum ALM1 (His 244 ), and Theoalkalivibrio sp. K90mix (His 262 ), was present at position 240 (His 240 ) ( Figure 1 ). E. coli K12 DH10B considered a neutrophile, can adapt to slightly alkaline ",
+    "sha256": "460efcf2ba91b3960aeca322ed699f51cb88b571c0096537b2a533f9d2e650d5",
+    "origin": "re3_v2_new_sentences"
+  },
+  "delta": {
+    "intent": "review_triggered_evidence_revision",
+    "spans": [
+      {
+        "before": "Across the pH gradient, growth of morphologically different bacterial colonies was observed.",
+        "after": "Across the pH gradient, morphologically different pink, orange and white bacterial colonies were observed.",
+        "gold": "Modify,Fact/Evidence",
+        "section": "Bacterial identification"
+      },
+      {
+        "before": "The orange pigmented bacterium was identified as Stenotrophomonas species based on BLAST analysis of 16S rRNA gene sequence and titled as Stenotrophomonas species DL18 (GenBank Accession number: JN995612 ).",
+        "after": "The orange pigmented bacterium was identified as Stenotrophomonas sp. based on a NCBI BLAST analysis of the 16S rRNA gene sequence and titled Stenotrophomonas sp. DL18 (GenBank Accession number: JN995612 ).",
+        "gold": "Modify,Fact/Evidence",
+        "section": "Bacterial identification"
+      },
+      {
+        "before": "The amino acid residue arginine, which was found to be conserved in almost all bacterial species in the a -subunit, was observed at position 200 (Arg 200 ) (Supplementary figure 3) .",
+        "after": "The amino acid residue arginine, which was found to be conserved in almost all bacterial species in the a -subunit, was observed at position 200 (Arg 200 ) in DL18.",
+        "gold": "Modify,Fact/Evidence",
+        "section": "ATP synthase a -subunit of Stenotrophomonas species DL18"
+      },
+      {
+        "before": "It was observed that the most conserved arginine residue of the a -subunit (Arg 200 of Stenotrophomonas species DL18) was aligned with the expected position of the facultative alkaliphile Bacillus pseudofirmus OF4 (i.e. ",
+        "after": "It was observed that the most conserved arginine residue of the a -subunit (Arg 200 of Stenotrophomonas sp. DL18) was aligned with the expected position of the facultative alkaliphile Bacillus pseudofirmus OF4 (i.e. Arg ",
+        "gold": "Modify,Fact/Evidence",
+        "section": "Comparison of a -subunit of Stenotrophomonas species DL18 with acidophiles, alkaliphiles and neutrophiles"
+      },
+      {
+        "before": "In addition, a glycine residue was observed at the same position in other alkaliphiles, T. cyclicum (Gly 206 ; GenBank Accession number: YP_004537849 ), and same amino acid family Ala 230 in Theoalkalivibrio species K90m",
+        "after": "In addition, glycine and alanine residues were observed at the same position in other alkaliphiles including Gly 206 in Thioalkalimicrobium cyclicum ALM1, and Ala 230 in Theoalkalivibrio sp. K90mix, as shown in Figure 1 ",
+        "gold": "Modify,Fact/Evidence",
+        "section": "Comparison of a -subunit of Stenotrophomonas species DL18 with acidophiles, alkaliphiles and neutrophiles"
+      },
+      {
+        "before": "Lys 180 and corresponding amino acids were located in transmembrane helix-4 ( a TMH-4) in Bacillus pseudofirmus OF4 and other alkaliphiles <REF-23> , <REF-24> .",
+        "after": "As reported by Ivey DM et al. , Lys 180 and corresponding amino acids were located in a TMH-4 in Bacillus pseudofirmus OF4 and other alkaliphiles <REF-12> , <REF-13> .",
+        "gold": "Modify,Fact/Evidence",
+        "section": "Comparison of a -subunit of Stenotrophomonas species DL18 with acidophiles, alkaliphiles and neutrophiles"
+      },
+      {
+        "before": "In the Stenotrophomonas species DL 18, a histidine residue, which is conserved in other reference species of the same genus ( S. maltophilia K279a GenBank Accession number: YP_001973793 ; and S . sp. SKA14) and other alk",
+        "after": "In the DL18 strain, a histidine residue, which is conserved in other reference species of the same genus (e.g. Stenotrophomonas species K279a, Stenotrophomonas sp. SKA14 and other alkaliphiles including T. cyclicum ALM1 ",
+        "gold": "Modify,Fact/Evidence",
+        "section": "Comparison of a -subunit of Stenotrophomonas species DL18 with acidophiles, alkaliphiles and neutrophiles"
+      },
+      {
+        "before": "However, E. coli K12 DH10B (GenBank Accession number: YP_001732559 ), considered as neutrophile, can adapt to slightly alkaline conditions i.e. up to pH 8.0 and this may be due to the presence of His 245 .",
+        "after": "E. coli K12 DH10B considered a neutrophile, can adapt to slightly alkaline conditions up to pH 8.0 and this may be due to the presence of His 245 .",
+        "gold": "Modify,Fact/Evidence",
+        "section": "Comparison of a -subunit of Stenotrophomonas species DL18 with acidophiles, alkaliphiles and neutrophiles"
+      }
+    ],
+    "operations": [
+      "Modify,Fact/Evidence"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "note": "src=NEW/v2, tgt=OLD/v1 per data_human README; edits are sentence-aligned human annotations (3-annotator majority)."
+  },
+  "provenance": {
+    "dataset": "Re3-Sci",
+    "record_id": "1-62",
+    "license": "CC BY 4.0 (DataLib item)",
+    "selection_rule": "doc with most ('Modify,Fact/Evidence',) both-span edits, review text present; tie-break doc_name"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": false,
+    "evidence_ids": []
+  }
+}

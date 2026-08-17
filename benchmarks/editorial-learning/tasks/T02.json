@@ -1,0 +1,135 @@
+{
+  "task_id": "T02",
+  "sequence": 2,
+  "source": "iterater",
+  "language": "en",
+  "domain": "wiki",
+  "material": {
+    "prompt_excerpt": "IteraTeR document revision task (domain: wiki, revision depth 1). Revise the BEFORE document. The human revision primarily addressed fluency.",
+    "sha256": "fdcadfd53c5eb9efbe9a84306b08b6cd9dfddda24b4e1d3648278c7f28886724"
+  },
+  "before": {
+    "excerpt": "Discovery-driven planning is a planning technique first introduced in a Harvard Business Review article by Rita Gunther McGrath and Ian C. MacMillan in 1995 McGrath , R. G. & MacMillan, I. C. 1995. Discovery Driven Planning . Harvard Business Review, 73(4): 4454 and subsequently referenced in a number of books and articles.McGrath, R. G. & MacMillan, I. C. 2009. Discovery Driven Growth: A Breakthrough Process to Reduce Risk and Seize Opportunity . Boston: Harvard Business Publishing ; Christensen, C. M. 1997. The innovator's dilemma: When new technologies cause great firms to fail. Boston , Mass. : Harvard Business School Press Its main thesis is that when one is operating in arenas with significant amounts of uncertainty, that a different approach than is normally used in conventional planning applies . In conventional planning, the correctness of a plan is generally judged by how close outcomes come to projections. In discovery-driven planning, it is assumed that plan parameters may change as new information is revealed. With conventional planning, it is considered appropriate to fund the entire project as the expectation is that one can predict a positive outcome. In discovery driven planning, funds are released based on the accomplishment of key milestones or checkpoints, at which point additional funding can be made available predicated on reasonable expectations for future success.Block, Z. & MacMillan, I. C. 1985. Milestones for successful venture planning. Harvard Bus",
+    "sha256": "3b87b9f904cb0ddf54aeb0e091d1fb5eb7cbe98a97392eba0ee0bca91a3c5093",
+    "origin": "iterater_before_revision"
+  },
+  "after": {
+    "excerpt": "Discovery-driven planning is a planning technique first introduced in a Harvard Business Review article by Rita Gunther McGrath and Ian C. MacMillan in 1995McGrath , R. G. & MacMillan, I. C. 1995. Discovery driven planning . Harvard Business Review, 73(4): 4454. and subsequently referenced in a number of books and articles.McGrath, R. G. & MacMillan, I. C. 2009. Discovery driven growth: a breakthrough process to reduce risk and seize opportunity . Boston: Harvard Business Publishing . Christensen, C. M. 1997. The innovator's dilemma: When new technologies cause great firms to fail. Boston : Harvard Business School Press . Its main thesis is that when one is operating in arenas with significant amounts of uncertainty, that a different approach applies than is normally used in conventional planning . In conventional planning, the correctness of a plan is generally judged by how close outcomes come to projections. In discovery-driven planning, it is assumed that plan parameters may change as new information is revealed. With conventional planning, it is considered appropriate to fund the entire project , as the expectation is that one can predict a positive outcome. In discovery-driven planning, funds are released based on the accomplishment of key milestones or checkpoints, at which point additional funding can be made available predicated on reasonable expectations for future success.Block, Z. & MacMillan, I. C. 1985. Milestones for successful venture planning. Harvard Busines",
+    "sha256": "1e175b37afc452363fc6d4c8fbe49051538a34d77e2d7ac72484506898156f3d",
+    "origin": "iterater_human_after_revision"
+  },
+  "delta": {
+    "intent": "fluency",
+    "spans": [
+      {
+        "before": "Driven Planning",
+        "after": "driven planning",
+        "intent": "fluency",
+        "raw_intents": [
+          "others",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": "4454",
+        "after": "4454.",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": ";",
+        "after": ".",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": "discovery driven",
+        "after": "discovery-driven",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": "8490",
+        "after": "8490.",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": "137",
+        "after": "137.",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": "63-72.",
+        "after": "6372.",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": "discovery driven",
+        "after": "discovery-driven",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      }
+    ],
+    "operations": [
+      "fluency"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "edit_action_count": 25
+  },
+  "provenance": {
+    "dataset": "IteraTeR (human_doc_level)",
+    "record_id": "22062208",
+    "license": "Apache-2.0 (repository)",
+    "selection_rule": "max usable fluency actions; tie-break by doc_id; pass 1"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": false,
+    "evidence_ids": []
+  }
+}

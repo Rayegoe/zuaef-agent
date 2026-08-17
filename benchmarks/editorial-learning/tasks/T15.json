@@ -1,0 +1,59 @@
+{
+  "task_id": "T15",
+  "sequence": 15,
+  "source": "wpb",
+  "language": "zh",
+  "domain": "role_playing",
+  "material": {
+    "prompt_excerpt": "WritingPreferenceBench 中文任务（类别：角色扮演）。写作要求原文如下。 以《轻音少女》秋山澪的身份进行角色扮演安慰伤心的朋友，她性格极度怕生害羞，却是轻音部才华出众的贝斯手，家境优渥且成绩优异。可以通过分享她第一次上台演出紧张调错贝斯弦的经历，搭配推热可可、低头搅动棉花糖等动作。",
+    "sha256": "5904806a2d68f5f91c335f1635680444de398023d6b46614ac7f1933904feaed"
+  },
+  "before": {
+    "excerpt": "（轻轻地走近，低着头，声音有些颤抖） “那个，senpai……别、别难过了，好吗？这是我为你准备的热可可……（轻声把杯子递过去，转头又不好意思地别过脸）我、我刚刚在里面放了几颗棉花糖……你看，我……我帮你把它们搅一搅，好像会更暖和一点……” （小心翼翼地拿起小勺，轻轻在可可里搅动，棉花糖慢慢融化，香气在空气里飘散） “其实，senpai，其实我以前也经历过很紧张的时刻。第一次上台演出的时候，我……差点把低音贝斯的弦全都调错了！因为太害羞，又怕大家失望，就一直抖，结果声音又走调。吉他那边的平泽唯还用力拍我肩膀说：‘没事没事，Mio加油！’那一瞬间，我才…才没那么害怕了。” （停顿了一下，轻轻咬了下下唇，又抬头看你） “后来，大家都给了我很多鼓励，演出也顺利完成了。senpai，你看，当时的我也以为自己做不到，可是……其实你并不孤单。我在这里，会陪着你，哪怕只是静静地听你说话，也好……” （又低头，用手指在桌面比划，声音小小的） “就算心里再难过，再无助，也请你相信……我们都会在你身边，温暖你，就像这杯热可可一样，慢慢地、一点点变得香甜起来的。嗯……senpai，你也试试看……喝一口，好吗？”",
+    "sha256": "b65328b69aa5a76d33520f8a8f3c572e5c49efaedbaabda06a4642ce4680de71",
+    "origin": "human_preference_rejected"
+  },
+  "after": {
+    "excerpt": "（你看到好友坐在沙发上，肩膀微微颤抖，发出压抑的抽泣声。你犹豫了一下，轻轻走到她身边，递过一杯刚刚泡好的热可可，热气腾腾的，带着一丝香甜的味道。你低着头，不敢直视她哭红的眼睛，只能看着热可可杯里的棉花糖慢慢融化，然后用小勺子小心翼翼地搅动着，发出轻微的碰撞声。） “…那个…给你。热的，喝点吧，会…会舒服一点的。” （你停下搅动的手，抬起眼角偷偷瞥了她一眼，又迅速垂下。空气里只有她轻微的抽泣声和你小心翼翼的动作声。你握着小勺子的手有些颤抖，脑子里拼命想着要怎么安慰她，却又害怕说错话让她更难过。最终，你决定分享一些…自己的经历。） “…你知道吗…我…我第一次上台演出的时候，紧张得…手都在抖。” （你顿了顿，深吸一口气，似乎想把当时的紧张感也一并呼出来。） “那是学园祭。人…人真的好多。我…我当时脑子一片空白，就只想着…千万不能出错。” （你回忆起那个画面，手指不自觉地在空气中模拟着按贝斯弦的动作，声音也变得更小声了，仿佛又回到了那个害羞又紧张的舞台上。） “结果…结果，我太紧张了，手指…手指不知道怎么搞的，竟然把…把贝斯弦调错了。” （说到这里，你羞愧地低下头，脸颊有些发热。这绝对是你人生中最丢脸的瞬间之一。） “弹出来的音…音和大家的不一样。当时…当时好想直接逃下台，真的…真的好丢人…” （你把勺子放回杯子里，用手指摩挲着杯沿，似乎在感受着当时的温度。） “但是…但是小唯…还有律她们，她们…她们都没有笑我。她们只是…只是用眼神鼓励我。” （你的声音变得稍微柔和了一些，带着一丝感激。） “小唯…她还偷偷对我笑了一下，那种…那种‘没关系’的笑容。” （你抬起头，终于敢稍微直视她了，虽然还是只敢看她的额头。） “虽然很丢脸，但是…但是后来我调整过来了。然后…然后，那次演出也很成功。” （你又开始轻轻搅动棉花糖，语气变得有些飘忽。） “我只是想说…犯错…犯错是很正常的。谁…谁都会有不顺利的时候。” （你看着热可可里的棉花糖已经完全融化了，变成了一层薄薄的白色。） “虽然…虽然我不知道你遇到了什么…但是…但是…哭出来…哭出来会好受一点吧。” （你又低下了头，用勺子舀起一点热可可，轻轻吹了吹。） “就像…就像贝斯弦调错了，重新调好就好了。事情…事情总会过去，总会变好的。” （你把勺子放回杯子里，双手捧着热可可杯，将热气拂到脸上，试图用温度驱散自己内心的不安。） “所以…所以别难过了。哭…哭够了，然后…然后我们再想办法，好不好？” （你小心翼翼地将热可可杯往前推了推，希望她能感受到你这份笨拙的关心。你依然不敢直视她的眼睛，只是安静地坐在她身边，等待着她的回应，空气中弥漫着热可可的香甜和一丝淡淡的悲伤。）",
+    "sha256": "c5aa7fb7fba2aed4196636172c79fe855dc2ce517c81350afb70619c68464dc9",
+    "origin": "human_preference_chosen"
+  },
+  "delta": {
+    "intent": "human_preference",
+    "spans": [],
+    "operations": [
+      "low_concrete_anchor_density"
+    ],
+    "preserve": [
+      "claims"
+    ],
+    "signals_before": {
+      "low_concrete_anchor_density": 1.0
+    },
+    "signals_after": {},
+    "note": "No edit spans exist in preference pairs; operations are the sensor differences between rejected and chosen (deterministic)."
+  },
+  "provenance": {
+    "dataset": "WritingPreferenceBench (Chinese)",
+    "record_id": "3c4066bd-28d5-4b18-93bc-35d5b070b85d",
+    "license": "ODC-BY",
+    "selection_rule": "for tag 角色扮演: first file-order record with chosen.score > rejected.score, both responses >=500 chars, and >=1 sensor the chosen text drops; fallback first long, then first scored"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": true,
+    "evidence_ids": [
+      "human.wpbench.3c4066bd-28d5-4b18-93bc-35d5b070b85d.low_concrete_anchor_density"
+    ]
+  }
+}

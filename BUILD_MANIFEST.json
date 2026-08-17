@@ -908,8 +908,8 @@
     },
     {
       "path": ".gitignore",
-      "bytes": 341,
-      "sha256": "a768178f18bce3c9a04ee5225ae9430806efd538bf004b22fe5a2188ef6d19c4"
+      "bytes": 569,
+      "sha256": "29160a1c9e652122bcdeeca138de6b906d4e4c1d5bef146b53daf909a0b149ae"
     },
     {
       "path": "AGENTS.md",
@@ -1252,6 +1252,11 @@
       "sha256": "fffd65468a982225fb61b3b4abb0fd21cf5b6aa160dc5057832831feaa458809"
     },
     {
+      "path": "tests/test_editorial_benchmark.py",
+      "bytes": 7522,
+      "sha256": "f819da80e3384c005951e905c57e4c858eb269a5931eec6e7e7455a6bef8d6ce"
+    },
+    {
       "path": "tests/test_editorial_control.py",
       "bytes": 31671,
       "sha256": "8df21c9eb18537472ca269f9b88b16ab979ed303c90914cb2ab0f434c5807bd3"
@@ -1310,6 +1315,11 @@
       "path": "tests/test_gateway_telegram.py",
       "bytes": 11229,
       "sha256": "96c5c8dcc8fda19709193f4ffbe4b95cf50a082111e7e038ee16512fb353fc40"
+    },
+    {
+      "path": "tests/test_learning_pack_compiler.py",
+      "bytes": 25245,
+      "sha256": "5937123a10fd12f6298ed878f3e5e86eb46fc67475829fd7a160ab2cc24ed3f9"
     },
     {
       "path": "tests/test_knowledge_invariants.py",

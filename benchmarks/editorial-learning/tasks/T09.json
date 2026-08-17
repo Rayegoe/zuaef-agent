@@ -1,0 +1,76 @@
+{
+  "task_id": "T09",
+  "sequence": 9,
+  "source": "tetra",
+  "language": "en",
+  "domain": "acl_paper",
+  "material": {
+    "prompt_excerpt": "TETRA professional editing task (paper P03-1006, editor A). The BEFORE text is reconstructed by reverting the editor's tracked edits; AFTER applies them.",
+    "sha256": "f2c8421343d7c011e145d7c94a5e90501753dead5e6a3a58e2a2c51912c0ed9a"
+  },
+  "before": {
+    "excerpt": "Generalized Algorithms for Constructing Statistical Language ModelsRecent text and speech processing applications such as speech mining raise new and more general problems related to the construction of language models. We presentand describe in detail, several new and efficient algorithms to address these more general problemsand report experimental results demonstrating their usefulness. We give an algorithm forcomputing efficientlythe expected counts of any sequence in a word latticeoutput by a speech recognizer or any arbitrary weighted automaton; describe a new technique for creating exact representations of n-gram language models by weighted automata whose size is practical for offline use even for a vocabulary size of about 500,000 words and an n-gram order n = 6; and present a simple and more general technique for constructing class-based language models that allows each class to represent an arbitrary weighted automaton. An efficient implementation of our algorithms and techniques has been incorporated in a general software library for language modeling, the GRM Library, that includes many other text and grammar processing functionalities.Statistical language models are crucial components of many modern natural language processing systems such as speech recognition, information extraction, machine translation,ordocument classification. Inallcases, a language model is used in combination with other information sources to rank alternative hypotheses by assigning them s",
+    "sha256": "0f81cacfa9b20356e4989e28082f41d76761f45a0f286d2461daee0f83bbba01",
+    "origin": "tetra_reconstructed_original"
+  },
+  "after": {
+    "excerpt": "Generalized Algorithms for Constructing Statistical Language ModelsRecent text and speech processing applications such as speech mining raise new and more general problems related to the construction of language models. We presentseveral new and efficient algorithms to address these more general problems, describe the algorithms in detail,and report experimental results demonstrating their usefulness. We give an algorithm forefficiently computingthe expected counts of any sequence in a word latticewhich has beenoutput by a speech recognizer or any arbitrary weighted automaton; describe a new technique for creating exact representations of n-gram language models by weighted automata whose size is practical for offline use even for a vocabulary size of about 500,000 words and an n-gram order n = 6; and present a simple and more general technique for constructing class-based language models that allows each class to represent an arbitrary weighted automaton. An efficient implementation of our algorithms and techniques has been incorporated in a general software library for language modeling, the GRM Library, that includes many other text and grammar processing functionalities.Statistical language models are crucial components of many modern natural language processing systems such as speech recognition, information extraction, machine translation,anddocument classification. Inthesecases, a language model is used in combination with other information sources to rank alternative h",
+    "sha256": "a0a3706e47e222ae48fbcb0d98e227b41617b16eff16250d8c57da2b328290de",
+    "origin": "tetra_professional_edit"
+  },
+  "delta": {
+    "intent": "consistency_flow",
+    "spans": [
+      {
+        "before": "computing efficiently",
+        "after": "efficiently computing",
+        "type": "style;word order",
+        "comment": "style / readability - it's more natural for the adverb to come first here"
+      },
+      {
+        "before": "contains typically",
+        "after": "typically contains",
+        "type": "style;word order",
+        "comment": "style / readability - as above, it's smoother with the adverb first"
+      },
+      {
+        "before": "in detail these algorithms",
+        "after": "these algorithms in detail",
+        "type": "style;word order;clarity",
+        "comment": "style / readability - bringing the object closer to the verb helps with clarity and flow"
+      }
+    ],
+    "operations": [
+      "style;word order",
+      "style;word order;clarity"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ]
+  },
+  "provenance": {
+    "dataset": "TETRA (professional edits of ACL papers)",
+    "record_id": "P03-1006-A",
+    "license": "CC BY 4.0",
+    "selection_rule": "max edits matching ('consistency', 'word order', 'flow') among editor-A files; tie-break doc_id"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": true,
+    "evidence_ids": [
+      "human.tetra.P03-1006.A.1",
+      "human.tetra.P03-1006.A.2"
+    ]
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "task_id": "T20",
+  "sequence": 20,
+  "source": "re3",
+  "language": "en",
+  "domain": "scientific_paper",
+  "material": {
+    "prompt_excerpt": "Re3-Sci collaborative revision task (paper 334-ARR). The passage below is a real peer-review excerpt that triggered the author's revision; revise the BEFORE passage accordingly. --- REVIEWER REPORT (excerpt) --- paper_summary. This work introduces a new dataset, the Hindi Legal Documents Corpus (HLDC), a corpus with 900 thousand legal documents in Hindi. This corpus is collected from public data, and the authors intend to release (in addition to the corpus) the scripts necessary for its creation and processing, along with models and code for the experiments in the paper. The authors examine the task of predicting the verdict of bail applications (a binary task, which is to predict whether or not the application was denied or granted). A variety of models are explored for this task; while accuracy is better than the majority baseline, there is still much room for progress. The headroom in performance even for this simple task highlights the challenges in using natural language processing and machine learning systems for legal use cases. Overall, I believe the data and experiments introduced by this work would be interesting to many, and I recommend it's acceptance. summary_of_strengths. 1. This work introduces a new, large-scale dataset containing legal documents in a low-resource language. This can be a valuable resource for many, and could help advance research in natural language processing for legal use cases. 2. Authors thoroughly describe the process of data collection a",
+    "sha256": "4bb1cd5fd903c12e1f24da209a07a88e1a97c61b05b1933bc0ce3bbb59d74a18"
+  },
+  "before": {
+    "excerpt": "Hindi Legal Document Corpus Hindi Legal Document Corpus (HLDC) is a corpus of about 900K Indian legal case documents in the Hindi language. The corpus is created by scraping data from the e-Courts website (a publicly available website: https:// districts.ecourts.gov.in/). We scrape case documents pertaining to the district courts located in the Indian northern state of Uttar Pradesh (U.P.). Results on different models are indicative of the need for further research in this area. The first step in HLDC creation is the scraping of documents from the e-Courts website. Populous countries (e.g., India) are burdened with a considerable backlog of legal cases. The header contains the meta-information related to the case, for example, case number, court identifier, applicable sections of the law, etc. For example, if a system could readily extract the required information from a legal document for a legal practitioner, then it would help them expedite the legal process. The body is further segmented into Facts and Arguments, Judge's summary and Case Result. For example, legal documents are typically quite long (tens of pages), legal documents are highly unstructured and noisy (spelling and grammar mistakes, since these are typed), language in legal documents are domain-specific, and pre-trained language models do not perform well on these (Malik et al., 2021). As observed in previous work (Malik et al., 2021), anonymization of a judge's name is important as there is a correlation bet",
+    "sha256": "5c9b41938087d5a10e52c759a5cf35887300d65e7ab1bf10849da961179dc07e",
+    "origin": "re3_v1_old_sentences"
+  },
+  "after": {
+    "excerpt": "Hindi Legal Documents Corpus Hindi Legal Documents Corpus (HLDC) is a corpus of 912,568 Indian legal case documents in the Hindi language. The corpus is created by downloading data from the e-Courts website (a publicly available website: https:// districts.ecourts.gov.in/). We download case documents pertaining to the district courts located in the Indian northern state of Uttar Pradesh (U.P.). Experiments with different models are indicative of the need for further research in this area. The first step in HLDC creation is the downloading of documents from the e-Courts website. Many populous countries including India are burdened with a considerable backlog of legal cases. The header contains the meta-information related to the case, for example, case number, court identifier, and applicable sections of the law. For example, if a system could readily extract the required information from a legal document for a legal practitioner, then it would help expedite the legal process. Body is further segmented into Facts and Arguments, Judge's summary and Case Result. For example, legal documents are typically quite long (tens of pages), highly unstructured and noisy (spelling and grammar mistakes since these are typed), use domainspecific language and jargon; consequently, pre-trained language models do not perform well on these (Malik et al., 2021b). As observed in previous work (Malik et al., 2021b), anonymization of a judge's name is important as there is a correlation between a c",
+    "sha256": "37bc0267f043aa0cb725cf88e72b0c7a724ce2945f53735db5919e1e2deee14c",
+    "origin": "re3_v2_new_sentences"
+  },
+  "delta": {
+    "intent": "holistic_revision_with_response",
+    "spans": [
+      {
+        "before": "Hindi Legal Document Corpus",
+        "after": "Hindi Legal Documents Corpus",
+        "gold": "Modify,Grammar",
+        "section": "HLDC: Hindi Legal Documents Corpus"
+      },
+      {
+        "before": "Hindi Legal Document Corpus (HLDC) is a corpus of about 900K Indian legal case documents in the Hindi language.",
+        "after": "Hindi Legal Documents Corpus (HLDC) is a corpus of 912,568 Indian legal case documents in the Hindi language.",
+        "gold": "Modify,Fact/Evidence",
+        "section": "Hindi Legal Document Corpus"
+      },
+      {
+        "before": "The corpus is created by scraping data from the e-Courts website (a publicly available website: https:// districts.ecourts.gov.in/).",
+        "after": "The corpus is created by downloading data from the e-Courts website (a publicly available website: https:// districts.ecourts.gov.in/).",
+        "gold": "Modify,Clarity",
+        "section": "Hindi Legal Document Corpus"
+      },
+      {
+        "before": "We scrape case documents pertaining to the district courts located in the Indian northern state of Uttar Pradesh (U.P.).",
+        "after": "We download case documents pertaining to the district courts located in the Indian northern state of Uttar Pradesh (U.P.).",
+        "gold": "Modify,Clarity",
+        "section": "Hindi Legal Document Corpus"
+      },
+      {
+        "before": "Results on different models are indicative of the need for further research in this area.",
+        "after": "Experiments with different models are indicative of the need for further research in this area.",
+        "gold": "Modify,Clarity",
+        "section": "Abstract"
+      },
+      {
+        "before": "The first step in HLDC creation is the scraping of documents from the e-Courts website.",
+        "after": "The first step in HLDC creation is the downloading of documents from the e-Courts website.",
+        "gold": "Modify,Clarity",
+        "section": "Hindi Legal Document Corpus"
+      },
+      {
+        "before": "Populous countries (e.g., India) are burdened with a considerable backlog of legal cases.",
+        "after": "Many populous countries including India are burdened with a considerable backlog of legal cases.",
+        "gold": "Modify,Clarity",
+        "section": "Abstract"
+      },
+      {
+        "before": "The header contains the meta-information related to the case, for example, case number, court identifier, applicable sections of the law, etc.",
+        "after": "The header contains the meta-information related to the case, for example, case number, court identifier, and applicable sections of the law.",
+        "gold": "Modify,Clarity",
+        "section": "Hindi Legal Document Corpus"
+      }
+    ],
+    "operations": [
+      "Modify,Clarity",
+      "Modify,Fact/Evidence",
+      "Modify,Grammar"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "note": "src=NEW/v2, tgt=OLD/v1 per data_human README; edits are sentence-aligned human annotations (3-annotator majority)."
+  },
+  "provenance": {
+    "dataset": "Re3-Sci",
+    "record_id": "334-ARR",
+    "license": "CC BY 4.0 (DataLib item)",
+    "selection_rule": "doc with most ('Modify,Clarity', 'Modify,Grammar', 'Modify,Fact/Evidence') both-span edits, review text present; tie-break doc_name"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": false,
+    "evidence_ids": []
+  }
+}

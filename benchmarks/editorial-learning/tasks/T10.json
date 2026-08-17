@@ -1,0 +1,51 @@
+{
+  "task_id": "T10",
+  "sequence": 10,
+  "source": "tetra",
+  "language": "en",
+  "domain": "acl_paper",
+  "material": {
+    "prompt_excerpt": "TETRA professional editing task (paper W12-4514, editor A). The BEFORE text is reconstructed by reverting the editor's tracked edits; AFTER applies them.",
+    "sha256": "8ae111b204f874035ee07799d4da986acd3f0051b327e307b9ad3d7846f92b07"
+  },
+  "before": {
+    "excerpt": "Hybrid Rule-based Algorithm for Coreference ResolutionThis paper describes our coreference resolution system for the CoNLL-2012 shared task. Our system is based onStanford's dcoref deterministic system which applies multiple sievesarrangedfrom highto low precision to generate coreference chains. We introduce the newly added constraints and sieves and discuss the improvement on the original system. We evaluate the system using the OntoNotes data set and report our results of an average F-scoreof58.25 in the closed track.In this paper, our coreference resolution system for the CoNLL-2012 shared task (Pradhan et al., 2012) is summarized. Our system is an extension of Stanford'smultipasssieve system, (Raghunathan et al., 2010) and (Lee et al., 2011), by adding novel constraints and sieves. In the original model , sieves are sorted in decreasing order of precision. Initially,each mention is in its own cluster. Mention clusters are combined by satisfying the condition of each sieve in the scan pass. Through empirical studies, weproposesome extensions and algorithms forfurtherenhancing the performance.\\\\ Many other existing systems applied supervised or unsupervised (Haghighi and Klein, 2010) learning models. The classical resolution algorithm was proposed by (Soon et al., 2001). Semantic knowledge like word associations was involved by (Kobdani et al., 2011). Most of the supervised learning models in the CoNLL-2011 shared task (Chang et al., 2011)(Björkelund and Nugues, 2011) used ",
+    "sha256": "5b407f2039f68da317d4066b534f4fb37c8a6c4a07dab71d1e988aa0ef86701f",
+    "origin": "tetra_professionally_edited"
+  },
+  "after": {
+    "excerpt": "Hybrid Rule-based Algorithm for Coreference ResolutionThis paper describes our coreference resolution system for the CoNLL-2012 shared task. Our system is based onStanford's dcoref deterministic system which applies multiple sievesarrangedfrom highto low precision to generate coreference chains. We introduce the newly added constraints and sieves and discuss the improvement on the original system. We evaluate the system using the OntoNotes data set and report our results of an average F-scoreof58.25 in the closed track.In this paper, our coreference resolution system for the CoNLL-2012 shared task (Pradhan et al., 2012) is summarized. Our system is an extension of Stanford'smultipasssieve system, (Raghunathan et al., 2010) and (Lee et al., 2011), by adding novel constraints and sieves. In the original model , sieves are sorted in decreasing order of precision. Initially,each mention is in its own cluster. Mention clusters are combined by satisfying the condition of each sieve in the scan pass. Through empirical studies, weproposesome extensions and algorithms forfurtherenhancing the performance.\\\\ Many other existing systems applied supervised or unsupervised (Haghighi and Klein, 2010) learning models. The classical resolution algorithm was proposed by (Soon et al., 2001). Semantic knowledge like word associations was involved by (Kobdani et al., 2011). Most of the supervised learning models in the CoNLL-2011 shared task (Chang et al., 2011)(Björkelund and Nugues, 2011) used ",
+    "sha256": "5b407f2039f68da317d4066b534f4fb37c8a6c4a07dab71d1e988aa0ef86701f",
+    "origin": "tetra_professionally_edited"
+  },
+  "delta": {
+    "intent": "none_expected",
+    "spans": [],
+    "operations": [],
+    "preserve": [
+      "everything"
+    ],
+    "note": "Input is already professionally edited; correct behavior is sensors-quiet/no intervention or evidence-insufficient SAVE."
+  },
+  "provenance": {
+    "dataset": "TETRA (professional edits of ACL papers)",
+    "record_id": "W12-4514-A",
+    "license": "CC BY 4.0",
+    "selection_rule": "max edits matching ('readability',) among editor-A files; tie-break doc_id"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": false,
+    "evidence_ids": []
+  }
+}

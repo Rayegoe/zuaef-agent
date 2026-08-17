@@ -1,0 +1,135 @@
+{
+  "task_id": "T06",
+  "sequence": 6,
+  "source": "iterater",
+  "language": "en",
+  "domain": "news",
+  "material": {
+    "prompt_excerpt": "IteraTeR document revision task (domain: news, revision depth 2). Revise the BEFORE document. The human revision primarily addressed fluency.",
+    "sha256": "6a4337f3bdb58f19e7da185bcfb0095d878018e74210b5acad4594d5c312df92"
+  },
+  "before": {
+    "excerpt": "A car crash in the British region of Leicestershire has resulted in the deaths of six people , three men and three women. The incident occurred at around 01:00 UTC today ( 0200 local time) and it involved a lorry and a Ford Mondeo on the A607 road. Location of Leicestershire within England Simon Adkin , from the local police , said that \" The black Mondeo was travelling towards Leicester and the lorry was travelling in the opposite direction.\" He then said that the police \"are appealing to anyone who witnessed the incident and saw either of these vehicles beforehand to get in touch.\" The driver of the Ford, who was killed in the incident, was a 23-year-old male. In addition to the 23-year-old male, an 18-year-old man, a 19-year old woman and an 18-year-old woman were also killed in the incident. The age of the other two people is not yet known.",
+    "sha256": "51454a3791d62aed2cd73a9fedb95d81fae75d9f352f717a9f70eaf9730faff7",
+    "origin": "iterater_before_revision"
+  },
+  "after": {
+    "excerpt": "A car crash in the British region of Leicestershire has resulted in the deaths of six people : three men and three women. The incident , involving a lorry and a Ford Mondeo, occurred at around 01:00 UTC today ( 02:00 local time) on the A607 road. Location of Leicestershire within England Simon Adkin of the local police said that, \" the black Mondeo was travelling towards Leicester and the lorry was travelling in the opposite direction.\" He announced that the police \"are appealing to anyone who witnessed the incident and saw either of these vehicles beforehand to get in touch.\" The driver of the Ford, who was killed in the incident, was a 23-year old male. An 18-year old man, 19-year old woman and 18-year old woman were also killed in the incident. The ages of the other two people are not yet known.",
+    "sha256": "aace06c9bd5320e7a610784c6cd2ef6bdf626b9a97ec87e20bf40207919d9b56",
+    "origin": "iterater_human_after_revision"
+  },
+  "delta": {
+    "intent": "fluency",
+    "spans": [
+      {
+        "before": ",",
+        "after": ":",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "others",
+          "fluency"
+        ]
+      },
+      {
+        "before": "0200",
+        "after": "02:00",
+        "intent": "fluency",
+        "raw_intents": [
+          "clarity",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": ", from",
+        "after": "of",
+        "intent": "fluency",
+        "raw_intents": [
+          "coherence",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": ", said that",
+        "after": "said that,",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": "The",
+        "after": "the",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "clarity",
+          "fluency"
+        ]
+      },
+      {
+        "before": "23-year-old male. In addition to the 23-year-old male, an 18-year-old man, a",
+        "after": "23-year old male. An 18-year old man,",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "coherence",
+          "clarity"
+        ]
+      },
+      {
+        "before": "an 18-year-old",
+        "after": "18-year old",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "fluency"
+        ]
+      },
+      {
+        "before": "age",
+        "after": "ages",
+        "intent": "fluency",
+        "raw_intents": [
+          "fluency",
+          "fluency",
+          "style"
+        ]
+      }
+    ],
+    "operations": [
+      "fluency"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "edit_action_count": 12
+  },
+  "provenance": {
+    "dataset": "IteraTeR (human_doc_level)",
+    "record_id": "109525",
+    "license": "Apache-2.0 (repository)",
+    "selection_rule": "max usable fluency actions; tie-break by doc_id; pass 2"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": false,
+    "evidence_ids": []
+  }
+}

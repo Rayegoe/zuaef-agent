@@ -1,0 +1,142 @@
+{
+  "task_id": "T01",
+  "sequence": 1,
+  "source": "iterater",
+  "language": "en",
+  "domain": "unknown",
+  "material": {
+    "prompt_excerpt": "IteraTeR document revision task (domain: unknown, revision depth 1). Revise the BEFORE document. The human revision primarily addressed clarity.",
+    "sha256": "2e026eaaec3dffd7d45077a5e5ce6105ac6d3d84d6d28491c17d94e8a4b47557"
+  },
+  "before": {
+    "excerpt": "240px| Several companies just looked the vision of WiMAX but ignore its threats. In the picture is MTube, innovated by Science and Technology Advisory Group of Executive Yuan of the Republic of China (Taiwan). Computers and technology bring several conveniences to the modern lifestyle , but it creates risks like computer viruses and hacking. Many people want to enjoy the conveniences brought by new technology, but they may not be aware of its problems. WiMAX , which is a communication standard is mainly promoted by the Taipei Computer Association, in addition to the Industrial Technology Research Institute and the Ministry of Economic Affairs of the Republic of China , is considered by some to be the next generation in mobile devices. Since several Internet crimes are progressively respected by several information security companies , some of them disputed on security of WiMAX. After all, everyone wants to welcome this new technology but is afraid of its problem to bring about security issues. Although some (security) companies analyzed statistics on potential issues to dispute the future of WiMAX, but the question is how will they present their analysis? With opportunities from two press conferences in Taiwan, Wikinews Journalist Rico Shen briefly and successively interviewed Hsiao-wen Hung, President of Microsoft Research Asia and Li Chang, Deputy Secretary General of Taipei Computer Association. With their experiences in the IT industry, they agreed to comment on this ques",
+    "sha256": "9c737e8e58ec34ea073b228b93543c97e1be7cd81193fd4f8eef251badddff13",
+    "origin": "iterater_before_revision"
+  },
+  "after": {
+    "excerpt": "240px| Some companies see the possibilities of WiMAX but ignore its threats. Pictured is MTube, developed by the Science and Technology Advisory Group of Executive Yuan of the Republic of China (Taiwan). Computers and technology make our modern lifestyle more convenient, but they also create new risks like computer viruses and hacking. Many people want to enjoy the convenience of new technology, but they may not be aware of its problems. WiMAX is being promoted in Taiwan by the Taipei Computer Association, the Industrial Technology Research Institute and the Ministry of Economic Affairs of the Republic of China . It is considered by some to be the communication standard for the next generation of mobile devices. Information security companies are concerned increasingly by Internet crime, and some of them question the security of WiMAX. After all, everyone wants to welcome this new technology but is afraid of its potential to cause security issues. Some companies have analyzed potential security issues which threaten the success of WiMAX. But what have they found? Taking the opportunity of two press conferences in Taiwan, Wikinews Journalist Rico Shen briefly interviewed both Hsiao-wen Hung, President of Microsoft Research Asia and Li Chang, Deputy Secretary General of Taipei Computer Association. With their experience in the IT industry, they agreed to comment on this question. __NOTOC__ Hsiao-wen Hung: Information security isn't built in a day Hsiao-wen Hung: The information",
+    "sha256": "a7e462f81a4a84e82f9a715525716942abad710451a2a61b7cf9fcaf2a027904",
+    "origin": "iterater_human_after_revision"
+  },
+  "delta": {
+    "intent": "clarity",
+    "spans": [
+      {
+        "before": "Several companies just looked the vision",
+        "after": "Some companies see the possibilities",
+        "intent": "clarity",
+        "raw_intents": [
+          "clarity",
+          "clarity",
+          "clarity"
+        ]
+      },
+      {
+        "before": "In the picture",
+        "after": "Pictured",
+        "intent": "clarity",
+        "raw_intents": [
+          "clarity",
+          "clarity",
+          "fluency"
+        ]
+      },
+      {
+        "before": "innovated by",
+        "after": "developed by the",
+        "intent": "clarity",
+        "raw_intents": [
+          "clarity",
+          "clarity",
+          "meaning-changed"
+        ]
+      },
+      {
+        "before": "bring several conveniences to the modern lifestyle , but it creates",
+        "after": "make our modern lifestyle more convenient, but they also create new",
+        "intent": "clarity",
+        "raw_intents": [
+          "clarity",
+          "clarity",
+          "clarity"
+        ]
+      },
+      {
+        "before": "conveniences brought by",
+        "after": "convenience of",
+        "intent": "clarity",
+        "raw_intents": [
+          "clarity",
+          "clarity",
+          "fluency"
+        ]
+      },
+      {
+        "before": "next generation in",
+        "after": "communication standard for the next generation of",
+        "intent": "clarity",
+        "raw_intents": [
+          "clarity",
+          "clarity",
+          "meaning-changed"
+        ]
+      },
+      {
+        "before": "disputed on",
+        "after": "question the",
+        "intent": "clarity",
+        "raw_intents": [
+          "fluency",
+          "clarity",
+          "clarity"
+        ]
+      },
+      {
+        "before": "problem to bring about",
+        "after": "potential to cause",
+        "intent": "clarity",
+        "raw_intents": [
+          "style",
+          "clarity",
+          "clarity"
+        ]
+      }
+    ],
+    "operations": [
+      "clarity"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "edit_action_count": 52
+  },
+  "provenance": {
+    "dataset": "IteraTeR (human_doc_level)",
+    "record_id": "105134",
+    "license": "Apache-2.0 (repository)",
+    "selection_rule": "max usable clarity actions; tie-break by doc_id; pass 1"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": true,
+    "evidence_ids": [
+      "human.iterater.105134.clarity.0",
+      "human.iterater.105134.clarity.1",
+      "human.iterater.105134.clarity.2",
+      "human.iterater.105134.clarity.3",
+      "human.iterater.105134.clarity.4",
+      "human.iterater.105134.clarity.8"
+    ]
+  }
+}

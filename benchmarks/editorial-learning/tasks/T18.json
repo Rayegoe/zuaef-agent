@@ -1,0 +1,103 @@
+{
+  "task_id": "T18",
+  "sequence": 18,
+  "source": "re3",
+  "language": "en",
+  "domain": "scientific_paper",
+  "material": {
+    "prompt_excerpt": "Re3-Sci collaborative revision task (paper 192-ARR). The passage below is a real peer-review excerpt that triggered the author's revision; revise the BEFORE passage accordingly. --- REVIEWER REPORT (excerpt) --- paper_summary. This paper proposes an unsupervised knowledge distillation framework with a multiple-task multiple-teacher model for cross-language named entity recognition. An entity similarity evaluator is proposed to help NER as an auxiliary task. The results show that the approach outperforms baselines on seven languages. summary_of_strengths. 1. This is the first work that using multi-task learning in cross-lingual NER. 2. The similarity metric model boosts the performance as an auxiliary task part. 3. The experiments show that the proposed approach performs better than the baselines. summary_of_weaknesses. 1. Innovation is weak, only the modification of existing methods. Although existing cross-lingual NER methods don’t consider multi-task learning, it has been widely used in transfer learning/unsupervised learning. 2. The experiment is not sufficient. A key contribution of this work is the teacher-student framework. But little experiments are carried out to prove its effectiveness. It seems that MTST in ablation study aims to prove it but the description “multiple-teacher to single-teacher” and “teacher and student have the same neural network structure” is confusing. comments,_suggestions_and_typos. There are some grammatical mistakes, such as a) in line 115, i",
+    "sha256": "0e606886bdc834751ad36ab8b7c5ab62aea0b28fd7baa77365c2859a493b9503"
+  },
+  "before": {
+    "excerpt": "During the learning process, the samples from target language are fed into the teacher model and the outputs are taken as the supervisory signal for two tasks in the student model. We aim to find entity similarity to help the cross-lingual NER model in target language. The exploiting of deep neural networks, such as Bi-LSTM-CRF (Lample et al., 2016), Bi-LSTM-CNN (Chiu and Nichols, 2016) make this task achieves significant performances. Teacher Student Distillation Learning In this section, we consider to transfer the named entity type and similarity knowledge learned on labeled source language corpus to unlabeled target language NER task. However, since deep neural networks highly relies on a large amount of labelled training data, the annotation acquiring process is expensive and time consuming. Cross-lingual named entity recognition task is one of the critical problem for evaluating the potential transfer learning techniques on low resource languages. We set batch size to be 32, maximum sequence length to be 128, dropout rate to be 0.2, and we use Adam as optimizer (Kingma and Ba, 2014). Specifically, compared with the remarkable RIKD, AdvPicker and Unitrans, which also use knowledge distillation but ignore the entity similarity knowledge, our model obtains significant and consistent improvements in F1-score ranging from 0.23 for German[de] to 6.81 for Arabic [ar]. Note that Bert-f performs better than our model on Chinese dataset due to their re-tokenization of the dataset",
+    "sha256": "5d1968f23fe320c172e26d74a80c0d250abba2b1f44ca183a60677b32b07b041",
+    "origin": "re3_v1_old_sentences"
+  },
+  "after": {
+    "excerpt": "During the learning process, the samples from the target language are fed into the teacher model and the outputs are taken as the supervisory signal for two tasks in the student model. We aim to find entity similarity to help the crosslingual NER model in the target language. The exploiting of deep neural networks, such as Bi-LSTM-CRF (Lample et al., 2016), Bi-LSTM-CNN (Chiu and Nichols, 2016) makes this task achieve significant performances. Teacher-student Distillation Learning In this section, we consider transferring the named entity type and similarity knowledge learned on labeled source language corpus to unlabeled target language NER task. However, since deep neural networks highly rely on a large amount of labelled training data, the annotation acquiring process is expensive and time consuming. Cross-lingual named entity recognition task is one of the critical problems for evaluating the potential transfer learning techniques on low resource languages. We set the batch size to be 32, maximum sequence length to be 128, dropout rate to be 0.2, and we use Adam as optimizer (Kingma and Ba, 2014). Specifically, compared with the remarkable RIKD, AdvPicker, and Unitrans, which also use knowledge distillation but ignore the entity similarity knowledge, our model obtains significant and consistent improvements in F1-score ranging from 0.23 for German[de] to 6.81 for Arabic [ar]. Note that BERT-f performs better than our model on the Chinese dataset due to their re-tokenizatio",
+    "sha256": "4867e7d645f948e48b2281f5acc2ddf66cb4c667aa4b65f614c9dfc39d36d493",
+    "origin": "re3_v2_new_sentences"
+  },
+  "delta": {
+    "intent": "review_triggered_grammar_fluency",
+    "spans": [
+      {
+        "before": "During the learning process, the samples from target language are fed into the teacher model and the outputs are taken as the supervisory signal for two tasks in the student model.",
+        "after": "During the learning process, the samples from the target language are fed into the teacher model and the outputs are taken as the supervisory signal for two tasks in the student model.",
+        "gold": "Modify,Grammar",
+        "section": "Framework"
+      },
+      {
+        "before": "We aim to find entity similarity to help the cross-lingual NER model in target language.",
+        "after": "We aim to find entity similarity to help the crosslingual NER model in the target language.",
+        "gold": "Modify,Grammar",
+        "section": "Teacher Models"
+      },
+      {
+        "before": "The exploiting of deep neural networks, such as Bi-LSTM-CRF (Lample et al., 2016), Bi-LSTM-CNN (Chiu and Nichols, 2016) make this task achieves significant performances.",
+        "after": "The exploiting of deep neural networks, such as Bi-LSTM-CRF (Lample et al., 2016), Bi-LSTM-CNN (Chiu and Nichols, 2016) makes this task achieve significant performances.",
+        "gold": "Modify,Grammar",
+        "section": "Introduction"
+      },
+      {
+        "before": "Teacher Student Distillation Learning",
+        "after": "Teacher-student Distillation Learning",
+        "gold": "Modify,Grammar",
+        "section": "Framework"
+      },
+      {
+        "before": "In this section, we consider to transfer the named entity type and similarity knowledge learned on labeled source language corpus to unlabeled target language NER task.",
+        "after": "In this section, we consider transferring the named entity type and similarity knowledge learned on labeled source language corpus to unlabeled target language NER task.",
+        "gold": "Modify,Grammar",
+        "section": "Teacher Student Distillation Learning"
+      },
+      {
+        "before": "However, since deep neural networks highly relies on a large amount of labelled training data, the annotation acquiring process is expensive and time consuming.",
+        "after": "However, since deep neural networks highly rely on a large amount of labelled training data, the annotation acquiring process is expensive and time consuming.",
+        "gold": "Modify,Grammar",
+        "section": "Introduction"
+      },
+      {
+        "before": "Cross-lingual named entity recognition task is one of the critical problem for evaluating the potential transfer learning techniques on low resource languages.",
+        "after": "Cross-lingual named entity recognition task is one of the critical problems for evaluating the potential transfer learning techniques on low resource languages.",
+        "gold": "Modify,Grammar",
+        "section": "Abstract"
+      },
+      {
+        "before": "We set batch size to be 32, maximum sequence length to be 128, dropout rate to be 0.2, and we use Adam as optimizer (Kingma and Ba, 2014).",
+        "after": "We set the batch size to be 32, maximum sequence length to be 128, dropout rate to be 0.2, and we use Adam as optimizer (Kingma and Ba, 2014).",
+        "gold": "Modify,Grammar",
+        "section": "Implementation Details"
+      }
+    ],
+    "operations": [
+      "Modify,Grammar"
+    ],
+    "preserve": [
+      "claims",
+      "source_refs"
+    ],
+    "note": "src=NEW/v2, tgt=OLD/v1 per data_human README; edits are sentence-aligned human annotations (3-annotator majority)."
+  },
+  "provenance": {
+    "dataset": "Re3-Sci",
+    "record_id": "192-ARR",
+    "license": "CC BY 4.0 (DataLib item)",
+    "selection_rule": "doc with most ('Modify,Grammar',) both-span edits, review text present; tie-break doc_name"
+  },
+  "agent_run": {
+    "signals": null,
+    "evidence_retrieved": null,
+    "intervention": null,
+    "save_vetoed": null
+  },
+  "outcome": {
+    "blind_preference": null,
+    "claim_preserved": null,
+    "human_edit_distance": null
+  },
+  "learning": {
+    "promote_to_evidence": false,
+    "evidence_ids": []
+  }
+}
