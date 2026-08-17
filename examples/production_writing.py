@@ -23,6 +23,7 @@ at save time. No new capability, no new schema, no new memory subsystem.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -484,6 +485,9 @@ def run_production_article(
         "artifact_path": path,
         "artifact_exists": bool(text),
         "artifact_chars": len(text),
+        "artifact_sha256": (
+            hashlib.sha256(text.encode("utf-8")).hexdigest() if text else None
+        ),
         "signals_on_artifact": run_trajectory_sensors(text) if text else {},
     }
 
