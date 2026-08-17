@@ -1002,6 +1002,11 @@
       "sha256": "f764be10d742fd4241c23e51b5e6d543cd76eecea07cd8ee5c6a8a6890bde8c6"
     },
     {
+      "path": "examples/fde_loop.py",
+      "bytes": 20972,
+      "sha256": "20ff1a1f2c78ccc3e6c29a71a579a88b9aeebdaa714de5bc755f37269f85cd5b"
+    },
+    {
       "path": "examples/host_fixture.py",
       "bytes": 9638,
       "sha256": "19e1e413faf8b0a99a1088ddc974d67bf1dc2eafbab886bf0fc447ebb992544a"
@@ -1305,6 +1310,11 @@
       "path": "tests/test_execute_run_seam.py",
       "bytes": 18730,
       "sha256": "076b053be9255d5ac1b92aeff05f0f146e62b495ac40668f3d547f6556dc1636"
+    },
+    {
+      "path": "tests/test_fde_loop.py",
+      "bytes": 4961,
+      "sha256": "f5c7d9cc06bc0bee5af44bb509ee0c52a12cfc83613cf05a3fff202893360e4c"
     },
     {
       "path": "tests/test_gateway_architecture.py",
