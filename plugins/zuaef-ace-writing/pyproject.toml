@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zuaef-ace-writing"
-version = "0.1.0"
-description = "ACE Writing business plugin for the ZUAEF Plugin Composition Layer: BudgetedWritingToolset over the external article-context-engine."
+version = "0.2.0"
+description = "ACE Writing business plugin for the ZUAEF Plugin Composition Layer: BudgetedWritingToolset over the external article-context-engine, plus the editorial-control capability (SPEC zuaef-editorial-control-v0.1)."
 requires-python = ">=3.11"
 # zuaef-agent itself is not on PyPI; install this package into the same
 # environment that provides the zuaef_agent distribution (peer dependency).
