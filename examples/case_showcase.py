@@ -1,4 +1,4 @@
-"""Validation-case host runner — raw fragments, not a finished article.
+"""Generic validation-case host runner — data-driven, no case specifics in code.
 
 Sanlian round 1 proved the projection path but exposed its limit: the
 material was a published essay, so Writer/Editor could only reword it
@@ -6,23 +6,26 @@ material was a published essay, so Writer/Editor could only reword it
 transcripts, chat logs, meeting notes, platform notices, sample texts —
 where the actual writing act is structuring them into an article.
 
-This runner is the host for such a case (default: ACE validation case
-``01-content-team``):
+This runner is the generic host for such cases. EVERYTHING case-specific is
+data, not code: it lives in ``<case_dir>/case.json`` (host-authored brief:
+task + assignment + writing_plan + signal gate rules + run/showcase names)
+next to the case's own ``raw/`` materials and ``expected-signals/`` brief.
+The runner itself only contains mechanisms:
 
     MaterialCase (examples/host_fixture.py — data entry only, per-file
         bytes/sha256/rights/ACE ingest -> M ids)
+        + case.json brief (host-authored data, loaded from disk)
         -> Host WritingContext (task + writing_plan + concatenated material
            with per-file sha256 separators + caller-owned S1..Sn ledger)
         -> Writer pass  -> Editor pass  -> showcase/
 
 The case's ``expected-signals/README.md`` is the editorial acceptance
-criteria — the host derives release constraints from it and the runner runs
-a deterministic zero-model signal gate on the final article. It is NOT
-projected as material.
+criteria; the brief's ``signal_gate`` rules drive a deterministic zero-model
+gate over the final article. Neither is projected as material.
 
 Layer rules are the same as the Sanlian runner: the adapter decides nothing,
-the writing plan is host-authored (hand-written, never auto-generated), no
-benchmark joins, examples=[].
+the writing plan is host-authored data (never auto-generated), no benchmark
+joins, examples=[].
 """
 
 from __future__ import annotations
@@ -32,7 +35,6 @@ import hashlib
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [
@@ -59,6 +61,7 @@ from examples.host_runner import (
     write_text,
 )
 from examples.production_writing import (
+    final_artifact_text,
     prepare_writing_context,
     render_writing_context,
     run_production_article,
@@ -73,90 +76,95 @@ DEFAULT_CASE = (
     / "cases"
     / "01-content-team"
 )
-DEFAULT_SHOWCASE = REPO / "workspace" / "artifacts" / "showcase" / "content-team-01"
+BRIEF_FILENAME = "case.json"
+BRIEF_REQUIRED = ("id", "title", "assignment", "writing_plan")
+PLAN_REQUIRED = (
+    "angle",
+    "questions",
+    "outline",
+    "target_length",
+    "release_constraints",
+)
 
-# --- host-authored task + writing plan (hand-written, from the case) -------------
+# --- case brief: host-authored data, loaded from the case directory --------------
 
 
-TASK: dict[str, str] = {
-    "id": "case-01-content-team",
-    "title": "说不清的“像真人”",
-    "audience": "内容行业业务案例读者——Field/Case 叙事",
-    "assignment": (
-        "根据这批原始素材（平台提示、访谈转录、团队聊天、会议速记、文章样本）"
-        "写一篇 Field/Case 叙事：一个日产过万的内容团队，被平台提示“同质化/低质”，"
-        "却说不清什么是“好”。从具体的人和话进入，呈现矛盾，不做结论。只使用素材"
-        "里已有的内容；数字标注为客户报数；不写平台检测机制；不补写现场细节。"
-    ),
-}
+def load_case_brief(case_dir: Path) -> dict:
+    """The host-authored brief for a case: task + writing_plan + signal gate
+    + run/showcase names. Lives next to the raw materials, never in code."""
+    path = case_dir / BRIEF_FILENAME
+    if not path.is_file():
+        raise SystemExit(
+            f"case brief missing: {path} — the host authors {BRIEF_FILENAME} "
+            f"(task + assignment + writing_plan + signal_gate) next to raw/"
+        )
+    brief = json.loads(path.read_text(encoding="utf-8"))
+    for key in BRIEF_REQUIRED:
+        if not brief.get(key):
+            raise SystemExit(f"case brief {path} missing required key: {key}")
+    plan = brief["writing_plan"]
+    for key in PLAN_REQUIRED:
+        if key not in plan:
+            raise SystemExit(f"case brief {path} writing_plan missing key: {key}")
+    return brief
 
-WRITING_PLAN: dict[str, Any] = {
-    "angle": (
-        "三千个号、日产过万的内容团队，质量判断却只有一句“大概看起来像真人”——"
-        "看高产能与不可言说的标准之间的裂缝。"
-    ),
-    "questions": [
-        "谁在判断一篇能不能发？",
-        "“像真人”为什么说不清？",
-        "换模型、加审核 agent，为什么都接不住这个问题？",
-        "是平台变了，还是自己越写越像了？",
-    ],
-    "outline": [
-        "从一条平台提示或一段对话进入",
-        "摆出规模与人力（客户报数，标注来源）",
-        "编辑的经验判断失效的过程",
-        "运营/技术/编辑三个视角对“像真人”的不同理解",
-        "回到未解的矛盾，不做结论",
-    ],
-    "target_length": "1200-1800 Chinese chars",
-    "release_constraints": [
-        "3000/12000/6 是客户报数，不写成独立核验事实",
-        "不写“平台通过指纹/算法识别AI内容”——没有证据",
-        "不补写天气、城市、办公室陈设等现场细节",
-        "只用素材中已有的对话与人物，不虚构",
-        "不把推测写成事实（推测需划线：也许/可能）",
-    ],
-}
+
+def task_from_brief(brief: dict) -> dict:
+    """The task block projected into the WritingContext."""
+    return {
+        "id": brief["id"],
+        "title": brief["title"],
+        "audience": brief.get("audience", ""),
+        "assignment": brief["assignment"],
+    }
+
+
+def signal_rules_from_brief(brief: dict) -> dict:
+    """Signal gate rules are case data (editorial choices), not code."""
+    return brief.get("signal_gate") or {}
+
 
 # --- expected-signals gate (deterministic, zero model) ---------------------------
 
-# Derived from the case's expected-signals/README.md. The gate is a heuristic
-# tripwire for the human judge, never a substitute for the human verdict.
-FORBIDDEN_PHRASES = ("指纹", "识别AI", "AI识别", "算法识别", "算法检测", "模型检测")
-REQUIRED_SOFT = ("客户", "同质化", "像真人")
-REQUIRED_SOFT_MIN = 2
 
+def check_expected_signals(text: str, rules: dict) -> dict:
+    """Zero-model gate over the final article, driven by the brief's rules.
 
-def check_expected_signals(text: str) -> dict:
-    """Zero-model gate over the final article against the case's signals."""
-    forbidden_hits = [p for p in FORBIDDEN_PHRASES if p in text]
-    required_present = [p for p in REQUIRED_SOFT if p in text]
-    required_missing = [p for p in REQUIRED_SOFT if p not in text]
-    ok = not forbidden_hits and len(required_present) >= REQUIRED_SOFT_MIN
+    A heuristic tripwire for the human judge, never a substitute for the
+    human verdict.
+    """
+    forbidden = tuple(rules.get("forbidden") or ())
+    required = tuple(rules.get("required") or ())
+    required_min = int(rules.get("required_min", 2))
+    forbidden_hits = [p for p in forbidden if p in text]
+    required_present = [p for p in required if p in text]
+    required_missing = [p for p in required if p not in text]
+    ok = not forbidden_hits and (not required or len(required_present) >= required_min)
     return {
         "pass": ok,
         "forbidden_hits": forbidden_hits,
         "required_present": required_present,
         "required_missing": required_missing,
-        "required_soft_min": REQUIRED_SOFT_MIN,
+        "required_min": required_min,
     }
 
 
 # --- workbench assembly ----------------------------------------------------------
 
 
-def project_case_context(case, techniques, memory) -> dict:
+def project_case_context(case, brief: dict, techniques, memory) -> dict:
     """The exact WritingContext bundle: concatenated material with per-file
     sha256 separators + caller-owned S1..Sn ledger + one binding hash over
-    the projected material text."""
+    the projected material text. Task/plan come from the brief (data)."""
     material = render_case_material(case)
+    task = task_from_brief(brief)
     return prepare_writing_context(
-        task_id=TASK["id"],
+        task_id=task["id"],
         material=material,
-        title=TASK["title"],
-        audience=TASK["audience"],
-        assignment=TASK["assignment"],
-        writing_plan=WRITING_PLAN,
+        title=task["title"],
+        audience=task["audience"],
+        assignment=task["assignment"],
+        writing_plan=brief["writing_plan"],
         sources=build_case_sources(case),
         source_sha256=hashlib.sha256(material.encode("utf-8")).hexdigest(),
         techniques=techniques,
@@ -165,14 +173,15 @@ def project_case_context(case, techniques, memory) -> dict:
     )
 
 
-def writer_prompt(case, techniques, memory, writer_run: str) -> str:
-    bundle = project_case_context(case, techniques, memory)
+def writer_prompt(case, brief: dict, techniques, memory, writer_run: str) -> str:
+    task = task_from_brief(brief)
+    bundle = project_case_context(case, brief, techniques, memory)
     return (
-        f"Write the article for task {TASK['id']}.\n\n"
+        f"Write the article for task {task['id']}.\n\n"
         + render_writing_context(bundle)
         + f"\n\nThe ACE article workspace id for THIS task is exactly `{writer_run}` — "
         f"you MUST pass this exact value as article_id to save_artifact. The task id "
-        f"`{TASK['id']}` is NOT a workspace id and will fail the save.\n\n"
+        f"`{task['id']}` is NOT a workspace id and will fail the save.\n\n"
         "Submit the complete article with save_artifact exactly once, together with "
         "the claim and source ledgers. Pass the COMPLETE projected source ledger "
         "(every S row shown under '### sources (ledger base)') — a save that drops "
@@ -188,14 +197,17 @@ def writer_prompt(case, techniques, memory, writer_run: str) -> str:
     )
 
 
-def editor_prompt(case, draft_text: str, techniques, memory, editor_run: str) -> str:
-    bundle = project_case_context(case, techniques, memory)
+def editor_prompt(
+    case, brief: dict, draft_text: str, techniques, memory, editor_run: str
+) -> str:
+    task = task_from_brief(brief)
+    bundle = project_case_context(case, brief, techniques, memory)
     return (
-        f"You are the editorial pass for task {TASK['id']}.\n\n"
+        f"You are the editorial pass for task {task['id']}.\n\n"
         f"The ACE article workspace id for THIS pass is exactly `{editor_run}` — "
         f"you MUST pass this exact value as article_id to save_artifact. The task id "
-        f"`{TASK['id']}` is NOT a workspace id and will fail the save.\n\n"
-        f"Assignment: {TASK['assignment']}\n\n"
+        f"`{task['id']}` is NOT a workspace id and will fail the save.\n\n"
+        f"Assignment: {task['assignment']}\n\n"
         "The writer produced this draft:\n\n"
         f"<writer-draft>\n{draft_text}\n</writer-draft>\n\n"
         "Apply minimal targeted editorial improvements only, guided by the "
@@ -221,17 +233,18 @@ def editor_prompt(case, draft_text: str, techniques, memory, editor_run: str) ->
 def write_readme(
     showcase: Path,
     case,
+    brief: dict,
     *,
     writer_record: dict | None,
     editor_record: dict | None,
     signals: dict | None,
 ) -> None:
     lines = [
-        "# Validation Case 01 — 内容团队的质检困境（说不清的“像真人”）",
+        f"# Validation Case — {brief['title']}",
         "",
-        "生产输入实验：**原始碎片素材**（访谈/聊天/速记/平台提示/样本）-> 写作计划",
-        "-> Writer 初稿 -> Editor 成稿。与《便利店奇妙夜》不同，这里没有一篇成熟",
-        "文章可以“改字句”——成稿必须从碎片里长出来。",
+        "生产输入实验：**原始碎片素材** -> 写作计划（host-authored，case.json）",
+        "-> Writer 初稿 -> Editor 成稿。这里没有一篇成熟文章可以“改字句”——",
+        "成稿必须从碎片里长出来。",
         "",
         "## 文件",
         "",
@@ -240,7 +253,7 @@ def write_readme(
     for f in case.files:
         lines.append(f"- `01-raw-{Path(f.source_ref).name}` — 原材料逐字节原文")
     lines += [
-        "- `02-writing-plan.md` — 写作计划（host-authored：task + assignment + writing_plan）",
+        "- `02-writing-plan.md` — 写作计划（case.json：task + assignment + writing_plan）",
         "- `03-writer-draft.md` — Writer 初稿（production 投影，save_artifact only）",
         "- `04-editor-final.md` — Editor 成稿（同一稿的最小定向修补）",
         "- `05-diff-writer-to-final.diff` — 初稿 -> 成稿逐行 diff",
@@ -249,7 +262,7 @@ def write_readme(
         "",
         "## 材料身份（逐文件 hash 绑定）",
         "",
-        f"- rights: `{case.rights}`（客户提供的内部素材，实验用途，不对外分发）",
+        f"- rights: `{case.rights}`（实验用途，不对外分发）",
         "",
     ]
     for f in case.files:
@@ -285,7 +298,10 @@ def write_readme(
             "## 信号门（零模型启发式，最终判断靠人）",
             "",
             f"- forbidden 命中：{signals['forbidden_hits'] or '无'}",
-            f"- required 命中：{signals['required_present']}（至少 {REQUIRED_SOFT_MIN} 项）",
+            (
+                f"- required 命中：{signals['required_present']}（至少 "
+                f"{signals['required_min']} 项）"
+            ),
             f"- 结论：{'PASS（可进入人工判断）' if signals['pass'] else 'FAIL（见上，人工复核）'}",
         ]
     lines += [
@@ -293,12 +309,12 @@ def write_readme(
         "## 诚实声明",
         "",
         "- `examples=[]`：不投 exemplar，只测 Skill 能否从碎片素材驱动写作。",
-        "- 3000/12000/6 是客户报数：成稿若引用必须标注来源（客户称…），不得写成独立核验事实。",
-        "- expected-signals 禁止的断言（平台检测机制等）由信号门做第一道拦截。",
-        "- 素材总字符约 1200，target_length 1200-1800：实际成稿偏短（9xx）时，",
-        "  不判失败——release_constraints 优先，编造才算。",
+        "- 素材总字符远小于 target_length 时，成稿偏短不判失败——",
+        "  release_constraints 优先，编造才算。",
         "- 成稿质量需要人工判断；本 README 不下结论。",
     ]
+    for note in brief.get("notes") or []:
+        lines.append(f"- {note}")
     write_text(showcase / "README.md", "\n".join(lines) + "\n")
 
 
@@ -308,22 +324,32 @@ def write_readme(
 def run_case(
     *,
     case_dir: Path,
-    showcase: Path,
+    showcase: Path | None,
     techniques_path: Path,
     memory_path: Path,
     writer_limit: int,
     editor_limit: int,
-    rights: str,
+    rights: str | None,
     check_only: bool,
 ) -> dict:
+    brief = load_case_brief(case_dir)
+    rights = rights or brief.get("rights", "user-provided")
+    showcase = showcase or (
+        REPO
+        / "workspace"
+        / "artifacts"
+        / "showcase"
+        / brief.get("showcase_name", case_dir.name)
+    )
     case = load_material_case(case_dir, rights=rights)
     techniques = select_techniques(techniques_path)
     memory = select_memory(memory_path)
-    bundle = project_case_context(case, techniques, memory)
-    base = "case01"
+    bundle = project_case_context(case, brief, techniques, memory)
+    task = task_from_brief(brief)
+    base = brief.get("run_base", "case")
     writer_run, editor_run = f"{base}-w", f"{base}-e"
     write_showcase_inputs(
-        showcase, task=TASK, writing_plan=WRITING_PLAN, files=case.files
+        showcase, task=task, writing_plan=brief["writing_plan"], files=case.files
     )
     signals_path = case_dir / "expected-signals" / "README.md"
     if signals_path.is_file():
@@ -333,11 +359,11 @@ def run_case(
         )
     write_text(
         showcase / "writer-context.md",
-        writer_prompt(case, techniques, memory, writer_run) + "\n",
+        writer_prompt(case, brief, techniques, memory, writer_run) + "\n",
     )
     if check_only:
         write_readme(
-            showcase, case, writer_record=None, editor_record=None, signals=None
+            showcase, case, brief, writer_record=None, editor_record=None, signals=None
         )
         print(
             json.dumps(
@@ -348,7 +374,7 @@ def run_case(
                     "technique_ids": [t["id"] for t in techniques],
                     "memory_ids": [e["id"] for e in memory],
                     "examples_projected": [],
-                    "writing_plan_sections": list(WRITING_PLAN),
+                    "writing_plan_sections": list(brief["writing_plan"]),
                     "writer_context_chars": len(render_writing_context(bundle)),
                 },
                 ensure_ascii=False,
@@ -368,13 +394,13 @@ def run_case(
     print(f"[1/3] Writer pass ({writer_run}, limit {writer_limit}) ...")
     writer_record = run_production_article(
         settings,
-        task_id=TASK["id"],
+        task_id=task["id"],
         material_path=case.files[0].source_path,
         material_paths=[f.source_path for f in case.files],
-        title=TASK["title"],
-        audience=TASK["audience"],
-        assignment=TASK["assignment"],
-        writing_plan=WRITING_PLAN,
+        title=task["title"],
+        audience=task["audience"],
+        assignment=task["assignment"],
+        writing_plan=brief["writing_plan"],
         sources=build_case_sources(case),
         source_sha256=bundle["source_sha256"],
         techniques=techniques,
@@ -382,15 +408,13 @@ def run_case(
         examples=[],
         request_limit=writer_limit,
         run_id=writer_run,
-        prompt=writer_prompt(case, techniques, memory, writer_run),
+        prompt=writer_prompt(case, brief, techniques, memory, writer_run),
     )
     print(
         f"    writer: status={writer_record.get('status')} "
         f"requests={writer_record.get('model_requests')} "
         f"artifact={'yes' if writer_record.get('artifact_exists') else 'NO'}"
     )
-    from examples.production_writing import final_artifact_text
-
     draft_text, draft_path = final_artifact_text(REPO / "workspace", writer_run)
     if not draft_text:
         raise SystemExit("writer pass produced no artifact — see receipt above")
@@ -398,13 +422,13 @@ def run_case(
     print(f"[2/3] Editor pass ({editor_run}, limit {editor_limit}) ...")
     editor_record = run_production_article(
         settings,
-        task_id=TASK["id"],
+        task_id=task["id"],
         material_path=case.files[0].source_path,
         material_paths=[f.source_path for f in case.files],
-        title=TASK["title"],
-        audience=TASK["audience"],
-        assignment=TASK["assignment"],
-        writing_plan=WRITING_PLAN,
+        title=task["title"],
+        audience=task["audience"],
+        assignment=task["assignment"],
+        writing_plan=brief["writing_plan"],
         sources=build_case_sources(case),
         source_sha256=bundle["source_sha256"],
         techniques=techniques,
@@ -412,7 +436,7 @@ def run_case(
         examples=[],
         request_limit=editor_limit,
         run_id=editor_run,
-        prompt=editor_prompt(case, draft_text, techniques, memory, editor_run),
+        prompt=editor_prompt(case, brief, draft_text, techniques, memory, editor_run),
     )
     print(
         f"    editor: status={editor_record.get('status')} "
@@ -425,18 +449,19 @@ def run_case(
 
     # Step 5 of the fixture contract: bind the real ACE material ids per file.
     bound = load_material_case(
-        case_dir, rights=rights, article_id=writer_run, title=TASK["title"]
+        case_dir, rights=rights, article_id=writer_run, title=task["title"]
     )
     bound_editor = load_material_case(
-        case_dir, rights=rights, article_id=editor_run, title=TASK["title"]
+        case_dir, rights=rights, article_id=editor_run, title=task["title"]
     )
 
     print("[3/3] Writing showcase ...")
-    signals = check_expected_signals(final_text)
+    signals = check_expected_signals(final_text, signal_rules_from_brief(brief))
     identity = {
         "case": bound.to_record(),
-        "task": TASK,
-        "writing_plan": WRITING_PLAN,
+        "task": task,
+        "writing_plan": brief["writing_plan"],
+        "signal_gate": signal_rules_from_brief(brief),
         "technique_ids": list(TECHNIQUE_IDS),
         "examples_projected": [],
         "expected_signals_gate": signals,
@@ -451,6 +476,7 @@ def run_case(
     write_readme(
         showcase,
         bound,
+        brief,
         writer_record=writer_record,
         editor_record=editor_record,
         signals=signals,
@@ -476,13 +502,18 @@ def run_case(
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--case-dir", default=str(DEFAULT_CASE))
-    ap.add_argument("--showcase", default=str(DEFAULT_SHOWCASE))
+    ap.add_argument(
+        "--showcase",
+        default=None,
+        help="output dir (default: workspace/artifacts/showcase/<case.json showcase_name>)",
+    )
     ap.add_argument("--techniques-jsonl", default=str(DEFAULT_TECHNIQUES))
     ap.add_argument("--memory-jsonl", default=str(DEFAULT_MEMORY))
     ap.add_argument(
         "--rights",
-        default="user-provided",
+        default=None,
         choices=("study-only", "licensed", "user-provided", "unknown"),
+        help="override the brief's rights",
     )
     ap.add_argument("--writer-limit", type=int, default=8)
     ap.add_argument("--editor-limit", type=int, default=6)
@@ -494,7 +525,7 @@ def main() -> None:
     args = ap.parse_args()
     run_case(
         case_dir=Path(args.case_dir),
-        showcase=Path(args.showcase),
+        showcase=Path(args.showcase) if args.showcase else None,
         techniques_path=Path(args.techniques_jsonl),
         memory_path=Path(args.memory_jsonl),
         writer_limit=args.writer_limit,

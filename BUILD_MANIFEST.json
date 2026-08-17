@@ -993,8 +993,8 @@
     },
     {
       "path": "examples/case_showcase.py",
-      "bytes": 20703,
-      "sha256": "82112d0fee61c26f53f56b257ce4c0e072525ade95215e558c465756ad7dfa33"
+      "bytes": 20968,
+      "sha256": "382321c09c97d8901663a5d879d6fe590fe93254259e68e8889f1ed43806d55c"
     },
     {
       "path": "examples/client_service_case.py",
@@ -1213,8 +1213,8 @@
     },
     {
       "path": "tests/test_case_showcase.py",
-      "bytes": 3227,
-      "sha256": "0dd35bca924959bce534d45acb3cf821f794bb7c91a514285dee43ee4c4074c0"
+      "bytes": 5542,
+      "sha256": "b6d079f58ee6a12b094ae2f3562140f5df896cee142d3fb40c334215233f6e78"
     },
     {
       "path": "tests/test_case_store.py",
