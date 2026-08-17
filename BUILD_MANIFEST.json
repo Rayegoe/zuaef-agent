@@ -1013,8 +1013,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 856,
-      "sha256": "15cb4833a83d4d03fd342e3fb65fe19f47acbed5f1380aed8462b3f0712e391e"
+      "bytes": 1137,
+      "sha256": "d2eec2b6759aeeddec178c211aca0d71bcafb98a16e109a39990f540ff18e877"
     },
     {
       "path": "uv.lock",
@@ -1063,8 +1063,8 @@
     },
     {
       "path": "src/zuaef_agent/config.py",
-      "bytes": 6046,
-      "sha256": "4245362d1473ae49d3806d722db628d2fe2d1c2d3dc6239ac5672f4847630102"
+      "bytes": 6480,
+      "sha256": "6602a463591d16fcdcf703f8068a921fbe9539ab2afc297451e2389aca69fd53"
     },
     {
       "path": "src/zuaef_agent/continuation.py",
@@ -1073,8 +1073,8 @@
     },
     {
       "path": "src/zuaef_agent/core.py",
-      "bytes": 5171,
-      "sha256": "be4708d7c69960b6cb372d93ea0cf36d5c2f6ba8a6118dde077faef95c2b1153"
+      "bytes": 5255,
+      "sha256": "45c339260f3241ee77aeb69b93481814e587aa5a228d038121d1c996d68467ee"
     },
     {
       "path": "src/zuaef_agent/effects.py",
@@ -1317,11 +1317,6 @@
       "sha256": "96c5c8dcc8fda19709193f4ffbe4b95cf50a082111e7e038ee16512fb353fc40"
     },
     {
-      "path": "tests/test_learning_pack_compiler.py",
-      "bytes": 25245,
-      "sha256": "5937123a10fd12f6298ed878f3e5e86eb46fc67475829fd7a160ab2cc24ed3f9"
-    },
-    {
       "path": "tests/test_knowledge_invariants.py",
       "bytes": 3496,
       "sha256": "d56b976038e2611b96de56f6d8cfdb69800e1f1d89ca5901c0142f84d7a86c31"
@@ -1330,6 +1325,11 @@
       "path": "tests/test_knowledge_store.py",
       "bytes": 1361,
       "sha256": "0cbc59bec1bc71a8dd3b90e779ecc0492f006859a8a6ef44389d330f66e23a69"
+    },
+    {
+      "path": "tests/test_learning_pack_compiler.py",
+      "bytes": 27735,
+      "sha256": "3cd7079de750b32d17a0ecf6d5b36ef731766dbb621bb1478dd61c0fed53b736"
     },
     {
       "path": "tests/test_manifest_integrity.py",
@@ -1643,13 +1643,208 @@
     },
     {
       "path": "tools/regen_manifest.py",
-      "bytes": 2334,
-      "sha256": "83a84a3048d45f3e4c5b9887b0e8eea0996467a1dbd61d21171f1a53cc6b7344"
+      "bytes": 2962,
+      "sha256": "b28868af103c5dbbda7dda6d54467d2dcacfb9f55e81fabb23758c4ec01b864b"
     },
     {
       "path": "workspace/knowledge/index.md",
       "bytes": 134,
       "sha256": "46e066ed5b7305c4ddd83cf702298ebb172bbd1d7813cd989595bf8d70191e74"
+    },
+    {
+      "path": "benchmarks/editorial-learning/README.md",
+      "bytes": 6659,
+      "sha256": "f33ff37fb1c1e4a7b8e63ac2198260548a8711297c09f1c4ac752de00481613d"
+    },
+    {
+      "path": "benchmarks/editorial-learning/benchmark.jsonl",
+      "bytes": 4667,
+      "sha256": "21771919c721023887e6a605f830b739227492210147655fd7232c2c777c9914"
+    },
+    {
+      "path": "benchmarks/editorial-learning/curated/sources.jsonl",
+      "bytes": 3376,
+      "sha256": "6d1656799984cb3b34ee0cb8c27ce46ede8575208751d26b3e680d5fa89c7445"
+    },
+    {
+      "path": "benchmarks/editorial-learning/curated/techniques.jsonl",
+      "bytes": 16015,
+      "sha256": "face6564300460527c8844f3ddf4730692b9567d92b414ee2dd773fad0019d70"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/evidence.jsonl",
+      "bytes": 10413,
+      "sha256": "4bc4148125f3037daeeb9b45592750ad0ba0fe84c34665749eea61e4d279ce28"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/manifest.json",
+      "bytes": 1045,
+      "sha256": "3b0389511a2f2757aa7ba512fb01f853b76f5e91e04b7702d0a3538f268522df"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/sequential_inputs.jsonl",
+      "bytes": 6668,
+      "sha256": "7b1c7d4567a832c983f8a74abb5d2af3b904640587bee44dfdff00735e906332"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/sources.jsonl",
+      "bytes": 7283,
+      "sha256": "b634d960e597367e82c2110dd4efff509c057dd64911f7593bc8fe6e574895d9"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/techniques.jsonl",
+      "bytes": 15794,
+      "sha256": "db90e7a7368973f066b764f15d47e68afed54dba8efc3a128b838ad704bbba58"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/build_tasks.py",
+      "bytes": 28853,
+      "sha256": "062fcf73016f0b90578b982ef24f06a1280c2ca012afc1c6e69be392a2745b90"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/compile_learning_pack.py",
+      "bytes": 24660,
+      "sha256": "a5d3564f1350b9505af524c15cd71e00005a27e78420639e4851fee49221751b"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/fetch_sources.py",
+      "bytes": 5820,
+      "sha256": "0d1d723931e514355036e95b0a7feeb3ef087fb19c58aaaedd9c7373abfcfe79"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/promote_patch.py",
+      "bytes": 4740,
+      "sha256": "28276e26adbcde43164085c1deda9961b621cbb65d9def03fcaad3dc914de043"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/report.py",
+      "bytes": 2500,
+      "sha256": "b2c7350636768333eaade4b9a6586ef2f08162429cae6cd3500f319f654512db"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/run_benchmark.py",
+      "bytes": 9127,
+      "sha256": "475bed3d03148b2e2c8df523101b59c9b2a7c321778a374ddcbab1bf92ac358d"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T01.json",
+      "bytes": 6609,
+      "sha256": "10f34c060d24c3462c704b6c88c6a663c649cb7bfad0ce858c2b4b22e8d21eb5"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T02.json",
+      "bytes": 6046,
+      "sha256": "9e6e5b03e3ead55902fd5472274b82b2ce748261a4413fbf360b343b9cf6b5ac"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T03.json",
+      "bytes": 4600,
+      "sha256": "f6cd901afcf582d526e33f553dfbeab49be8ee24ac9b8e88d404260df1499a2f"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T04.json",
+      "bytes": 4827,
+      "sha256": "0f2e837d115796b38b3a11b1f2b0e88b6c0e62f28374b648e5c4be8f9c7ac1e8"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T05.json",
+      "bytes": 6098,
+      "sha256": "5bdc1a5f57d42dab037c4a1851be8f15188ad061d9741428f67b688fd574d180"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T06.json",
+      "bytes": 4778,
+      "sha256": "eb3659d14353c4a0978605d510551d34ded61367866dd5a87d299949a78cb8b7"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T07.json",
+      "bytes": 4687,
+      "sha256": "09f376fe07bc6621347e034eee2f067499d8397c3a393ee64b020668eada215d"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T08.json",
+      "bytes": 5916,
+      "sha256": "af2d83f71ecdb3305aaad10870cac7b0b7de8633e8919929a73491f49e09275f"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T09.json",
+      "bytes": 5295,
+      "sha256": "fd0a6954aeb8eb683262fc379462bddf8f0e69f948947f2c928a2d505bcf9d8a"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T10.json",
+      "bytes": 4541,
+      "sha256": "fff0c6c0aec11eeb48a7d32ba608b7667cbec487017a6570e5dc3f11f7595b6c"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T11.json",
+      "bytes": 9907,
+      "sha256": "0d0081462d92546e18dfaea3daa86a648c5a6c7dae1f76c11f3be3b9834f8eeb"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T12.json",
+      "bytes": 5948,
+      "sha256": "20616c5faa94a621728b30bc20c51777c7bc3b6654afb04c98508f49ae913206"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T13.json",
+      "bytes": 8915,
+      "sha256": "7e4aa3508a094745b7020e9774968f229f5f1060d71276d93fcd4e932c6910d3"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T14.json",
+      "bytes": 10684,
+      "sha256": "97776216072bc9ba4a5ce1c79eb4ae384d1d7086f3a7cfb6c61c1f4cdfc06f8a"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T15.json",
+      "bytes": 6869,
+      "sha256": "3b871b6457c66cc983253818be2d4696bad2cfaa5ee603266b70a0bde1c607cc"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T16.json",
+      "bytes": 6412,
+      "sha256": "38b2ea8be84eb00dd629ef036b25db2f997fe851a8f9e23301dfb7b6a9ba9173"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T17.json",
+      "bytes": 9756,
+      "sha256": "d7c7afe0e68c93e212efc0b8604a814c85a98851980fcdff5fd726f9a55b1355"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T18.json",
+      "bytes": 9200,
+      "sha256": "a4b105ac5da74ef75aedfeafefc91b5640cca47a793124fa1aedb4d706edc93d"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T19.json",
+      "bytes": 10502,
+      "sha256": "54ae761a922bba7ac4db2e4396a0bbe9595897bd893a96aba258107a85b47a98"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T20.json",
+      "bytes": 8756,
+      "sha256": "46489ae616f5312de0950932b31f7fe9715254a3b2241c8e5f7613d0be4e5d9e"
+    },
+    {
+      "path": "benchmarks/editorial-learning/evidence/human_patches.jsonl",
+      "bytes": 21887,
+      "sha256": "831866c59464f7d4b49d70f64f0b16e37eaf574a705dd49d6fc0da800ce3fea0"
+    },
+    {
+      "path": "benchmarks/editorial-learning/evidence/seed_snapshot.jsonl",
+      "bytes": 3396,
+      "sha256": "adc0ef0eeaf289d8e9c5c7318781121343ca30fd02ffadbc41ae42a181409fcb"
+    },
+    {
+      "path": "benchmarks/editorial-learning/provenance/licenses.md",
+      "bytes": 1092,
+      "sha256": "57ac21766a2cef214f91dbee9e1e1a3d0b13d381cced60cb8a7148fb2c1404a4"
+    },
+    {
+      "path": "benchmarks/editorial-learning/provenance/sources.jsonl",
+      "bytes": 1942,
+      "sha256": "da607c7e68ba20979dce5a261dc3d3d792866fe18ba14f5711fc5ff69b3a5595"
     }
   ]
 }

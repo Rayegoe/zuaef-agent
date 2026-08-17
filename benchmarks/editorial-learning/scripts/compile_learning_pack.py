@@ -32,7 +32,7 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-ace-writing"),
     str(REPO / "src"),
 ]
-from zuaef_ace_writing.editorial import COGNITIVE_ACTIONS, EditorialEvidenceStore  # noqa: E402
+from zuaef_ace_writing.editorial import COGNITIVE_ACTIONS, EditorialEvidenceStore
 
 FROZEN_ACTIONS = set(COGNITIVE_ACTIONS)
 FROZEN_SENSORS = {
@@ -526,8 +526,8 @@ def compile_pack(pack: Path, curated_sources_path: Path, curated_techniques_path
     try:
         render(staging, sources, techniques, evidence, sequential, manifest)
         # fill manifest hashes from staged bytes, then rewrite manifest + re-verify
-        for name in files_map:
-            files_map[name]["sha256"] = sha256_file(staging / name)
+        for name, info in files_map.items():
+            info["sha256"] = sha256_file(staging / name)
         (staging / "manifest.json").write_text(canon(manifest) + "\n", encoding="utf-8")
         verify_staging(staging, {name: info["records"] for name, info in files_map.items()} | {"manifest.json": 1})
         transactional_publish(out, staging)

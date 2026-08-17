@@ -13,6 +13,9 @@ tasks/T01..T20.json                 data/raw/            四源完整数据集
   bounded excerpts (<=1500 chars)   data/derived/tasks_full/  任务全文
   sha256 of FULL texts              data/derived/materials/   ACE 摄入材料
   record id / license / selection
+curated/sources.jsonl + techniques.jsonl    （pack compiler 权威层，见下节）
+compiled/{sources,techniques,evidence,
+  sequential_inputs}.jsonl + manifest.json   （确定性重建的机器资产）
 evidence/seed_snapshot.jsonl        由 fetch_sources.py 下载 / build_tasks.py 派生
 evidence/human_patches.jsonl
 provenance/sources.jsonl + licenses.md
@@ -20,6 +23,72 @@ benchmark.jsonl
 results/{base,static,adaptive}/
 scripts/
 ```
+
+## Pack Compiler（offline — SPEC: writing-intelligence-compilation）
+
+仓库提交 curated layer + compiled 机器资产；**外部学习 pack 是外部产物，不进入 git**。
+Compiler 只做输入校验、legacy cross-check、exact join、hash、locator、canonical sort、
+serialization、transactional publish；不推理、不调用 LLM、不自动 promotion。
+
+### 权威层级（authority 顺序）
+
+1. `curated/` — 仓库内权威层。`sources.jsonl`（14 个 source 的 path/provenance manifest）、
+   `techniques.jsonl`（T001–T020 完整语义）。**compiler 不从 Markdown 反推语义字段**，
+   technique 语义只来自这里。
+2. 外部 pack（`zuaef-writing-learning-pack`）— `sanlian/*.md`、`research/*.md`（curated
+   学习笔记）；`raw/*.md`（raw 快照，只 hash/locator，不写入 compiled body）；
+   `data/sources.jsonl` / `data/techniques.jsonl`（legacy integrity cross-check 输入，
+   `id/url` 与 `id/name/source/maps_to` 不一致必须 fail loud）。
+3. `compiled/` — 固定 ABI 输出，由 1 + 2 + `benchmark.jsonl` 确定性重建。
+
+### Compile command
+
+```bash
+uv run python benchmarks/editorial-learning/scripts/compile_learning_pack.py \
+  --pack <外部 pack 路径> \
+  --curated-sources benchmarks/editorial-learning/curated/sources.jsonl \
+  --curated-techniques benchmarks/editorial-learning/curated/techniques.jsonl \
+  --benchmark benchmarks/editorial-learning/benchmark.jsonl \
+  --out benchmarks/editorial-learning/compiled
+```
+
+- 省略 `--benchmark` = **PACK_ONLY**：只产出 `sources.jsonl` / `techniques.jsonl` /
+  `evidence.jsonl` / `manifest.json` 四文件，不创建 `sequential_inputs.jsonl`，
+  manifest 标明 `benchmark_provided=false`。
+- 确定性：同一输入两次编译逐 byte 相同（无 timestamp / random id / absolute path）；
+  `test_real_pack_recompile_is_byte_identical` 用真实 pack 对已提交快照验证。
+- 失败安全：任何校验失败非零退出，既有 compiled target 不被污染
+  （staging → backup → rename → rollback）。
+
+### Compiled ABI
+
+五文件：`sources.jsonl`（14，SHA-256 + line locator）、`techniques.jsonl`（20，
+canonical copy + `node_id`）、`evidence.jsonl`（20）、`sequential_inputs.jsonl`（20，
+仅 benchmark 模式）、`manifest.json`（counts + 各文件 hash + 输入 hash）。
+
+- Evidence 固定：`source_type=corpus_observation`、`weight=0.75`、
+  `approved_by=pack-curation:v0.1`；**绝不自动提升为 `human_patch`**。
+- compiled 不含 raw/full article body、不含目标句式样本。
+
+### Raw / 数据边界（clone 后重建）
+
+- 外部 pack 的 `raw/*.md` 是外部宿主，不进仓库、不进 compiled；compiled 只带 hash/locator。
+- 仓库根 `data/`（四公开数据集 raw + derived）gitignored，clone 后重建：
+
+  ```bash
+  uv run python benchmarks/editorial-learning/scripts/fetch_sources.py   # 或 --reuse <既有 raw 树>
+  uv run python benchmarks/editorial-learning/scripts/build_tasks.py
+  ```
+
+  committed 的 `tasks/T01..T20.json` 只带 bounded excerpts + sha256 + license/provenance。
+
+### Sequential promotion 边界
+
+- promotion 属于 benchmark flow（`scripts/promote_patch.py`，严格 T01→T20 顺序），
+  **不是 compiler 的职责**；`sequential_inputs.jsonl` 的 `prior_task_ids` 只是
+  "可能成为历史的任务集合"，不代表已 promotion。
+- compiler 不写 `evidence/human_patches.jsonl`、不调用 `promote_patch.py`、
+  不触碰 `~/.config/zuaef/editorial/evidence.jsonl`。
 
 ## 顺序学习协议（Gate F 核心）
 

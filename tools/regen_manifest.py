@@ -41,6 +41,17 @@ INCLUDE_GLOBS = [
     "tests/fixtures/synthetic_client_service/**/*.yml",
     "tools/*.py",
     "workspace/knowledge/index.md",
+    # Editorial-learning benchmark: authoritative source assets only. Generated
+    # state (results/**, experiments/**/runs/**, judgments, metrics/REPORT) and
+    # the sequential-v1 experiment machinery stay OUT of the manifest scope.
+    "benchmarks/editorial-learning/README.md",
+    "benchmarks/editorial-learning/benchmark.jsonl",
+    "benchmarks/editorial-learning/curated/**",
+    "benchmarks/editorial-learning/compiled/**",
+    "benchmarks/editorial-learning/scripts/**",
+    "benchmarks/editorial-learning/tasks/**",
+    "benchmarks/editorial-learning/evidence/**",
+    "benchmarks/editorial-learning/provenance/**",
 ]
 
 

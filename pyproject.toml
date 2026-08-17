@@ -25,7 +25,20 @@ dev = ["pytest>=8.3", "ruff>=0.8"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "tests/fixture_plugins", "plugins/zuaef-ace-writing", "plugins/zuaef-emtb-budget", "plugins/zuaef-client-service", "."]
+pythonpath = [
+  "src",
+  "tests/fixture_plugins",
+  "plugins/zuaef-ace-writing",
+  "plugins/zuaef-emtb-budget",
+  "plugins/zuaef-client-service",
+  ".",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# E402: deliberate sys.path bootstrapping before importing the editable plugins
+# (benchmark/experiment seam scripts and their tests import after sys.path[:0]).
+"benchmarks/editorial-learning/**" = ["E402"]
+"tests/*.py" = ["E402"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zuaef_agent"]
