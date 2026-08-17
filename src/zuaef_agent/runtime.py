@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import UTC, datetime
@@ -360,6 +361,53 @@ def finalize_terminal(
     return TerminalRun(summary=final_summary, receipt=receipt)
 
 
+def _persist_pause_frontier(
+    settings: AgentSettings,
+    *,
+    run_id: str,
+    conversation_id: str,
+    messages: list[Any],
+) -> None:
+    """Persist the pause frontier as a continuable harness snapshot.
+
+    A paused run ends with unresolved tool calls (the pending approvals), so
+    the harness classifies its history as ``interrupted`` and saves nothing on
+    its own — after process exit ``continue_run()`` would find no snapshot to
+    rebuild the history from. This saves exactly that frontier through the
+    harness primitive (``FileStepStore.save_snapshot``, state ``interrupted``);
+    resume reads it back with ``continue_run(..., include_interrupted=True)``.
+    Best-effort: a failing snapshot save must not lose the pause receipt, so
+    the pause still settles and only the durable resume frontier degrades.
+    """
+    try:
+        from pydantic_ai_harness.step_persistence import (
+            ContinuableSnapshot,
+            FileStepStore,
+        )
+
+        store = FileStepStore(
+            settings.step_store_dir,
+            max_snapshots_per_run=settings.max_snapshots_per_run,
+        )
+        asyncio.run(
+            store.save_snapshot(
+                ContinuableSnapshot(
+                    run_id=run_id,
+                    step_index=0,
+                    messages=list(messages),
+                    conversation_id=conversation_id,
+                    parent_run_id=None,
+                    agent_name="zuaef",
+                    state="interrupted",
+                )
+            )
+        )
+    except Exception:  # noqa: BLE001 — best-effort durable frontier
+        logging.getLogger(__name__).warning(
+            "pause frontier snapshot could not be persisted for run %s", run_id
+        )
+
+
 def _build_paused(
     requests: DeferredToolRequests,
     *,
@@ -420,9 +468,17 @@ def _build_paused(
         composition=composition,
     )
     ReceiptStore(settings.state_root).write(pause_receipt)
+    message_history = list(result.all_messages())
+    if settings.enable_step_persistence:
+        _persist_pause_frontier(
+            settings,
+            run_id=run_id,
+            conversation_id=conversation_id,
+            messages=message_history,
+        )
     return PausedRun(
         requests=requests,
-        message_history=list(result.all_messages()),
+        message_history=message_history,
         conversation_id=conversation_id,
         pause_receipt=pause_receipt,
     )

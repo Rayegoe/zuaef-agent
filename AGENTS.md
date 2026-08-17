@@ -14,6 +14,7 @@ Own the user outcome with the smallest reliable agent loop. Business behavior is
 - Full oversized tool outputs belong under `.zuaef-state/tool-results/`; pass a handle/preview to the model and retrieve progressively.
 - Durable step/tool-effect evidence belongs to Harness `StepPersistence`; `RunReceipt` is only an index, never a second source of truth.
 - External writes and destructive actions use PydanticAI native approval. Never interpret model intent as authorization.
+- Surface/Gateway is an external interaction layer. It may own transport, authorization, session bindings and approval presentation, but must not implement agent execution, business policy, approval semantics, durable execution truth or receipts.
 - Do not add a vector database until lexical/file navigation is measurably insufficient.
 - Do not add a graph runtime, custom state machine, long-term-memory service, multi-agent team, custom event bus, custom steering runtime, or custom durable runtime without a measured failure that requires it.
 

@@ -1,0 +1,5 @@
+semantic_preferences:
+- preference_id: SEM-SYN-001
+  name: explain_without_overdelivering
+  description: 售前提供专业判断、原则和边界，但不免费交付可执行的完整方案。
+  evidence_ids: [EVD-SYN-001]

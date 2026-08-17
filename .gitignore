@@ -5,4 +5,8 @@ __pycache__/
 *.pyc
 .zuaef-state/
 workspace/artifacts/
+# Private/derived knowledge the model may write stays out of the public repo;
+# only index.md / concepts/* already committed are tracked (gitignore never
+# untracks them). Blocks future untracked real knowledge from git add.
+workspace/knowledge/
 .state-proof/

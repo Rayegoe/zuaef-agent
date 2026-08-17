@@ -1,0 +1,15 @@
+# Example profile: Client Service Decision Slice (SPEC v0.1 §22/§60).
+# Install: cp examples/profiles/client-service-beauty.toml ~/.config/zuaef/profiles/
+# The private corpus lives OUTSIDE this repo (slice_root); this file carries
+# no secrets and no customer content (§18/§22).
+schema = 1
+name = "client-service-beauty"
+
+[[plugins]]
+id = "client-service"
+allow_capabilities = false
+
+[plugins.config]
+mode = "shadow"
+domain = "beauty-content"
+slice_root = "~/.local/share/zuaef/client-service"

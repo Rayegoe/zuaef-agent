@@ -9,34 +9,62 @@ Keep the loop thin, but make long-running work inspectable and recoverable enoug
 ## Architecture
 
 ```text
-User / CLI / Telegram
-        |
-        v
-  one PydanticAI Agent
-        |
-  +-----+---------------------------+
-  | Capabilities                    | Toolsets / Skills
-  |                                 |
-  | FileSystem                      | business tools
-  | ToolOutputLimits                | ingestion tools
-  | StepPersistence                 | deferred domain skills
-  | Knowledge                       |
-  | Planning                        |
-  +-------------+-------------------+
-                |
-                v
+User Surfaces
+CLI / Telegram
+       |
+       v
+Surface Gateway                # transport, authorization, session binding,
+       |                       # approval presentation, routing state
+       v
+Profile Composition            # build_profile_agent / frozen CompositionSnapshot
+       |
+       v
+one PydanticAI Agent
+       |
+       v
+Toolsets / Skills / Capabilities
+       |
+       v
+Pause / Resume / Verification  # native approval, shared continuation seam,
+       |                       # host-verified effects
+       v
+Artifacts + Knowledge + Receipts
+```
+
+> Gateway does not own an agent loop. It translates external interaction into the same ZUAEF runtime used by the CLI.
+
+```text
 workspace/                    # model-facing filesystem root
   artifacts/
   knowledge/
     index.md
     sources/
     concepts/
+  inbox/telegram/             # gateway-downloaded attachments (workspace-relative)
 
 .zuaef-state/                 # runtime-only sibling; not model-writable
   steps/                      # append-only step events + snapshots + tool-effect ledger
   tool-results/               # full spilled tool payloads; model receives a handle/preview
   receipts/                   # one compact JSON run receipt
+  gateway.sqlite3             # gateway routing state only: sessions, cursors, token hashes
 ```
+
+## Interactive Business Gateway (v0.3)
+
+`zuaef-agent gateway start --surface telegram --profile wordpress-operator`
+runs one blocking foreground process: Telegram long polling → normalized
+`InboundEnvelope` → `GatewayService` → `build_profile_agent` →
+`execute_run()`. A paused run renders an Approve/Deny card in Telegram; the
+callback resolves an opaque approval token and resumes through the same
+`resume_paused_run` seam the CLI uses. Every external write (WordPress
+create/update/publish) is approval-gated by PydanticAI native
+`requires_approval` and settles in the `RunReceipt`'s verified tool effects.
+
+Required environment: `ZUAEF_TELEGRAM_BOT_TOKEN`,
+`ZUAEF_TELEGRAM_ALLOWED_USERS` (comma-separated user ids — empty means fail
+closed), `ZUAEF_WORDPRESS_USERNAME`, `ZUAEF_WORDPRESS_APP_PASSWORD`. The
+`wordpress-operator` profile carries non-secret config only; credentials
+never enter a profile, snapshot or receipt.
 
 ## Why this shape
 

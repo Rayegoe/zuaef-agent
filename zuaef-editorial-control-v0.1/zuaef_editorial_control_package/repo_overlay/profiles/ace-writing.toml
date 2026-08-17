@@ -1,0 +1,30 @@
+# ACE Writing + Cognitive Editorial Control.
+schema = 1
+name = "ace-writing"
+
+[[plugins]]
+id = "ace-writing"
+# Lifecycle hooks are composition-visible behavior and must be explicitly allowed.
+allow_capabilities = true
+
+[plugins.config]
+ace_root = "~/projects/article-context-engine/article-context-engine"
+
+# Editorial Control is enabled by default when this plugin is composed.
+editorial_control = true
+
+# Optional approved human/corpus editorial evidence.
+# If omitted, the plugin first looks for:
+#   <ZUAEF_STATE_ROOT>/editorial/evidence.jsonl
+# and otherwise uses its small built-in seed set.
+# editorial_evidence_path = "~/.config/zuaef/editorial/evidence.jsonl"
+
+# Bound all behavior; no unbounded reviewer loop.
+editorial_max_injections = 4
+editorial_max_save_vetoes = 1
+editorial_evidence_limit = 3
+editorial_veto_threshold = 1.50
+
+# Sampling changes are opt-in. The main mechanism is semantic context pressure.
+editorial_temperature_nudge = 0.0
+# editorial_base_temperature = 0.7

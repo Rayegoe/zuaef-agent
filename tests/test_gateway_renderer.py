@@ -1,0 +1,153 @@
+"""Renderer tests — SPEC v0.3 §40–§44: deterministic, redacting, bounded."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+from zuaef_agent.gateway.renderer import (
+    CHUNK_MAX,
+    chunk_text,
+    preview_arguments,
+    render_error,
+    render_new_conversation,
+    render_pause,
+    render_profile,
+    render_status,
+    render_terminal,
+)
+from zuaef_agent.models import (
+    ArtifactVerification,
+    PauseReceipt,
+    RunReceipt,
+    RunSummary,
+    ToolEffectVerification,
+)
+from zuaef_agent.runtime import PausedRun, TerminalRun
+
+
+def _paused(approvals: list[dict]) -> PausedRun:
+    now = datetime.now(UTC)
+    receipt = PauseReceipt(
+        run_id="run-paused-1234",
+        conversation_id="conv-1",
+        model="test",
+        started_at=now,
+        finished_at=now,
+        pending_approvals=approvals,
+    )
+    return PausedRun(
+        requests=None,  # type: ignore[arg-type]
+        message_history=[],
+        conversation_id="conv-1",
+        pause_receipt=receipt,
+    )
+
+
+def _terminal(status="completed") -> TerminalRun:
+    now = datetime.now(UTC)
+    summary = RunSummary(status=status, outcome="post published")  # type: ignore[arg-type]
+    receipt = RunReceipt(
+        run_id="run-term-1234",
+        model="test",
+        started_at=now,
+        finished_at=now,
+        status=status,  # type: ignore[arg-type]
+        summary=summary,
+        verified_artifacts=[ArtifactVerification(path="a.md", size=1, sha256="x" * 64)],
+        verified_tool_effects=[
+            ToolEffectVerification(tool_call_id="c1", tool_name="wordpress_publish_post", status="completed")
+        ],
+    )
+    return TerminalRun(summary=summary, receipt=receipt)
+
+
+def test_preview_redacts_secret_named_keys():
+    preview = preview_arguments(
+        {
+            "post_id": 123,
+            "auth_token": "secret-value",
+            "api_key": "key-value",
+            "password": "pw",
+        }
+    )
+    assert "post_id: 123" in preview
+    assert "auth_token: ***REDACTED***" in preview
+    assert "api_key: ***REDACTED***" in preview
+    assert "password: ***REDACTED***" in preview
+    assert "secret-value" not in preview
+    assert "key-value" not in preview
+    assert "pw" not in preview.replace("post_id: 123", "")
+
+
+def test_preview_bounded_to_1200_chars():
+    preview = preview_arguments({"payload": "x" * 5000})
+    assert len(preview) <= 1200 + 5
+    assert preview.endswith("…")
+
+
+def test_render_terminal_status_and_counts():
+    text = render_terminal(_terminal())
+    assert "✅ Completed" in text
+    assert "post published" in text
+    assert "Verified artifacts: 1" in text
+    assert "Verified effects: 1" in text
+    assert "Run: run-term-1234" in text
+
+
+def test_render_terminal_partial_and_blocked():
+    assert "⚠️ Partial" in render_terminal(_terminal("partial"))
+    assert "⛔ Blocked" in render_terminal(_terminal("blocked"))
+
+
+def test_render_pause_single_approval():
+    text = render_pause(_paused([{"tool_name": "wordpress_publish_post", "args": {"post_id": 123, "auth_token": "s"}}]))
+    assert "⚠️ Approval required" in text
+    assert "wordpress_publish_post" in text
+    assert "post_id: 123" in text
+    assert "***REDACTED***" in text
+    assert "[Approve]" in text
+    assert "[Deny]" in text
+
+
+def test_render_pause_batch_approval():
+    text = render_pause(
+        _paused(
+            [
+                {"tool_name": "t1", "args": {}},
+                {"tool_name": "t2", "args": {}},
+                {"tool_name": "t3", "args": {}},
+            ]
+        )
+    )
+    assert "3 actions require approval" in text
+    assert "1. t1" in text
+    assert "[Approve all]" in text
+    assert "[Deny all]" in text
+
+
+def test_render_status_states():
+    base = {"profile": "wordpress-operator", "conversation_id": "conversation-abc"}
+    ready = render_status(**base, state="READY")
+    assert "State: READY" in ready
+    assert "Profile: wordpress-operator" in ready
+    paused = render_status(
+        **base, state="PAUSED", run_id="run-1", pending_approval_count=2, pending_tools=["t"]
+    )
+    assert "State: PAUSED" in paused
+    assert "Pending approvals: 2" in paused
+
+
+def test_render_profile_and_new_and_error():
+    profile = render_profile(current="writing", available=["writing", "wordpress-operator"])
+    assert "Current profile: writing" in profile
+    assert "- wordpress-operator" in profile
+    assert "Profile: writing" in render_new_conversation("writing")
+    assert render_error("boom") == "⚠️ boom"
+
+
+def test_chunk_text_respects_max():
+    text = "line\n" * 3000
+    chunks = chunk_text(text)
+    assert all(len(chunk) <= CHUNK_MAX for chunk in chunks)
+    assert "".join(chunks).replace("\n", "") == text.replace("\n", "")
+    assert chunk_text("short") == ["short"]

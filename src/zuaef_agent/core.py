@@ -39,8 +39,13 @@ RunSummary claims are verified by the host, not trusted:
 
 # Harness FileSystem default protections plus the knowledge area: general file
 # tools may read knowledge/** but only the Knowledge Capability may write it.
+# Case control-plane files (BusinessCase doc, Barry's policy overrides) are
+# supervisor-editable only; the model writes situation/trajectory/drafts
+# exclusively through the zuaef-case toolset.
 FILESYSTEM_PROTECTED_PATTERNS = [
     "knowledge/*",
+    "cases/*/case.md",
+    "cases/*/policy-overrides.md",
     ".git/*",
     ".env",
     ".env.*",

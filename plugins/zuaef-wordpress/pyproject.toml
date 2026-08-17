@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-wordpress"
+version = "0.1.0"
+description = "WordPress business adapter plugin for ZUAEF: REST-based post observation and approval-gated external writes."
+requires-python = ">=3.11"
+# zuaef-agent itself is not on PyPI; install this package into the same
+# environment that provides the zuaef_agent distribution (peer dependency).
+dependencies = [
+  "httpx>=0.28",
+  "pydantic-ai>=2.27,<3",
+]
+
+[project.entry-points."zuaef.plugins"]
+wordpress = "zuaef_wordpress:create_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["zuaef_wordpress"]

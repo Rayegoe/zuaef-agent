@@ -1,0 +1,14 @@
+# Wordpress operator profile — SPEC v0.3 §47, §57.
+# Stage A proof profile: the wordpress plugin alone, no ACE Writing yet.
+# Non-secret config only; credentials live in ZUAEF_WORDPRESS_USERNAME /
+# ZUAEF_WORDPRESS_APP_PASSWORD and never enter a profile or receipt.
+# Install: cp profiles/wordpress-operator.toml ~/.config/zuaef/profiles/
+schema = 1
+name = "wordpress-operator"
+
+[[plugins]]
+id = "wordpress"
+
+[plugins.config]
+site_url = "https://example.com"
+site_label = "production"

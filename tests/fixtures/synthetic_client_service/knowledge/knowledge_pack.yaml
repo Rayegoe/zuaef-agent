@@ -1,0 +1,5 @@
+knowledge_items:
+- knowledge_id: KNO-SYN-001
+  statement: 平台规则和识别机制会持续变化，内容生产方式需要持续适配。
+  domain: beauty
+  evidence_ids: [EVD-SYN-003]

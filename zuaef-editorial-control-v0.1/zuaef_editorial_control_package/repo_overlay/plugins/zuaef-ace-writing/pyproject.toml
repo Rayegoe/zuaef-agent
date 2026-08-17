@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-ace-writing"
+version = "0.2.0"
+description = "ACE Writing business plugin for ZUAEF with evidence-backed Cognitive Editorial Control."
+requires-python = ">=3.11"
+# zuaef-agent itself is not on PyPI; install this package into the same
+# environment that provides the zuaef_agent distribution (peer dependency).
+dependencies = [
+  "pydantic-ai>=2.27,<3",
+  "pydantic-ai-harness[skills]>=0.1",
+]
+
+[project.entry-points."zuaef.plugins"]
+ace-writing = "zuaef_ace_writing:create_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["zuaef_ace_writing"]

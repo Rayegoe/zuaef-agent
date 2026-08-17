@@ -1,0 +1,39 @@
+# FDE Deployment Profile: stillevo-fde — SPEC v0.3 FDE Platform §8.
+#
+# One FDE agent deployed to the Stillevo field: case context + client service
+# + ACE writing + budget + wordpress. A deployment profile is a capability
+# set per business site — NOT a personality switcher. The user talks to
+# "Stillevo FDE", not to five agents.
+#
+# Install:
+#   cp profiles/stillevo-fde.toml ~/.config/zuaef/profiles/stillevo-fde.toml
+#   zuaef-agent profile check stillevo-fde --config-root ~/.config/zuaef
+#
+# Field requirements (non-secret config only; secrets stay in the environment):
+#   - ZUAEF_WORDPRESS_USERNAME / ZUAEF_WORDPRESS_APP_PASSWORD
+#   - client-service private corpus (default ~/.local/share/zuaef/client-service)
+#   - ACE checkout at the ace_root below (tools/ctx.py must exist)
+schema = 1
+name = "stillevo-fde"
+
+[[plugins]]
+id = "zuaef-case"
+
+[[plugins]]
+id = "client-service"
+
+[[plugins]]
+id = "ace-writing"
+
+[plugins.config]
+ace_root = "~/projects/article-context-engine/article-context-engine"
+
+[[plugins]]
+id = "zuaef-emtb-budget"
+
+[[plugins]]
+id = "wordpress"
+
+[plugins.config]
+site_url = "https://stillevo.example"
+site_label = "production"

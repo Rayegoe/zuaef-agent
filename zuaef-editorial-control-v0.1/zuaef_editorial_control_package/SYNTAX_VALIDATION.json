@@ -1,0 +1,8 @@
+{
+  "repo_overlay/tests/test_editorial_control_capability.py": "ok",
+  "repo_overlay/tests/test_ace_writing_plugin.py": "ok",
+  "repo_overlay/plugins/zuaef-ace-writing/zuaef_ace_writing/editorial_control.py": "ok",
+  "repo_overlay/plugins/zuaef-ace-writing/zuaef_ace_writing/editorial_evidence.py": "ok",
+  "repo_overlay/plugins/zuaef-ace-writing/zuaef_ace_writing/__init__.py": "ok",
+  "repo_overlay/plugins/zuaef-ace-writing/zuaef_ace_writing/plugin.py": "ok"
+}

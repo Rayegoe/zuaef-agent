@@ -1,20 +1,13 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import sys
 from pathlib import Path
 from uuid import uuid4
 
-from pydantic_ai import (
-    DeferredToolRequests,
-    DeferredToolResults,
-    ToolDenied,
-    ToolFailed,
-)
+import httpx
 from pydantic_ai.exceptions import UserError
-from pydantic_ai.messages import ToolCallPart
 
 from .composition import (
     build_profile_agent,
@@ -23,10 +16,9 @@ from .composition import (
     resolve_profile,
 )
 from .config import AgentSettings
-from .core import build_agent
+from .continuation import resume_paused_run
 from .models import CoreDeps
 from .profiles import list_profiles, load_profile
-from .receipt_store import ReceiptStore
 from .runtime import PausedRun, RuntimeOutcome, execute_run, run_task
 
 # Exit-code contract: completed 0, partial 1, blocked 2, paused 3 (distinct from
@@ -92,6 +84,19 @@ def _parser() -> argparse.ArgumentParser:
     profile_check.add_argument("name")
     for command in (profile_show, profile_check):
         command.add_argument("--config-root", type=Path)
+
+    gateway = sub.add_parser(
+        "gateway", help="run the interactive business gateway (SPEC v0.3)"
+    )
+    gateway_sub = gateway.add_subparsers(dest="gateway_command", required=True)
+    gateway_start = gateway_sub.add_parser(
+        "start", help="foreground blocking gateway process (Stage A: telegram)"
+    )
+    gateway_start.add_argument("--surface", required=True, choices=["telegram"])
+    gateway_start.add_argument("--profile")
+    gateway_start.add_argument("--workspace", type=Path)
+    gateway_start.add_argument("--model")
+    gateway_start.add_argument("--config-root", type=Path)
     return p
 
 
@@ -156,56 +161,18 @@ def _resume(args: argparse.Namespace) -> int:
         print("exactly one of --approve / --deny is required", file=sys.stderr)
         return EXIT_PROCESS_ERROR
     settings = _settings_from_args(args)
-
-    receipt = ReceiptStore(settings.state_root).read(args.run_id)
-    if getattr(receipt, "state", "terminal") != "paused":
-        print(f"run {args.run_id} is not paused; resume needs a pause receipt", file=sys.stderr)
-        return EXIT_PROCESS_ERROR
-
-    from pydantic_ai_harness.step_persistence import FileStepStore, continue_run
-
-    store = FileStepStore(settings.step_store_dir)
-    history = asyncio.run(continue_run(store, run_id=args.run_id))
-
-    requests = DeferredToolRequests(
-        approvals=[
-            ToolCallPart(
-                tool_name=entry.get("tool_name") or "",
-                args=entry.get("args") or {},
-                tool_call_id=entry.get("tool_call_id") or "",
-            )
-            for entry in receipt.pending_approvals
-        ]
-    )
-    results = DeferredToolResults()
-    for call in requests.approvals:
-        results.approvals[call.tool_call_id] = True if args.approve else ToolDenied(args.reason or "denied by operator")
-    for entry in receipt.pending_calls:
-        results.calls[entry["tool_call_id"]] = ToolFailed("no external executor configured")
-
-    run_id = uuid4().hex
-    composition = getattr(receipt, "composition", None)
-    if composition is not None:
-        # The pause receipt is the composition authority; the mutable
-        # current profile is ignored, and an installed version/entry point
-        # that drifted from the frozen snapshot fails here (process error).
-        agent, _ = build_profile_agent(
-            settings, run_id=run_id, snapshot=composition
+    try:
+        # Shared continuation seam: the CLI owns no resume orchestration of
+        # its own — the Gateway executes the exact same function.
+        outcome = resume_paused_run(
+            settings,
+            args.run_id,
+            decision="approve" if args.approve else "deny",
+            reason=args.reason,
         )
-    else:
-        agent = build_agent(settings, run_id=run_id)
-    deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
-    outcome = execute_run(
-        agent,
-        deps,
-        settings=settings,
-        run_id=run_id,
-        conversation_id=receipt.conversation_id,
-        message_history=history,
-        deferred_tool_results=results,
-        prior_pause_receipt=receipt,
-        composition=composition,
-    )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return EXIT_PROCESS_ERROR
     _print_outcome(outcome)
     return _outcome_exit_code(outcome)
 
@@ -250,6 +217,14 @@ def _profile(args: argparse.Namespace) -> int:
     return 0
 
 
+def _gateway(args: argparse.Namespace) -> int:
+    from .gateway import runner
+
+    settings = _settings_from_args(args)
+    config = runner.load_gateway_config(args)
+    return runner.run_gateway(config=config, settings=settings)
+
+
 def main() -> None:
     parser = _parser()
     try:
@@ -266,9 +241,11 @@ def main() -> None:
             code = _resume(args)
         elif args.command == "plugin":
             code = _plugin(args)
+        elif args.command == "gateway":
+            code = _gateway(args)
         else:
             code = _profile(args)
-    except (ValueError, FileNotFoundError, LookupError, UserError) as exc:
+    except (ValueError, FileNotFoundError, LookupError, UserError, httpx.HTTPError) as exc:
         print(f"process error: {exc}", file=sys.stderr)
         sys.exit(EXIT_PROCESS_ERROR)
     sys.exit(code)

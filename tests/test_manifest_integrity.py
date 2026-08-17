@@ -35,6 +35,7 @@ def test_manifest_covers_all_delivery_source_files():
     tracked: list[str] = []
     for pattern in (
         "src/zuaef_agent/*.py",
+        "src/zuaef_agent/gateway/*.py",
         "tests/*.py",
         "tests/fixture_plugins/**/*.py",
         "tests/fixture_plugins/**/*.md",
@@ -42,7 +43,11 @@ def test_manifest_covers_all_delivery_source_files():
         "plugins/**/*.py",
         "plugins/*.toml",
         "plugins/**/*.csv",
+        "plugins/**/*.md",
         "profiles/*.toml",
+        "examples/profiles/*.toml",
+        "tests/fixtures/synthetic_client_service/**/*.jsonl",
+        "tests/fixtures/synthetic_client_service/**/*.yaml",
         "examples/*.py",
         "examples/budget_lib/*.py",
         "examples/data/*.csv",

@@ -1,0 +1,13 @@
+schema_version: 1
+customer_id: CASE-SYN-001
+stage: qualification
+authority: unknown
+budget: unknown
+budget_confidence: unknown
+software_need: unknown
+signals: []
+disclosed: []
+not_disclosed: []
+next_best_action: ""
+updated_from: ""
+evidence_ids: []

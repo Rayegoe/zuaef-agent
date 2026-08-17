@@ -1,0 +1,67 @@
+[
+  {
+    "path": "README.md",
+    "bytes": 1563,
+    "sha256": "86e16fd4508987f5b74fb37551ca88caec69efd76befac8f4223759300280dca"
+  },
+  {
+    "path": "SPEC.md",
+    "bytes": 9074,
+    "sha256": "e143597c0ab32df2548d0adb05c1db1144ff58398b9b7d1f8116c8adedcdbd3c"
+  },
+  {
+    "path": "SYNTAX_VALIDATION.json",
+    "bytes": 463,
+    "sha256": "9b51ec198dce19b387703840457e720bf0fa978322e00de6a5f48ef203e887ff"
+  },
+  {
+    "path": "editorial-control.patch",
+    "bytes": 36490,
+    "sha256": "23da5abe1c6279de020b9d44018b3370e62e9bc75313a605865dfab537fbe398"
+  },
+  {
+    "path": "examples/editorial-evidence.example.jsonl",
+    "bytes": 1199,
+    "sha256": "04349365cd75275d696c87cc494de80a78823c91d50d7c94ce9fbfbd206d8cee"
+  },
+  {
+    "path": "repo_overlay/plugins/zuaef-ace-writing/pyproject.toml",
+    "bytes": 653,
+    "sha256": "0491bc346eed62c4b8bdd1d3d5293a6f81c8dcb0095f362deb8c3a9f9b72122d"
+  },
+  {
+    "path": "repo_overlay/plugins/zuaef-ace-writing/zuaef_ace_writing/__init__.py",
+    "bytes": 1025,
+    "sha256": "e57bb6ded13329b9a0b31215d7b707cea273ee1ee40f3466829b030fdfe02eb9"
+  },
+  {
+    "path": "repo_overlay/plugins/zuaef-ace-writing/zuaef_ace_writing/editorial_control.py",
+    "bytes": 16187,
+    "sha256": "1d338d47b16e5d607ebe334b616de079d63ab608b5f3a4094ec7e84c1a383f7b"
+  },
+  {
+    "path": "repo_overlay/plugins/zuaef-ace-writing/zuaef_ace_writing/editorial_evidence.py",
+    "bytes": 8461,
+    "sha256": "dc05fb4e74102157bfb1709e4b55959228a6561e91b5c1b42bc1243855e87d95"
+  },
+  {
+    "path": "repo_overlay/plugins/zuaef-ace-writing/zuaef_ace_writing/plugin.py",
+    "bytes": 3636,
+    "sha256": "1333e56c372bf7a3d2b0764c19400059e386d1a56fd81b287b0541a089602eb7"
+  },
+  {
+    "path": "repo_overlay/profiles/ace-writing.toml",
+    "bytes": 990,
+    "sha256": "ce821068faddab7ec80d0d25b87d55db5a45d6b5b88a94469bfe78256a2e01e2"
+  },
+  {
+    "path": "repo_overlay/tests/test_ace_writing_plugin.py",
+    "bytes": 3684,
+    "sha256": "c5a73d77b8d6bc61c0a09800511855bf0869428e91ebb17cf1fdedee37ba13bf"
+  },
+  {
+    "path": "repo_overlay/tests/test_editorial_control_capability.py",
+    "bytes": 2296,
+    "sha256": "45d08d2ed0fe48b3f385e9a431fedbbca502f25ddb637933ff81323889ca3b72"
+  }
+]
