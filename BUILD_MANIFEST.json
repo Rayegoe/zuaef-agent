@@ -998,8 +998,8 @@
     },
     {
       "path": "examples/production_writing.py",
-      "bytes": 19514,
-      "sha256": "ccd8204e2afb4e25f8219e9635f8ae8adc690fedb8a387a6426009e05316a885"
+      "bytes": 19821,
+      "sha256": "2cda023ada9555f8e136ca097fc3cdb0dc23d61aa749dc5b00eb159e130c0556"
     },
     {
       "path": "examples/research_toolset.py",
@@ -1068,8 +1068,8 @@
     },
     {
       "path": "src/zuaef_agent/config.py",
-      "bytes": 6480,
-      "sha256": "6602a463591d16fcdcf703f8068a921fbe9539ab2afc297451e2389aca69fd53"
+      "bytes": 6760,
+      "sha256": "f63d3cd5dd003d5ef3db28e6ba211b4abd4b5c93a0aea39f5014be13f2ab8791"
     },
     {
       "path": "src/zuaef_agent/continuation.py",
@@ -1078,8 +1078,8 @@
     },
     {
       "path": "src/zuaef_agent/core.py",
-      "bytes": 5255,
-      "sha256": "45c339260f3241ee77aeb69b93481814e587aa5a228d038121d1c996d68467ee"
+      "bytes": 5551,
+      "sha256": "1e2286cba57e629fb92b479433edf7cb309dd351f14f872fa5d33e70279e6a1c"
     },
     {
       "path": "src/zuaef_agent/effects.py",
@@ -1348,8 +1348,8 @@
     },
     {
       "path": "tests/test_production_writing.py",
-      "bytes": 7256,
-      "sha256": "1e0573df976e19148bf8082b54ee568ebc59ab15e4df8ccf3472623ddf41774c"
+      "bytes": 10096,
+      "sha256": "41488ba68f624261a66a0485282fcb9c43a35a914e23f4ff5458001cce890b7d"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -1663,8 +1663,8 @@
     },
     {
       "path": "benchmarks/editorial-learning/README.md",
-      "bytes": 8945,
-      "sha256": "fde50275d3f47c9dc2cb1208a543ffdcd82dd48f0e5a15738f81e552408c82c3"
+      "bytes": 9885,
+      "sha256": "c396993893a38a0a162cf2e8f7d8bd75f72c9052bd460ad94ff07f344846158e"
     },
     {
       "path": "benchmarks/editorial-learning/benchmark.jsonl",
@@ -1713,8 +1713,8 @@
     },
     {
       "path": "benchmarks/editorial-learning/scripts/compare_paths.py",
-      "bytes": 14035,
-      "sha256": "a2452d6501d3001ba95fadd3e70afe26198cb3d6aee1715c40eda2e6264acf6e"
+      "bytes": 19627,
+      "sha256": "0fb93e36eada107264d47d802dfcaac5b9a8a351f1543f1a89e85988a1c79f17"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/compile_learning_pack.py",

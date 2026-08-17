@@ -105,17 +105,33 @@ canonical copy + `node_id`）、`evidence.jsonl`（20）、`sequential_inputs.js
 - 老六工具轨迹（`examples/writing_toolset.py` / `writing_case.py`）保持原样，
   仅用于集成测试 / 能力证明。
 
-### OLD vs NEW 对比（同一篇文章）
+### OLD vs NEW 对比（同一篇文章，真实证据）
 
 ```bash
 uv run python benchmarks/editorial-learning/scripts/compare_paths.py --check   # 零模型调用自检
-uv run python benchmarks/editorial-learning/scripts/compare_paths.py --tasks T01
+uv run python benchmarks/editorial-learning/scripts/compare_paths.py --tasks T01 --mode both --repeat 3
+uv run python benchmarks/editorial-learning/scripts/compare_paths.py --tasks T01 --mode writer_editor --repeat 3
 ```
 
 - OLD = proof 轨迹（材料不预给、强制 read/exemplar/knowledge/probe，request_limit 30）
 - NEW = production 投影（request_limit 12，SLO 报警线 8）
-- 输出 `results/compare/T01_old.json` / `T01_new.json` / `T01_summary.json`：
-  model requests、tool calls、signals on 真实 final.md、vetoes、evidence cited。
+- WRITER_EDITOR = production 两遍：Writer 全稿 → Editor 最小定向修补
+- `--repeat N` 输出 `T01_{mode}_r01..rNN.json` + summary（requests 列表 + p50），
+  证据可独立复现，重跑不覆盖历史
+- **两个路径都走共享运行时 `execute_run`**（usage limits / exception boundary /
+  receipt settlement / host artifact verification），指标取自 RunReceipt
+  （usage.requests、verified_tool_effects、verified_artifacts），不做消息嗅探
+
+实测（deepseek-v4-flash, T01, 2026-08-17）：
+
+| 模式 | requests | p50 | 出稿 |
+|---|---|---|---|
+| OLD（proof） | 30 打满未收敛（曾 11 成功一次） | — | ✗（本组证据） |
+| NEW（writer） | [3,3,3] | 3 | ✓✓✓ |
+| WRITER_EDITOR | [6,5,5] | 5 | ✓✓✓ |
+
+Editor 机器侧增量（sensors on final.md）：r01 0.304→0.304、r02 0.63→0.615、
+r03 不可测 —— 真人盲评未做（PENDING），Editor 的真实增益待人工评估。
 
 ### 真实文章读取（bug fix）
 

@@ -59,11 +59,16 @@ def build_agent(
     settings: AgentSettings,
     *,
     run_id: str | None = None,
+    instructions: str | None = None,
     extra_capabilities: Sequence[AbstractCapability[CoreDeps]] = (),
     extra_toolsets: Sequence[AbstractToolset[CoreDeps]] = (),
     extra_skill_dirs: Sequence[Path] = (),
 ) -> Agent[CoreDeps, RunSummary | DeferredToolRequests]:
     """Build one core agent through explicit composition; there is intentionally no registry.
+
+    ``instructions`` defaults to ``CORE_INSTRUCTIONS``; single-purpose surfaces
+    (e.g. the production writer) pass their own so core noise (spill handles,
+    knowledge nodes) cannot derail the model.
 
     ``extra_skill_dirs`` extends the Skills capability's source directories
     (plugin skill dirs; the base ``settings.skills_dir`` stays first, so a
@@ -72,12 +77,14 @@ def build_agent(
     settings.workspace_root.mkdir(parents=True, exist_ok=True)
     settings.state_root.mkdir(parents=True, exist_ok=True)
 
-    capabilities: list[AbstractCapability[CoreDeps]] = [
-        FileSystem[CoreDeps](
-            root_dir=settings.workspace_root,
-            protected_patterns=list(FILESYSTEM_PROTECTED_PATTERNS),
-        ),
-    ]
+    capabilities: list[AbstractCapability[CoreDeps]] = []
+    if settings.enable_filesystem:
+        capabilities.append(
+            FileSystem[CoreDeps](
+                root_dir=settings.workspace_root,
+                protected_patterns=list(FILESYSTEM_PROTECTED_PATTERNS),
+            )
+        )
 
     if settings.enable_tool_output_limits:
         capabilities.append(
@@ -98,7 +105,8 @@ def build_agent(
             )
         )
 
-    capabilities.append(Knowledge())
+    if settings.enable_knowledge:
+        capabilities.append(Knowledge())
     if settings.enable_planning:
         capabilities.append(Planning[CoreDeps]())
     if settings.enable_skills:
@@ -115,7 +123,7 @@ def build_agent(
         resolve_model(settings),
         deps_type=CoreDeps,
         output_type=[RunSummary, DeferredToolRequests],
-        instructions=CORE_INSTRUCTIONS,
+        instructions=instructions or CORE_INSTRUCTIONS,
         capabilities=capabilities,
         toolsets=list(extra_toolsets),
         name="zuaef",

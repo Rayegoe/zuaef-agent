@@ -1,0 +1,26 @@
+{
+  "mode": "writer_editor",
+  "task_id": "T01",
+  "runs": 3,
+  "writer_requests": [
+    3,
+    2,
+    2
+  ],
+  "editor_requests": [
+    3,
+    3,
+    3
+  ],
+  "total_requests": [
+    6,
+    5,
+    5
+  ],
+  "p50_total_requests": 5.0,
+  "artifacts": [
+    true,
+    true,
+    true
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "mode": "old",
+  "task_id": "T01",
+  "runs": 1,
+  "requests": [
+    30
+  ],
+  "p50_requests": 30.0,
+  "artifacts": [
+    false
+  ],
+  "statuses": [
+    "partial"
+  ]
+}

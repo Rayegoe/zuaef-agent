@@ -1,0 +1,21 @@
+{
+  "mode": "new",
+  "task_id": "T01",
+  "runs": 3,
+  "requests": [
+    3,
+    3,
+    3
+  ],
+  "p50_requests": 3.0,
+  "artifacts": [
+    true,
+    true,
+    true
+  ],
+  "statuses": [
+    "partial",
+    "partial",
+    "partial"
+  ]
+}

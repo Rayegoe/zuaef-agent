@@ -1,0 +1,155 @@
+{
+  "mode": "old",
+  "task_id": "T01",
+  "run_id": "cmp-old-T01",
+  "request_limit": 30,
+  "status": "partial",
+  "summary_outcome": "Run stopped at an enforced usage boundary.",
+  "model_requests": 30,
+  "usage": {
+    "input_tokens": 125730,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 123776,
+    "output_tokens": 1230,
+    "input_audio_tokens": 0,
+    "cache_audio_read_tokens": 0,
+    "output_audio_tokens": 0,
+    "details": {
+      "prompt_cache_hit_tokens": 123776,
+      "prompt_cache_miss_tokens": 1954
+    },
+    "cost": 0.0009645328,
+    "requests": 30,
+    "tool_calls": 30
+  },
+  "verified_artifacts": [],
+  "verified_tool_effects": [
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ],
+    [
+      "list_materials",
+      "completed"
+    ]
+  ],
+  "unresolved_effects": [],
+  "error": "The next request would exceed the request_limit of 30. Consider raising the limit, or see the docs on usage limits for budget-aware patterns: https://ai.pydantic.dev/agent/#usage-limits",
+  "artifact_path": "/home/barry/zuaef-agent/workspace/artifacts/cmp-old-T01/final.md",
+  "artifact_exists": false,
+  "artifact_chars": 0,
+  "artifact_sha256": null,
+  "signals_on_artifact": {}
+}

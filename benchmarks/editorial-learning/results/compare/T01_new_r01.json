@@ -1,0 +1,43 @@
+{
+  "run_id": "cmp-new-T01",
+  "task_id": "T01",
+  "status": "partial",
+  "summary_outcome": "Article written and saved for task T01 (article_id cmp-new-T01). The revision applies a clarity-only local patch within the minimal range, preserving claims and source ledger as immutable. Claims ledger (C1, C2) cites source S1; source ledger contains only S1 (material M001). save_artifact succeeded (ok:true), evidence gate resolved after adding the claims ledger; the only remaining gate item is the human_final_reviewed release flag, which only a human can set.",
+  "model_requests": 3,
+  "usage": {
+    "input_tokens": 8093,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 4864,
+    "output_tokens": 920,
+    "input_audio_tokens": 0,
+    "cache_audio_read_tokens": 0,
+    "output_audio_tokens": 0,
+    "details": {
+      "prompt_cache_hit_tokens": 4864,
+      "prompt_cache_miss_tokens": 3229
+    },
+    "cost": 0.0007232792,
+    "requests": 3,
+    "tool_calls": 2
+  },
+  "verified_artifacts": [
+    "artifacts/cmp-new-T01/final.md"
+  ],
+  "verified_tool_effects": [
+    [
+      "save_artifact",
+      "completed"
+    ],
+    [
+      "save_artifact",
+      "completed"
+    ]
+  ],
+  "unresolved_effects": [],
+  "artifact_path": "/home/barry/zuaef-agent/workspace/artifacts/cmp-new-T01/final.md",
+  "artifact_exists": true,
+  "artifact_chars": 918,
+  "signals_on_artifact": {},
+  "mode": "new",
+  "artifact_sha256": "f8688bd2ee66a81174a65b0338a8d1ba523d3b311c9e9c41a8163fc65fee6cdb"
+}

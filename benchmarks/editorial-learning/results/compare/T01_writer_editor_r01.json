@@ -1,0 +1,91 @@
+{
+  "mode": "writer_editor",
+  "task_id": "T01",
+  "status": "partial",
+  "writer": {
+    "run_id": "cmp-we-T01-w",
+    "task_id": "T01",
+    "status": "partial",
+    "summary_outcome": "The clarity-focused revision for T01 was written and saved to the canonical article artifact. The document applies local clarity patches (intent-classified as clarity/fluency) within a minimal edit range, treating the claims ledger and source ledger (S1) as immutable boundaries. No facts were added or removed, and no sources were introduced beyond S1. The evidence gate passed on claims resolution and fact check, with the only remaining gate flag (human_final_reviewed) requiring human confirmation as expected.",
+    "model_requests": 3,
+    "usage": {
+      "input_tokens": 8201,
+      "cache_write_tokens": 0,
+      "cache_read_tokens": 5632,
+      "output_tokens": 1402,
+      "input_audio_tokens": 0,
+      "cache_audio_read_tokens": 0,
+      "output_audio_tokens": 0,
+      "details": {
+        "prompt_cache_hit_tokens": 5632,
+        "prompt_cache_miss_tokens": 2569
+      },
+      "cost": 0.0007679896,
+      "requests": 3,
+      "tool_calls": 2
+    },
+    "verified_artifacts": [
+      "artifacts/cmp-we-T01-w/final.md"
+    ],
+    "verified_tool_effects": [
+      [
+        "save_artifact",
+        "completed"
+      ],
+      [
+        "save_artifact",
+        "completed"
+      ]
+    ],
+    "unresolved_effects": [],
+    "artifact_path": "/home/barry/zuaef-agent/workspace/artifacts/cmp-we-T01-w/final.md",
+    "artifact_exists": true,
+    "artifact_chars": 2156,
+    "signals_on_artifact": {
+      "low_concrete_anchor_density": 0.304
+    }
+  },
+  "editor": {
+    "run_id": "cmp-we-T01-e",
+    "task_id": "T01",
+    "status": "partial",
+    "summary_outcome": "Draft reviewed and saved as-is; it already meets the clarity bar. No edits were needed.",
+    "model_requests": 3,
+    "usage": {
+      "input_tokens": 9524,
+      "cache_write_tokens": 0,
+      "cache_read_tokens": 7552,
+      "output_tokens": 1232,
+      "input_audio_tokens": 0,
+      "cache_audio_read_tokens": 0,
+      "output_audio_tokens": 0,
+      "details": {
+        "prompt_cache_hit_tokens": 7552,
+        "prompt_cache_miss_tokens": 1972
+      },
+      "cost": 0.0006421856,
+      "requests": 3,
+      "tool_calls": 2
+    },
+    "verified_artifacts": [
+      "artifacts/cmp-we-T01-e/final.md"
+    ],
+    "verified_tool_effects": [
+      [
+        "save_artifact",
+        "completed"
+      ],
+      [
+        "save_artifact",
+        "completed"
+      ]
+    ],
+    "unresolved_effects": [],
+    "artifact_path": "/home/barry/zuaef-agent/workspace/artifacts/cmp-we-T01-e/final.md",
+    "artifact_exists": true,
+    "artifact_chars": 2155,
+    "signals_on_artifact": {
+      "low_concrete_anchor_density": 0.304
+    }
+  }
+}

@@ -47,6 +47,14 @@ class AgentSettings:
     total_tokens_limit: int | None = None
     enable_planning: bool = True
     enable_skills: bool = True
+    # Sandbox FileSystem capability (list_directory/read_file/...) — always on
+    # for normal agents, but experiment runners that compose their own writing
+    # toolset route file writes through save_artifact and disable the sandbox
+    # so the model cannot derail into generic filesystem exploration.
+    enable_filesystem: bool = True
+    # Knowledge capability (search/read/list/write under knowledge/**) — same
+    # discipline: off for single-purpose surfaces like the production writer.
+    enable_knowledge: bool = True
     enable_tool_output_limits: bool = True
     enable_step_persistence: bool = True
     max_snapshots_per_run: int | None = 8
@@ -116,6 +124,8 @@ class AgentSettings:
             total_tokens_limit=int(os.environ["ZUAEF_TOTAL_TOKENS_LIMIT"]) if os.getenv("ZUAEF_TOTAL_TOKENS_LIMIT") else None,
             enable_planning=_env_bool("ZUAEF_ENABLE_PLANNING", cls.enable_planning),
             enable_skills=_env_bool("ZUAEF_ENABLE_SKILLS", cls.enable_skills),
+            enable_filesystem=_env_bool("ZUAEF_ENABLE_FILESYSTEM", cls.enable_filesystem),
+            enable_knowledge=_env_bool("ZUAEF_ENABLE_KNOWLEDGE", cls.enable_knowledge),
             enable_tool_output_limits=_env_bool(
                 "ZUAEF_ENABLE_TOOL_OUTPUT_LIMITS", cls.enable_tool_output_limits
             ),
