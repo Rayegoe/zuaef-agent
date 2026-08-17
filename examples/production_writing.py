@@ -488,6 +488,16 @@ def run_production_article(
     }
 
 
+def resolve_evidence_arg(value: str | None) -> Path | None:
+    """--evidence arg -> evidence file; ABSENT -> the default compiled corpus.
+
+    Regression: passing None through used to silently downgrade the editorial
+    store to builtin seeds only, contradicting the documented default
+    (seeds + compiled/evidence.jsonl).
+    """
+    return Path(value) if value else COMPILED_EVIDENCE
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--task", required=True)
@@ -507,7 +517,7 @@ def main() -> None:
         task_id=args.task,
         material_path=Path(args.material),
         title=args.title,
-        evidence_path=Path(args.evidence) if args.evidence else None,
+        evidence_path=resolve_evidence_arg(args.evidence),
     )
     print(json.dumps(record, ensure_ascii=False, indent=2))
 

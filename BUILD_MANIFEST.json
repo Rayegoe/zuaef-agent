@@ -998,8 +998,8 @@
     },
     {
       "path": "examples/production_writing.py",
-      "bytes": 19821,
-      "sha256": "2cda023ada9555f8e136ca097fc3cdb0dc23d61aa749dc5b00eb159e130c0556"
+      "bytes": 20202,
+      "sha256": "f1ab350bca9a1558def69b0e9ad05956b46e82312c3f7c18056d445ff85fcf92"
     },
     {
       "path": "examples/research_toolset.py",
@@ -1348,8 +1348,8 @@
     },
     {
       "path": "tests/test_production_writing.py",
-      "bytes": 10096,
-      "sha256": "41488ba68f624261a66a0485282fcb9c43a35a914e23f4ff5458001cce890b7d"
+      "bytes": 10586,
+      "sha256": "e973d7bf779cc2632fbefba622d0084ec67f1a7c829a63767b323a8062f82bc1"
     },
     {
       "path": "tests/test_receipt_store.py",

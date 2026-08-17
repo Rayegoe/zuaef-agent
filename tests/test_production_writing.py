@@ -220,6 +220,16 @@ def test_evidence_path_is_honored(tmp_path):
     assert "corpus.T001" not in ids  # default compiled corpus NOT loaded
 
 
+def test_cli_evidence_default_is_compiled_corpus():
+    """CLI without --evidence must keep seeds + compiled corpus (regression:
+    a None pass-through silently downgraded the store to builtin seeds)."""
+    from examples.production_writing import COMPILED_EVIDENCE, resolve_evidence_arg
+
+    assert resolve_evidence_arg(None) == COMPILED_EVIDENCE
+    assert resolve_evidence_arg("") == COMPILED_EVIDENCE
+    assert resolve_evidence_arg("/tmp/custom.jsonl") == Path("/tmp/custom.jsonl")
+
+
 def test_final_artifact_text_reads_snapshot_not_summary(tmp_path):
     run_id = "prod-t01"
     snapshot = tmp_path / "artifacts" / run_id / "final.md"

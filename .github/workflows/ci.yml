@@ -1,0 +1,37 @@
+name: repository-contract
+
+# Minimal commit gate: does this commit still satisfy the deterministic
+# software contracts we have already proven (424 tests, manifest integrity,
+# delivery-scope ruff)? Deliberately NO real model APIs, NO benchmark runs,
+# NO OLD-vs-NEW / Writer-vs-Editor experiments, NO raw dataset downloads,
+# NO external learning pack, NO blind evaluation — those are experiments,
+# not commit gates.
+#
+# Tests that need external inputs skip cleanly by their own guards:
+#   - ACE checkout            -> tests/test_writing_slice.py skipUnless
+#   - raw datasets            -> tests/test_editorial_benchmark.py data/derived skip
+#   - external learning pack  -> tests/test_learning_pack_compiler.py conditional skip
+# All network-touching tests use httpx.MockTransport (no live services).
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Lint (delivery scope)
+        # Full-repo `ruff check .` still fails on pre-existing unrelated
+        # assets (.agents/**, _bmad/**, zuaef-editorial-control-v0.1/**) —
+        # a lint cleanup WO owns those; the gate pins the delivery scope.
+        run: uv run ruff check src/ plugins/ examples/ benchmarks/ tests/ tools/
+      - name: Contract tests (incl. manifest integrity)
+        run: uv run pytest -q
