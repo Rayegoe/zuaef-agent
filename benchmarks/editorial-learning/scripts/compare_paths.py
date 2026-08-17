@@ -60,6 +60,7 @@ sys.path[:0] = [
 
 from pydantic_ai import Agent
 from pydantic_ai_harness.step_persistence import FileStepStore, StepPersistence
+from task_inputs import resolve_task_inputs
 from zuaef_ace_writing.editorial import (
     EditorialControlCapability,
     EditorialEvidenceStore,
@@ -156,11 +157,14 @@ def load_full_task(task_id: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def material_file(task_id: str, full: dict) -> Path:
+def material_file(task_id: str, before_text: str) -> Path:
+    """Write the REAL BEFORE body as the ingested material (never the
+    assignment prompt — regression: T01's material field is a 144-char
+    instruction, not the document)."""
     directory = REPO / "data" / "derived" / "materials"
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{task_id}.md"
-    path.write_text(full["material"], encoding="utf-8")
+    path.write_text(before_text, encoding="utf-8")
     return path
 
 
@@ -201,16 +205,20 @@ def build_old_agent(
 
 def run_old(task_id: str, settings: AgentSettings, run_id: str) -> dict:
     full = load_full_task(task_id)
-    material = material_file(task_id, full)
+    inputs = resolve_task_inputs(full, task_id)
+    material = material_file(task_id, inputs["before_text"])
     ace_prepare(
         run_id, title=task_id, materials=[str(material)], ace_root=DEFAULT_ACE_ROOT
     )
     agent = build_old_agent(settings, run_id=run_id)
     prompt = build_prompt(
         article_id=run_id,
-        focus=[full.get("record_id", task_id)],
+        focus=[full.get("record_id") or task_id],
         account="",
     )
+    # the assignment intent rides along even in the pull proof (it is task
+    # context, not material); the BEFORE body stays ACE-side for read_material
+    prompt += f"\nAssignment: {inputs['assignment']}"
     run_settings = settings.with_overrides(request_limit=OLD_REQUEST_LIMIT)
     reset_run_state(settings, run_id)
     outcome = execute_run(
@@ -229,7 +237,8 @@ def run_old(task_id: str, settings: AgentSettings, run_id: str) -> dict:
 
 def run_new(task_id: str, settings: AgentSettings, run_id: str) -> dict:
     full = load_full_task(task_id)
-    material = material_file(task_id, full)
+    inputs = resolve_task_inputs(full, task_id)
+    material = material_file(task_id, inputs["before_text"])
     techniques, memory = benchmark_bundle_inputs(task_id)
     record = run_production_article(
         settings,
@@ -250,7 +259,8 @@ def run_new(task_id: str, settings: AgentSettings, run_id: str) -> dict:
 
 def run_writer_editor(task_id: str, settings: AgentSettings, base_run_id: str) -> dict:
     full = load_full_task(task_id)
-    material = material_file(task_id, full)
+    inputs = resolve_task_inputs(full, task_id)
+    material = material_file(task_id, inputs["before_text"])
     techniques, memory = benchmark_bundle_inputs(task_id)
     writer_run = f"{base_run_id}-w"
     editor_run = f"{base_run_id}-e"
@@ -276,6 +286,7 @@ def run_writer_editor(task_id: str, settings: AgentSettings, base_run_id: str) -
         }
     editor_prompt = (
         f"You are the editorial pass for task {task_id}.\n\n"
+        f"Assignment: {inputs['assignment']}\n\n"
         "The writer produced this draft:\n\n"
         f"<writer-draft>\n{draft_text}\n</writer-draft>\n\n"
         "Apply minimal targeted editorial improvements only, guided by the "
@@ -285,7 +296,7 @@ def run_writer_editor(task_id: str, settings: AgentSettings, base_run_id: str) -
         + render_writing_context(
             prepare_writing_context(
                 task_id=task_id,
-                material=full["material"],
+                material=inputs["before_text"],
                 title=task_id,
                 techniques=techniques,
                 editorial_memory=memory,

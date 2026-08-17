@@ -45,6 +45,7 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-ace-writing"),
     str(REPO / "src"),
 ]
+from task_inputs import resolve_task_inputs
 from zuaef_ace_writing.editorial import (
     EditorialControlCapability,
     EditorialEvidenceStore,
@@ -153,17 +154,22 @@ def trace_from_messages(messages) -> dict:
 
 async def run_task(mode: str, task: dict, settings: AgentSettings, run_id: str) -> dict:
     full = load_full_task(task["task_id"])
-    # ACE workspace per task: ingest the material so save_artifact has a ledger
+    inputs = resolve_task_inputs(full, task["task_id"])
+    # ACE workspace per task: ingest the REAL BEFORE body so save_artifact has
+    # a ledger and read_material returns the document, not the assignment.
     ace_prepare(
         run_id,
         title=task["task_id"],
-        materials=[str(_material_file(task["task_id"], full))],
+        materials=[str(_material_file(task["task_id"], inputs["before_text"]))],
         ace_root=DEFAULT_ACE_ROOT,
     )
     agent = compose(mode, settings, run_id)
     deps = CoreDeps(workspace_root=settings.workspace_root, run_id=run_id)
     result = await agent.run(
-        full["material"] + "\n\nWrite the article now and save it via save_artifact.",
+        inputs["assignment"]
+        + "\n\n### BEFORE document\n\n"
+        + inputs["before_text"]
+        + "\n\nWrite the revised article now and save it via save_artifact.",
         deps=deps,
         retries=3,
     )
@@ -185,11 +191,14 @@ async def run_task(mode: str, task: dict, settings: AgentSettings, run_id: str) 
     }
 
 
-def _material_file(task_id: str, full: dict) -> Path:
+def _material_file(task_id: str, before_text: str) -> Path:
+    """Write the REAL BEFORE body as the ingested material (never the
+    assignment prompt — regression: T01's material field is a 144-char
+    instruction, not the document)."""
     directory = REPO / "data" / "derived" / "materials"
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{task_id}.md"
-    path.write_text(full["material"], encoding="utf-8")
+    path.write_text(before_text, encoding="utf-8")
     return path
 
 

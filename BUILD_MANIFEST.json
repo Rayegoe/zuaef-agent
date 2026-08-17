@@ -1357,6 +1357,11 @@
       "sha256": "7a1d6f0250182d782341df0c41a2eedaaa3b2ce62b1d104b276459274620d115"
     },
     {
+      "path": "tests/test_task_inputs.py",
+      "bytes": 4763,
+      "sha256": "be17ae192f9660a1e21b5d084d7fcb4e20bab0bd616480451895e279ae91b53a"
+    },
+    {
       "path": "tests/test_verification.py",
       "bytes": 4936,
       "sha256": "9ac8e41ae684d63f387eb44ae6bcc229e59c09d2b6cd4e02f5815d3679fa5921"
@@ -1707,14 +1712,29 @@
       "sha256": "db90e7a7368973f066b764f15d47e68afed54dba8efc3a128b838ad704bbba58"
     },
     {
+      "path": "benchmarks/editorial-learning/scripts/__pycache__/compare_paths.cpython-313.pyc",
+      "bytes": 24241,
+      "sha256": "18bd1c63a07011d1911e2a65e1998f98084fbb569c91e8767ccb797ac2a879f4"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/__pycache__/run_benchmark.cpython-313.pyc",
+      "bytes": 15311,
+      "sha256": "5d3d0b5a3ac765c2f9a773ee97891d865a15ce1b5672afe9499310d6e08ae5f1"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/__pycache__/task_inputs.cpython-313.pyc",
+      "bytes": 2193,
+      "sha256": "9f592f92584d79fd9b0cbb19807679e22d4f2b4a868cda152e1f973bcdadeaf4"
+    },
+    {
       "path": "benchmarks/editorial-learning/scripts/build_tasks.py",
       "bytes": 28853,
       "sha256": "062fcf73016f0b90578b982ef24f06a1280c2ca012afc1c6e69be392a2745b90"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/compare_paths.py",
-      "bytes": 19627,
-      "sha256": "0fb93e36eada107264d47d802dfcaac5b9a8a351f1543f1a89e85988a1c79f17"
+      "bytes": 20314,
+      "sha256": "57ac06aeee3d9d640a279b4048eed40c9e724b979c694f6a2f17eabd47eb38cf"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/compile_learning_pack.py",
@@ -1738,8 +1758,13 @@
     },
     {
       "path": "benchmarks/editorial-learning/scripts/run_benchmark.py",
-      "bytes": 11153,
-      "sha256": "02d3e99610cdced8763688b613242f8e4184c33be4311a6d6ee977a4334f0b00"
+      "bytes": 11619,
+      "sha256": "9c2c5b065b99b6b4d0be574d9c1e648c9863738629a246887e790b5b80da21b0"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/task_inputs.py",
+      "bytes": 1761,
+      "sha256": "493b3ad04b4586333ab7512d46fd0ec45c77f30268c6c1a5d166eeaa51b2addc"
     },
     {
       "path": "benchmarks/editorial-learning/tasks/T01.json",

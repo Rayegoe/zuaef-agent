@@ -2,23 +2,23 @@
   "run_id": "cmp-new-T01",
   "task_id": "T01",
   "status": "partial",
-  "summary_outcome": "Article written and saved for task T01 (article_id cmp-new-T01). The revision applies a clarity-only local patch within the minimal range, preserving claims and source ledger as immutable. Claims ledger (C1, C2) cites source S1; source ledger contains only S1 (material M001). save_artifact succeeded (ok:true), evidence gate resolved after adding the claims ledger; the only remaining gate item is the human_final_reviewed release flag, which only a human can set.",
-  "model_requests": 3,
+  "summary_outcome": "Article written and saved for task T01. The save succeeded (article saved, gate_exit=1), though the evidence gate flags human_final_reviewed as needing a human to set — that flag is outside what the writing agent controls. The article covers the WiMAX vs. security theme, presents both interviews (Hsiao-wen Hung and Li Chang) with factual quotes confined to the source material, and includes the claim ledger (C1–C10) and source ledger (S1) as required.",
+  "model_requests": 2,
   "usage": {
-    "input_tokens": 8093,
+    "input_tokens": 7300,
     "cache_write_tokens": 0,
-    "cache_read_tokens": 4864,
-    "output_tokens": 920,
+    "cache_read_tokens": 5504,
+    "output_tokens": 1790,
     "input_audio_tokens": 0,
     "cache_audio_read_tokens": 0,
     "output_audio_tokens": 0,
     "details": {
-      "prompt_cache_hit_tokens": 4864,
-      "prompt_cache_miss_tokens": 3229
+      "prompt_cache_hit_tokens": 5504,
+      "prompt_cache_miss_tokens": 1796
     },
-    "cost": 0.0007232792,
-    "requests": 3,
-    "tool_calls": 2
+    "cost": 0.0007680512,
+    "requests": 2,
+    "tool_calls": 1
   },
   "verified_artifacts": [
     "artifacts/cmp-new-T01/final.md"
@@ -27,17 +27,15 @@
     [
       "save_artifact",
       "completed"
-    ],
-    [
-      "save_artifact",
-      "completed"
     ]
   ],
   "unresolved_effects": [],
   "artifact_path": "/home/barry/zuaef-agent/workspace/artifacts/cmp-new-T01/final.md",
   "artifact_exists": true,
-  "artifact_chars": 918,
-  "signals_on_artifact": {},
-  "mode": "new",
-  "artifact_sha256": "f8688bd2ee66a81174a65b0338a8d1ba523d3b311c9e9c41a8163fc65fee6cdb"
+  "artifact_chars": 4330,
+  "artifact_sha256": "9b150a387b185e147d7530432b663777c370d2c4c0dc7558c25ad58f912f3f7d",
+  "signals_on_artifact": {
+    "low_concrete_anchor_density": 0.596
+  },
+  "mode": "new"
 }

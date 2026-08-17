@@ -7,20 +7,20 @@
   "summary_outcome": "Run stopped at an enforced usage boundary.",
   "model_requests": 30,
   "usage": {
-    "input_tokens": 125730,
+    "input_tokens": 135362,
     "cache_write_tokens": 0,
-    "cache_read_tokens": 123776,
-    "output_tokens": 1230,
+    "cache_read_tokens": 126208,
+    "output_tokens": 1433,
     "input_audio_tokens": 0,
     "cache_audio_read_tokens": 0,
     "output_audio_tokens": 0,
     "details": {
-      "prompt_cache_hit_tokens": 123776,
-      "prompt_cache_miss_tokens": 1954
+      "prompt_cache_hit_tokens": 126208,
+      "prompt_cache_miss_tokens": 9154
     },
-    "cost": 0.0009645328,
+    "cost": 0.0020361824,
     "requests": 30,
-    "tool_calls": 30
+    "tool_calls": 33
   },
   "verified_artifacts": [],
   "verified_tool_effects": [
@@ -33,7 +33,15 @@
       "completed"
     ],
     [
-      "list_materials",
+      "read_material",
+      "completed"
+    ],
+    [
+      "retrieve_exemplars",
+      "completed"
+    ],
+    [
+      "retrieve_knowledge",
       "completed"
     ],
     [
@@ -41,7 +49,11 @@
       "completed"
     ],
     [
-      "list_materials",
+      "retrieve_exemplars",
+      "completed"
+    ],
+    [
+      "retrieve_knowledge",
       "completed"
     ],
     [

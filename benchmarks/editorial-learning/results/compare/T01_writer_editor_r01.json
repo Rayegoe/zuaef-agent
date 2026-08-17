@@ -6,21 +6,21 @@
     "run_id": "cmp-we-T01-w",
     "task_id": "T01",
     "status": "partial",
-    "summary_outcome": "The clarity-focused revision for T01 was written and saved to the canonical article artifact. The document applies local clarity patches (intent-classified as clarity/fluency) within a minimal edit range, treating the claims ledger and source ledger (S1) as immutable boundaries. No facts were added or removed, and no sources were introduced beyond S1. The evidence gate passed on claims resolution and fact check, with the only remaining gate flag (human_final_reviewed) requiring human confirmation as expected.",
+    "summary_outcome": "Article written for T01 and saved to the ACE workspace. The piece reports on the WiMAX security debate, covering the context (TCA promotion, security companies' disputes, the two Taiwan press conferences) and the interviews with Hsiao-wen Hung (President of Microsoft Research Asia) and Li Chang (Deputy Secretary General of TCA), with all quotes drawn verbatim from the source material. Claims and source ledgers were included; the evidence gate flagged only the human_final_reviewed release flag, which cannot be set by this agent.",
     "model_requests": 3,
     "usage": {
-      "input_tokens": 8201,
+      "input_tokens": 12759,
       "cache_write_tokens": 0,
-      "cache_read_tokens": 5632,
-      "output_tokens": 1402,
+      "cache_read_tokens": 12032,
+      "output_tokens": 3156,
       "input_audio_tokens": 0,
       "cache_audio_read_tokens": 0,
       "output_audio_tokens": 0,
       "details": {
-        "prompt_cache_hit_tokens": 5632,
-        "prompt_cache_miss_tokens": 2569
+        "prompt_cache_hit_tokens": 12032,
+        "prompt_cache_miss_tokens": 727
       },
-      "cost": 0.0007679896,
+      "cost": 0.0010191496,
       "requests": 3,
       "tool_calls": 2
     },
@@ -40,32 +40,31 @@
     "unresolved_effects": [],
     "artifact_path": "/home/barry/zuaef-agent/workspace/artifacts/cmp-we-T01-w/final.md",
     "artifact_exists": true,
-    "artifact_chars": 2156,
-    "signals_on_artifact": {
-      "low_concrete_anchor_density": 0.304
-    }
+    "artifact_chars": 6172,
+    "artifact_sha256": "96867bf7f22bc228c802cf467f6dc162f7da649c6cdd10d96d0e07bbfe1d4a4d",
+    "signals_on_artifact": {}
   },
   "editor": {
     "run_id": "cmp-we-T01-e",
     "task_id": "T01",
     "status": "partial",
-    "summary_outcome": "Draft reviewed and saved as-is; it already meets the clarity bar. No edits were needed.",
-    "model_requests": 3,
+    "summary_outcome": "The writer's draft already meets the clarity-revision bar. It contains well-structured prose with clear paragraphing, integrated interview quotations, and faithful coverage of all facts and claims from the source material. I preserved the draft verbatim (no factual or stylistic drift) and saved it with the claim and source ledgers intact via save_artifact. The evidence gate reported a \"release flag\" veto (human_final_reviewed requiring manual verification) but transport succeeded and fact_check/claims_resolved passed. No content patch was warranted per editorial techniques T011/T012/T020 since the draft required no changes.",
+    "model_requests": 2,
     "usage": {
-      "input_tokens": 9524,
+      "input_tokens": 10440,
       "cache_write_tokens": 0,
-      "cache_read_tokens": 7552,
-      "output_tokens": 1232,
+      "cache_read_tokens": 7296,
+      "output_tokens": 2231,
       "input_audio_tokens": 0,
       "cache_audio_read_tokens": 0,
       "output_audio_tokens": 0,
       "details": {
-        "prompt_cache_hit_tokens": 7552,
-        "prompt_cache_miss_tokens": 1972
+        "prompt_cache_hit_tokens": 7296,
+        "prompt_cache_miss_tokens": 3144
       },
-      "cost": 0.0006421856,
-      "requests": 3,
-      "tool_calls": 2
+      "cost": 0.0010852688,
+      "requests": 2,
+      "tool_calls": 1
     },
     "verified_artifacts": [
       "artifacts/cmp-we-T01-e/final.md"
@@ -74,18 +73,13 @@
       [
         "save_artifact",
         "completed"
-      ],
-      [
-        "save_artifact",
-        "completed"
       ]
     ],
     "unresolved_effects": [],
     "artifact_path": "/home/barry/zuaef-agent/workspace/artifacts/cmp-we-T01-e/final.md",
     "artifact_exists": true,
-    "artifact_chars": 2155,
-    "signals_on_artifact": {
-      "low_concrete_anchor_density": 0.304
-    }
+    "artifact_chars": 6173,
+    "artifact_sha256": "9bf41e17693c4582fd86b7f78fe5780302376a494c739f0e3a31ab88ae025700",
+    "signals_on_artifact": {}
   }
 }
