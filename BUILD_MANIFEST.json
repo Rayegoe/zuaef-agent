@@ -992,14 +992,29 @@
       "sha256": "5594c1d6bac10a8da69fdba58331b555c64d23795b8ca1f3eade93b3205e23d1"
     },
     {
+      "path": "examples/case_showcase.py",
+      "bytes": 20703,
+      "sha256": "82112d0fee61c26f53f56b257ce4c0e072525ade95215e558c465756ad7dfa33"
+    },
+    {
       "path": "examples/client_service_case.py",
       "bytes": 5097,
       "sha256": "f764be10d742fd4241c23e51b5e6d543cd76eecea07cd8ee5c6a8a6890bde8c6"
     },
     {
+      "path": "examples/host_fixture.py",
+      "bytes": 9638,
+      "sha256": "19e1e413faf8b0a99a1088ddc974d67bf1dc2eafbab886bf0fc447ebb992544a"
+    },
+    {
+      "path": "examples/host_runner.py",
+      "bytes": 5054,
+      "sha256": "ae7e594b35264ac72d31e0624d715c42766201f2c9d4292162d9c73a56f5572c"
+    },
+    {
       "path": "examples/production_writing.py",
-      "bytes": 24062,
-      "sha256": "04ea2c23aa76dcc86e05dd9c00804cd6f5d181dcd27f67c87fd68e70b30c8185"
+      "bytes": 24359,
+      "sha256": "a94bff68fb736c196976f53a0bf601cb71a1d16e44dbb764c1dfca795125d1a4"
     },
     {
       "path": "examples/research_toolset.py",
@@ -1008,13 +1023,13 @@
     },
     {
       "path": "examples/sanlian_fixture.py",
-      "bytes": 5778,
-      "sha256": "cabb49fe375c0fec685b0de042f30ace0a68e72c83a27a0a9c4a8ed3549f1209"
+      "bytes": 1806,
+      "sha256": "7b663304ea5ddd7fdeaa219094200abb857faf999eb47e02d1e2388e4bf0aa7a"
     },
     {
       "path": "examples/sanlian_showcase.py",
-      "bytes": 23347,
-      "sha256": "9619661d56a2dc22eeabeaf0cfaf20a7eff90858fdebb07461dc7cd0d9891f70"
+      "bytes": 19859,
+      "sha256": "914cbd727c990f08d639db3b4d0c54397adeded1d45b7d98fdce15f1e2ad8e23"
     },
     {
       "path": "examples/writing_case.py",
@@ -1197,6 +1212,11 @@
       "sha256": "00f10e3d3aa29d46f8281bad0205e7fa00953cc6d8419b987b856086d35784eb"
     },
     {
+      "path": "tests/test_case_showcase.py",
+      "bytes": 3227,
+      "sha256": "0dd35bca924959bce534d45acb3cf821f794bb7c91a514285dee43ee4c4074c0"
+    },
+    {
       "path": "tests/test_case_store.py",
       "bytes": 8017,
       "sha256": "51fe91e934d8e6495983633f82eeda69407ab97fc9f5322b5b7848a2cb6485d0"
@@ -1330,6 +1350,11 @@
       "path": "tests/test_gateway_telegram.py",
       "bytes": 11229,
       "sha256": "96c5c8dcc8fda19709193f4ffbe4b95cf50a082111e7e038ee16512fb353fc40"
+    },
+    {
+      "path": "tests/test_host_fixture.py",
+      "bytes": 5660,
+      "sha256": "de231fae1da82999c13030c33135deae2d372829c88ef9ba1c29c87e310db68e"
     },
     {
       "path": "tests/test_knowledge_invariants.py",

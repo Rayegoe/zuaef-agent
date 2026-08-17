@@ -170,7 +170,10 @@ def prepare_writing_context(
         "examples": list(examples or []),
         "constraints": [
             "Facts, numbers, quotes and scenes come only from the material below.",
-            "Source ledger: S1 = the material file; add S2..Sn only for other cited sources.",
+            (
+                "Source ledger: S1..Sn are the projected material files; every claim "
+                "source_ids must reference these S ids, never M ids."
+            ),
             "Claim ledger: every FACT claim needs existing source_ids; no invented claims.",
             'Every claim must carry "status":"resolved" — ACE rejects unresolved claims.',
             "Write the complete article in one pass, then save_artifact once.",
@@ -480,6 +483,7 @@ def run_production_article(
     *,
     task_id: str,
     material_path: Path,
+    material_paths: list[Path] | None = None,
     title: str = "",
     audience: str = "",
     assignment: str = "",
@@ -512,17 +516,19 @@ def run_production_article(
 
     run_id = run_id or f"prod-{task_id}"
     reset_run_state(settings, run_id)
-    material = material_path.read_text(encoding="utf-8")
-    # Ingest the material so save_artifact has a real source ledger (the
-    # bundle's S1 must resolve to an ingested M001, or ACE rejects the save).
+    paths = material_paths if material_paths is not None else [material_path]
+    # Ingest the material file(s) so save_artifact has a real source ledger
+    # (the bundle's S ids must resolve to ingested M ids, or ACE rejects the
+    # save). Multi-file bundles ingest every projected file in one call.
     ace_prepare(
         run_id,
         title=title or task_id,
-        materials=[str(material_path)],
+        materials=[str(p) for p in paths],
         ace_root=DEFAULT_ACE_ROOT,
     )
     agent = build_production_agent(settings, run_id=run_id, evidence_path=evidence_path)
     if prompt is None:
+        material = material_path.read_text(encoding="utf-8")
         bundle = prepare_writing_context(
             task_id=task_id,
             material=material,

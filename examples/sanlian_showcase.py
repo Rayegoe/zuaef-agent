@@ -33,11 +33,8 @@ auto-selection, no auto writing plan, no embeddings, no editor team.
 from __future__ import annotations
 
 import argparse
-import difflib
 import json
 import sys
-from datetime import date, datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +46,17 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-ace-writing"),
 ]
 
+from examples.host_runner import (
+    DEFAULT_MEMORY,
+    DEFAULT_TECHNIQUES,
+    TECHNIQUE_IDS,
+    json_default,
+    select_memory,
+    select_techniques,
+    write_showcase_inputs,
+    write_showcase_results,
+    write_text,
+)
 from examples.production_writing import (
     final_artifact_text,
     prepare_writing_context,
@@ -65,9 +73,6 @@ DEFAULT_FIXTURE = (
     / "sources"
     / "22-便利店奇妙夜.md"
 )
-BENCH = REPO / "benchmarks" / "editorial-learning"
-DEFAULT_TECHNIQUES = BENCH / "curated" / "techniques.jsonl"
-DEFAULT_MEMORY = BENCH / "compiled" / "evidence.jsonl"
 DEFAULT_SHOWCASE = (
     REPO / "workspace" / "artifacts" / "showcase" / "sanlian-convenience-night"
 )
@@ -109,65 +114,6 @@ WRITING_PLAN: dict[str, Any] = {
         "不把推测写成事实",
     ],
 }
-
-TECHNIQUE_IDS = (
-    "T001",
-    "T002",
-    "T003",
-    "T004",
-    "T005",
-    "T006",
-    "T007",
-    "T008",
-    "T009",
-    "T010",
-    "T011",
-    "T012",
-    "T013",
-    "T014",
-    "T015",
-    "T016",
-    "T017",
-    "T018",
-    "T019",
-    "T020",
-)
-
-
-def load_jsonl(path: Path) -> list[dict]:
-    if not path.is_file():
-        raise SystemExit(f"missing jsonl: {path}")
-    return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
-
-
-def select_techniques(path: Path) -> list[dict]:
-    """The curated Writing Skill pack (caller-owned methodology records)."""
-    records = load_jsonl(path)
-    wanted = set(TECHNIQUE_IDS)
-    selected = [t for t in records if t.get("id") in wanted]
-    if len(selected) != len(TECHNIQUE_IDS):
-        raise SystemExit(
-            f"technique pack incomplete: expected {len(TECHNIQUE_IDS)} ids, "
-            f"found {len(selected)} in {path}"
-        )
-    return selected
-
-
-def select_memory(path: Path) -> list[dict]:
-    """Corpus evidence records as editorial memory (caller-owned)."""
-    records = load_jsonl(path)
-    wanted = {f"corpus.{tid}" for tid in TECHNIQUE_IDS}
-    selected = [e for e in records if e.get("id") in wanted]
-    if len(selected) != len(TECHNIQUE_IDS):
-        raise SystemExit(
-            f"memory pack incomplete: expected {len(TECHNIQUE_IDS)} ids, "
-            f"found {len(selected)} in {path}"
-        )
-    return selected
 
 
 def source_entry(fixture) -> dict:
@@ -262,73 +208,6 @@ def editor_prompt(fixture, draft_text: str, techniques, memory, editor_run: str)
 # --- showcase files -------------------------------------------------------------
 
 
-def write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
-
-
-def _json_default(obj: Any) -> Any:
-    """Run receipts carry Decimal token counts / datetimes — keep JSON-clean."""
-    if isinstance(obj, Decimal):
-        return float(obj)
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
-
-def write_showcase_inputs(showcase: Path, fixture) -> None:
-    """Raw material + writing plan only (also used by --check)."""
-    write_text(
-        showcase / "01-raw-material-22-便利店奇妙夜.md",
-        fixture.text,
-    )
-    write_text(
-        showcase / "02-writing-plan.md",
-        "# 写作计划（host-authored）\n\n"
-        f"## task\n\n```json\n{json.dumps(TASK, ensure_ascii=False, indent=2)}\n```\n\n"
-        f"## writing_plan\n\n```json\n"
-        f"{json.dumps(WRITING_PLAN, ensure_ascii=False, indent=2)}\n```\n",
-    )
-
-
-def write_showcase_results(
-    showcase: Path, fixture, *, writer_record, editor_record
-) -> None:
-    draft_text, _ = final_artifact_text(REPO / "workspace", writer_record["run_id"])
-    final_text, _ = final_artifact_text(REPO / "workspace", editor_record["run_id"])
-    write_text(showcase / "03-writer-draft.md", draft_text)
-    write_text(showcase / "04-editor-final.md", final_text)
-    diff = "".join(
-        difflib.unified_diff(
-            draft_text.splitlines(keepends=True),
-            final_text.splitlines(keepends=True),
-            fromfile="03-writer-draft.md",
-            tofile="04-editor-final.md",
-        )
-    )
-    write_text(
-        showcase / "05-diff-writer-to-final.diff",
-        diff or "(writer draft and editor final are identical)\n",
-    )
-    write_text(
-        showcase / "receipt.json",
-        json.dumps(
-            {
-                "fixture": fixture.to_record(),
-                "task": TASK,
-                "writing_plan": WRITING_PLAN,
-                "technique_ids": list(TECHNIQUE_IDS),
-                "examples_projected": [],
-                "writer": writer_record,
-                "editor": editor_record,
-            },
-            ensure_ascii=False,
-            indent=2,
-            default=_json_default,
-        ),
-    )
-
-
 def write_readme(
     showcase: Path,
     fixture,
@@ -344,7 +223,7 @@ def write_readme(
         "",
         "## 文件",
         "",
-        "- `01-raw-material-22-便利店奇妙夜.md` — 原材料（源文件逐字节原文，含 front matter）",
+        "- `01-raw-22-便利店奇妙夜.md` — 原材料（源文件逐字节原文，含 front matter）",
         "- `02-writing-plan.md` — 写作计划（host-authored：task + assignment + writing_plan）",
         "- `03-writer-draft.md` — Writer 初稿（production 投影，save_artifact only）",
         "- `04-editor-final.md` — Editor 成稿（同一稿的最小定向修补）",
@@ -425,7 +304,9 @@ def run_showcase(
     bundle = project_writer_context(fixture, techniques, memory)
     base = "sanlian-22"
     writer_run, editor_run = f"{base}-w", f"{base}-e"
-    write_showcase_inputs(showcase, fixture)
+    write_showcase_inputs(
+        showcase, task=TASK, writing_plan=WRITING_PLAN, files=[fixture]
+    )
     write_text(
         showcase / "writer-context.md",
         writer_prompt(fixture, techniques, memory, writer_run) + "\n",
@@ -521,7 +402,17 @@ def run_showcase(
 
     print("[3/3] Writing showcase ...")
     write_showcase_results(
-        showcase, fixture, writer_record=writer_record, editor_record=editor_record
+        showcase,
+        identity={
+            "fixture": fixture.to_record(),
+            "task": TASK,
+            "writing_plan": WRITING_PLAN,
+            "technique_ids": list(TECHNIQUE_IDS),
+            "examples_projected": [],
+        },
+        writer_record=writer_record,
+        editor_record=editor_record,
+        workspace_root=REPO / "workspace",
     )
     write_readme(
         showcase, fixture, writer_record=writer_record, editor_record=editor_record
@@ -539,7 +430,7 @@ def run_showcase(
         "writer_draft_path": draft_path,
         "editor_final_path": final_path,
     }
-    print(json.dumps(record, ensure_ascii=False, indent=2, default=_json_default))
+    print(json.dumps(record, ensure_ascii=False, indent=2, default=json_default))
     return record
 
 
