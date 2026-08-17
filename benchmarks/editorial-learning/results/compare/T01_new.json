@@ -1,0 +1,24 @@
+{
+  "mode": "new",
+  "task_id": "T01",
+  "run_id": "cmp-new-T01",
+  "request_limit": 12,
+  "status": "completed",
+  "outcome": "Article written and saved for task T01 (clarity-revision method). Claims and sources ledgers included. The evidence gate passed fact-check and claims validation; the only remaining gate flag (human_final_reviewed) is a human-only release switch outside my authority.",
+  "artifact_path": "/home/barry/zuaef-agent/workspace/artifacts/cmp-new-T01/final.md",
+  "artifact_exists": true,
+  "artifact_sha256": "07718e953dd33212fe97c0f27aeeffb8bd79641e36737ad885fd9a0633511040",
+  "signals_on_artifact": {
+    "low_concrete_anchor_density": 0.757
+  },
+  "model_requests": 3,
+  "tool_calls": 3,
+  "tool_names": [
+    "save_artifact",
+    "save_artifact",
+    "final_result"
+  ],
+  "interventions": [],
+  "evidence_cited": [],
+  "save_vetoes": 0
+}

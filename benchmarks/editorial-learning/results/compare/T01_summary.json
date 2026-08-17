@@ -1,0 +1,29 @@
+{
+  "model_requests": {
+    "old": null,
+    "new": 3
+  },
+  "tool_calls": {
+    "old": null,
+    "new": 3
+  },
+  "tool_names_old": [],
+  "tool_names_new": [
+    "save_artifact",
+    "save_artifact",
+    "final_result"
+  ],
+  "save_vetoes": {
+    "old": null,
+    "new": 0
+  },
+  "interventions": {
+    "old": 0,
+    "new": 0
+  },
+  "evidence_cited": {
+    "old": [],
+    "new": []
+  },
+  "artifact_sha256_match": false
+}

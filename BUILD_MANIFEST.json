@@ -997,6 +997,11 @@
       "sha256": "f764be10d742fd4241c23e51b5e6d543cd76eecea07cd8ee5c6a8a6890bde8c6"
     },
     {
+      "path": "examples/production_writing.py",
+      "bytes": 19514,
+      "sha256": "ccd8204e2afb4e25f8219e9635f8ae8adc690fedb8a387a6426009e05316a885"
+    },
+    {
       "path": "examples/research_toolset.py",
       "bytes": 3831,
       "sha256": "bc8657009dc4fa619912e578e95f7fe8a27cc17ab9f9f1540a0baa50fc689f53"
@@ -1342,6 +1347,11 @@
       "sha256": "f9848c16ae431e903bb25c7c3bc8d858d53afcd3411e37fdea393a2782586fd1"
     },
     {
+      "path": "tests/test_production_writing.py",
+      "bytes": 7256,
+      "sha256": "1e0573df976e19148bf8082b54ee568ebc59ab15e4df8ccf3472623ddf41774c"
+    },
+    {
       "path": "tests/test_receipt_store.py",
       "bytes": 1232,
       "sha256": "7a1d6f0250182d782341df0c41a2eedaaa3b2ce62b1d104b276459274620d115"
@@ -1653,8 +1663,8 @@
     },
     {
       "path": "benchmarks/editorial-learning/README.md",
-      "bytes": 6659,
-      "sha256": "f33ff37fb1c1e4a7b8e63ac2198260548a8711297c09f1c4ac752de00481613d"
+      "bytes": 8945,
+      "sha256": "fde50275d3f47c9dc2cb1208a543ffdcd82dd48f0e5a15738f81e552408c82c3"
     },
     {
       "path": "benchmarks/editorial-learning/benchmark.jsonl",
@@ -1702,6 +1712,11 @@
       "sha256": "062fcf73016f0b90578b982ef24f06a1280c2ca012afc1c6e69be392a2745b90"
     },
     {
+      "path": "benchmarks/editorial-learning/scripts/compare_paths.py",
+      "bytes": 14035,
+      "sha256": "a2452d6501d3001ba95fadd3e70afe26198cb3d6aee1715c40eda2e6264acf6e"
+    },
+    {
       "path": "benchmarks/editorial-learning/scripts/compile_learning_pack.py",
       "bytes": 24660,
       "sha256": "a5d3564f1350b9505af524c15cd71e00005a27e78420639e4851fee49221751b"
@@ -1723,8 +1738,8 @@
     },
     {
       "path": "benchmarks/editorial-learning/scripts/run_benchmark.py",
-      "bytes": 9127,
-      "sha256": "475bed3d03148b2e2c8df523101b59c9b2a7c321778a374ddcbab1bf92ac358d"
+      "bytes": 11153,
+      "sha256": "02d3e99610cdced8763688b613242f8e4184c33be4311a6d6ee977a4334f0b00"
     },
     {
       "path": "benchmarks/editorial-learning/tasks/T01.json",

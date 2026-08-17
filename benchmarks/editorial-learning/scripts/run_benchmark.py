@@ -2,17 +2,23 @@
 """Run the editorial-learning benchmark in three modes (Gate E A/B/C).
 
   base     editorial_control OFF          — what the model does alone
-  static   editorial_control ON, seeds only, learning disabled (empty
-           evidence file; the 6 builtin seeds load from the capability)
-  adaptive editorial_control ON, human patches promoted sequentially:
-           run task N with everything promoted so far, then promote task
-           N's patches BEFORE task N+1. Agent@T01 != Agent@T20 with zero
-           weight changes — that is the learning proof.
+  static   editorial_control ON, seeds + compiled corpus evidence only,
+           learning disabled
+  adaptive editorial_control ON, seeds + compiled corpus evidence + human
+           patches promoted sequentially: run task N with everything promoted
+           so far, then promote task N's patches BEFORE task N+1.
+           Agent@T01 != Agent@T20 with zero weight changes.
+
+Honest naming (per 2026-08-17 review): the promoted patches come from the
+pre-built dataset pool (evidence/human_patches.jsonl, IteraTeR-derived), so
+adaptive proves SEQUENTIAL EVIDENCE EXPOSURE — not experiential learning.
+Experiential learning (operator-owned judgments on this run's own drafts)
+is the experiments/sequential-v1 experiment's contract, not this runner's.
 
 Each task run writes results/<mode>/T##_run.json with the full machine-side
-trace (signals on the submitted draft, evidence ids cited in interventions,
-veto count, final text path). Blind human judgment fields are left null —
-machines do not grade taste (see report.py).
+trace. Sensors run on the REAL saved article (the run snapshot
+workspace/artifacts/<run_id>/final.md), never on the RunSummary text. Blind
+human judgment fields are left null — machines do not grade taste.
 
 The agent is composed through the same seams the Plugin Composition Layer
 uses (core.build_agent + BudgetedWritingToolset + EditorialControlCapability),
@@ -56,7 +62,10 @@ from zuaef_agent.core import build_agent
 from zuaef_agent.models import CoreDeps
 
 RESULTS = BENCH / "results"
+COMPILED_EVIDENCE = BENCH / "compiled" / "evidence.jsonl"
 EVIDENCE_RUN = RESULTS / "adaptive" / "evidence_running.jsonl"
+# adaptive store = compiled corpus + promoted patches, merged per task
+EVIDENCE_RUN_FULL = RESULTS / "adaptive" / "evidence_running_full.jsonl"
 MOVE_RE = re.compile(r"\[editorial move \| (\w+) \| origin: (\w+)\]")
 EVIDENCE_LINE_RE = re.compile(r"^evidence: (.+)$", re.MULTILINE)
 
@@ -70,20 +79,41 @@ def load_full_task(task_id: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def merged_evidence_file(mode: str) -> Path | None:
+    """Evidence file per mode.
+
+    static:   seeds + compiled corpus (compiled/evidence.jsonl)
+    adaptive: seeds + compiled corpus + promoted human patches — the runner
+              merges corpus + the running promotion file per task so the
+              EditorialEvidenceStore gets ONE extra path (no runtime change).
+    base:     no capability, no file.
+    """
+    if mode == "base":
+        return None
+    if mode == "static":
+        return COMPILED_EVIDENCE
+    lines: list[str] = []
+    for path in (COMPILED_EVIDENCE, EVIDENCE_RUN):
+        if path.is_file():
+            lines.extend(
+                line
+                for line in path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            )
+    EVIDENCE_RUN_FULL.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return EVIDENCE_RUN_FULL
+
+
 def compose(mode: str, settings: AgentSettings, run_id: str):
     """Agent per mode: same toolset always; capability only when ON."""
     toolset = build_writing_toolset(DEFAULT_ACE_ROOT)
     capabilities = []
-    if mode != "base":
-        evidence_file = EVIDENCE_RUN if mode == "adaptive" else None
-        store = (
-            EditorialEvidenceStore(evidence_file)
-            if evidence_file is not None
-            else EditorialEvidenceStore()
-        )
+    evidence_file = merged_evidence_file(mode)
+    if evidence_file is not None:
         capabilities.append(
             EditorialControlCapability(
-                settings=EditorialSettings(), store=store
+                settings=EditorialSettings(),
+                store=EditorialEvidenceStore(evidence_file),
             )
         )
     return build_agent(
@@ -135,15 +165,23 @@ async def run_task(mode: str, task: dict, settings: AgentSettings, run_id: str) 
     result = await agent.run(
         full["material"] + "\n\nWrite the article now and save it via save_artifact.",
         deps=deps,
+        retries=3,
     )
-    draft = result.output
+    # Sensors run on the REAL saved article (the run snapshot final.md), not
+    # on result.output — output is a RunSummary, never the article text.
+    snapshot = Path(settings.workspace_root) / "artifacts" / run_id / "final.md"
+    final_text = (
+        snapshot.read_text(encoding="utf-8") if snapshot.is_file() else ""
+    )
     trace = trace_from_messages(result.all_messages())
     return {
         "task_id": task["task_id"],
         "mode": mode,
-        "signals_on_draft": run_trajectory_sensors(draft if isinstance(draft, str) else ""),
+        "signals_on_artifact": run_trajectory_sensors(final_text),
+        "artifact_path": str(snapshot),
+        "artifact_exists": snapshot.is_file(),
+        "artifact_chars": len(final_text),
         **trace,
-        "output_preview": (draft if isinstance(draft, str) else str(draft))[:400],
     }
 
 
@@ -168,6 +206,8 @@ def check() -> None:
     seed_file = BENCH / "evidence" / "seed_snapshot.jsonl"
     if not seed_file.is_file():
         problems.append("seed_snapshot.jsonl missing")
+    if not COMPILED_EVIDENCE.is_file():
+        problems.append("compiled/evidence.jsonl missing (run compile_learning_pack.py)")
     if not (DEFAULT_ACE_ROOT / "tools" / "ctx.py").is_file():
         problems.append(f"ACE_ROOT invalid: {DEFAULT_ACE_ROOT}")
     else:
@@ -187,8 +227,7 @@ def run_mode(mode: str, limit: int | None) -> None:
     """
     from zuaef_agent.providers import resolve_model  # noqa: F401  (env sanity)
 
-    settings = AgentSettings(
-        model=__import__("os").environ.get("ZUAEF_MODEL", "test"),
+    settings = AgentSettings.from_env().with_overrides(
         workspace_root=REPO / "workspace",
         runtime_state_root=REPO / ".zuaef-state",
         enable_planning=False,
@@ -215,9 +254,13 @@ def run_mode(mode: str, limit: int | None) -> None:
             json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         print(f"  {mode} {tid}: interventions={len(record['interventions'])} "
-              f"vetoes={record['save_vetoes']} evidence={len(record['evidence_cited'])}")
+              f"vetoes={record['save_vetoes']} evidence={len(record['evidence_cited'])} "
+              f"artifact={'yes' if record['artifact_exists'] else 'NO'} "
+              f"signals={len(record['signals_on_artifact'])}")
         if mode == "adaptive":
-            # learning loop: promote THIS task's patches before the next one
+            # Sequential evidence exposure (dataset-derived patches; not
+            # experiential learning — see module docstring): promote THIS
+            # task's patches before the next one.
             subprocess.run(
                 [sys.executable, str(BENCH / "scripts" / "promote_patch.py"),
                  "--task", tid, "--out", str(EVIDENCE_RUN)],

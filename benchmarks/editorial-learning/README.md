@@ -90,6 +90,49 @@ canonical copy + `node_id`）、`evidence.jsonl`（20）、`sequential_inputs.js
 - compiler 不写 `evidence/human_patches.jsonl`、不调用 `promote_patch.py`、
   不触碰 `~/.config/zuaef/editorial/evidence.jsonl`。
 
+## Production writing path（2026-08-17 review 后的生产路径）
+
+审查结论：六工具 pull 轨迹是**能力证明**（21–22 model requests），不能当生产默认。
+生产路径 = Host 一次性投影 WritingContext + 最少工具面：
+
+- `examples/production_writing.py` — Host 侧确定性组装 WritingContext
+  （material、source ledger、compiled sequential inputs 精确 join 出的候选
+  techniques、corpus evidence + curated human patches、constraints），
+  注入第一次 request；Agent 只有 `save_artifact` + `retrieve_more_context`。
+  无 budget/withdrawal 机制（那是 proof 路径的治理，不进生产主路径）。
+- Editorial control 保留：seeds + `compiled/evidence.jsonl`（20 条 corpus），
+  save veto ≤1、dynamic intervention ≤4（待实测降到 1–2）。
+- 老六工具轨迹（`examples/writing_toolset.py` / `writing_case.py`）保持原样，
+  仅用于集成测试 / 能力证明。
+
+### OLD vs NEW 对比（同一篇文章）
+
+```bash
+uv run python benchmarks/editorial-learning/scripts/compare_paths.py --check   # 零模型调用自检
+uv run python benchmarks/editorial-learning/scripts/compare_paths.py --tasks T01
+```
+
+- OLD = proof 轨迹（材料不预给、强制 read/exemplar/knowledge/probe，request_limit 30）
+- NEW = production 投影（request_limit 12，SLO 报警线 8）
+- 输出 `results/compare/T01_old.json` / `T01_new.json` / `T01_summary.json`：
+  model requests、tool calls、signals on 真实 final.md、vetoes、evidence cited。
+
+### 真实文章读取（bug fix）
+
+sensors 运行在 **save_artifact 落盘的快照**（`workspace/artifacts/<run_id>/final.md`），
+不是 `result.output`（那是 RunSummary，不是文章文本）——`run_benchmark.py` 与
+`compare_paths.py` 均已修正。
+
+### 证据接入（bug fix）
+
+`run_benchmark.py`：
+- static = seeds + compiled corpus（`compiled/evidence.jsonl`）
+- adaptive = seeds + compiled corpus + 逐步 promote 的 human patches（每 task merge）
+
+诚实命名：adaptive 的 patch 来自预构建数据集池（IteraTeR 派生），证明的是
+**sequential evidence exposure**，不是 experiential learning；operator-owned
+judgment → promotion 的体验式学习是 `experiments/sequential-v1` 的契约。
+
 ## 顺序学习协议（Gate F 核心）
 
 human patches **永不一次性灌入**运行时证据文件：
