@@ -998,13 +998,23 @@
     },
     {
       "path": "examples/production_writing.py",
-      "bytes": 20336,
-      "sha256": "fdd2aea0d673c8572146fb18ff18b133eacfb1f18a916203cd7f088a39f75f33"
+      "bytes": 24062,
+      "sha256": "04ea2c23aa76dcc86e05dd9c00804cd6f5d181dcd27f67c87fd68e70b30c8185"
     },
     {
       "path": "examples/research_toolset.py",
       "bytes": 3831,
       "sha256": "bc8657009dc4fa619912e578e95f7fe8a27cc17ab9f9f1540a0baa50fc689f53"
+    },
+    {
+      "path": "examples/sanlian_fixture.py",
+      "bytes": 5778,
+      "sha256": "cabb49fe375c0fec685b0de042f30ace0a68e72c83a27a0a9c4a8ed3549f1209"
+    },
+    {
+      "path": "examples/sanlian_showcase.py",
+      "bytes": 23347,
+      "sha256": "9619661d56a2dc22eeabeaf0cfaf20a7eff90858fdebb07461dc7cd0d9891f70"
     },
     {
       "path": "examples/writing_case.py",
@@ -1348,13 +1358,18 @@
     },
     {
       "path": "tests/test_production_writing.py",
-      "bytes": 10586,
-      "sha256": "e973d7bf779cc2632fbefba622d0084ec67f1a7c829a63767b323a8062f82bc1"
+      "bytes": 14196,
+      "sha256": "2cb87a1a05ad0c61eae570f477af010fbebce93176149c7643a8707ece8e71ed"
     },
     {
       "path": "tests/test_receipt_store.py",
       "bytes": 1232,
       "sha256": "7a1d6f0250182d782341df0c41a2eedaaa3b2ce62b1d104b276459274620d115"
+    },
+    {
+      "path": "tests/test_sanlian_fixture.py",
+      "bytes": 5184,
+      "sha256": "21a6834f044ff06b23239df1b232c1f833f307d571034a4549439c8eb180c6c1"
     },
     {
       "path": "tests/test_task_inputs.py",

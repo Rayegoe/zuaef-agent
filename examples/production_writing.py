@@ -97,6 +97,10 @@ def prepare_writing_context(
     material: str,
     title: str = "",
     audience: str = "",
+    assignment: str = "",
+    writing_plan: dict | None = None,
+    sources: list[dict] | None = None,
+    source_sha256: str | None = None,
     techniques: list[dict] | None = None,
     editorial_memory: list[dict] | None = None,
     examples: list[str] | None = None,
@@ -109,11 +113,37 @@ def prepare_writing_context(
     absent the bundle is just task + material + ledger + constraints.
     Sources/ledger start as the single material source S1; the agent may
     extend the ledger at save time.
+
+    ``writing_plan`` is the host-authored assignment for THIS article (angle,
+    questions, outline, target_length, release_constraints) — how to write,
+    never facts. ``sources`` are caller-owned ledger entries (the fixture
+    adapter supplies S1 with source_ref/sha256/rights; default is the plain
+    S1/M001 row for backward compatibility). ``source_sha256`` binds the
+    projected material to the exact ingested bytes so a run receipt can
+    prove the model saw the file that was hashed.
     """
     bundle = {
-        "task": {"id": task_id, "title": title, "audience": audience},
+        "task": {
+            "id": task_id,
+            "title": title,
+            "audience": audience,
+            "assignment": assignment,
+        },
+        "writing_plan": dict(writing_plan or {}),
         "material": material,
-        "sources": [{"id": "S1", "kind": "material", "label": title or task_id, "material_ids": ["M001"]}],
+        "source_sha256": source_sha256,
+        "sources": (
+            list(sources)
+            if sources is not None
+            else [
+                {
+                    "id": "S1",
+                    "kind": "material",
+                    "label": title or task_id,
+                    "material_ids": ["M001"],
+                }
+            ]
+        ),
         "techniques": [
             {
                 "id": t["id"],
@@ -142,6 +172,7 @@ def prepare_writing_context(
             "Facts, numbers, quotes and scenes come only from the material below.",
             "Source ledger: S1 = the material file; add S2..Sn only for other cited sources.",
             "Claim ledger: every FACT claim needs existing source_ids; no invented claims.",
+            'Every claim must carry "status":"resolved" — ACE rejects unresolved claims.',
             "Write the complete article in one pass, then save_artifact once.",
             "If the editorial gate vetoes, patch the smallest thing and save once more.",
         ],
@@ -158,7 +189,40 @@ def render_writing_context(bundle: dict) -> str:
         + (f" — {task['title']}" if task["title"] else "")
         + (f" (audience: {task['audience']})" if task["audience"] else "")
     )
+    if task.get("assignment"):
+        sections.append(f"\n### assignment\n{task['assignment']}")
+    writing_plan = bundle.get("writing_plan") or {}
+    if writing_plan:
+        sections.append("\n### writing plan")
+        for key in (
+            "angle",
+            "questions",
+            "outline",
+            "target_length",
+            "release_constraints",
+        ):
+            value = writing_plan.get(key)
+            if value is None:
+                continue
+            if isinstance(value, list):
+                sections.append(f"- {key}:")
+                for i, item in enumerate(value, 1):
+                    sections.append(f"  {i}. {item}")
+            else:
+                sections.append(f"- {key}: {value}")
+        for key, value in writing_plan.items():
+            if key in (
+                "angle",
+                "questions",
+                "outline",
+                "target_length",
+                "release_constraints",
+            ):
+                continue
+            sections.append(f"- {key}: {value}")
     sections.append("\n### material")
+    if bundle.get("source_sha256"):
+        sections.append(f"(source sha256: {bundle['source_sha256']})")
     sections.append(bundle["material"])
     sections.append("\n### sources (ledger base)")
     sections.append(json.dumps(bundle["sources"], ensure_ascii=False, indent=2))
@@ -167,7 +231,11 @@ def render_writing_context(bundle: dict) -> str:
         for t in bundle["techniques"]:
             sections.append(
                 f"- {t['id']} [{t['action']}]: {t['instruction']}"
-                + (f"\n  anti-pattern: {', '.join(t['anti_pattern'])}" if t["anti_pattern"] else "")
+                + (
+                    f"\n  anti-pattern: {', '.join(t['anti_pattern'])}"
+                    if t["anti_pattern"]
+                    else ""
+                )
             )
     if bundle["editorial_memory"]:
         sections.append("\n### relevant editorial memory")
@@ -176,7 +244,9 @@ def render_writing_context(bundle: dict) -> str:
                 f"- {e['id']} [{e['action']}] (weight {e['weight']}, {e['approved_by']}): {e['directive']}"
             )
     if bundle["examples"]:
-        sections.append("\n### examples (language/technique references only, never facts)")
+        sections.append(
+            "\n### examples (language/technique references only, never facts)"
+        )
         for i, example in enumerate(bundle["examples"], 1):
             sections.append(f"\n<example {i}>\n{example}\n</example {i}>")
     sections.append("\n### constraints")
@@ -279,18 +349,27 @@ def build_production_toolset(
         for material_id in material_ids or []:
             parts.append(
                 read_material_impl(
-                    article_id, material_id, run_id=ctx.deps.run_id, ace_root=toolset._ace_root
+                    article_id,
+                    material_id,
+                    run_id=ctx.deps.run_id,
+                    ace_root=toolset._ace_root,
                 )
             )
         if query:
             parts.append(
                 retrieve_exemplars_impl(
-                    article_id, query, run_id=ctx.deps.run_id, ace_root=toolset._ace_root
+                    article_id,
+                    query,
+                    run_id=ctx.deps.run_id,
+                    ace_root=toolset._ace_root,
                 )
             )
             parts.append(
                 retrieve_knowledge_impl(
-                    article_id, query, run_id=ctx.deps.run_id, ace_root=toolset._ace_root
+                    article_id,
+                    query,
+                    run_id=ctx.deps.run_id,
+                    ace_root=toolset._ace_root,
                 )
             )
         return "\n\n".join(parts) if parts else "NO ADDITIONAL CONTEXT AVAILABLE"
@@ -332,9 +411,7 @@ def build_production_agent(
         if evidence_path is not None
         else EditorialEvidenceStore()
     )
-    capability = EditorialControlCapability(
-        settings=EditorialSettings(), store=store
-    )
+    capability = EditorialControlCapability(settings=EditorialSettings(), store=store)
     return build_agent(
         minimal,
         run_id=run_id,
@@ -377,8 +454,14 @@ def reset_run_state(settings: AgentSettings, run_id: str) -> None:
     the ACE workspace and stale snapshots so budgets/receipts start empty."""
     import shutil
 
-    for child in settings.step_store_dir.glob(f"{run_id}*") if settings.step_store_dir.is_dir() else []:
-        if child.is_dir() and (child.name == run_id or child.name.startswith(f"{run_id}-")):
+    for child in (
+        settings.step_store_dir.glob(f"{run_id}*")
+        if settings.step_store_dir.is_dir()
+        else []
+    ):
+        if child.is_dir() and (
+            child.name == run_id or child.name.startswith(f"{run_id}-")
+        ):
             shutil.rmtree(child, ignore_errors=True)
     for root in (settings.receipt_dir, settings.state_root / "settlements"):
         for child in root.glob(f"{run_id}*") if root.is_dir() else []:
@@ -398,6 +481,11 @@ def run_production_article(
     task_id: str,
     material_path: Path,
     title: str = "",
+    audience: str = "",
+    assignment: str = "",
+    writing_plan: dict | None = None,
+    sources: list[dict] | None = None,
+    source_sha256: str | None = None,
     techniques: list[dict] | None = None,
     editorial_memory: list[dict] | None = None,
     examples: list[str] | None = None,
@@ -412,7 +500,9 @@ def run_production_article(
     agent (build_agent, generic surfaces off) -> execute_run (usage limits,
     exception boundary, receipt settlement, host artifact verification).
     Returns receipt-derived evidence: status, model requests, tool effects,
-    verified artifacts, signals on the real final.md.
+    verified artifacts, signals on the real final.md. The record also carries
+    ``writing_context.source_sha256`` (when provided) so a run receipt proves
+    which exact bytes were projected as the material.
 
     ``run_id``/``prompt`` overrides support multi-pass flows (e.g. the
     writer -> editor experiment in compare_paths.py).
@@ -431,14 +521,17 @@ def run_production_article(
         materials=[str(material_path)],
         ace_root=DEFAULT_ACE_ROOT,
     )
-    agent = build_production_agent(
-        settings, run_id=run_id, evidence_path=evidence_path
-    )
+    agent = build_production_agent(settings, run_id=run_id, evidence_path=evidence_path)
     if prompt is None:
         bundle = prepare_writing_context(
             task_id=task_id,
             material=material,
             title=title,
+            audience=audience,
+            assignment=assignment,
+            writing_plan=writing_plan,
+            sources=sources,
+            source_sha256=source_sha256,
             techniques=techniques,
             editorial_memory=editorial_memory,
             examples=examples,
@@ -468,7 +561,7 @@ def run_production_article(
         }
     receipt: RunReceipt = outcome.receipt
     text, path = final_artifact_text(settings.workspace_root, run_id)
-    return {
+    record = {
         "run_id": run_id,
         "task_id": task_id,
         "status": receipt.status,
@@ -490,6 +583,9 @@ def run_production_article(
         ),
         "signals_on_artifact": run_trajectory_sensors(text) if text else {},
     }
+    if source_sha256:
+        record["writing_context"] = {"source_sha256": source_sha256}
+    return record
 
 
 def resolve_evidence_arg(value: str | None) -> Path | None:
@@ -505,9 +601,19 @@ def resolve_evidence_arg(value: str | None) -> Path | None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--task", required=True)
-    ap.add_argument("--material", required=True, help="path to the material markdown file")
+    ap.add_argument(
+        "--material", required=True, help="path to the material markdown file"
+    )
     ap.add_argument("--title", default="")
-    ap.add_argument("--evidence", help="evidence jsonl path (default: compiled/evidence.jsonl)")
+    ap.add_argument("--assignment", default="", help="host-authored assignment text")
+    ap.add_argument(
+        "--writing-plan",
+        help="path to a JSON file with the host-authored writing plan "
+        "(angle/questions/outline/target_length/release_constraints)",
+    )
+    ap.add_argument(
+        "--evidence", help="evidence jsonl path (default: compiled/evidence.jsonl)"
+    )
     args = ap.parse_args()
 
     settings = AgentSettings.from_env().with_overrides(
@@ -516,11 +622,16 @@ def main() -> None:
         enable_planning=False,
         enable_skills=False,
     )
+    writing_plan = None
+    if args.writing_plan:
+        writing_plan = json.loads(Path(args.writing_plan).read_text(encoding="utf-8"))
     record = run_production_article(
         settings,
         task_id=args.task,
         material_path=Path(args.material),
         title=args.title,
+        assignment=args.assignment,
+        writing_plan=writing_plan,
         evidence_path=resolve_evidence_arg(args.evidence),
     )
     print(json.dumps(record, ensure_ascii=False, indent=2))

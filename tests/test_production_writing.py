@@ -96,11 +96,19 @@ def test_bundle_shape_with_caller_provided_selection():
         "id": "beauty-wechat-20260818-001",
         "title": "某客户公众号文章",
         "audience": "都市女性读者",
+        "assignment": "",
     }
     assert bundle["material"] == MATERIAL
     assert bundle["sources"] == [
-        {"id": "S1", "kind": "material", "label": "某客户公众号文章", "material_ids": ["M001"]}
+        {
+            "id": "S1",
+            "kind": "material",
+            "label": "某客户公众号文章",
+            "material_ids": ["M001"],
+        }
     ]
+    assert bundle["writing_plan"] == {}
+    assert bundle["source_sha256"] is None
     assert [t["id"] for t in bundle["techniques"]] == ["T001"]
     assert [e["id"] for e in bundle["editorial_memory"]] == ["corpus.T001"]
     assert bundle["examples"] == ["<一段示范开头>"]
@@ -144,6 +152,89 @@ def test_render_carries_material_techniques_memory_examples_constraints():
     assert "save_artifact once" in prompt
 
 
+WRITING_PLAN = {
+    "angle": "从便利店夜班中的具体人物进入，看城市夜生活中被忽略的一层日常。",
+    "questions": [
+        "夜里的便利店里什么人在出现？",
+        "哪些东西材料没有答案，不能擅自解释？",
+    ],
+    "outline": [
+        "从一个材料已有的现场进入",
+        "最后回到具体生活，不做宏大总结",
+    ],
+    "target_length": "2500-3500 Chinese chars",
+    "release_constraints": [
+        "不制造采访",
+        "不把推测写成事实",
+    ],
+}
+
+CALLER_SOURCES = [
+    {
+        "id": "S1",
+        "kind": "material",
+        "label": "便利店奇妙夜",
+        "material_ids": ["M001"],
+        "source_ref": "wiki-sanlian-life-weekly-2026-30/sources/22-便利店奇妙夜.md",
+        "sha256": "08d042f85b725db6df1a0554ebdfc8300fd5ea5354a84840248fd2d15538c07d",
+        "rights": "study-only",
+    }
+]
+
+
+def test_bundle_with_writing_plan_and_caller_owned_sources():
+    """Host projection v0.1: writing_plan + assignment + caller-owned source
+    ledger (fixture identity rides on S1) + source_sha256 binding."""
+    bundle = prepare_writing_context(
+        task_id="sanlian-22-convenience-night",
+        material=MATERIAL,
+        title="便利店奇妙夜",
+        audience="三联生活周刊读者",
+        assignment="以《便利店奇妙夜》为唯一材料，重新组织成一篇城市夜生活观察短文。",
+        writing_plan=WRITING_PLAN,
+        sources=CALLER_SOURCES,
+        source_sha256=CALLER_SOURCES[0]["sha256"],
+    )
+    assert bundle["task"]["assignment"].startswith("以《便利店奇妙夜》")
+    assert bundle["writing_plan"] == WRITING_PLAN
+    assert bundle["sources"] == CALLER_SOURCES
+    assert bundle["source_sha256"] == CALLER_SOURCES[0]["sha256"]
+
+
+def test_render_projects_writing_plan_and_source_sha256():
+    """request #1 must carry the writing plan and the material hash binding."""
+    bundle = prepare_writing_context(
+        task_id="sanlian-22-convenience-night",
+        material=MATERIAL,
+        title="便利店奇妙夜",
+        assignment="以《便利店奇妙夜》为唯一材料。",
+        writing_plan=WRITING_PLAN,
+        sources=CALLER_SOURCES,
+        source_sha256=CALLER_SOURCES[0]["sha256"],
+    )
+    prompt = render_writing_context(bundle)
+    assert "### writing plan" in prompt
+    assert WRITING_PLAN["angle"] in prompt
+    assert "1. 夜里的便利店里什么人在出现？" in prompt
+    assert "2. 哪些东西材料没有答案，不能擅自解释？" in prompt
+    assert "1. 从一个材料已有的现场进入" in prompt
+    assert "target_length: 2500-3500 Chinese chars" in prompt
+    assert "release_constraints" in prompt
+    assert "1. 不制造采访" in prompt
+    assert "### assignment" in prompt
+    assert f"(source sha256: {CALLER_SOURCES[0]['sha256']})" in prompt
+    assert "source_ref" in prompt and "rights" in prompt  # caller-owned ledger
+
+
+def test_no_writing_plan_section_when_absent():
+    """Backward compat: a bundle without a writing plan renders no plan block."""
+    bundle = prepare_writing_context(task_id="T01", material=MATERIAL, title="T01")
+    prompt = render_writing_context(bundle)
+    assert "### writing plan" not in prompt
+    assert "### assignment" not in prompt
+    assert "(source sha256:" not in prompt
+
+
 def test_production_toolset_surface_is_minimal():
     toolset = build_production_toolset()
     assert isinstance(toolset, ProductionWritingToolset)
@@ -174,7 +265,9 @@ def test_composition_through_shared_seam_with_minimal_surface():
     caps = agent.root_capability.capabilities
     editorial = [c for c in caps if isinstance(c, EditorialControlCapability)]
     assert len(editorial) == 1
-    store = editorial[0]._store if hasattr(editorial[0], "_store") else editorial[0].store
+    store = (
+        editorial[0]._store if hasattr(editorial[0], "_store") else editorial[0].store
+    )
     corpus = [e for e in store._entries if e.source_type == "corpus_observation"]
     assert len(corpus) == 20  # compiled corpus, not just the 6 seeds
     assert all(e.weight == 0.75 for e in corpus)
@@ -246,7 +339,12 @@ def test_final_artifact_text_reads_snapshot_not_summary(tmp_path):
 def test_metrics_counts_model_responses_and_tool_calls():
     messages = [
         ModelRequest(parts=[]),
-        ModelResponse(parts=[TextPart(content="plan"), ToolCallPart(tool_name="save_artifact", args="{}")]),
+        ModelResponse(
+            parts=[
+                TextPart(content="plan"),
+                ToolCallPart(tool_name="save_artifact", args="{}"),
+            ]
+        ),
         ModelRequest(parts=[]),
         ModelResponse(parts=[ToolCallPart(tool_name="save_artifact", args="{}")]),
         ModelRequest(parts=[]),
