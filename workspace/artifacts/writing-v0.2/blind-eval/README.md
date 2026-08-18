@@ -28,6 +28,14 @@
 | Revision Quality | 修改是否回应反馈 |
 | Overall | 编辑是否愿意继续采用（权重最高） |
 
+## 已出结论（2026-08，盲评完成）
+
+- **样品Y（Editorial Control OFF）质量更好**（Overall：Y > X）。
+- 决策（SPEC §20）：Editorial Control **保持 optional**——生产默认
+  `ace-writing` 已改为 `editorial_control = false`；ON 侧可按需使用
+  `profiles/ace-writing-editorial.toml`。不再追加 machine sensor。
+- WCASE 评审表仍可继续填写以积累写作质量证据，但 v0.2 的决策闭环已达成。
+
 ## 已知运行接口缺陷（与写作能力无关，勿计入评分）
 
 - WCASE-4 修订轮 receipt 为 `partial`，根因是 RunSummary 的 artifacts 引用漏了

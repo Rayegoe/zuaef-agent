@@ -11,7 +11,9 @@ id = "ace-writing"
 allow_capabilities = true
 
 [plugins.config]
-editorial_control = true
+# editorial_control stays OFF so the CodeMode A/B isolates only the CodeMode
+# variable (Phase 9 verdict: editorial control is optional/experimental).
+editorial_control = false
 code_mode = true
 editorial_max_injections = 4
 editorial_max_save_vetoes = 1

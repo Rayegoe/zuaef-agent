@@ -1673,18 +1673,18 @@
     },
     {
       "path": "profiles/ace-writing-codemode.toml",
-      "bytes": 703,
-      "sha256": "24ecee7782657cd9dab82e3d21983b890aba616a6e1507391d500c666593151c"
+      "bytes": 855,
+      "sha256": "bdbae233ce74abbe1168daa05b02d3af030ddece5e83c7dcab9b0e81b6f664cd"
     },
     {
-      "path": "profiles/ace-writing-no-editorial.toml",
-      "bytes": 388,
-      "sha256": "4b167edaf9902c15c9d0d292756ab2f5c6cfbf84b931a997b0aea16b2a021e12"
+      "path": "profiles/ace-writing-editorial.toml",
+      "bytes": 682,
+      "sha256": "b16d0c340038fc7a0e85f0411b437ceff3e6820411df3428bce8b77cb8a87561"
     },
     {
       "path": "profiles/ace-writing.toml",
-      "bytes": 1903,
-      "sha256": "3e62ca1c0499af5bb2230d591284e2197efb33989b1fb9922348f53fe56cf1bf"
+      "bytes": 2205,
+      "sha256": "4cc3b01141ab71c0aa458fe5dd3f1840893e0785f8b2f27a188b2846da04d9c9"
     },
     {
       "path": "profiles/emtb-budget.toml",

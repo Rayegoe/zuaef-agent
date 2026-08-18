@@ -19,7 +19,11 @@ allow_capabilities = true
 # ace_root = "~/projects/article-context-engine/article-context-engine"
 
 # --- Editorial control (SPEC zuaef-editorial-control-v0.1) ---
-editorial_control = true
+# Phase 9 blind A/B verdict (2026-08): OFF beat ON on the anonymous sample
+# (样品Y > 样品X). Per SPEC §20, editorial control shows no stable advantage
+# and stays OPTIONAL — the production default is OFF. To run the ON side for
+# your own evaluation, copy profiles/ace-writing-editorial.toml.
+editorial_control = false
 editorial_max_injections = 4        # normal interventions per run
 editorial_max_save_vetoes = 1       # save_artifact rejections per run
 editorial_evidence_limit = 3        # evidence refs per intervention

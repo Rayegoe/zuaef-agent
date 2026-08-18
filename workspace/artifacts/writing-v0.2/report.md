@@ -92,13 +92,16 @@ StepPersistence / CodeMode 等 upstream primitives，ACE tools 负责材料/依�
   **迁移证明：无 case_showcase 依赖。**
 
 ### Phase 9 — Editorial Control A/B
-- 已运行（WCASE-1，同任务/材料/预算 40）：
+- 运行（WCASE-1，同任务/材料/预算 40）：
   - ON（`ace-writing`，editorial_control=true）：draft partial，16 requests，1250 字
     （partial 为 summary 引用格式问题，产物已保存）
   - OFF（`ace-writing-no-editorial`）：draft completed，19 requests，1275 字
-  - 两稿位于 `eval/editorial-A-ON/` 与 `eval/editorial-B-OFF/`，**待人工匿名盲评**。
-- 决策规则（SPEC §20）：无稳定优势 → `editorial_control` 保持 optional/experimental
-  （当前默认 true 保持不变，除非盲评否定）。不得加更多 machine sensors 强行优化。
+- **盲评结论（2026-08，人工匿名评审）：样品Y（OFF）质量更好（样品Y > 样品X）。**
+  ON 未显示稳定优势。
+- **决策落地（SPEC §20）**：Editorial Control **保持 optional/experimental**。
+  生产默认 `ace-writing` 的 `editorial_control = false`；ON 侧可通过
+  `profiles/ace-writing-editorial.toml` 按需开启。**不追加任何 machine sensor**
+  去强行优化"指标赢"。盲评表与 KEY 见 `blind-eval/`。
 
 ## 停止条件评估（SPEC §33）
 
@@ -163,7 +166,7 @@ Writing v0.2 实施到此停止；下一步只由真实 Writing failure 或人�
 | WRITE-8 事实完整 | ✅ | WCASE-3 无编造；WCASE-2 数字全用正式版 |
 | WRITE-9 ACE 校验 | ✅ | save_artifact 走 ACE；WCASE-1 fact_check_passed=true；artifacts/** 受保护 |
 | WRITE-10 修订 | ✅ | WCASE-4：判断句删减、人物对话化、开头场景化，事实保留 |
-| WRITE-11 Editorial A/B | ✅（数据齐，待人工盲评） | ON 16 req/1250 字 vs OFF 19 req/1275 字 |
+| WRITE-11 Editorial A/B | ✅（盲评出结论） | 样品Y(OFF) > 样品X(ON) → 保持 optional，默认 OFF |
 | WRITE-12 无新通用基建 | ✅ | 仅新增 Harness CodeMode + writing skills + 工具加固；无新 engine/store |
 
 ## 环境说明
@@ -176,10 +179,11 @@ Writing v0.2 实施到此停止；下一步只由真实 Writing failure 或人�
 
 ## 待办（需要人工/后续轮次）
 
-- **Phase 9 盲评（v0.2 唯一剩余闭环动作）**：`workspace/artifacts/writing-v0.2/
-  blind-eval/` 已就绪（WCASE 评审表 + Editorial A/B 匿名表 + KEY 密封）。
-  盲评结论决定 Editorial Control 的去留。
-- 若 Editorial ON 稳定胜出 → 评估 Editorial Intelligence follow-up SPEC；
-  不战出 → 保持 optional，不继续投资。
+- **Phase 9 盲评已完成（2026-08）**：样品Y（Editorial OFF）质量更好 →
+  Editorial Control 按 SPEC §20 保持 optional：生产默认 OFF
+  （`profiles/ace-writing-editorial.toml` 为 ON 可选侧），不再追加 sensor。
+- 若未来有新的实际证据表明 Editorial Control 稳定胜出，再评估
+  Editorial Intelligence follow-up SPEC；在此之前不投资。
 - CodeMode 稳定性：若收口问题（run_code 未决效果）修复后重测，再决定默认。
-- 提交策略：已按语义拆 5 个提交（refactor / feat / fix / test / docs）。
+- 提交策略：已按语义拆 5 个提交（refactor / feat / fix / test / docs），
+  盲评结论作为独立提交追加。
