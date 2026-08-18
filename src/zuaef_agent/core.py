@@ -46,6 +46,12 @@ FILESYSTEM_PROTECTED_PATTERNS = [
     "knowledge/*",
     "cases/*/case.md",
     "cases/*/policy-overrides.md",
+    # Artifacts are written by toolsets (e.g. ACE save_artifact snapshot) and
+    # verified by the host (pre/post diff). Generic model-facing file tools
+    # must not be able to plant files under artifacts/** and have them counted
+    # as verified run output — that would bypass domain validation (Writing
+    # v0.2, WRITE-9 provenance invariant).
+    "artifacts/*",
     ".git/*",
     ".env",
     ".env.*",

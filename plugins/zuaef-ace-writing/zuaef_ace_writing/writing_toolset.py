@@ -235,6 +235,20 @@ def check_claim_impl(
     purpose: str = "validation",
     ace_root: Path = DEFAULT_ACE_ROOT,
 ) -> str:
+    """Ask ACE to validate one claim; a serialization problem is a returned
+    failure string, never a raised exception (tool errors must not block a
+    run through the retry loop)."""
+    try:
+        payload = json.dumps(claim, ensure_ascii=False, default=str)
+    except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
+        return json.dumps(
+            {
+                "ok": False,
+                "error": f"claim is not JSON-serializable: {type(exc).__name__}",
+                "hint": "pass plain JSON values in the claim object.",
+            },
+            ensure_ascii=False,
+        )
     r = _ace(
         ace_root,
         "claim-check",
@@ -243,7 +257,7 @@ def check_claim_impl(
         run_id,
         "--purpose",
         purpose,
-        input_text=json.dumps(claim, ensure_ascii=False),
+        input_text=payload,
     )
     return (
         r.stdout if r.returncode == 0 else f"CLAIM CHECK FAILED: {r.stderr or r.stdout}"
@@ -534,7 +548,7 @@ def build_writing_toolset(
     def check_claim(
         ctx: RunContext[CoreDeps],
         article_id: str,
-        claim: dict,
+        claim: Any = None,
         purpose: str = "validation",
     ) -> str:
         """Validate one claim JSON against ACE source ledger rules.
@@ -545,7 +559,11 @@ def build_writing_toolset(
         "integration_probe" for the explicit end-of-run capability canary
         (non-authoritative for the saved artifact: its output must not trigger
         another save). The check is logged by ACE; fix failures before
-        save_artifact. Per-run cap: 8 checks; once exhausted the tool is withdrawn."""
+        save_artifact. Per-run cap: 8 checks; once exhausted the tool is withdrawn.
+
+        A malformed claim returns a normal error string, never a raised
+        exception: a bad argument must not exhaust tool retries and block the
+        run (Writing v0.2 field hardening)."""
         toolset._note_article(ctx.deps.run_id, article_id)
         if (
             toolset._remaining(
@@ -564,6 +582,28 @@ def build_writing_toolset(
                     "budget_exhausted": True,
                     "hint": "check_claim budget exhausted; batch validation is in "
                     "save_artifact. Call save_artifact now, then return RunSummary.",
+                },
+                ensure_ascii=False,
+            )
+        if isinstance(claim, str):
+            try:
+                claim = json.loads(claim)
+            except json.JSONDecodeError:
+                return json.dumps(
+                    {
+                        "ok": False,
+                        "error": f"claim is not valid JSON: {claim[:200]!r}",
+                        "hint": "pass the claim as a JSON object, e.g. "
+                        '{"id":"C1","text":"...","type":"FACT","source_ids":["S1"],"status":"resolved"}',
+                    },
+                    ensure_ascii=False,
+                )
+        if not isinstance(claim, dict):
+            return json.dumps(
+                {
+                    "ok": False,
+                    "error": f"claim must be a JSON object, got {type(claim).__name__}",
+                    "hint": "pass the claim as a JSON object with id/text/type/source_ids/status.",
                 },
                 ensure_ascii=False,
             )

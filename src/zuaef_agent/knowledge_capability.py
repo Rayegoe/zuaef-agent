@@ -32,8 +32,21 @@ class Knowledge(AbstractCapability[CoreDeps]):
 
         @toolset.tool
         def read_knowledge(ctx: RunContext[CoreDeps], knowledge_id: str) -> str:
-            """Read one knowledge node by id, e.g. concepts/agent-harness."""
-            return KnowledgeStore(ctx.deps.workspace_root).read_doc(knowledge_id)
+            """Read one knowledge node by id, e.g. concepts/agent-harness.
+
+            Returns an error string when the node does not exist, so a bad or
+            invented knowledge id is a recoverable tool result, not a fatal
+            exception (Writing v0.2 field experience: an agent once conflated
+            ACE evidence hints with ZUAEF workspace knowledge ids and the
+            resulting FileNotFoundError blocked the whole run)."""
+            try:
+                return KnowledgeStore(ctx.deps.workspace_root).read_doc(knowledge_id)
+            except (ValueError, OSError) as exc:
+                return (
+                    f"NO SUCH KNOWLEDGE NODE: {knowledge_id!r} — {type(exc).__name__}: {exc}. "
+                    "Use list_knowledge to see the actual node ids; workspace "
+                    "knowledge is NOT the ACE evidence corpus."
+                )
 
         @toolset.tool
         def list_knowledge(ctx: RunContext[CoreDeps]) -> list[str]:
