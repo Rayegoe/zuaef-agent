@@ -1,0 +1,15 @@
+{
+  "id": "case-01-content-team",
+  "article_id": "case-01-content-team",
+  "title": "Content team case (migrated from case_showcase data)",
+  "assignment": "根据这批原始素材（平台提示、访谈转录、团队聊天、会议速记、文章样本）写一篇Field/Case叙事：一个日产过万的内容团队，被平台提示同质化/低质，却说不清什么是好。从具体的人和话进入，呈现矛盾，不做结论。只使用素材里已有的内容；数字标注为客户报数；不写平台检测机制；不补写现场细节。",
+  "audience": "内容行业业务案例读者",
+  "constraints": [
+    "约1200-1800字",
+    "只用素材里已有的内容",
+    "数字标注为客户报数",
+    "不写平台检测机制",
+    "不补写现场细节"
+  ],
+  "rights": "user-provided"
+}

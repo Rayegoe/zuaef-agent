@@ -1,10 +1,13 @@
-"""Shared host-runner machinery for production showcase cases.
+"""Shared host-runner machinery for the sanlian showcase experiment.
 
-Both case runners (``sanlian_showcase.py``, ``case_showcase.py``) build the
-same kind of workbench: caller-selected Writing Skill packs, deterministic
-showcase directories, JSON-clean receipts. Everything here is deterministic —
-no model calls, no benchmark joins. Case-specific content (task, writing
-plan, prompts, README wording) stays in each runner.
+The legacy showcase runner (``sanlian_showcase.py``) builds the workbench:
+caller-selected Writing Skill packs, deterministic showcase directories,
+JSON-clean receipts. Everything here is deterministic — no model calls, no
+benchmark joins. Case-specific content (task, writing plan, prompts, README
+wording) stays in the runner.
+
+Writing SPEC v0.2 §23 removed ``case_showcase.py`` from writing-proof
+authority; its data migrated to ``benchmarks/writing-cases/case-01-content-team/``.
 """
 
 from __future__ import annotations
