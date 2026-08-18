@@ -1,35 +1,40 @@
-"""Production writing path contract tests (SPEC review 2026-08-17, round 2).
+"""Production writing v0.2 contract tests — zero model calls.
 
-Covers the host-projected WritingContext machinery WITHOUT any model call:
+Covers the thin production driver (examples/production_writing.py), SPEC
+§6 (input contract), §21 (one production composition path), §22 (host
+projection retired) and §31 (anti-cheating):
 
-  1. bundle assembly     — task/material/sources/techniques/editorial_memory/
-                           examples/constraints present; ALL selection is
-                           caller-provided — a non-benchmark task id (e.g. a
-                           real customer article) must not crash and must not
-                           silently pull benchmark assets;
-  2. render              — the projected prompt carries material, technique
-                           ids, evidence ids, examples and constraints;
-  3. toolset surface     — save_artifact only by default; escape hatch is
-                           opt-in; no budget/withdrawal machinery;
-  4. composition         — build_production_agent goes through the SHARED
-                           seam (core.build_agent) with the generic surfaces
-                           OFF (filesystem/knowledge/planning/skills) and
-                           receipts + editorial capability ON;
-  5. evidence wiring     — evidence_path is honored by the composition
-                           (the --evidence CLI arg is not a dead knob);
-  6. artifact read       — final_artifact_text reads the run snapshot, never
-                           the run summary;
-  7. metrics             — ModelResponse/ToolCallPart counting over a
-                           synthetic message history.
+  1. WritingTask rejects host-authored plan fields (extra="forbid")
+  2. the first-request prompt carries ONLY the task + mechanical facts:
+     no angle/questions/outline, no selected techniques/memory/examples,
+     no material text
+  3. mechanical_prepare: bytes -> sha256 -> rights -> ACE ingest -> real
+     M-id binding (skipUnless ACE checkout present)
+  4. production composition goes through build_profile_agent("ace-writing")
+     -> the BudgetedWritingToolset surface + Harness capabilities
+  5. CodeMode selection: observation tools tagged code_mode=True, and
+     save_artifact is NOT inside the sandboxed set
+  6. metric/artifact helpers and re-runnable reset
+  7. CLI args map onto WritingTask
+
+No model call happens in this module (the composition test builds the agent,
+it never runs it).
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
+from importlib.metadata import EntryPoint
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+from pydantic_ai import RunContext, RunUsage
+from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, ToolCallPart
+
 REPO = Path(__file__).parents[1]
-BENCH = REPO / "benchmarks" / "editorial-learning"
 sys.path[:0] = [
     str(REPO),
     str(REPO / "examples"),
@@ -37,312 +42,304 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-ace-writing"),
 ]
 
-from pydantic_ai.messages import (
-    ModelRequest,
-    ModelResponse,
-    TextPart,
-    ToolCallPart,
-)
-from zuaef_ace_writing.editorial import (
-    EditorialControlCapability,
-)
+from zuaef_ace_writing.writing_toolset import BudgetedWritingToolset
 
 from examples.production_writing import (
-    ProductionWritingToolset,
-    build_production_toolset,
-    final_artifact_text,
-    metrics_from_messages,
-    prepare_writing_context,
-    render_writing_context,
+    PreparedFile,
+    WritingTask,
+    mechanical_prepare,
+    parse_args,
+    render_agent_prompt,
+    resolve_ace_root,
+    run_production_task,
+)
+from zuaef_agent.config import AgentSettings
+from zuaef_agent.models import CoreDeps
+
+ACE_ROOT = resolve_ace_root() if (resolve_ace_root() / "tools" / "ctx.py").is_file() else None
+# The real entry point is only present when the plugin distribution is
+# installed; the checked-out module is importable via sys.path above.
+PLUGIN_INSTALLED = "ace-writing" in {
+    ep.name for ep in __import__("importlib.metadata", fromlist=["entry_points"]).entry_points(group="zuaef.plugins")
+}
+PROFILE_EXISTS = (REPO / "profiles" / "ace-writing.toml").is_file()
+NEEDS_ACE = pytest.mark.skipif(
+    ACE_ROOT is None, reason="ACE checkout (tools/ctx.py) not available"
+)
+NEEDS_PLUGIN = pytest.mark.skipif(
+    not (PLUGIN_INSTALLED and PROFILE_EXISTS),
+    reason="ace-writing plugin entry point and/or profiles/ace-writing.toml missing",
 )
 
-MATERIAL = (
-    "# Material for test\n\n"
-    "The iterater study describes 100 revision intents across 8,302 edits. "
-    "Human revisers labelled each intent; 105134 is one annotated document. "
-    "The paper reports that clarity edits dominate at 34.6%."
+MATERIAL_A = "# 素材甲\n\n客户说大概三千个号。\n编辑提到同质化。\n"
+MATERIAL_B = "# 素材乙\n\n产品发布会照片显示现场约两百人。\n"
+
+
+def _settings(tmp_path: Path) -> AgentSettings:
+    return AgentSettings(
+        model="test",
+        workspace_root=tmp_path / "ws",
+        runtime_state_root=tmp_path / "state",
+        request_limit=8,
+    )
+
+
+# --- 1. input contract ----------------------------------------------------------
+
+
+def test_writing_task_accepts_only_the_thin_contract():
+    task = WritingTask(
+        article_id="beauty-20260818-001",
+        assignment="根据客户提供的采访和产品资料写一篇公众号文章。",
+        audience="普通消费者",
+        constraints=["约1800字", "不虚构采访现场", "产品事实必须来自原始材料"],
+    )
+    assert task.article_id == "beauty-20260818-001"
+    assert task.audience == "普通消费者"
+    assert len(task.constraints) == 3
+    assert WritingTask(article_id="a", assignment="写").constraints == []
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "writing_plan",
+        "angle",
+        "questions",
+        "outline",
+        "selected_techniques",
+        "selected_editorial_memory",
+        "selected_examples",
+        "selected_material_ids",
+        "material",
+    ],
 )
-
-TECHNIQUE = {
-    "id": "T001",
-    "action": "return_to_observation",
-    "instruction": "回到材料的具体观察。",
-    "preserve": ["claims"],
-    "anti_pattern": ["fabricate_scene"],
-    "rationale": "curator rationale",
-}
-EVIDENCE = {
-    "id": "corpus.T001",
-    "action": "return_to_observation",
-    "directive": "回到材料的具体观察。",
-    "rationale": "r",
-    "weight": 0.75,
-    "approved_by": "pack-curation:v0.1",
-    "source_ref": "pack:sanlian-172807#technique:T001",
-}
+def test_writing_task_rejects_host_plan_fields(field):
+    """SPEC §6/WRITE-2: the production contract must refuse host decisions."""
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        WritingTask(
+            article_id="a",
+            assignment="写一篇短文。",
+            **{field: "anything"},
+        )
 
 
-def test_bundle_shape_with_caller_provided_selection():
-    bundle = prepare_writing_context(
-        task_id="beauty-wechat-20260818-001",
-        material=MATERIAL,
-        title="某客户公众号文章",
-        audience="都市女性读者",
-        techniques=[TECHNIQUE],
-        editorial_memory=[EVIDENCE],
-        examples=["<一段示范开头>"],
+# --- 2. thin first-request prompt -----------------------------------------------
+
+
+def test_prompt_has_no_host_plan(tmp_path):
+    task = WritingTask(
+        article_id="wc-1",
+        assignment="根据素材写一篇800字左右的观察短文。",
+        audience="普通读者",
+        constraints=["不虚构", "只用素材里的内容"],
     )
-    assert bundle["task"] == {
-        "id": "beauty-wechat-20260818-001",
-        "title": "某客户公众号文章",
-        "audience": "都市女性读者",
-        "assignment": "",
-    }
-    assert bundle["material"] == MATERIAL
-    assert bundle["sources"] == [
-        {
-            "id": "S1",
-            "kind": "material",
-            "label": "某客户公众号文章",
-            "material_ids": ["M001"],
-        }
-    ]
-    assert bundle["writing_plan"] == {}
-    assert bundle["source_sha256"] is None
-    assert [t["id"] for t in bundle["techniques"]] == ["T001"]
-    assert [e["id"] for e in bundle["editorial_memory"]] == ["corpus.T001"]
-    assert bundle["examples"] == ["<一段示范开头>"]
-    assert bundle["constraints"]
+    from examples.production_writing import PrepResult
 
-
-def test_non_benchmark_task_gets_no_implicit_selection():
-    """Production must NOT depend on benchmark task ids / sequential_inputs:
-    an unknown customer task id yields a clean bundle with no techniques or
-    memory sections — the caller decides what to include."""
-    bundle = prepare_writing_context(
-        task_id="wordpress-post-52", material=MATERIAL, title="WP post"
+    prep = PrepResult(
+        task=task,
+        run_id="wc-1",
+        ace_root=Path("/tmp/ace"),
+        title="wc-1",
+        files=[
+            PreparedFile(
+                source_ref="a.md",
+                path=Path("a.md"),
+                sha256="x" * 64,
+                byte_length=10,
+                rights="user-provided",
+                material_id="M001",
+            )
+        ],
     )
-    assert bundle["techniques"] == []
-    assert bundle["editorial_memory"] == []
-    assert bundle["examples"] == []
-    prompt = render_writing_context(bundle)
-    assert "### relevant techniques" not in prompt
-    assert "### relevant editorial memory" not in prompt
-    assert "### examples" not in prompt
-    assert "### material" in prompt
+    prompt = render_agent_prompt(prep)
+    assert task.article_id in prompt
+    assert task.assignment in prompt
+    assert "普通读者" in prompt
+    assert "- 不虚构" in prompt
+    assert "- 只用素材里的内容" in prompt
+    assert "list_materials" in prompt
+    # RunSummary guidance carries the literal full path INCLUDING the
+    # artifacts/ prefix (field defect: an earlier revision run dropped the
+    # prefix and the host rejected the artifact ref -> partial).
+    assert "artifacts/" in prompt and "final.md" in prompt
+    for banned in (
+        "writing plan",
+        "### angle",
+        "## WritingContext",
+        "questions:",
+        "outline",
+        "T001",
+        "corpus.T001",
+        "relevant techniques",
+        "editorial memory",
+        "examples (language",
+        "<example",
+        "### material",
+        "source_sha256",
+    ):
+        assert banned not in prompt, f"host plan marker {banned!r} leaked into prompt"
 
 
-def test_render_carries_material_techniques_memory_examples_constraints():
-    bundle = prepare_writing_context(
-        task_id="T01",
-        material=MATERIAL,
-        title="T01",
-        techniques=[TECHNIQUE],
-        editorial_memory=[EVIDENCE],
-        examples=["<example one>"],
+def test_prompt_carries_natural_language_feedback(tmp_path):
+    from examples.production_writing import PrepResult
+
+    task = WritingTask(article_id="wc-4", assignment="写一篇文章。")
+    prep = PrepResult(
+        task=task,
+        run_id="wc-4",
+        ace_root=Path("/tmp/ace"),
+        title="wc-4",
+        files=[],
     )
-    prompt = render_writing_context(bundle)
-    assert "## WritingContext" in prompt
-    assert MATERIAL.splitlines()[1] in prompt
-    assert "### relevant techniques" in prompt
-    assert "T001" in prompt and "return_to_observation" in prompt
-    assert "corpus.T001" in prompt
-    assert "<example one>" in prompt
-    assert "### constraints" in prompt
-    assert "save_artifact once" in prompt
+    feedback = "判断句太多，人物没有出来，开头太像背景说明。"
+    prompt = render_agent_prompt(prep, feedback=feedback)
+    assert feedback in prompt
+    assert "Revise the article" in prompt
 
 
-WRITING_PLAN = {
-    "angle": "从便利店夜班中的具体人物进入，看城市夜生活中被忽略的一层日常。",
-    "questions": [
-        "夜里的便利店里什么人在出现？",
-        "哪些东西材料没有答案，不能擅自解释？",
-    ],
-    "outline": [
-        "从一个材料已有的现场进入",
-        "最后回到具体生活，不做宏大总结",
-    ],
-    "target_length": "2500-3500 Chinese chars",
-    "release_constraints": [
-        "不制造采访",
-        "不把推测写成事实",
-    ],
-}
-
-CALLER_SOURCES = [
-    {
-        "id": "S1",
-        "kind": "material",
-        "label": "便利店奇妙夜",
-        "material_ids": ["M001"],
-        "source_ref": "wiki-sanlian-life-weekly-2026-30/sources/22-便利店奇妙夜.md",
-        "sha256": "08d042f85b725db6df1a0554ebdfc8300fd5ea5354a84840248fd2d15538c07d",
-        "rights": "study-only",
-    }
-]
+# --- 3. mechanical preparation (ACE-gated) --------------------------------------
 
 
-def test_bundle_with_writing_plan_and_caller_owned_sources():
-    """Host projection v0.1: writing_plan + assignment + caller-owned source
-    ledger (fixture identity rides on S1) + source_sha256 binding."""
-    bundle = prepare_writing_context(
-        task_id="sanlian-22-convenience-night",
-        material=MATERIAL,
-        title="便利店奇妙夜",
-        audience="三联生活周刊读者",
-        assignment="以《便利店奇妙夜》为唯一材料，重新组织成一篇城市夜生活观察短文。",
-        writing_plan=WRITING_PLAN,
-        sources=CALLER_SOURCES,
-        source_sha256=CALLER_SOURCES[0]["sha256"],
+@NEEDS_ACE
+def test_mechanical_prepare_binds_sha256_and_material_ids(tmp_path):
+    a = tmp_path / "raw-a.md"
+    b = tmp_path / "raw-b.md"
+    a.write_text(MATERIAL_A, encoding="utf-8")
+    b.write_text(MATERIAL_B, encoding="utf-8")
+    task = WritingTask(article_id="mprep-1", assignment="写一篇短文。")
+    prep = mechanical_prepare(
+        task,
+        material_paths=[a, b],
+        rights="study-only",
+        ace_root=ACE_ROOT,
+        run_id="mprep-1",
     )
-    assert bundle["task"]["assignment"].startswith("以《便利店奇妙夜》")
-    assert bundle["writing_plan"] == WRITING_PLAN
-    assert bundle["sources"] == CALLER_SOURCES
-    assert bundle["source_sha256"] == CALLER_SOURCES[0]["sha256"]
+    assert prep.run_id == "mprep-1"
+    assert [f.material_id for f in prep.files] == ["M001", "M002"]
+    assert prep.files[0].sha256 == hashlib.sha256(MATERIAL_A.encode("utf-8")).hexdigest()
+    assert prep.files[1].sha256 == hashlib.sha256(MATERIAL_B.encode("utf-8")).hexdigest()
+    assert prep.files[0].byte_length == len(MATERIAL_A.encode("utf-8"))
+    assert prep.files[0].rights == "study-only"
+    # prep record is mechanical metadata only — no content
+    assert "素材" not in json.dumps(prep.record(), ensure_ascii=False)
 
 
-def test_render_projects_writing_plan_and_source_sha256():
-    """request #1 must carry the writing plan and the material hash binding."""
-    bundle = prepare_writing_context(
-        task_id="sanlian-22-convenience-night",
-        material=MATERIAL,
-        title="便利店奇妙夜",
-        assignment="以《便利店奇妙夜》为唯一材料。",
-        writing_plan=WRITING_PLAN,
-        sources=CALLER_SOURCES,
-        source_sha256=CALLER_SOURCES[0]["sha256"],
+@NEEDS_ACE
+def test_mechanical_prepare_rejects_bad_rights_and_missing_file(tmp_path):
+    a = tmp_path / "raw.md"
+    a.write_text("x", encoding="utf-8")
+    task = WritingTask(article_id="mprep-2", assignment="写。")
+    with pytest.raises(ValueError, match="rights"):
+        mechanical_prepare(task, material_paths=[a], rights="pirated", ace_root=ACE_ROOT)
+    with pytest.raises(FileNotFoundError, match="missing"):
+        mechanical_prepare(
+            task, material_paths=[tmp_path / "nope.md"], ace_root=ACE_ROOT
+        )
+
+
+def test_resolve_ace_root_errors_on_missing_ctx(tmp_path):
+    with pytest.raises(FileNotFoundError, match="tools/ctx.py"):
+        resolve_ace_root(tmp_path / "no-ace")
+
+
+# --- 4. production composition through the profile -------------------------------
+
+
+@NEEDS_PLUGIN
+def test_production_composition_through_ace_writing_profile(tmp_path):
+    """WRITE-1: build_profile_agent("ace-writing") composes the writing surface.
+
+    The generic Harness capabilities stay ON (SPEC §4): planning, skills,
+    filesystem, knowledge, tool output limits, step persistence."""
+    settings = _settings(tmp_path)
+    from zuaef_agent.composition import build_profile_agent
+
+    agent, snapshot = build_profile_agent(
+        settings,
+        run_id="wc-probe",
+        profile="ace-writing",
+        config_root=REPO,
     )
-    prompt = render_writing_context(bundle)
-    assert "### writing plan" in prompt
-    assert WRITING_PLAN["angle"] in prompt
-    assert "1. 夜里的便利店里什么人在出现？" in prompt
-    assert "2. 哪些东西材料没有答案，不能擅自解释？" in prompt
-    assert "1. 从一个材料已有的现场进入" in prompt
-    assert "target_length: 2500-3500 Chinese chars" in prompt
-    assert "release_constraints" in prompt
-    assert "1. 不制造采访" in prompt
-    assert "### assignment" in prompt
-    assert f"(source sha256: {CALLER_SOURCES[0]['sha256']})" in prompt
-    assert "source_ref" in prompt and "rights" in prompt  # caller-owned ledger
+    assert snapshot is not None
+    assert snapshot.profile == "ace-writing"
+    assert [p.id for p in snapshot.plugins] == ["ace-writing"]
 
-
-def test_no_writing_plan_section_when_absent():
-    """Backward compat: a bundle without a writing plan renders no plan block."""
-    bundle = prepare_writing_context(task_id="T01", material=MATERIAL, title="T01")
-    prompt = render_writing_context(bundle)
-    assert "### writing plan" not in prompt
-    assert "### assignment" not in prompt
-    assert "(source sha256:" not in prompt
-
-
-def test_production_toolset_surface_is_minimal():
-    toolset = build_production_toolset()
-    assert isinstance(toolset, ProductionWritingToolset)
-    # default surface: save_artifact ONLY (escape hatch is opt-in; a model
-    # offered a fetch tool used it ~10x instead of writing — measured)
-    assert set(toolset.tools.keys()) == {"save_artifact"}
-    assert not hasattr(toolset, "_BUDGETED")
-    assert not hasattr(toolset, "_remaining")
-
-
-def test_escape_hatch_is_opt_in():
-    toolset = build_production_toolset(escape_hatch=True)
-    assert set(toolset.tools.keys()) == {"save_artifact", "retrieve_more_context"}
-
-
-def test_composition_through_shared_seam_with_minimal_surface():
-    from examples.production_writing import build_production_agent
-    from zuaef_agent.config import AgentSettings
-
-    settings = AgentSettings(
-        model="test",
-        workspace_root=REPO / "workspace",
-        runtime_state_root=REPO / ".zuaef-state",
-        enable_planning=False,
-        enable_skills=False,
-    )
-    agent = build_production_agent(settings, run_id="prod-test")
     caps = agent.root_capability.capabilities
-    editorial = [c for c in caps if isinstance(c, EditorialControlCapability)]
-    assert len(editorial) == 1
-    store = (
-        editorial[0]._store if hasattr(editorial[0], "_store") else editorial[0].store
+    cap_names = {type(c).__name__ for c in caps}
+    assert "StepPersistence" in cap_names
+    assert "ToolOutputLimits" in cap_names
+    assert "Planning" in cap_names
+    assert "FileSystem" in cap_names
+    assert "Knowledge" in cap_names
+    assert "Skills" in cap_names
+
+    toolsets = list(agent.toolsets)
+    assert any(isinstance(t, BudgetedWritingToolset) for t in toolsets)
+
+
+@NEEDS_PLUGIN
+def test_profile_toolset_exposes_exact_ace_surface(tmp_path):
+    settings = _settings(tmp_path)
+    from zuaef_agent.composition import build_profile_agent
+
+    agent, _ = build_profile_agent(
+        settings,
+        run_id="wc-probe2",
+        profile="ace-writing",
+        config_root=REPO,
     )
-    corpus = [e for e in store._entries if e.source_type == "corpus_observation"]
-    assert len(corpus) == 20  # compiled corpus, not just the 6 seeds
-    assert all(e.weight == 0.75 for e in corpus)
-    assert any(isinstance(t, ProductionWritingToolset) for t in agent.toolsets)
-    # shared seam: receipts stay ON; generic model-visible surfaces are OFF
-    # (measured: a model given list_directory/find_files wasted 12 requests
-    # wandering instead of writing)
-    assert any("StepPersistence" in type(c).__name__ for c in caps)
-    assert not any("FileSystem" in type(c).__name__ for c in caps)
-    assert not any("Knowledge" in type(c).__name__ for c in caps)
-    assert not any("Planning" in type(c).__name__ for c in caps)
-    assert not any("Skills" in type(c).__name__ for c in caps)
-    assert not any("ToolOutputLimits" in type(c).__name__ for c in caps)
+    toolset = next(t for t in agent.toolsets if isinstance(t, BudgetedWritingToolset))
+    deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id="wc-probe2")
+    ctx = RunContext(deps=deps, usage=RunUsage(), prompt="", model=None)
+    names = set(__import__("asyncio").run(toolset.get_tools(ctx)))
+    assert names == {
+        "list_materials",
+        "read_material",
+        "retrieve_exemplars",
+        "retrieve_knowledge",
+        "check_claim",
+        "save_artifact",
+    }
 
 
-def test_evidence_path_is_honored(tmp_path):
-    """The --evidence knob must reach the composition (was a dead parameter)."""
-    from examples.production_writing import build_production_agent
-    from zuaef_agent.config import AgentSettings
+def test_profile_composition_with_injected_discovery(tmp_path):
+    """Hermetic variant for environments where the plugin dist is not installed.
 
-    custom = tmp_path / "custom_evidence.jsonl"
-    custom.write_text(
-        '{"id":"corpus.X001","source_type":"corpus_observation",'
-        '"source_ref":"pack:x#technique:X001","situation_tags":["drafting"],'
-        '"trigger_signals":[],"action":"delay_interpretation",'
-        '"directive":"custom directive","rationale":"r","weight":0.75,'
-        '"approved_by":"pack-curation:v0.1","before_excerpt":"","after_excerpt":""}\n',
-        encoding="utf-8",
+    The checked-out module is on sys.path; we synthesize the entry point the
+    way the composition layer would see it after ``pip install``."""
+    from zuaef_agent.composition import build_profile_agent
+
+    ep = EntryPoint(
+        name="ace-writing",
+        value="zuaef_ace_writing:create_plugin",
+        group="zuaef.plugins",
     )
-    settings = AgentSettings(
-        model="test",
-        workspace_root=REPO / "workspace",
-        runtime_state_root=REPO / ".zuaef-state",
-        enable_planning=False,
-        enable_skills=False,
+    settings = _settings(tmp_path)
+    agent, snapshot = build_profile_agent(
+        settings,
+        run_id="wc-hermetic",
+        profile="ace-writing",
+        config_root=REPO,
+        discover=lambda: {"ace-writing": ep},
+        version_for=lambda ep: "0.2.0",
     )
-    agent = build_production_agent(settings, run_id="prod-ev", evidence_path=custom)
-    caps = agent.root_capability.capabilities
-    editorial = next(c for c in caps if isinstance(c, EditorialControlCapability))
-    store = editorial._store if hasattr(editorial, "_store") else editorial.store
-    ids = [e.id for e in store._entries]
-    assert "corpus.X001" in ids  # custom file loaded
-    assert "corpus.T001" not in ids  # default compiled corpus NOT loaded
+    assert [p.id for p in snapshot.plugins] == ["ace-writing"]
+    assert any(isinstance(t, BudgetedWritingToolset) for t in agent.toolsets)
 
 
-def test_cli_evidence_default_is_compiled_corpus():
-    """CLI without --evidence must keep seeds + compiled corpus (regression:
-    a None pass-through silently downgraded the store to builtin seeds)."""
-    from examples.production_writing import COMPILED_EVIDENCE, resolve_evidence_arg
-
-    assert resolve_evidence_arg(None) == COMPILED_EVIDENCE
-    assert resolve_evidence_arg("") == COMPILED_EVIDENCE
-    assert resolve_evidence_arg("/tmp/custom.jsonl") == Path("/tmp/custom.jsonl")
-
-
-def test_final_artifact_text_reads_snapshot_not_summary(tmp_path):
-    run_id = "prod-t01"
-    snapshot = tmp_path / "artifacts" / run_id / "final.md"
-    snapshot.parent.mkdir(parents=True)
-    snapshot.write_text("# The real article\n\nBody with 42 anchors.", encoding="utf-8")
-    text, path = final_artifact_text(tmp_path, run_id)
-    assert text.startswith("# The real article")
-    assert path.endswith("final.md")
-    # missing snapshot -> empty text, honest path
-    text2, _ = final_artifact_text(tmp_path, "prod-nosuch")
-    assert text2 == ""
+# --- 6. mechanical helpers -------------------------------------------------------
 
 
 def test_metrics_counts_model_responses_and_tool_calls():
+    from examples.production_writing import metrics_from_messages
+
     messages = [
         ModelRequest(parts=[]),
         ModelResponse(
             parts=[
                 TextPart(content="plan"),
-                ToolCallPart(tool_name="save_artifact", args="{}"),
+                ToolCallPart(tool_name="list_materials", args="{}"),
             ]
         ),
         ModelRequest(parts=[]),
@@ -353,4 +350,94 @@ def test_metrics_counts_model_responses_and_tool_calls():
     m = metrics_from_messages(messages)
     assert m["model_requests"] == 3
     assert m["tool_calls"] == 2
-    assert m["tool_names"] == ["save_artifact", "save_artifact"]
+    assert m["tool_names"] == ["list_materials", "save_artifact"]
+
+
+def test_final_artifact_text_reads_snapshot_not_summary(tmp_path):
+    from examples.production_writing import final_artifact_text
+
+    run_id = "prod-t01"
+    snapshot = tmp_path / "artifacts" / run_id / "final.md"
+    snapshot.parent.mkdir(parents=True)
+    snapshot.write_text("# The real article\n\nBody.", encoding="utf-8")
+    text, path = final_artifact_text(tmp_path, run_id)
+    assert text.startswith("# The real article")
+    assert path.endswith("final.md")
+    text2, _ = final_artifact_text(tmp_path, "prod-nosuch")
+    assert text2 == ""
+
+
+def test_reset_run_state_is_rerunnable(tmp_path):
+    from examples.production_writing import reset_run_state
+
+    settings = _settings(tmp_path)
+    (settings.receipt_dir / "run-x.json").parent.mkdir(parents=True, exist_ok=True)
+    (settings.receipt_dir / "run-x.json").write_text("{}", encoding="utf-8")
+    reset_run_state(settings, "run-x", ace_root=ACE_ROOT, clean_ace=False)
+    assert not (settings.receipt_dir / "run-x.json").exists()
+    # no crash on a second run
+    reset_run_state(settings, "run-x", ace_root=ACE_ROOT, clean_ace=False)
+
+
+def test_composition_settings_disable_filesystem_for_writing(tmp_path):
+    """Measured v0.2 decision: the writing profile composes WITHOUT the generic
+    FileSystem and Knowledge capabilities (the ACE toolset covers file and
+    knowledge access; FS/KN-on runs wandered or bypassed save_artifact).
+    Other generic capabilities stay ON.
+    """
+    from examples.production_writing import composition_settings
+
+    s = _settings(tmp_path)
+    composed = composition_settings(s, request_limit=21)
+    assert composed.enable_filesystem is False
+    assert composed.enable_knowledge is False
+    assert composed.enable_planning is True
+    assert composed.enable_skills is True
+    assert composed.enable_tool_output_limits is True
+    assert composed.enable_step_persistence is True
+    assert composed.request_limit == 21
+
+
+# --- 7. CLI ----------------------------------------------------------------------
+
+
+def test_cli_args_map_to_writing_task(tmp_path):
+    a = tmp_path / "a.md"
+    a.write_text("x", encoding="utf-8")
+    args = parse_args(
+        [
+            "--task",
+            "beauty-20260818-001",
+            "--assignment",
+            "根据素材写一篇公众号文章。",
+            "--audience",
+            "普通消费者",
+            "--material",
+            str(a),
+            "--constraints",
+            "约1800字",
+            "--constraints",
+            "不虚构",
+            "--run-id",
+            "run-1",
+            "--rights",
+            "user-provided",
+        ]
+    )
+    task = WritingTask(
+        article_id=args.task,
+        assignment=args.assignment,
+        audience=args.audience,
+        constraints=list(args.constraints),
+    )
+    assert task.article_id == "beauty-20260818-001"
+    assert task.constraints == ["约1800字", "不虚构"]
+    assert task.audience == "普通消费者"
+    assert args.material == [str(a)]
+
+
+def test_run_production_task_requires_material_paths(tmp_path):
+    settings = _settings(tmp_path)
+    task = WritingTask(article_id="x", assignment="写。")
+    with pytest.raises(ValueError, match="at least one material"):
+        run_production_task(settings, task=task, material_paths=[])

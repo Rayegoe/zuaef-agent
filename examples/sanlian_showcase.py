@@ -44,7 +44,14 @@ sys.path[:0] = [
     str(REPO / "examples"),
     str(REPO / "src"),
     str(REPO / "plugins" / "zuaef-ace-writing"),
+    str(REPO / "benchmarks" / "editorial-learning" / "scripts"),
 ]
+
+from host_projection_legacy import (
+    prepare_writing_context,
+    render_writing_context,
+    run_production_article,
+)
 
 from examples.host_runner import (
     DEFAULT_MEMORY,
@@ -59,9 +66,6 @@ from examples.host_runner import (
 )
 from examples.production_writing import (
     final_artifact_text,
-    prepare_writing_context,
-    render_writing_context,
-    run_production_article,
 )
 from examples.sanlian_fixture import load_sanlian_fixture
 from zuaef_agent.config import AgentSettings

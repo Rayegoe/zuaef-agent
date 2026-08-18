@@ -58,6 +58,12 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-ace-writing"),
 ]
 
+from host_projection_legacy import (
+    COMPILED_EVIDENCE,
+    prepare_writing_context,
+    render_writing_context,
+    run_production_article,
+)
 from pydantic_ai import Agent
 from pydantic_ai_harness.step_persistence import FileStepStore, StepPersistence
 from task_inputs import resolve_task_inputs
@@ -74,12 +80,8 @@ from zuaef_ace_writing.writing_toolset import (
 )
 
 from examples.production_writing import (
-    COMPILED_EVIDENCE,
     final_artifact_text,
-    prepare_writing_context,
-    render_writing_context,
     reset_run_state,
-    run_production_article,
 )
 from examples.writing_case import WRITING_AGENT_INSTRUCTIONS, build_prompt
 from zuaef_agent.config import AgentSettings

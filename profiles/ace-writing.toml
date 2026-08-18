@@ -13,8 +13,10 @@ id = "ace-writing"
 allow_capabilities = true
 
 [plugins.config]
-# Explicit config wins over ACE_ROOT / the compiled default path.
-ace_root = "~/projects/article-context-engine/article-context-engine"
+# ACE root resolution (plugin order): explicit `ace_root` here -> $ACE_ROOT ->
+# the compiled default (~/projects/article-context-engine/article-context-engine).
+# Not pinned here so deployments can point ACE_ROOT at their checkout.
+# ace_root = "~/projects/article-context-engine/article-context-engine"
 
 # --- Editorial control (SPEC zuaef-editorial-control-v0.1) ---
 editorial_control = true
@@ -26,3 +28,11 @@ editorial_temperature_nudge = 0.0   # 0.0 = sampling untouched (default)
 # Optional overrides:
 # editorial_evidence_path = "~/.config/zuaef/editorial/evidence.jsonl"
 # editorial_base_temperature = 0.7
+
+# --- CodeMode (Writing SPEC v0.2 §9-§10, experimental) ---
+# OFF by default (writing_code_mode = false). When true, the observation
+# tools (list/read/retrieve/check, tagged code_mode=True in the toolset) are
+# sandboxed behind a single run_code tool; save_artifact always stays a
+# normal explicit tool call. Enable only for the A/B comparison
+# (same task/materials, ON vs OFF) — see tools/run_writing_eval.py.
+code_mode = false
