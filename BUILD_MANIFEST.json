@@ -7,6 +7,11 @@
   },
   "files": [
     {
+      "path": ".agents/skills/beauty-wechat-writing/SKILL.md",
+      "bytes": 2618,
+      "sha256": "6954a66b4fca7c6ec10656875d7af330178b05744d4d90b38d076684003ccc6d"
+    },
+    {
       "path": ".agents/skills/bmad-advanced-elicitation/SKILL.md",
       "bytes": 5015,
       "sha256": "23a1f2903f6a19255e3ceae798afe48f6394694769b3b034502d174d683612b2"
@@ -892,6 +897,11 @@
       "sha256": "16bff9ed7ec003add9c56818575f613380925782bd4ef0cc0804ed34a074eeaf"
     },
     {
+      "path": ".agents/skills/editorial-revision/SKILL.md",
+      "bytes": 2278,
+      "sha256": "8a9af248f4e9dc9a7a80035360cb628a8f917839b3a27d8bb61552dc3274fe3f"
+    },
+    {
       "path": ".agents/skills/evidence-first/SKILL.md",
       "bytes": 748,
       "sha256": "a1bb82950e1b74d775b5ce3fb418a60877a945f9a766e2d4d1073fb43791de2b"
@@ -900,6 +910,16 @@
       "path": ".agents/skills/knowledge-ingestion/SKILL.md",
       "bytes": 997,
       "sha256": "ce6aca36408eed48fc169397030ec071e11be04e7e94de395a34639c2a8a6c73"
+    },
+    {
+      "path": ".agents/skills/longform-feature-writing/SKILL.md",
+      "bytes": 3125,
+      "sha256": "e43b761b6c5c26f9058b126caac163739094dbd08af37e79537019766d8b6383"
+    },
+    {
+      "path": ".agents/skills/scene-preserving-writing/SKILL.md",
+      "bytes": 2597,
+      "sha256": "e759616a240e3b5a07f658b975040095039af027cf69d3664fd8983fe08004a6"
     },
     {
       "path": ".env.example",
@@ -992,11 +1012,6 @@
       "sha256": "5594c1d6bac10a8da69fdba58331b555c64d23795b8ca1f3eade93b3205e23d1"
     },
     {
-      "path": "examples/case_showcase.py",
-      "bytes": 20968,
-      "sha256": "382321c09c97d8901663a5d879d6fe590fe93254259e68e8889f1ed43806d55c"
-    },
-    {
       "path": "examples/client_service_case.py",
       "bytes": 5097,
       "sha256": "f764be10d742fd4241c23e51b5e6d543cd76eecea07cd8ee5c6a8a6890bde8c6"
@@ -1013,13 +1028,13 @@
     },
     {
       "path": "examples/host_runner.py",
-      "bytes": 5054,
-      "sha256": "ae7e594b35264ac72d31e0624d715c42766201f2c9d4292162d9c73a56f5572c"
+      "bytes": 5190,
+      "sha256": "7ac3652cd3b3d2bb765ef4445408e62f19ab31c2d339a721510878c9e461fd6b"
     },
     {
       "path": "examples/production_writing.py",
-      "bytes": 24359,
-      "sha256": "a94bff68fb736c196976f53a0bf601cb71a1d16e44dbb764c1dfca795125d1a4"
+      "bytes": 20729,
+      "sha256": "9fd57605143f3bf7c1c199e467c0995fadcbea0cd3ca0fbf50391c455eccf2bc"
     },
     {
       "path": "examples/research_toolset.py",
@@ -1033,8 +1048,8 @@
     },
     {
       "path": "examples/sanlian_showcase.py",
-      "bytes": 19859,
-      "sha256": "914cbd727c990f08d639db3b4d0c54397adeded1d45b7d98fdce15f1e2ad8e23"
+      "bytes": 19964,
+      "sha256": "52517937a8d799e892acc4ea9849f6b195dfbca51de1dfb7c92af285ba2de7a4"
     },
     {
       "path": "examples/writing_case.py",
@@ -1043,18 +1058,18 @@
     },
     {
       "path": "examples/writing_toolset.py",
-      "bytes": 21539,
-      "sha256": "1b2d553f816e87a690331610341a3d8c80c64b974629eb1fd0c45fb10afff30d"
+      "bytes": 23427,
+      "sha256": "7d94e9544c980b9d690509ad4793ec0c0c56c3822b1bb6dab1728f1bc97ab211"
     },
     {
       "path": "pyproject.toml",
-      "bytes": 1137,
-      "sha256": "d2eec2b6759aeeddec178c211aca0d71bcafb98a16e109a39990f540ff18e877"
+      "bytes": 1147,
+      "sha256": "a950c50ab97162c885bdc5a00b90988e80457644ee71fda2f1a2bcae07dd6cee"
     },
     {
       "path": "uv.lock",
-      "bytes": 398344,
-      "sha256": "c5bd1f41c3a21f5561ccad5af2a16a3112c46c09624405bd59a5e2971378b328"
+      "bytes": 431677,
+      "sha256": "815e5db8aff9b507e2254f3be85c8a491c03702b46b481464aab7de2b1a08dac"
     },
     {
       "path": "spec/SPEC.md",
@@ -1108,8 +1123,8 @@
     },
     {
       "path": "src/zuaef_agent/core.py",
-      "bytes": 5551,
-      "sha256": "1e2286cba57e629fb92b479433edf7cb309dd351f14f872fa5d33e70279e6a1c"
+      "bytes": 5924,
+      "sha256": "76510fdddbc79343ad73b0157429cad7ca067596d6c83caa56c249372f1c6995"
     },
     {
       "path": "src/zuaef_agent/effects.py",
@@ -1118,8 +1133,8 @@
     },
     {
       "path": "src/zuaef_agent/knowledge_capability.py",
-      "bytes": 2615,
-      "sha256": "9449341dc505c20417d50cc94f18fd59dbf05d66017c5df97668d8789ae79c15"
+      "bytes": 3341,
+      "sha256": "ec583ebb6605839264d8ae85e1bab4a84dc18c56616c80b2d5cbae247f9641fa"
     },
     {
       "path": "src/zuaef_agent/knowledge_store.py",
@@ -1215,11 +1230,6 @@
       "path": "tests/test_budget_slice.py",
       "bytes": 17055,
       "sha256": "00f10e3d3aa29d46f8281bad0205e7fa00953cc6d8419b987b856086d35784eb"
-    },
-    {
-      "path": "tests/test_case_showcase.py",
-      "bytes": 5542,
-      "sha256": "b6d079f58ee6a12b094ae2f3562140f5df896cee142d3fb40c334215233f6e78"
     },
     {
       "path": "tests/test_case_store.py",
@@ -1393,8 +1403,8 @@
     },
     {
       "path": "tests/test_production_writing.py",
-      "bytes": 14196,
-      "sha256": "2cb87a1a05ad0c61eae570f477af010fbebce93176149c7643a8707ece8e71ed"
+      "bytes": 15547,
+      "sha256": "be48dd17c6bf938a510589140d610ea31492fd33d6177e6bfff96d198bb79efa"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -1420,6 +1430,11 @@
       "path": "tests/test_wordpress_plugin.py",
       "bytes": 14102,
       "sha256": "4bc6eb0bf48f7cefa9cbe1656ef1280e0bc79ba55bc5777a829e384f3e75db4b"
+    },
+    {
+      "path": "tests/test_writing_codemode_skills.py",
+      "bytes": 6659,
+      "sha256": "ea1a1633ef78760e738d2eaa1f1f0a1565f66d21724224060d8bb564da27bdd3"
     },
     {
       "path": "tests/test_writing_slice.py",
@@ -1483,13 +1498,13 @@
     },
     {
       "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/plugin.py",
-      "bytes": 4543,
-      "sha256": "c855b62b5d3c77cb756a03965193a09b1acdf9bda2a6d725fbf03285225da3f1"
+      "bytes": 5250,
+      "sha256": "adc892499c966c6b76ef2dc678191d17fb9137a7e1ed08f938b1fae9ddece234"
     },
     {
       "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/writing_toolset.py",
-      "bytes": 21767,
-      "sha256": "ca9f4f60c693c9f8cd3afd86668c90c7eb1983e17519df79222eb69eb0dd75f4"
+      "bytes": 23655,
+      "sha256": "a888144f99fb3002892094da4fd39fde0d75624d0a366f8f09b978a4c14d2fde"
     },
     {
       "path": "plugins/zuaef-case/zuaef_case/__init__.py",
@@ -1657,9 +1672,19 @@
       "sha256": "98c18bda1e701e3ae9ad3fcb0eb78f1f72a0815f1efa069c2a63030a9bdd08af"
     },
     {
+      "path": "profiles/ace-writing-codemode.toml",
+      "bytes": 703,
+      "sha256": "24ecee7782657cd9dab82e3d21983b890aba616a6e1507391d500c666593151c"
+    },
+    {
+      "path": "profiles/ace-writing-no-editorial.toml",
+      "bytes": 388,
+      "sha256": "4b167edaf9902c15c9d0d292756ab2f5c6cfbf84b931a997b0aea16b2a021e12"
+    },
+    {
       "path": "profiles/ace-writing.toml",
-      "bytes": 1297,
-      "sha256": "716fd3947e386549a44359753ad2c3c0ca1a529ac0404810b439d5f2bb48d863"
+      "bytes": 1903,
+      "sha256": "3e62ca1c0499af5bb2230d591284e2197efb33989b1fb9922348f53fe56cf1bf"
     },
     {
       "path": "profiles/emtb-budget.toml",
@@ -1710,6 +1735,11 @@
       "path": "tools/regen_manifest.py",
       "bytes": 2962,
       "sha256": "b28868af103c5dbbda7dda6d54467d2dcacfb9f55e81fabb23758c4ec01b864b"
+    },
+    {
+      "path": "tools/run_writing_eval.py",
+      "bytes": 8056,
+      "sha256": "310319c7e3f94c79e2783f4cf89ebe3f337776c47c3f1a5dddd5f909037d343d"
     },
     {
       "path": "workspace/knowledge/index.md",
@@ -1763,8 +1793,13 @@
     },
     {
       "path": "benchmarks/editorial-learning/scripts/__pycache__/compare_paths.cpython-313.pyc",
-      "bytes": 24241,
-      "sha256": "18bd1c63a07011d1911e2a65e1998f98084fbb569c91e8767ccb797ac2a879f4"
+      "bytes": 24280,
+      "sha256": "61061cc8e4321640d4092737d03a2617b27661bc11bb9984d93699e64dad0040"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/__pycache__/host_projection_legacy.cpython-313.pyc",
+      "bytes": 22108,
+      "sha256": "1fde855edc17c3500c795d86a70a0f0252730a0ad18eb6775472a88d2e675328"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/__pycache__/run_benchmark.cpython-313.pyc",
@@ -1783,8 +1818,8 @@
     },
     {
       "path": "benchmarks/editorial-learning/scripts/compare_paths.py",
-      "bytes": 20314,
-      "sha256": "57ac06aeee3d9d640a279b4048eed40c9e724b979c694f6a2f17eabd47eb38cf"
+      "bytes": 20353,
+      "sha256": "4b7ab209dac9d449a3035ab77b7efa1defd676d8e1c46bb71dc594715c2fe7c3"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/compile_learning_pack.py",
@@ -1795,6 +1830,11 @@
       "path": "benchmarks/editorial-learning/scripts/fetch_sources.py",
       "bytes": 5820,
       "sha256": "0d1d723931e514355036e95b0a7feeb3ef087fb19c58aaaedd9c7373abfcfe79"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/host_projection_legacy.py",
+      "bytes": 19130,
+      "sha256": "7327301f6aafb9c61242a4ac881c0eeb89511aeedccd51668b00e7a6c65cf9e7"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/promote_patch.py",
