@@ -1,0 +1,20 @@
+{
+  "client-background.md": {
+    "material_id": "M001",
+    "source_ref": "cases/stillevo-beauty/materials/client-background.md",
+    "sha256": "84e3f00ca802a1f9313489c96108847b24861ab8a6624725fc31b9d3102665fe",
+    "rights": "user-provided"
+  },
+  "chat-history.md": {
+    "material_id": "M002",
+    "source_ref": "cases/stillevo-beauty/materials/chat-history.md",
+    "sha256": "f8dd010ba7b6f77cce95ecbde5399db461d98b76dfa467538e144b8ee9c688c3",
+    "rights": "user-provided"
+  },
+  "product-notes.md": {
+    "material_id": "M003",
+    "source_ref": "cases/stillevo-beauty/materials/product-notes.md",
+    "sha256": "60f830d743ab0e3ce0218921bd8a31bb0037ca3b8d84b99f1187d0eb7c686695",
+    "rights": "user-provided"
+  }
+}

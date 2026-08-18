@@ -1063,8 +1063,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 1147,
-      "sha256": "a950c50ab97162c885bdc5a00b90988e80457644ee71fda2f1a2bcae07dd6cee"
+      "bytes": 1179,
+      "sha256": "2fb763c88e5d3563efb836e9c8fa0763670f887950d6c28978d2b6be6adecc4b"
     },
     {
       "path": "uv.lock",
@@ -1437,6 +1437,11 @@
       "sha256": "ea1a1633ef78760e738d2eaa1f1f0a1565f66d21724224060d8bb564da27bdd3"
     },
     {
+      "path": "tests/test_writing_pack_plugin.py",
+      "bytes": 2329,
+      "sha256": "34eadd6714795bb133ea2c135ccba49624f8714cbe8d8788659a480ddc09a1e5"
+    },
+    {
       "path": "tests/test_writing_slice.py",
       "bytes": 21183,
       "sha256": "1b1f2e0a8e82dc18e5f9bfa061dc04994775dda88a0bad0154e033b8057a9d7b"
@@ -1647,6 +1652,21 @@
       "sha256": "b7af912770595ae3a43d04f4753b99767f4fbc12616462f7d29ca467c072b526"
     },
     {
+      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/__init__.py",
+      "bytes": 257,
+      "sha256": "0f6cf77e9b06f68d6df80f16b1c3bd9d238ad14527389aef826460b3a8674e94"
+    },
+    {
+      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/plugin.py",
+      "bytes": 2951,
+      "sha256": "3ca1e5ab62be6ebcbb2dc97accf6e1505e6525adb2650aabf6eb4e6d88073fc5"
+    },
+    {
+      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/toolset.py",
+      "bytes": 3896,
+      "sha256": "f618fbf912c01481c090b886fbcdd65b68ca74d731166beb40a72d24162256f6"
+    },
+    {
       "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/data/emtb_budget_sample.csv",
       "bytes": 648,
       "sha256": "5c5bf85a2472fc929c07db028953403abcc1fb56979cca990b9c4b4b6b1bcf95"
@@ -1672,6 +1692,11 @@
       "sha256": "98c18bda1e701e3ae9ad3fcb0eb78f1f72a0815f1efa069c2a63030a9bdd08af"
     },
     {
+      "path": "plugins/zuaef-writing-pack/README.md",
+      "bytes": 603,
+      "sha256": "a6e92535b39fc2b0582c2e99a357c3421fcc4842ac12bd30e45593a0892c6d59"
+    },
+    {
       "path": "profiles/ace-writing-codemode.toml",
       "bytes": 855,
       "sha256": "bdbae233ce74abbe1168daa05b02d3af030ddece5e83c7dcab9b0e81b6f664cd"
@@ -1680,6 +1705,11 @@
       "path": "profiles/ace-writing-editorial.toml",
       "bytes": 682,
       "sha256": "b16d0c340038fc7a0e85f0411b437ceff3e6820411df3428bce8b77cb8a87561"
+    },
+    {
+      "path": "profiles/ace-writing-sanlian.toml",
+      "bytes": 551,
+      "sha256": "dd2448d57ac48781ec3740990dd3e8b672401c2ac19cd770c9783dc33489df62"
     },
     {
       "path": "profiles/ace-writing.toml",

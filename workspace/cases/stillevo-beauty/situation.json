@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "case_id": "stillevo-beauty",
+  "updated_at": "2026-08-17T16:31:04.772918+00:00",
+  "updated_by": "run:fde-stillevo-beauty-e03",
+  "state": {
+    "customer": {
+      "company": "云朵美妆",
+      "contact": "李姐",
+      "stage": "方案讨论"
+    },
+    "budget": {
+      "monthly_range": "3000-5000 元（客户原话，见 chat-history）"
+    },
+    "demo": {
+      "status": "rework_in_progress",
+      "promise": "本周内给一篇现场写的 demo（我方承诺，见 chat-history）",
+      "draft_ref": "msg-002.md",
+      "channel": "tentatively 公众号，待确认开放问题"
+    },
+    "demo_commit": "客户已主动催促 demo，需尽快完成现场成稿（公众号）+ 同步确认用途",
+    "materials_read": [
+      "M001",
+      "M002",
+      "M003"
+    ],
+    "open_question_pending": "demo用途公众号/朋友圈已随草稿一并询问客户",
+    "article_ace_status": "save_article 失败：Unknown article workspace，demo 文章未在 ACE 登记，需补充登记后重试",
+    "feedback": {
+      "rework": "老板反馈：开头太长、要结论前置；价格段落不写"
+    }
+  },
+  "open_questions": [
+    "demo 文章的用途：公众号还是朋友圈？"
+  ],
+  "evidence_ids": [
+    "artifact:cases/stillevo-beauty/drafts/msg-001.md",
+    "material-M001",
+    "material-M002",
+    "material-M003",
+    "tool-effect:save_draft",
+    "trajectory-seq-1",
+    "trajectory-seq-8"
+  ],
+  "barry_override": "barry-onboard"
+}
