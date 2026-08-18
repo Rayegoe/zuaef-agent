@@ -20,6 +20,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from pydantic_ai_harness.code_mode import CodeMode
+
 from zuaef_agent.plugin_api import CompositionError, PluginBundle, PluginEnv
 
 from .editorial import (
@@ -87,17 +89,32 @@ def _editorial_settings(config: dict) -> EditorialSettings:
 
 
 def create_plugin(env: PluginEnv, config: dict) -> PluginBundle:
-    """Assemble the ACE writing plugin from config (SPEC §34 + editorial v0.1).
+    """Assemble the ACE writing plugin from config (SPEC §34 + editorial v0.1
+    + Writing v0.2 CodeMode).
 
-    Returns exactly one toolset, plus — only when ``editorial_control`` is on —
-    exactly one capability. No skills.
+    Returns exactly one toolset, plus capabilities that config opt-ins:
+    - ``editorial_control = true``  -> EditorialControlCapability
+    - ``code_mode = true``          -> Harness CodeMode wrapping the observe
+      tools tagged ``code_mode=True`` (list/read/retrieve/check), leaving
+      ``save_artifact`` as a normal explicit tool call (Writing SPEC §10).
+
+    No skills are shipped by the plugin; writing skills live in the repo's
+    skill library (``.agents/skills``).
     """
     ace_root = _resolve_ace_root(config)
     toolset = build_writing_toolset(ace_root)
-    if config.get("editorial_control", False) is not True:
+    capabilities: list[Any] = []
+    if config.get("editorial_control", False) is True:
+        settings = _editorial_settings(config)
+        store = EditorialEvidenceStore(settings.evidence_path)
+        capabilities.append(EditorialControlCapability(settings=settings, store=store))
+    if config.get("code_mode", False) is True:
+        capabilities.append(
+            CodeMode(
+                tools={"code_mode": True},
+                max_retries=3,
+            )
+        )
+    if not capabilities:
         return PluginBundle(toolsets=[toolset])
-
-    settings = _editorial_settings(config)
-    store = EditorialEvidenceStore(settings.evidence_path)
-    capability = EditorialControlCapability(settings=settings, store=store)
-    return PluginBundle(toolsets=[toolset], capabilities=[capability])
+    return PluginBundle(toolsets=[toolset], capabilities=capabilities)

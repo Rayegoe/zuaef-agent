@@ -1,0 +1,20 @@
+# Experimental profile: ace-writing with Harness CodeMode ON (Writing SPEC v0.2
+# §9-§10, Phase 5). Same plugin and task contract as ace-writing; the observe
+# tools (list_materials/read_material/retrieve_exemplars/retrieve_knowledge/
+# check_claim) are sandboxed behind a single run_code call; save_artifact stays
+# a normal explicit tool. Use ONLY for the ON side of the A/B comparison.
+schema = 1
+name = "ace-writing-codemode"
+
+[[plugins]]
+id = "ace-writing"
+allow_capabilities = true
+
+[plugins.config]
+editorial_control = true
+code_mode = true
+editorial_max_injections = 4
+editorial_max_save_vetoes = 1
+editorial_evidence_limit = 3
+editorial_veto_threshold = 1.50
+editorial_temperature_nudge = 0.0

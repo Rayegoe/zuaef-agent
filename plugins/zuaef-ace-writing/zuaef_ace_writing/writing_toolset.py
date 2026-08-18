@@ -425,12 +425,12 @@ def build_writing_toolset(
 ) -> BudgetedWritingToolset:
     toolset = BudgetedWritingToolset(ace_root=ace_root)
 
-    @toolset.tool
+    @toolset.tool(metadata={"code_mode": True})
     def list_materials(ctx: RunContext[CoreDeps], article_id: str) -> str:
         """List ACE ingested material index rows (ids, hashes, stored paths)."""
         return list_materials_impl(article_id, ctx.deps.run_id, ace_root)
 
-    @toolset.tool
+    @toolset.tool(metadata={"code_mode": True})
     def read_material(
         ctx: RunContext[CoreDeps], article_id: str, material_id: str
     ) -> str:
@@ -438,7 +438,7 @@ def build_writing_toolset(
         a pre-built context pack; each read is receipted by ACE."""
         return read_material_impl(article_id, material_id, ctx.deps.run_id, ace_root)
 
-    @toolset.tool(retries=3)
+    @toolset.tool(retries=3, metadata={"code_mode": True})
     def retrieve_exemplars(
         ctx: RunContext[CoreDeps],
         article_id: str,
@@ -489,7 +489,7 @@ def build_writing_toolset(
         )
         return note + out
 
-    @toolset.tool(retries=3)
+    @toolset.tool(retries=3, metadata={"code_mode": True})
     def retrieve_knowledge(
         ctx: RunContext[CoreDeps],
         article_id: str,
@@ -530,7 +530,7 @@ def build_writing_toolset(
         )
         return note + out
 
-    @toolset.tool(retries=3)
+    @toolset.tool(retries=3, metadata={"code_mode": True})
     def check_claim(
         ctx: RunContext[CoreDeps],
         article_id: str,
