@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-writing-pack"
+version = "0.1.0"
+description = "Thin adapter exposing the runtime-agnostic ZUAEF Writing Intelligence Pack to zuaef-agent."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic-ai>=2.27,<3",
+]
+
+[project.entry-points."zuaef.plugins"]
+zuaef-writing-pack = "zuaef_writing_pack.plugin:build_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["zuaef_writing_pack"]

@@ -31,6 +31,7 @@ pythonpath = [
   "plugins/zuaef-ace-writing",
   "plugins/zuaef-emtb-budget",
   "plugins/zuaef-client-service",
+  "plugins/zuaef-writing-pack",
   ".",
 ]
 

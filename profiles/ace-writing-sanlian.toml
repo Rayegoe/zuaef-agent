@@ -1,0 +1,21 @@
+# Optional semantic writing mode: existing ACE writing plus the external
+# runtime-agnostic ZUAEF Writing Intelligence Pack.
+schema = 1
+name = "ace-writing-sanlian"
+
+[[plugins]]
+id = "ace-writing"
+allow_capabilities = true
+
+[plugins.config]
+editorial_control = false
+code_mode = false
+
+[[plugins]]
+id = "zuaef-writing-pack"
+allow_capabilities = false
+
+[plugins.config]
+# Set this explicitly in each environment or use ZUAEF_WRITING_PACK_ROOT.
+# pack_root = "/home/barry/zuaef_writing"
+# corpus_dir = "/private/path/to/a/legacy/sanlian-*.md-directory"
