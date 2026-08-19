@@ -9,6 +9,7 @@ and the runtime never see a Telegram ``Update``.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol
 
@@ -48,7 +49,21 @@ class SurfaceAdapter(Protocol):
         *,
         text: str,
         approve_token: str,
+        approve_label: str = "Approve",
+        deny_label: str = "Deny",
     ) -> None:
+        ...
+
+    def send_keyboard(
+        self,
+        channel_id: str,
+        *,
+        text: str,
+        buttons: Sequence[tuple[str, str]],
+    ) -> None:
+        """Render text with a deterministic control keyboard (one button per
+        row). Each button is ``(label, callback_data)``; the callback_data is
+        minted by the gateway service, never by the model."""
         ...
 
     def answer_callback(

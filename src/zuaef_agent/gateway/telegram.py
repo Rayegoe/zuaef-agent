@@ -14,13 +14,19 @@ from __future__ import annotations
 import logging
 import os
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import httpx
 
-from .models import AttachmentRef, InboundEnvelope
+from .models import (
+    CONTROL_CALLBACK_ACTIONS,
+    CONTROL_PREFIX,
+    AttachmentRef,
+    InboundEnvelope,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -226,16 +232,34 @@ class TelegramAdapter:
             return None
         data = callback.get("data") or ""
         parts = data.split(":")
-        if len(parts) != 3 or parts[0] != CALLBACK_PREFIX:
-            self.answer_callback(str(callback.get("id", "")), "Unknown action.")
-            return None
-        token, action = parts[1], parts[2]
-        if action not in ("a", "d"):
+        if len(parts) != 3 or parts[0] not in (CALLBACK_PREFIX, CONTROL_PREFIX):
             self.answer_callback(str(callback.get("id", "")), "Unknown action.")
             return None
         message = callback.get("message", {})
         chat = message.get("chat", {})
         channel_id = str(chat.get("id", ""))
+        if parts[0] == CONTROL_PREFIX:
+            # Supervisor control action (zc:<action>:<payload>) —
+            # self-describing, no approval token involved.
+            action, payload = parts[1], parts[2]
+            if action not in CONTROL_CALLBACK_ACTIONS:
+                self.answer_callback(str(callback.get("id", "")), "Unknown action.")
+                return None
+            return InboundEnvelope(
+                surface=self.surface_name,
+                user_id=user_id,
+                channel_id=channel_id,
+                thread_id=None,
+                message_id=str(callback.get("id", "")),
+                text="",
+                callback_action=action,
+                callback_payload=payload or None,
+                transport_context={"callback_query_id": str(callback.get("id", ""))},
+            )
+        token, action = parts[1], parts[2]
+        if action not in ("a", "d"):
+            self.answer_callback(str(callback.get("id", "")), "Unknown action.")
+            return None
         return InboundEnvelope(
             surface=self.surface_name,
             user_id=user_id,
@@ -301,6 +325,26 @@ class TelegramAdapter:
                 },
             ]
         ]
+        self._send_with_keyboard(channel_id, text, keyboard)
+
+    def send_keyboard(
+        self,
+        channel_id: str,
+        *,
+        text: str,
+        buttons: Sequence[tuple[str, str]],
+    ) -> None:
+        keyboard = [
+            [{"text": label, "callback_data": data}] for label, data in buttons
+        ]
+        self._send_with_keyboard(channel_id, text, keyboard)
+
+    def _send_with_keyboard(
+        self,
+        channel_id: str,
+        text: str,
+        keyboard: list[list[dict[str, Any]]],
+    ) -> None:
         self._post(
             "sendMessage",
             {

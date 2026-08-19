@@ -218,6 +218,82 @@ def test_callback_deny_action(tmp_path: Path):
     assert events[0].callback_action == "deny"
 
 
+def _control_update(data: str) -> dict:
+    return {
+        "update_id": 11,
+        "callback_query": {
+            "id": "cb-11",
+            "from": {"id": 42},
+            "message": {"chat": {"id": 42, "type": "private"}},
+            "data": data,
+        },
+    }
+
+
+def test_control_callback_bind_normalization(tmp_path: Path):
+    bot = FakeBot([_control_update("zc:bind:stillevo-beauty")])
+    adapter = _adapter(tmp_path, bot)
+
+    events = adapter.poll_once(timeout_seconds=0)
+
+    assert len(events) == 1
+    env = events[0]
+    assert env.callback_action == "bind"
+    assert env.callback_payload == "stillevo-beauty"
+    assert env.callback_token is None
+    assert env.transport_context["callback_query_id"] == "cb-11"
+
+
+def test_control_callback_bare_actions_normalize(tmp_path: Path):
+    bot = FakeBot([_control_update(f"zc:{action}:") for action in ("unbind", "cases", "new")])
+    adapter = _adapter(tmp_path, bot)
+
+    events = adapter.poll_once(timeout_seconds=0)
+
+    assert [e.callback_action for e in events] == ["unbind", "cases", "new"]
+    assert all(e.callback_payload is None for e in events)
+
+
+def test_control_callback_unknown_action_answered_and_dropped(tmp_path: Path):
+    bot = FakeBot([_control_update("zc:explode:x"), _control_update("zz:bind:a")])
+    adapter = _adapter(tmp_path, bot)
+
+    events = adapter.poll_once(timeout_seconds=0)
+
+    assert events == []
+    answered = [call for call in bot.calls if call[0] == "answerCallbackQuery"]
+    assert len(answered) == 2
+    assert all(call[1]["text"] == "Unknown action." for call in answered)
+
+
+def test_control_callback_unauthorized_user_dropped(tmp_path: Path):
+    update = _control_update("zc:bind:stillevo-beauty")
+    update["callback_query"]["from"]["id"] = 999
+    bot = FakeBot([update])
+    adapter = _adapter(tmp_path, bot)
+
+    events = adapter.poll_once(timeout_seconds=0)
+
+    assert events == []
+
+
+def test_send_keyboard_posts_one_button_per_row(tmp_path: Path):
+    bot = FakeBot([])
+    adapter = _adapter(tmp_path, bot)
+    adapter.send_keyboard(
+        "42",
+        text="Case binding",
+        buttons=[("Bind alpha", "zc:bind:alpha"), ("Cases", "zc:cases:")],
+    )
+    sent = next(call for call in bot.calls if call[0] == "sendMessage")
+    keyboard = sent[1]["reply_markup"]["inline_keyboard"]
+    assert keyboard == [
+        [{"text": "Bind alpha", "callback_data": "zc:bind:alpha"}],
+        [{"text": "Cases", "callback_data": "zc:cases:"}],
+    ]
+    assert sent[1]["text"] == "Case binding"
+
+
 def test_cursor_advances_across_batch(tmp_path: Path):
     bot = FakeBot([_text_update(7, "first"), _text_update(8, "second")])
     adapter = _adapter(tmp_path, bot)

@@ -13,6 +13,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+# Supervisor control actions (Phase 3A): deterministic gateway operations that
+# ride the callback channel without an approval token. The prefix and action
+# set are the shared vocabulary between the transport parser and the service
+# dispatcher (callback data shape: ``zc:<action>:<payload>``).
+CONTROL_PREFIX = "zc"
+CONTROL_CALLBACK_ACTIONS = ("bind", "unbind", "cases", "new")
+
 
 class AttachmentRef(BaseModel):
     """One inbound attachment, already downloaded to a workspace-relative path.
@@ -44,7 +51,14 @@ class InboundEnvelope(BaseModel):
     attachments: list[AttachmentRef] = Field(default_factory=list)
 
     callback_token: str | None = None
-    callback_action: Literal["approve", "deny"] | None = None
+    # ``approve``/``deny`` carry an opaque approval token (callback_token);
+    # the supervisor control actions (bind/unbind/cases/new) are
+    # self-describing instead — their argument rides in callback_payload and
+    # they never touch the approval-token mint/consume machinery.
+    callback_action: Literal[
+        "approve", "deny", "bind", "unbind", "cases", "new"
+    ] | None = None
+    callback_payload: str | None = None
 
     # Surface-specific non-secret transport context (e.g. the Telegram
     # callback_query_id needed to answer a callback). Full platform Updates

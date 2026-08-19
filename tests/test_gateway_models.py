@@ -64,6 +64,27 @@ def test_inbound_envelope_rejects_unknown_callback_action():
         )
 
 
+def test_inbound_envelope_control_callback_actions():
+    for action in ("bind", "unbind", "cases", "new"):
+        env = InboundEnvelope(
+            surface="telegram",
+            user_id="42",
+            channel_id="42",
+            message_id=f"cb-{action}",
+            callback_action=action,
+            callback_payload="stillevo-beauty" if action == "bind" else None,
+        )
+        assert env.callback_action == action
+        assert env.callback_token is None
+
+
+def test_inbound_envelope_callback_payload_defaults_none():
+    env = InboundEnvelope(
+        surface="telegram", user_id="42", channel_id="42", message_id="m1"
+    )
+    assert env.callback_payload is None
+
+
 def test_session_binding_shape():
     binding = SessionBinding(
         surface="telegram",
