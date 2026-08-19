@@ -59,6 +59,20 @@ class AgentSettings:
     enable_step_persistence: bool = True
     max_snapshots_per_run: int | None = 8
     skills_dir: Path = Path(".agents/skills")
+    # Generalist platform surface (upstream primitives, SPEC v2.1 §4).
+    # Availability is broad; AUTHORIZATION is per-deployment. The default
+    # narrow business surface stays untouched; a deployment opts the
+    # generalist capabilities in. Activation (LOAD/INVOKE) is task-driven.
+    enable_shell: bool = False
+    enable_repo_context: bool = False
+    enable_web_search: bool = False
+    enable_web_fetch: bool = False
+    enable_tool_search: bool = False
+    enable_memory: bool = False
+    enable_conversation_search: bool = False
+    enable_subagents: bool = False
+    enable_context_controls: bool = False
+    repo_context_dir: Path | None = None
     openai_base_url: str | None = None
     openai_api_key: str | None = None
     compat_model: str | None = None
@@ -130,6 +144,27 @@ class AgentSettings:
                 "ZUAEF_ENABLE_STEP_PERSISTENCE", cls.enable_step_persistence
             ),
             max_snapshots_per_run=max_snapshots,
+            # Generalist surface: individually authorized by deployment.
+            enable_shell=_env_bool("ZUAEF_ENABLE_SHELL", cls.enable_shell),
+            enable_repo_context=_env_bool(
+                "ZUAEF_ENABLE_REPO_CONTEXT", cls.enable_repo_context
+            ),
+            enable_web_search=_env_bool("ZUAEF_ENABLE_WEB_SEARCH", cls.enable_web_search),
+            enable_web_fetch=_env_bool("ZUAEF_ENABLE_WEB_FETCH", cls.enable_web_fetch),
+            enable_tool_search=_env_bool("ZUAEF_ENABLE_TOOL_SEARCH", cls.enable_tool_search),
+            enable_memory=_env_bool("ZUAEF_ENABLE_MEMORY", cls.enable_memory),
+            enable_conversation_search=_env_bool(
+                "ZUAEF_ENABLE_CONVERSATION_SEARCH", cls.enable_conversation_search
+            ),
+            enable_subagents=_env_bool("ZUAEF_ENABLE_SUBAGENTS", cls.enable_subagents),
+            enable_context_controls=_env_bool(
+                "ZUAEF_ENABLE_CONTEXT_CONTROLS", cls.enable_context_controls
+            ),
+            repo_context_dir=(
+                Path(os.environ["ZUAEF_REPO_CONTEXT_DIR"])
+                if os.getenv("ZUAEF_REPO_CONTEXT_DIR")
+                else None
+            ),
             openai_base_url=_first_env("ZUAEF_OPENAI_BASE_URL", "LLM_API_BASE"),
             openai_api_key=_first_env("ZUAEF_OPENAI_API_KEY", "LLM_API_KEY"),
             compat_model=_first_env("ZUAEF_COMPAT_MODEL", "LLM_MODEL"),

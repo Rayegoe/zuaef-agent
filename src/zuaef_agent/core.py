@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.capabilities import AbstractCapability
@@ -61,6 +62,117 @@ FILESYSTEM_PROTECTED_PATTERNS = [
 ]
 
 
+def generalist_capabilities(
+    settings: AgentSettings,
+    *,
+    sub_agents: Sequence[Any] = (),
+) -> list[AbstractCapability[CoreDeps]]:
+    """Compose the upstream generalist platform surface (SPEC v2.1 §4, T006).
+
+    This is a small constructor/helper over released public primitives — it is
+    NOT a ZUAEF harness framework. Capability *availability* here means "the
+    runtime can compose this upstream primitive when the deployment authorizes
+    it". AUTHORIZATION is per-deployment (settings flags); LOADING and
+    INVOKING are task-driven by the model. The default business surface is
+    untouched, so no deployment pays tool-schema/context cost for capabilities
+    it did not opt in.
+
+    ``sub_agents`` registers named upstream SubAgent delegates; the delegates
+    are never the default topology — the one FDE Agent owns the outcome and a
+    delegate runs only when isolated/parallel work is genuinely useful.
+    """
+    capabilities: list[AbstractCapability[CoreDeps]] = []
+
+    if settings.enable_repo_context:
+        from pydantic_ai_harness.repo_context import RepoContext
+
+        repo_dir = (settings.repo_context_dir or settings.workspace_root).resolve()
+        capabilities.append(
+            RepoContext[CoreDeps](
+                workspace_dir=repo_dir,
+                home_dir=None,
+                filenames=("AGENTS.md", "README.md"),
+            )
+        )
+
+    if settings.enable_web_search:
+        from pydantic_ai.capabilities import WebSearch
+
+        # Official WebSearch capability (native provider WebSearchTool when the
+        # model supports it). No local reimplementation; deployments needing a
+        # custom backend pass `WebSearch(native=False, local=...)` themselves.
+        capabilities.append(WebSearch[CoreDeps](native=True))
+
+    if settings.enable_web_fetch:
+        from pydantic_ai.capabilities import WebFetch
+
+        capabilities.append(WebFetch[CoreDeps](native=True))
+
+    if settings.enable_tool_search:
+        from pydantic_ai.capabilities import ToolSearch
+
+        # Official ToolSearch: compact capability catalog with on-demand tool
+        # activation — keeps the active tool/context surface bounded.
+        capabilities.append(ToolSearch[CoreDeps]())
+
+    if settings.enable_memory:
+        from pydantic_ai_harness.memory import FileStore, Memory
+
+        capabilities.append(
+            Memory[CoreDeps](
+                store=FileStore(directory=settings.state_root / "memory"),
+                agent_name="zuaef",
+                namespace="default",
+            )
+        )
+
+    if settings.enable_conversation_search and settings.enable_step_persistence:
+        from pydantic_ai_harness.conversation_search import (
+            ConversationSearch,
+            SnapshotHistorySource,
+        )
+
+        capabilities.append(
+            ConversationSearch[CoreDeps](
+                source=SnapshotHistorySource(
+                    store=FileStepStore(settings.step_store_dir)
+                ),
+                scope="all",
+            )
+        )
+
+    if settings.enable_subagents:
+        from pydantic_ai_harness.subagents import SubAgents
+
+        capabilities.append(SubAgents[CoreDeps](agents=sub_agents))
+
+    if settings.enable_context_controls:
+        from pydantic_ai_harness.compaction import (
+            ClampOversizedMessages,
+            ClearToolResults,
+            WarnNearLimits,
+        )
+
+        # Threshold-driven context controls: ClearToolResults needs at least one
+        # bound (we use token pressure), oversized parts are clamped, and the
+        # model/host are warned near limits. Defaults stay conservative.
+        capabilities.append(ClearToolResults[CoreDeps](max_tokens=80_000, keep_pairs=3))
+        capabilities.append(ClampOversizedMessages[CoreDeps](max_part_chars=40_000))
+        capabilities.append(
+            WarnNearLimits[CoreDeps](max_context_fraction=0.8, context_window=200_000)
+        )
+
+    if settings.enable_shell:
+        from pydantic_ai_harness.shell import Shell
+
+        # Shell is the most privileged generalist primitive: only composed when
+        # an authorized, trusted execution environment turns it on. The harness
+        # default denied-commands list (rm/rf/dd/…) stays untouched.
+        capabilities.append(Shell[CoreDeps](cwd=settings.workspace_root))
+
+    return capabilities
+
+
 def build_agent(
     settings: AgentSettings,
     *,
@@ -69,6 +181,7 @@ def build_agent(
     extra_capabilities: Sequence[AbstractCapability[CoreDeps]] = (),
     extra_toolsets: Sequence[AbstractToolset[CoreDeps]] = (),
     extra_skill_dirs: Sequence[Path] = (),
+    sub_agents: Sequence[Any] = (),
 ) -> Agent[CoreDeps, RunSummary | DeferredToolRequests]:
     """Build one core agent through explicit composition; there is intentionally no registry.
 
@@ -79,6 +192,9 @@ def build_agent(
     ``extra_skill_dirs`` extends the Skills capability's source directories
     (plugin skill dirs; the base ``settings.skills_dir`` stays first, so a
     local skill wins a duplicate id over an installed plugin's).
+
+    ``sub_agents`` are optional registered upstream SubAgent delegates, used
+    only when the deployment authorizes the SubAgents capability.
     """
     settings.workspace_root.mkdir(parents=True, exist_ok=True)
     settings.state_root.mkdir(parents=True, exist_ok=True)
@@ -123,6 +239,8 @@ def build_agent(
         ]
         if skill_dirs:
             capabilities.append(Skills[CoreDeps](skill_dirs))
+
+    capabilities.extend(generalist_capabilities(settings, sub_agents=sub_agents))
     capabilities.extend(extra_capabilities)
 
     return Agent(
