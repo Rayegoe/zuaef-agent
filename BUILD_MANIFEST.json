@@ -1377,6 +1377,11 @@
       "sha256": "96c5c8dcc8fda19709193f4ffbe4b95cf50a082111e7e038ee16512fb353fc40"
     },
     {
+      "path": "tests/test_generalist_activation.py",
+      "bytes": 7848,
+      "sha256": "0742fa27e75b80c58ad13116cac9712be07c55d585333c0e84a1fb5d517c834c"
+    },
+    {
       "path": "tests/test_host_fixture.py",
       "bytes": 5660,
       "sha256": "de231fae1da82999c13030c33135deae2d372829c88ef9ba1c29c87e310db68e"
