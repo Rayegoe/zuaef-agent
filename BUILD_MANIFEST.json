@@ -1358,8 +1358,8 @@
     },
     {
       "path": "tests/test_gateway_continuity.py",
-      "bytes": 6894,
-      "sha256": "c3fe2f26e194c6f0430b263ce0a7dfb2e8b1e08560e06f28794f0ecb8eaff0d6"
+      "bytes": 9131,
+      "sha256": "9f98d0ee75dc9e9d6f562a34cd6f002de518a9e6e7d95b01ecdfa79fb0e36520"
     },
     {
       "path": "tests/test_gateway_e2e_wordpress.py",

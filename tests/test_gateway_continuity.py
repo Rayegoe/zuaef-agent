@@ -13,11 +13,13 @@ prior history across conversations.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from pydantic_ai import models
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
+from pydantic_ai_harness.step_persistence import FileStepStore, continue_run
 
 from zuaef_agent import core as core_module
 from zuaef_agent.config import AgentSettings
@@ -138,6 +140,16 @@ def _session(service: GatewayService):
     )
 
 
+def _user_text(messages) -> str:
+    """All user-prompt content the model actually saw, in order."""
+    return " || ".join(
+        str(part.content)
+        for m in messages
+        for part in getattr(m, "parts", [])
+        if getattr(part, "part_kind", None) == "user-prompt"
+    )
+
+
 def test_turn2_sees_turn1_constraint(tmp_path, monkeypatch):
     """Turn 2's model receives Turn 1's real prompt via public history restore."""
     seen_run_texts: list[str] = []
@@ -207,3 +219,45 @@ def test_reset_conversation_does_not_leak_prior_history(tmp_path, monkeypatch):
     # No history restore across the reset boundary.
     new_seen = seen_run_texts[-1]
     assert "价格先不要写" not in new_seen, f"history leaked across /new: {new_seen!r}"
+
+
+def test_terminal_run_leaves_resumable_snapshot(tmp_path, monkeypatch):
+    """T002/T010 diagnostic: a terminal Turn-1 run leaves a ``complete``
+    StepPersistence snapshot and ``continue_run`` rebuilds its message history.
+
+    This is the persistence half the Gateway restore relies on — the public
+    Harness 0.20.0 API confirmation recorded in
+    ``docs/gateway-continuity-trace.md`` §4. Ported from the phase-1
+    gateway-history branch (e2bbe57) before the branch was cleaned up.
+    """
+    seen: list[str] = []
+
+    def fn(messages, info):
+        seen.append(_user_text(messages))
+        return _final()
+
+    surface = FakeSurface()
+    service = _make_service(tmp_path, monkeypatch, surface, fn)
+    service.handle(_envelope("Turn one: the product pitch is about a blue umbrella", 1))
+    run1 = _session(service).last_terminal_run_id
+
+    store = FileStepStore(service.settings.step_store_dir)
+    records = asyncio.run(
+        store.list_runs(conversation_id=_session(service).conversation_id)
+    )
+    assert any(r.run_id == run1 for r in records), "Turn 1 must be recorded under the conversation"
+
+    snapshot = asyncio.run(store.latest_snapshot(run_id=run1))
+    assert snapshot is not None, "Turn 1 must leave a resumable snapshot"
+    assert snapshot.state == "complete", f"terminal snapshot should be complete, got {snapshot.state!r}"
+    snapshot_text = " ".join(
+        str(p.content)
+        for m in snapshot.messages
+        for p in getattr(m, "parts", [])
+        if getattr(p, "part_kind", None) == "user-prompt"
+    )
+    assert "blue umbrella" in snapshot_text, "Turn 1's prompt must be preserved in the snapshot"
+
+    history = asyncio.run(continue_run(store, run_id=run1))
+    assert history, "continue_run must rebuild the Turn 1 history for message_history="
+    assert "blue umbrella" in _user_text(history)
