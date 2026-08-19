@@ -104,20 +104,34 @@ domain; budget/WordPress stay dormant unless that work is actually requested.
 ### Gateway → Case binding (supervisor only)
 
 A channel/thread is mechanically bound to one Customer Case — the model never
-guesses identity. The supervisor writes the durable mapping once:
+guesses identity. Two supervisor entrances write the same durable mapping:
 
 ```bash
+# automation/scripts:
 zuaef-agent gateway bind-case \
   --surface telegram --user 42 --channel 42 \
   --case stillevo-beauty --state-root ./.zuaef-state
 ```
 
+```text
+# the Telegram console (Phase 3A) — deterministic control, never the model:
+/case              → card + buttons (Cases / New conversation / Unbind)
+/cases             → recent cases as one-tap bind buttons
+/case <id>         → bind now
+/unbind            → remove the binding
+```
+
+Control commands and their inline buttons are pure gateway logic: they never
+start a run, never consult the model, and ride a self-describing `zc:` callback
+channel separate from approval tokens. Binding/unbinding is refused while a
+run waits for approval — a resumed run must keep the Case it was bound to.
+
 Conversation identity and Case identity stay separate: `conversation_id` is
-the dialogue lifecycle, `case_id` the business work item; `/new` rotates the
-conversation but keeps the Case. Every inbound run threads the bound
-`case_id` into `CoreDeps`, the receipts record it, and the real Case tools
-reject any operation naming a different Case (a cross-case `send_to_customer`
-is a blocked run, not an operator queue entry).
+the dialogue lifecycle, `case_id` the business work item; `/new` (and the New
+conversation button) rotates the conversation but keeps the Case. Every
+inbound run threads the bound `case_id` into `CoreDeps`, the receipts record
+it, and the real Case tools reject any operation naming a different Case (a
+cross-case `send_to_customer` is a blocked run, not an operator queue entry).
 
 ### Authoritative Phase-2 proof
 

@@ -923,8 +923,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 3025,
-      "sha256": "0e18e1d6f449db9a05ececba12773b3c25acc52d511c021860633225a264d68d"
+      "bytes": 3592,
+      "sha256": "4aea1807fc36e5772298afac4f0f288554547486b4ea092945b90ba91e73142d"
     },
     {
       "path": ".gitignore",
@@ -958,8 +958,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 15736,
-      "sha256": "ae73205bdd120f78553450c05400dcb6d63fbde1c6bd2b97e698f6aac22d8f3d"
+      "bytes": 16411,
+      "sha256": "865f404461a17bf5e98d44ac6ff222422c182533269d8c624f1365b49160c6cb"
     },
     {
       "path": "REFACTOR_NOTES.md",
@@ -1198,13 +1198,13 @@
     },
     {
       "path": "src/zuaef_agent/gateway/models.py",
-      "bytes": 3013,
-      "sha256": "a9526ded27e48ee9a9cdaa07b2f046d100c06f28c5ca7e64fa4ca947a7f89662"
+      "bytes": 3768,
+      "sha256": "a905246403e02011ab182d388c3e7611d9fa1e89b47c4dca6ede7580843e156b"
     },
     {
       "path": "src/zuaef_agent/gateway/renderer.py",
-      "bytes": 4705,
-      "sha256": "4abea4a98638ceffa87d7cc23409ee187b47c4207ee381ce45bf29e66ca6b0ee"
+      "bytes": 5932,
+      "sha256": "d0ffb284459d427bbeefbe782bce3cdd2b81c63c531f72868a0e4abf14e78962"
     },
     {
       "path": "src/zuaef_agent/gateway/runner.py",
@@ -1213,8 +1213,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 19818,
-      "sha256": "375c4bc60afa36b498654f472b2cfeef5555010ef7688a9ea7286d34c84b99dc"
+      "bytes": 26619,
+      "sha256": "da23b4955f5ec53b89f88cfc3bb6f0caf5d181040024accf8a8bd710cfa90d21"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
@@ -1223,13 +1223,13 @@
     },
     {
       "path": "src/zuaef_agent/gateway/surface.py",
-      "bytes": 1573,
-      "sha256": "83dd34162a7b990ed8a97c1de2666b7f2bd55adeefe47b1639971a8fe1e20d73"
+      "bytes": 2065,
+      "sha256": "a940c6da6cc12a90755ff22eb6a8b4afa4aee941500c74316d8363f24daf50cf"
     },
     {
       "path": "src/zuaef_agent/gateway/telegram.py",
-      "bytes": 11998,
-      "sha256": "2947f6b941e10880d67ddd0a0e13e5a24fdf1c0d070a097b547f1d7616e18792"
+      "bytes": 13491,
+      "sha256": "cc682beebf5015ebd0a0259f0bd1026c6c763b07dabf66dfea1204964ad387e8"
     },
     {
       "path": "tests/test_ace_writing_plugin.py",
@@ -1353,33 +1353,33 @@
     },
     {
       "path": "tests/test_gateway_cli.py",
-      "bytes": 13043,
-      "sha256": "74b336d13f6049496d3dcac047fea315e026fed797cb0329ad50f43486737316"
+      "bytes": 13124,
+      "sha256": "8c232d242e636aeb4097af66d1d46f7cd012d1bc321612f98203ea0dba712922"
     },
     {
       "path": "tests/test_gateway_continuity.py",
-      "bytes": 9131,
-      "sha256": "9f98d0ee75dc9e9d6f562a34cd6f002de518a9e6e7d95b01ecdfa79fb0e36520"
+      "bytes": 9237,
+      "sha256": "33a7a5a7cc52b7e1e7a1fd4d57f43a6e3dc4e60e21ee82c537ec830b6159d172"
     },
     {
       "path": "tests/test_gateway_e2e_wordpress.py",
-      "bytes": 9155,
-      "sha256": "c0d1f1db5f3eb654038c2cbe3313d4e00421889c1c9b99488e579b38f110db90"
+      "bytes": 9255,
+      "sha256": "5fc147d5ab2ef81927b8ec64a180ad1da4ee3327076666d1c1b1f27e888a48b8"
     },
     {
       "path": "tests/test_gateway_models.py",
-      "bytes": 3329,
-      "sha256": "f8a86ce51587dd29a2722b7e86b8669cd838272b6ce3182a4dbc50f385704213"
+      "bytes": 4017,
+      "sha256": "af1cf5c3f3d177ffe865193a3fdc8bf3b2b384223de98db252acbcdc2623676d"
     },
     {
       "path": "tests/test_gateway_renderer.py",
-      "bytes": 4802,
-      "sha256": "4b4f78f8275339b8f2f08d2afb82ca66927207bbc87b1946e8ff0ace825ffcbb"
+      "bytes": 6158,
+      "sha256": "cbfddb05a655007b6f6fd665d5086b31450b6d1ac6c82f5f6eedc947466a00cc"
     },
     {
       "path": "tests/test_gateway_service.py",
-      "bytes": 20496,
-      "sha256": "c3443c997a124da9bf55c39f8c5efe82fcae2cc921c7168aff6b97905aa15995"
+      "bytes": 27710,
+      "sha256": "dc1bd9e5ab8f0df9dc05988d08fedb8c82ca01a2404a34963d35aebf32c9eda1"
     },
     {
       "path": "tests/test_gateway_store.py",
@@ -1388,8 +1388,8 @@
     },
     {
       "path": "tests/test_gateway_telegram.py",
-      "bytes": 11229,
-      "sha256": "96c5c8dcc8fda19709193f4ffbe4b95cf50a082111e7e038ee16512fb353fc40"
+      "bytes": 13746,
+      "sha256": "251983e8139f642cfa9794c00205e707a293584bd8eb0999eae6aa4dcb40b2bd"
     },
     {
       "path": "tests/test_generalist_activation.py",
@@ -1428,8 +1428,8 @@
     },
     {
       "path": "tests/test_phase2_case_binding.py",
-      "bytes": 13778,
-      "sha256": "4b750908710cc2b2ed246262e94dc2044018c48e81594aa918102171f79960ea"
+      "bytes": 13884,
+      "sha256": "6d27127622789ac779650fbc4723781118a683a8633c1bfca01da0661e289342"
     },
     {
       "path": "tests/test_phase2_case_isolation.py",
@@ -1828,8 +1828,8 @@
     },
     {
       "path": "tools/fde_two_turn_proof.py",
-      "bytes": 30795,
-      "sha256": "38a088902865acefecab418a755ac0a77d8b14db8d58ebf97b16827234aaa661"
+      "bytes": 31033,
+      "sha256": "1d3949e3ebb8182ec1580e2c53448bd90cdfd21b894e78c50043231b3d6c43b2"
     },
     {
       "path": "tools/probe_upstream_baseline.py",
