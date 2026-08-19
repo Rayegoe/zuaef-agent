@@ -78,6 +78,9 @@ class FakeSurface:
     ) -> None:
         self.approvals.append({"text": text, "token": approve_token})
 
+    def send_keyboard(self, channel_id, *, text, buttons) -> None:
+        self.texts.append(text)
+
     def answer_callback(self, callback_id: str, text: str) -> None:
         self.callback_answers.append((callback_id, text))
 

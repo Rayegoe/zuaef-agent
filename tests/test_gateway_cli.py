@@ -58,6 +58,9 @@ class LoopAdapter:
     def send_approval(self, channel_id, *, text, approve_token, approve_label="Approve", deny_label="Deny") -> None:
         pass
 
+    def send_keyboard(self, channel_id, *, text, buttons) -> None:
+        pass
+
     def answer_callback(self, callback_id: str, text: str) -> None:
         pass
 

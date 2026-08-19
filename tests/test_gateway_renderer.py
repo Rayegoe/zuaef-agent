@@ -8,6 +8,8 @@ from zuaef_agent.gateway.renderer import (
     CHUNK_MAX,
     chunk_text,
     preview_arguments,
+    render_case_card,
+    render_cases,
     render_error,
     render_new_conversation,
     render_pause,
@@ -135,6 +137,47 @@ def test_render_status_states():
     )
     assert "State: PAUSED" in paused
     assert "Pending approvals: 2" in paused
+
+
+def test_render_status_includes_case_binding_line():
+    card = render_status(
+        profile="stillevo-fde",
+        conversation_id="conversation-abc",
+        case_id="stillevo-beauty",
+        state="READY",
+    )
+    assert "Case: stillevo-beauty" in card
+    unbound = render_status(
+        profile="stillevo-fde", conversation_id="conversation-abc", state="READY"
+    )
+    assert "Case: (unbound)" in unbound
+
+
+def test_render_case_card_bound_and_unbound():
+    bound = render_case_card(
+        case_id="stillevo-beauty",
+        profile="stillevo-fde",
+        conversation_id="conversation-abc",
+    )
+    assert "Case: stillevo-beauty" in bound
+    assert "Profile: stillevo-fde" in bound
+    assert "State: READY" in bound
+    unbound = render_case_card(
+        case_id=None, profile=None, conversation_id="conversation-abc"
+    )
+    assert "Case: (unbound)" in unbound
+    assert "Profile: (none)" in unbound
+
+
+def test_render_cases_listing_marks_bound_case():
+    text = render_cases(
+        [("newer-case", "2026-08-19"), ("older-case", "2026-08-01")],
+        bound_case="older-case",
+    )
+    assert "newer-case" in text and "older-case" in text
+    assert "- older-case (bound)" in text
+    assert "- newer-case ·" in text
+    assert "No cases found" in render_cases([], bound_case=None)
 
 
 def test_render_profile_and_new_and_error():

@@ -8,6 +8,7 @@ bridge's composition seams (the same pattern as the bridge tests).
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 from importlib.metadata import EntryPoint
 from pathlib import Path
@@ -43,6 +44,7 @@ class FakeSurface:
         self.texts: list[tuple[str, str]] = []
         self.documents: list[tuple[str, Path, str | None]] = []
         self.approvals: list[dict] = []
+        self.keyboards: list[dict] = []
         self.callback_answers: list[tuple[str, str]] = []
 
     def poll_once(self, *, timeout_seconds):
@@ -74,6 +76,11 @@ class FakeSurface:
                 "approve_label": approve_label,
                 "deny_label": deny_label,
             }
+        )
+
+    def send_keyboard(self, channel_id: str, *, text: str, buttons) -> None:
+        self.keyboards.append(
+            {"channel_id": channel_id, "text": text, "buttons": list(buttons)}
         )
 
     def answer_callback(self, callback_id: str, text: str) -> None:
@@ -529,7 +536,10 @@ def test_help_lists_commands(tmp_path: Path, monkeypatch):
     surface = FakeSurface()
     service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
     service.handle(_envelope("/help", n=1))
-    for command in ("/new", "/profile", "/status", "/approve", "/deny", "/artifacts"):
+    for command in (
+        "/new", "/case", "/cases", "/unbind", "/profile", "/status",
+        "/approve", "/deny", "/artifacts",
+    ):
         assert command in surface.last_text()
 
 
@@ -604,3 +614,188 @@ def test_unauthorized_user_rejected_at_service(tmp_path: Path, monkeypatch):
     service.handle(_envelope("do it", n=1, user_id="999", channel_id="999"))
     assert seen.get("model_calls", 0) == 0
     assert surface.texts == []
+
+
+# ── supervisor case control plane (Phase 3A) — deterministic, never the model ─
+
+
+def _make_case_dir(service: GatewayService, name: str, stamp: float) -> None:
+    root = service.settings.workspace_root / "cases" / name
+    root.mkdir(parents=True, exist_ok=True)
+    marker = root / "situation.json"
+    marker.write_text("{}", encoding="utf-8")
+    os.utime(marker, (stamp, stamp))
+
+
+def _control_envelope(n: int, action: str, payload: str | None = None) -> InboundEnvelope:
+    return _envelope(
+        "",
+        n=n,
+        callback_action=action,
+        callback_payload=payload,
+        transport_context={"callback_query_id": f"cbq-{n}"},
+    )
+
+
+def test_case_view_sends_card_and_control_buttons(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    _ensure_session(service)
+
+    service.handle(_envelope("/case", n=1))
+
+    assert surface.keyboards, "/case must send a control keyboard"
+    kb = surface.keyboards[-1]
+    assert "Case: (unbound)" in kb["text"]
+    # unbound: Cases + New conversation only — no Unbind button
+    assert kb["buttons"] == [
+        ("Cases", "zc:cases:"),
+        ("New conversation", "zc:new:"),
+    ]
+
+
+def test_case_bind_is_deterministic_and_persists(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    _make_case_dir(service, "alpha", 1_000_000.0)
+    _ensure_session(service)
+
+    service.handle(_envelope("/case alpha", n=1))
+
+    assert _session(service).case_id == "alpha"
+    kb = surface.keyboards[-1]
+    assert "Case: alpha" in kb["text"]
+    assert ("Unbind case", "zc:unbind:") in kb["buttons"]
+
+
+def test_case_bind_rejects_unknown_case(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    _ensure_session(service)
+
+    service.handle(_envelope("/case nope", n=1))
+
+    assert _session(service).case_id is None
+    assert "unknown case: nope" in surface.last_text()
+
+
+def test_case_bind_blocked_while_paused_command_and_button(tmp_path, monkeypatch):
+    seen: dict = {}
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, _pause_fn(seen))
+    _make_case_dir(service, "alpha", 1_000_000.0)
+    service.handle(_envelope("publish the article", n=1))
+    assert _session(service).paused_run_id
+
+    service.handle(_envelope("/case alpha", n=2))
+    assert _session(service).case_id is None
+    assert "waiting for approval" in surface.last_text()
+
+    service.handle(_control_envelope(3, "bind", "alpha"))
+    assert _session(service).case_id is None
+    assert any("waiting for approval" in text for _, text in surface.callback_answers)
+
+
+def test_cases_lists_most_recent_first_with_bind_buttons(tmp_path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    _make_case_dir(service, "older", 1_000_000.0)
+    _make_case_dir(service, "newer", 2_000_000.0)
+    _ensure_session(service)
+
+    service.handle(_envelope("/cases", n=1))
+
+    kb = surface.keyboards[-1]
+    assert [label for label, _ in kb["buttons"]] == ["Bind newer", "Bind older"]
+    assert kb["buttons"][0] == ("Bind newer", "zc:bind:newer")
+    assert "newer" in kb["text"] and "older" in kb["text"]
+
+    service.handle(_envelope("/case older", n=2))
+    service.handle(_envelope("/cases", n=3))
+    assert "- older (bound)" in surface.keyboards[-1]["text"]
+
+
+def test_unbind_clears_binding(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    _make_case_dir(service, "alpha", 1_000_000.0)
+    _ensure_session(service)
+    service.handle(_envelope("/case alpha", n=1))
+
+    service.handle(_envelope("/unbind", n=2))
+
+    assert _session(service).case_id is None
+    kb = surface.keyboards[-1]
+    assert "Case: (unbound)" in kb["text"]
+    assert ("Unbind case", "zc:unbind:") not in kb["buttons"]
+
+
+def test_control_callback_binds_case_without_approval_machinery(tmp_path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    _make_case_dir(service, "alpha", 1_000_000.0)
+    _ensure_session(service)
+
+    service.handle(_control_envelope(1, "bind", "alpha"))
+
+    assert _session(service).case_id == "alpha"
+    assert surface.callback_answers[-1] == ("cbq-1", "Bound case alpha.")
+    # a control keyboard card came back, but no approval keyboard was minted
+    assert surface.approvals == []
+    assert surface.keyboards
+
+
+def test_control_callback_new_rotates_conversation_keeps_case(tmp_path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    _make_case_dir(service, "alpha", 1_000_000.0)
+    _ensure_session(service)
+    service.handle(_envelope("/case alpha", n=1))
+    before = _session(service).conversation_id
+
+    service.handle(_control_envelope(2, "new"))
+
+    after = _session(service)
+    assert after.conversation_id != before
+    assert after.case_id == "alpha"
+    assert surface.callback_answers[-1] == ("cbq-2", "New conversation.")
+    assert "New ZUAEF conversation started" in surface.last_text()
+
+
+def test_control_callback_rejects_unknown_case(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    _ensure_session(service)
+
+    service.handle(_control_envelope(1, "bind", "nope"))
+
+    assert _session(service).case_id is None
+    assert any("unknown case" in text for _, text in surface.callback_answers)
+
+
+def test_control_plane_never_calls_the_model(tmp_path: Path, monkeypatch):
+    def _boom(messages, info):
+        raise AssertionError("the supervisor control plane must never call the model")
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, _boom)
+    _make_case_dir(service, "alpha", 1_000_000.0)
+    _ensure_session(service)
+
+    # every control command and control callback, with a model that explodes
+    service.handle(_envelope("/case", n=1))
+    service.handle(_envelope("/cases", n=2))
+    service.handle(_envelope("/case alpha", n=3))
+    service.handle(_envelope("/status", n=4))
+    service.handle(_envelope("/help", n=5))
+    service.handle(_envelope("/unbind", n=6))
+    service.handle(_control_envelope(7, "cases"))
+    service.handle(_control_envelope(8, "bind", "alpha"))
+    service.handle(_control_envelope(9, "new"))
+
+    session = _session(service)
+    assert session.case_id == "alpha"
+    assert session.active_run_id is None
+    assert session.paused_run_id is None
+    receipts_dir = service.settings.state_root / "receipts"
+    assert not receipts_dir.exists() or not list(receipts_dir.glob("*.json"))

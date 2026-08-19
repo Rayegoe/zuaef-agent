@@ -118,6 +118,7 @@ class RecordingSurface(SurfaceAdapter):
         self.texts: list[tuple[str, str]] = []
         self.documents: list[tuple[str, Path, str | None]] = []
         self.approvals: list[dict] = []
+        self.keyboards: list[dict] = []
         self.callback_answers: list[tuple[str, str]] = []
 
     def poll_once(self, *, timeout_seconds):
@@ -149,6 +150,11 @@ class RecordingSurface(SurfaceAdapter):
                 "approve_label": approve_label,
                 "deny_label": deny_label,
             }
+        )
+
+    def send_keyboard(self, channel_id: str, *, text: str, buttons) -> None:
+        self.keyboards.append(
+            {"channel_id": channel_id, "text": text, "buttons": list(buttons)}
         )
 
     def answer_callback(self, callback_id: str, text: str) -> None:

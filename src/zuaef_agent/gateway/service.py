@@ -15,6 +15,7 @@ output is ever interpreted as approval.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -24,9 +25,16 @@ from ..profiles import list_profiles
 from ..receipt_store import ReceiptStore
 from ..runtime import PausedRun, TerminalRun
 from . import bridge
-from .models import InboundEnvelope, SessionBinding
+from .models import (
+    CONTROL_CALLBACK_ACTIONS,
+    CONTROL_PREFIX,
+    InboundEnvelope,
+    SessionBinding,
+)
 from .renderer import (
     chunk_text,
+    render_case_card,
+    render_cases,
     render_error,
     render_new_conversation,
     render_pause,
@@ -46,6 +54,9 @@ Send a task normally.
 
 Commands:
 /new
+/case [id]
+/cases
+/unbind
 /profile [name]
 /status
 /approve
@@ -62,9 +73,18 @@ PROFILE_BLOCKED_BY_PAUSE = (
     "A run is waiting for approval.\nApprove, deny, or /new before changing profile."
 )
 
+CASE_BLOCKED_BY_PAUSE = (
+    "A run is waiting for approval.\n"
+    "Approve, deny, or /new before changing the Case binding — a resumed run "
+    "must keep the Case it was bound to."
+)
+
 NOTHING_TO_APPROVE = "Nothing is awaiting approval."
 
 GATEWAY_DENY_REASON = "denied by operator from gateway"
+
+# /cases shows the most recent case directories; one keyboard row per case.
+CASES_LIST_LIMIT = 20
 
 
 class GatewayService:
@@ -107,7 +127,7 @@ class GatewayService:
             thread_id=envelope.thread_id,
             default_profile=self.default_profile,
         )
-        if envelope.callback_token is not None and envelope.callback_action is not None:
+        if envelope.callback_action is not None:
             self._handle_callback(envelope, session)
             return
         text = envelope.text.strip()
@@ -204,6 +224,11 @@ class GatewayService:
     def _handle_callback(
         self, envelope: InboundEnvelope, session: SessionBinding
     ) -> None:
+        if envelope.callback_action in CONTROL_CALLBACK_ACTIONS:
+            # Supervisor control callback (zc:<action>:<payload>) — no
+            # approval token, no run, never the model.
+            self._handle_control_callback(envelope, session)
+            return
         callback_id = envelope.transport_context.get("callback_query_id")
         decision = "approved" if envelope.callback_action == "approve" else "denied"
         try:
@@ -284,6 +309,12 @@ class GatewayService:
         elif command == "new":
             reset = self.store.reset_session(session)
             self._send_text(reset, render_new_conversation(reset.profile))
+        elif command == "case":
+            self._cmd_case(argument, session)
+        elif command == "cases":
+            self._cmd_cases(session)
+        elif command == "unbind":
+            self._cmd_unbind(session)
         elif command == "profile":
             self._cmd_profile(argument, session)
         elif command == "status":
@@ -294,6 +325,140 @@ class GatewayService:
             self._cmd_artifacts(session)
         else:
             self._send_text(session, render_error(f"unknown command: /{command}"))
+
+    # ── supervisor case control (deterministic, never the model) ────────────
+
+    def _case_entries(self) -> list[tuple[str, str]]:
+        """Enumerate case directories under the workspace cases root —
+        filesystem facts only (most recent first). The gateway never imports
+        the case plugin; the directory name IS the case_id."""
+        root = self.settings.workspace_root / "cases"
+        if not root.is_dir():
+            return []
+        stamped: list[tuple[float, str]] = []
+        for entry in root.iterdir():
+            if not entry.is_dir():
+                continue
+            marker = entry / "situation.json"
+            stamp = marker.stat().st_mtime if marker.is_file() else entry.stat().st_mtime
+            stamped.append((stamp, entry.name))
+        stamped.sort(reverse=True)
+        return [
+            (name, datetime.fromtimestamp(stamp, tz=UTC).strftime("%Y-%m-%d"))
+            for stamp, name in stamped[:CASES_LIST_LIMIT]
+        ]
+
+    def _case_state_label(self, session: SessionBinding) -> str:
+        if session.paused_run_id:
+            return "PAUSED"
+        if session.active_run_id:
+            return "RUNNING"
+        return "READY"
+
+    def _send_case_card(self, session: SessionBinding) -> None:
+        buttons: list[tuple[str, str]] = [
+            ("Cases", f"{CONTROL_PREFIX}:cases:"),
+            ("New conversation", f"{CONTROL_PREFIX}:new:"),
+        ]
+        if session.case_id:
+            buttons.append(("Unbind case", f"{CONTROL_PREFIX}:unbind:"))
+        self.surface.send_keyboard(
+            session.channel_id,
+            text=render_case_card(
+                case_id=session.case_id,
+                profile=session.profile,
+                conversation_id=session.conversation_id,
+                state=self._case_state_label(session),
+            ),
+            buttons=buttons,
+        )
+
+    def _bind_case(
+        self, session: SessionBinding, case_id: str
+    ) -> tuple[SessionBinding, str | None]:
+        """Deterministic bind (or error). Membership in the cases-root listing
+        is the whole validation — a name that is not an existing directory can
+        never be bound, which also structurally rules out path traversal."""
+        if session.paused_run_id:
+            return session, CASE_BLOCKED_BY_PAUSE
+        known = {name for name, _ in self._case_entries()}
+        if case_id not in known:
+            return session, f"unknown case: {case_id} (see /cases)"
+        return self.store.bind_case(session, case_id), None
+
+    def _unbind_case(self, session: SessionBinding) -> tuple[SessionBinding, str | None]:
+        if session.paused_run_id:
+            return session, CASE_BLOCKED_BY_PAUSE
+        return self.store.bind_case(session, None), None
+
+    def _cmd_case(self, argument: str, session: SessionBinding) -> None:
+        if not argument:
+            self._send_case_card(session)
+            return
+        session, error = self._bind_case(session, argument)
+        if error:
+            self._send_text(session, render_error(error))
+            return
+        logger.info("supervisor bound session to case %s", argument)
+        self._send_case_card(session)
+
+    def _cmd_cases(self, session: SessionBinding) -> None:
+        entries = self._case_entries()
+        buttons = [
+            (f"Bind {name}", f"{CONTROL_PREFIX}:bind:{name}") for name, _ in entries
+        ]
+        self.surface.send_keyboard(
+            session.channel_id,
+            text=render_cases(entries, bound_case=session.case_id),
+            buttons=buttons,
+        )
+
+    def _cmd_unbind(self, session: SessionBinding) -> None:
+        session, error = self._unbind_case(session)
+        if error:
+            self._send_text(session, render_error(error))
+            return
+        logger.info("supervisor unbound session case")
+        self._send_case_card(session)
+
+    def _handle_control_callback(
+        self, envelope: InboundEnvelope, session: SessionBinding
+    ) -> None:
+        """zc:<action>:<payload> — supervisor buttons. Same deterministic
+        operations as the slash commands; every callback gets answered."""
+        callback_id = envelope.transport_context.get("callback_query_id")
+        action = envelope.callback_action
+        if action == "new":
+            reset = self.store.reset_session(session)
+            if callback_id:
+                self.surface.answer_callback(callback_id, "New conversation.")
+            self._send_text(reset, render_new_conversation(reset.profile))
+            return
+        if action == "cases":
+            if callback_id:
+                self.surface.answer_callback(callback_id, "Cases…")
+            self._cmd_cases(session)
+            return
+        if action == "unbind":
+            updated, error = self._unbind_case(session)
+            if error:
+                self._reject_callback(callback_id, updated, error)
+                return
+            if callback_id:
+                self.surface.answer_callback(callback_id, "Case unbound.")
+            logger.info("supervisor unbound session case (button)")
+            self._send_case_card(updated)
+            return
+        # bind
+        case_id = envelope.callback_payload or ""
+        updated, error = self._bind_case(session, case_id)
+        if error:
+            self._reject_callback(callback_id, updated, error)
+            return
+        if callback_id:
+            self.surface.answer_callback(callback_id, f"Bound case {case_id}.")
+        logger.info("supervisor bound session to case %s (button)", case_id)
+        self._send_case_card(updated)
 
     def _cmd_profile(self, argument: str, session: SessionBinding) -> None:
         if not argument:
@@ -332,6 +497,7 @@ class GatewayService:
                 self._send_text(session, render_status(
                     profile=session.profile,
                     conversation_id=session.conversation_id,
+                    case_id=session.case_id,
                     state="READY",
                 ))
                 return
@@ -340,6 +506,7 @@ class GatewayService:
                 render_status(
                     profile=session.profile,
                     conversation_id=session.conversation_id,
+                    case_id=session.case_id,
                     state="PAUSED",
                     run_id=session.paused_run_id,
                     pending_approval_count=len(receipt.pending_approvals),
@@ -356,6 +523,7 @@ class GatewayService:
                 render_status(
                     profile=session.profile,
                     conversation_id=session.conversation_id,
+                    case_id=session.case_id,
                     state="RUNNING",
                     run_id=session.active_run_id,
                 ),
@@ -369,6 +537,7 @@ class GatewayService:
                 self._send_text(session, render_status(
                     profile=session.profile,
                     conversation_id=session.conversation_id,
+                    case_id=session.case_id,
                     state="READY",
                 ))
                 return
@@ -382,6 +551,7 @@ class GatewayService:
                 render_status(
                     profile=session.profile,
                     conversation_id=session.conversation_id,
+                    case_id=session.case_id,
                     state=state,
                     run_id=session.last_terminal_run_id,
                 ),
@@ -392,6 +562,7 @@ class GatewayService:
             render_status(
                 profile=session.profile,
                 conversation_id=session.conversation_id,
+                case_id=session.case_id,
                 state="READY",
             ),
         )

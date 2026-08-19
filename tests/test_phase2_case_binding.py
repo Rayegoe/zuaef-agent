@@ -69,6 +69,9 @@ class FakeSurface(SurfaceAdapter):
     def send_approval(self, channel_id, *, text, approve_token, approve_label="Approve", deny_label="Deny"):
         self.approvals.append({"channel_id": channel_id, "token": approve_token})
 
+    def send_keyboard(self, channel_id, *, text, buttons):
+        self.texts.append((channel_id, text))
+
     def answer_callback(self, callback_id: str, text: str) -> None:
         pass
 

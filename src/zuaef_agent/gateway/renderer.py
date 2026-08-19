@@ -8,6 +8,8 @@ long messages chunk below the Telegram hard limit.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from zuaef_agent.runtime import PausedRun, TerminalRun
 
 CHUNK_MAX = 3800
@@ -98,6 +100,7 @@ def render_status(
     profile: str | None,
     conversation_id: str,
     state: str,
+    case_id: str | None = None,
     run_id: str | None = None,
     pending_approval_count: int = 0,
     pending_tools: list[str] | None = None,
@@ -107,6 +110,7 @@ def render_status(
         "ZUAEF",
         "",
         f"Profile: {profile or '(none)'}",
+        f"Case: {case_id or '(unbound)'}",
         f"Conversation: {_short(conversation_id)}",
         "",
         f"State: {state}",
@@ -135,6 +139,40 @@ def render_profile(*, current: str | None, available: list[str]) -> str:
 
 def render_new_conversation(profile: str | None) -> str:
     return f"New ZUAEF conversation started.\nProfile: {profile or '(none)'}"
+
+
+def render_case_card(
+    *,
+    case_id: str | None,
+    profile: str | None,
+    conversation_id: str,
+    state: str = "READY",
+) -> str:
+    """Supervisor /case view and post-bind confirmation card. Deterministic
+    routing facts only — never model output."""
+    return "\n".join(
+        [
+            "Case binding",
+            "",
+            f"Case: {case_id or '(unbound)'}",
+            f"Profile: {profile or '(none)'}",
+            f"Conversation: {_short(conversation_id)}",
+            "",
+            f"State: {state}",
+        ]
+    )
+
+
+def render_cases(entries: Sequence[tuple[str, str]], bound_case: str | None) -> str:
+    """/cases listing: one line per case directory, most recent first. Each
+    entry is ``(case_id, updated)`` from filesystem metadata only."""
+    lines = ["Cases (most recent first)"]
+    if not entries:
+        lines.extend(["", "No cases found under the workspace cases root."])
+    for case_id, updated in entries:
+        marker = " (bound)" if case_id == bound_case else ""
+        lines.append(f"- {case_id}{marker} · {updated}")
+    return "\n".join(lines)
 
 
 def chunk_text(text: str, max_chars: int = CHUNK_MAX) -> list[str]:
