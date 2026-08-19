@@ -129,6 +129,19 @@ class GatewayService:
         run_id = uuid4().hex
         session = session.model_copy(update={"active_run_id": run_id})
         self.store.save_session(session)
+        # Normal-turn continuity (SPEC §15 / T010): a follow-up message in the
+        # same conversation resumes the prior terminal run's real history from
+        # public persistence — a fresh run_id, the same conversation_id.
+        history = (
+            bridge.prior_run_history(
+                self.settings,
+                run_id=session.last_terminal_run_id,
+                conversation_id=session.conversation_id,
+                receipts=self.receipts,
+            )
+            if session.last_terminal_run_id is not None
+            else None
+        )
         try:
             outcome = bridge.start_profile_run(
                 settings=self.settings,
@@ -137,6 +150,7 @@ class GatewayService:
                 conversation_id=session.conversation_id,
                 config_root=self.config_root,
                 run_id=run_id,
+                message_history=history,
             )
         except CompositionError as exc:
             session = session.model_copy(update={"active_run_id": None})
