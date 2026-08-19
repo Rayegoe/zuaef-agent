@@ -222,3 +222,59 @@ def test_chat_mode_forwards_explicit_thinking_toggle(tmp_path):
 
     assert isinstance(model, OpenAIChatModel)
     assert model.settings == {"extra_body": {"thinking": {"type": "disabled"}}}
+
+
+def test_deepseek_uses_official_provider_profile(tmp_path):
+    """T005: DeepSeek capability flags come from the official
+    ``DeepSeekProvider.model_profile`` — ZUAEF no longer copies model flags."""
+    from zuaef_agent.providers import resolve_model
+
+    settings = AgentSettings(
+        openai_base_url="https://api.deepseek.com",
+        openai_api_key="test-key",
+        compat_model="deepseek-chat",
+        workspace_root=tmp_path / "w",
+    )
+    model = resolve_model(settings)
+
+    assert model.system == "deepseek"  # official DeepSeekProvider
+    profile = dict(model.profile)
+    # Flags the official deepseek_model_profile owns (previously hand-copied):
+    assert profile["openai_chat_thinking_field"] == "reasoning_content"
+    assert profile["openai_chat_send_back_thinking_parts"] == "field"
+    assert profile["supports_json_object_output"] is True
+    assert profile["openai_supports_tool_choice_required"] is True
+
+
+def test_deepseek_v4_does_not_force_tool_choice(tmp_path):
+    """The official DeepSeek profile is what forbids forced tool_choice on v4."""
+    from zuaef_agent.providers import resolve_model
+
+    settings = AgentSettings(
+        openai_base_url="https://api.deepseek.com",
+        openai_api_key="test-key",
+        compat_model="deepseek-v4-flash",
+        workspace_root=tmp_path / "w",
+    )
+    model = resolve_model(settings)
+    assert dict(model.profile)["openai_supports_tool_choice_required"] is False
+
+
+def test_generic_endpoint_uses_official_default_profile(tmp_path):
+    """T005: generic OpenAI-compatible endpoints rely on the official profile —
+    the locally copied capability flags are gone from AgentSettings."""
+    from pydantic_ai.models.openai import OpenAIChatModel
+
+    from zuaef_agent.providers import resolve_model
+
+    settings = AgentSettings(
+        openai_base_url="http://localhost:8000/v1",
+        openai_api_key="test-key",
+        compat_model="local-model",
+        openai_api_mode="chat",
+        workspace_root=tmp_path / "w",
+    )
+    model = resolve_model(settings)
+    assert isinstance(model, OpenAIChatModel)
+    # No local capability-flag fields survive on the settings object.
+    assert not hasattr(settings, "openai_strict_tool_definitions")

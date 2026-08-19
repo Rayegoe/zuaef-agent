@@ -6,6 +6,8 @@ from pydantic_ai.models import Model
 
 from .config import AgentSettings
 
+_DEEPSEEK_MODEL_PREFIX = "deepseek-"
+
 
 def _http_proxy() -> str | None:
     """Resolve an http(s) proxy from the environment, ignoring socks:// entries.
@@ -23,59 +25,83 @@ def _http_proxy() -> str | None:
     return None
 
 
-def resolve_model(settings: AgentSettings) -> str | Model:
-    """Resolve either a normal PydanticAI model id or an OpenAI-compatible endpoint.
+def _openai_client(settings: AgentSettings):
+    """Deployment-specific OpenAI-compatible client glue.
 
-    The OpenAI-specific modules are imported lazily: a normal model id must not
-    pay (or fail on) the ``openai`` import.
+    Only transport/configuration lives here (base URL, api key, proxy, timeouts,
+    retries). Model capability flags belong to the official provider profiles.
     """
-    if not settings.openai_base_url:
-        return settings.model
-
     import httpx
     from openai import AsyncOpenAI
-    from pydantic_ai.models.openai import (
-        OpenAIChatModel,
-        OpenAIChatModelSettings,
-        OpenAIResponsesModel,
-    )
-    from pydantic_ai.profiles.openai import OpenAIModelProfile
-    from pydantic_ai.providers.openai import OpenAIProvider
 
-    assert settings.compat_model is not None
     proxy = _http_proxy()
     http_client = (
         httpx.AsyncClient(trust_env=False, proxy=proxy)
         if proxy
         else httpx.AsyncClient(trust_env=False)
     )
-    client = AsyncOpenAI(
+    return AsyncOpenAI(
         base_url=settings.openai_base_url,
         api_key=settings.openai_api_key or "not-required",
         timeout=settings.openai_timeout_seconds,
         max_retries=settings.openai_max_retries,
         http_client=http_client,
     )
-    provider = OpenAIProvider(openai_client=client)
+
+
+def _is_deepseek_model(model_name: str | None) -> bool:
+    """DeepSeek models served through the official ``DeepSeekProvider``.
+
+    The official provider/profile owns their capability flags
+    (``deepseek_model_profile``), so ZUAEF no longer copies them.
+    """
+    return bool(model_name) and model_name.startswith(_DEEPSEEK_MODEL_PREFIX)
+
+
+def _thinking_settings(settings: AgentSettings):
+    """Deployment toggle: DeepSeek OpenAI-compatible APIs default to thinking;
+    forward the explicit enable/disable through ``extra_body``. This is
+    transport/configuration, not a capability profile."""
+    if settings.openai_enable_thinking is None:
+        return None
+    from pydantic_ai.models.openai import OpenAIChatModelSettings
+
+    thinking_type = "enabled" if settings.openai_enable_thinking else "disabled"
+    return OpenAIChatModelSettings(extra_body={"thinking": {"type": thinking_type}})
+
+
+def resolve_model(settings: AgentSettings) -> str | Model:
+    """Resolve either a normal PydanticAI model id or an OpenAI-compatible endpoint.
+
+    The OpenAI-specific modules are imported lazily: a normal model id must not
+    pay (or fail on) the ``openai`` import. Model capability flags come from
+    the official provider profiles (T005): DeepSeek models use the official
+    ``DeepSeekProvider``/``deepseek_model_profile``; generic compatible
+    endpoints use ``OpenAIProvider`` with its official default profile.
+    """
+    if not settings.openai_base_url:
+        return settings.model
+
+    assert settings.compat_model is not None
+    from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModel
+    from pydantic_ai.providers.openai import OpenAIProvider
+
+    client = _openai_client(settings)
+
     if settings.openai_api_mode == "responses":
-        return OpenAIResponsesModel(settings.compat_model, provider=provider)
-    profile = OpenAIModelProfile(
-        openai_supports_strict_tool_definition=settings.openai_strict_tool_definitions,
-        openai_chat_supports_multiple_system_messages=settings.openai_multiple_system_messages,
-        openai_chat_supports_max_completion_tokens=settings.openai_supports_max_completion_tokens,
-    )
-    model_settings = None
-    if settings.openai_enable_thinking is not None:
-        # DeepSeek's OpenAI-compatible API defaults V4 models to thinking mode.
-        # Forced tool selection is rejected in that mode, so forward the explicit
-        # toggle from the copied provider configuration through `extra_body`.
-        thinking_type = "enabled" if settings.openai_enable_thinking else "disabled"
-        model_settings = OpenAIChatModelSettings(
-            extra_body={"thinking": {"type": thinking_type}}
+        return OpenAIResponsesModel(
+            settings.compat_model, provider=OpenAIProvider(openai_client=client)
         )
+
+    if _is_deepseek_model(settings.compat_model):
+        from pydantic_ai.providers.deepseek import DeepSeekProvider
+
+        provider = DeepSeekProvider(openai_client=client)
+    else:
+        provider = OpenAIProvider(openai_client=client)
+
     return OpenAIChatModel(
         settings.compat_model,
         provider=provider,
-        profile=profile,
-        settings=model_settings,
+        settings=_thinking_settings(settings),
     )

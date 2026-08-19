@@ -1118,8 +1118,8 @@
     },
     {
       "path": "src/zuaef_agent/config.py",
-      "bytes": 6760,
-      "sha256": "f63d3cd5dd003d5ef3db28e6ba211b4abd4b5c93a0aea39f5014be13f2ab8791"
+      "bytes": 6608,
+      "sha256": "57d27931a9e8372b3b424c14194679861dcfe4c118fdd2fa4b93a4d24de4acac"
     },
     {
       "path": "src/zuaef_agent/continuation.py",
@@ -1163,8 +1163,8 @@
     },
     {
       "path": "src/zuaef_agent/providers.py",
-      "bytes": 3169,
-      "sha256": "026219299a5b653a2d2a040b9d18041a06379acf1b874005160f686a16f73e61"
+      "bytes": 3943,
+      "sha256": "73673bb71cbf78fe89328e4504e16319a75047db84043fccb75a97fef219f02c"
     },
     {
       "path": "src/zuaef_agent/receipt_store.py",
@@ -1248,8 +1248,8 @@
     },
     {
       "path": "tests/test_cli_and_providers.py",
-      "bytes": 7552,
-      "sha256": "c4e9efbdf584e3fd2cf6ce0fd9ff33f84aa4f28c376d95c2458b31a315aafbc2"
+      "bytes": 9795,
+      "sha256": "33198f002c54702b5df0550a46b93920b7f7e6e32f87815f3bde8276d7fb2989"
     },
     {
       "path": "tests/test_cli_resume.py",

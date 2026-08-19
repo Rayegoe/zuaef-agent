@@ -65,9 +65,6 @@ class AgentSettings:
     openai_api_mode: str = "chat"
     openai_timeout_seconds: float = 180.0
     openai_max_retries: int = 3
-    openai_strict_tool_definitions: bool = True
-    openai_multiple_system_messages: bool = True
-    openai_supports_max_completion_tokens: bool = True
     openai_enable_thinking: bool | None = None
 
     def __post_init__(self) -> None:
