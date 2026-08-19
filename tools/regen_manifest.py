@@ -18,6 +18,7 @@ INCLUDE_GLOBS = [
     ".env.example",
     ".gitignore",
     "*.md",
+    "docs/*.md",
     "examples/*.py",
     "examples/budget_lib/*.py",
     "examples/data/*.csv",

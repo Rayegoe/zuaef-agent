@@ -997,6 +997,11 @@
       "sha256": "3ac89fe3cde85543c7d7feb8d8284580ed3440e30d48eeb1887697e45e9a48e2"
     },
     {
+      "path": "docs/upstream-baseline.md",
+      "bytes": 4086,
+      "sha256": "370e8d7a950637e035d8ae014d002b524720db61d8086519b5b94488c6bb8e80"
+    },
+    {
       "path": "examples/approval_toolset.py",
       "bytes": 639,
       "sha256": "659bf241585356ba7d358c532de3cc90a8b90b552a62f1499980ca1df40629b8"
@@ -1762,9 +1767,14 @@
       "sha256": "4aa4b8645b9ec9b1e4a46c6e249eb8124209ee5bbeb35138102b4dddcddc2a7f"
     },
     {
+      "path": "tools/probe_upstream_baseline.py",
+      "bytes": 3941,
+      "sha256": "c493a77c1f6dec7e6d40d21919ddb916a227511e4c00e3863531c3e311485a02"
+    },
+    {
       "path": "tools/regen_manifest.py",
-      "bytes": 2962,
-      "sha256": "b28868af103c5dbbda7dda6d54467d2dcacfb9f55e81fabb23758c4ec01b864b"
+      "bytes": 2979,
+      "sha256": "2ebdd2dd116fb77001dfda34c522544202ae9441d14eb593d91172d7637539b4"
     },
     {
       "path": "tools/run_writing_eval.py",
@@ -1824,12 +1834,12 @@
     {
       "path": "benchmarks/editorial-learning/scripts/__pycache__/compare_paths.cpython-313.pyc",
       "bytes": 24280,
-      "sha256": "61061cc8e4321640d4092737d03a2617b27661bc11bb9984d93699e64dad0040"
+      "sha256": "2f5562d2d8452630669d6f5ea2d3d11538d00becbf5d555fa6aec21108ede4c9"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/__pycache__/host_projection_legacy.cpython-313.pyc",
       "bytes": 22108,
-      "sha256": "1fde855edc17c3500c795d86a70a0f0252730a0ad18eb6775472a88d2e675328"
+      "sha256": "cbcec2c4eabd7ad529ea4adc6eee8cb418e4f5719504a8c76b5a4fed6959a500"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/__pycache__/run_benchmark.cpython-313.pyc",
