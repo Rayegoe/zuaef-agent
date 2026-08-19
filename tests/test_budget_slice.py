@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from pydantic_ai import RunContext, RunUsage
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
@@ -321,12 +321,7 @@ class TestCompositionSeam(unittest.TestCase):
                             "csv_name": "emtb_budget",
                         })
                     ])
-                return ModelResponse(parts=[ToolCallPart("final_result", {
-                    "status": "completed",
-                    "outcome": "预算分析完成，健康度 CRITICAL",
-                    "artifacts": [f"artifacts/{run_id}/emtb_budget-report.md"],
-                    "evidence": [f"artifact:artifacts/{run_id}/emtb_budget-report.md"],
-                })])
+                return ModelResponse(parts=[TextPart(content="预算分析完成，健康度 CRITICAL")])
 
             with agent.override(model=FunctionModel(fn)):
                 outcome = execute_run(

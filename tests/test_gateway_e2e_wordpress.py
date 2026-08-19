@@ -19,7 +19,7 @@ import httpx
 import pytest
 import zuaef_wordpress
 from pydantic_ai import models
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from zuaef_wordpress.client import WordPressClient
 from zuaef_wordpress.toolset import make_toolset
@@ -136,19 +136,7 @@ def world(tmp_path: Path, monkeypatch):
             return ModelResponse(
                 parts=[ToolCallPart("wordpress_publish_post", {"post_id": 5})]
             )
-        return ModelResponse(
-            parts=[
-                ToolCallPart(
-                    "final_result",
-                    {
-                        "status": "completed",
-                        "outcome": "WordPress post published.",
-                        "artifacts": [],
-                        "evidence": [],
-                    },
-                )
-            ]
-        )
+        return ModelResponse(parts=[TextPart(content="WordPress post published.")])
 
     monkeypatch.setattr(
         core_module, "resolve_model", lambda s: FunctionModel(model_fn)

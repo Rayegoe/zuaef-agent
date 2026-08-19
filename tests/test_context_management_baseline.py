@@ -20,6 +20,7 @@ from pathlib import Path
 from pydantic_ai import Agent, FunctionToolset
 from pydantic_ai.messages import (
     ModelResponse,
+    TextPart,
     ToolCallPart,
 )
 from pydantic_ai.models.function import FunctionModel
@@ -108,7 +109,7 @@ def test_tool_output_limits_spills_oversized_return(tmp_path):
         )
         captured["content"] = content
         return ModelResponse(
-            parts=[ToolCallPart("final_result", {"status": "completed", "outcome": "done"})]
+            parts=[TextPart(content="done")]
         )
 
     _grounded(agent, script=script)
@@ -154,7 +155,7 @@ def test_clear_tool_results_replaces_stale_returns(tmp_path):
         captured["cleared"] = cleared
         captured["seen"] = len(returns)
         return ModelResponse(
-            parts=[ToolCallPart("final_result", {"status": "completed", "outcome": "done"})]
+            parts=[TextPart(content="done")]
         )
 
     _grounded(agent, script=script)

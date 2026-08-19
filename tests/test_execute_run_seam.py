@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 from pydantic_ai import models
 from pydantic_ai.exceptions import UnexpectedModelBehavior
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.usage import RunUsage
 from pydantic_ai_harness.step_persistence import FileStepStore, StepEvent
@@ -75,8 +75,9 @@ def _compose(settings: AgentSettings, marker_root: Path, run_id: str):
     return agent, deps
 
 
-def _final(summary: dict) -> ModelResponse:
-    return ModelResponse(parts=[ToolCallPart("final_result", summary)])
+def _final(text: str = "done") -> ModelResponse:
+    """Natural terminal: plain text is the whole presentation (P3B-2 INV-1)."""
+    return ModelResponse(parts=[TextPart(content=text)])
 
 
 def _has_tool_return(messages) -> bool:
@@ -96,20 +97,14 @@ def test_seam_tool_run_verified_completed(tmp_path: Path):
     def fn(messages, info):
         if not _has_tool_return(messages):
             return ModelResponse(parts=[ToolCallPart("write_report", {"content": "# Report\n\nFindings."})])
-        return _final(
-            {
-                "status": "completed",
-                "outcome": "report written",
-                "artifacts": ["artifacts/report.md"],
-                "evidence": ["artifact:artifacts/report.md"],
-            }
-        )
+        return _final("Report written.")
 
     with agent.override(model=FunctionModel(fn)):
         outcome = execute_run(agent, deps, prompt="write the report", settings=settings, run_id=run_id)
 
     assert isinstance(outcome, TerminalRun)
     assert outcome.summary.status == "completed"
+    assert outcome.presentation == "Report written."
     report = settings.workspace_root / "artifacts" / "report.md"
     assert report.is_file()
     assert outcome.receipt.verified_artifacts[0].path == "artifacts/report.md"
@@ -118,29 +113,24 @@ def test_seam_tool_run_verified_completed(tmp_path: Path):
     assert Path(outcome.receipt.summary.receipt).is_file()
 
 
-def test_fake_artifact_claim_degrades_completed_to_partial(tmp_path: Path):
+def test_natural_terminal_settles_completed_with_zero_artifacts(tmp_path: Path):
+    """P3B-2 L4: a plain answer with no artifact claim is a full completion —
+    the settlement never requires model-crafted artifact/evidence refs."""
     settings = _settings(tmp_path)
     run_id = uuid4().hex
     agent, deps = _compose(settings, tmp_path / ".state-proof", run_id)
 
     def fn(messages, info):
-        return _final(
-            {
-                "status": "completed",
-                "outcome": "ghost report",
-                "artifacts": ["artifacts/ghost.md"],
-                "evidence": ["artifact:artifacts/ghost.md"],
-            }
-        )
+        return _final("这是改写后的正文。")
 
     with agent.override(model=FunctionModel(fn)):
-        outcome = execute_run(agent, deps, prompt="fake it", settings=settings, run_id=run_id)
+        outcome = execute_run(agent, deps, prompt="改写这篇文章", settings=settings, run_id=run_id)
 
     assert isinstance(outcome, TerminalRun)
-    assert outcome.summary.status == "partial"
-    assert outcome.summary.artifacts == []
-    assert outcome.receipt.degraded
-    assert "ghost.md" in outcome.receipt.degraded[0]
+    assert outcome.summary.status == "completed"
+    assert outcome.receipt.verified_artifacts == []
+    assert outcome.presentation == "这是改写后的正文。"
+    assert not outcome.receipt.degraded
 
 
 def test_usage_payload_accepts_run_usage_tracker_directly():
@@ -159,35 +149,21 @@ def test_unchanged_preexisting_artifact_not_owned_by_run(tmp_path: Path):
     agent, deps = _compose(settings, tmp_path / ".state-proof", run_id)
 
     def fn(messages, info):
-        return _final(
-            {
-                "status": "completed",
-                "outcome": "claims the old file",
-                "artifacts": ["artifacts/report.md"],
-                "evidence": ["artifact:artifacts/report.md"],
-            }
-        )
+        return _final("claims nothing; the file predates the run")
 
     with agent.override(model=FunctionModel(fn)):
         outcome = execute_run(agent, deps, prompt="claim it", settings=settings, run_id=run_id)
 
     assert isinstance(outcome, TerminalRun)
-    assert outcome.summary.status == "partial"
+    assert outcome.summary.status == "completed"
     assert outcome.receipt.verified_artifacts == []
-    assert any("unchanged" in note for note in outcome.receipt.degraded)
+    assert not any("unchanged" in note for note in outcome.receipt.degraded)
 
 
 def _approval_fn(messages, info):
     if not _has_tool_return(messages):
         return ModelResponse(parts=[ToolCallPart("record_external_effect", {"effect_id": "e1"})])
-    return _final(
-        {
-            "status": "completed",
-            "outcome": "side effect handled",
-            "artifacts": [],
-            "evidence": [],
-        }
-    )
+    return _final("side effect handled")
 
 
 def test_pause_then_deny_leaves_no_side_effect(tmp_path: Path):
@@ -300,17 +276,7 @@ def test_pause_settles_and_resume_inherits_artifact_and_knowledge(tmp_path: Path
             return ModelResponse(parts=[ToolCallPart("write_report", {"content": "# Pause proof"})])
         if "record_external_effect" not in called:
             return ModelResponse(parts=[ToolCallPart("record_external_effect", {"effect_id": "pause-proof"})])
-        return _final(
-            {
-                "status": "completed",
-                "outcome": "pause proof completed",
-                "artifacts": ["artifacts/report.md"],
-                "evidence": [
-                    "artifact:artifacts/report.md",
-                    "knowledge:concepts/pause-proof",
-                ],
-            }
-        )
+        return _final("pause proof completed")
 
     with agent.override(model=FunctionModel(fn)):
         paused = execute_run(agent, deps, prompt="prove pause inheritance", settings=settings, run_id=run_id)
@@ -497,14 +463,7 @@ def test_knowledge_written_via_capability_is_verified(tmp_path: Path):
                     )
                 ]
             )
-        return _final(
-            {
-                "status": "completed",
-                "outcome": "knowledge captured",
-                "artifacts": [],
-                "evidence": ["knowledge:concepts/shared-seam"],
-            }
-        )
+        return _final("knowledge captured")
 
     with agent.override(model=FunctionModel(fn)):
         outcome = execute_run(agent, deps, prompt="capture knowledge", settings=settings, run_id=run_id)

@@ -218,7 +218,7 @@ def test_start_profile_run_threads_bound_case_into_deps(tmp_path: Path, monkeypa
     settings = _settings(tmp_path)
     captured: dict[str, object] = {}
 
-    from pydantic_ai.messages import ModelResponse, ToolCallPart
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
     from pydantic_ai.models.function import FunctionModel
 
     def fn(messages, info):
@@ -238,10 +238,7 @@ def test_start_profile_run_threads_bound_case_into_deps(tmp_path: Path, monkeypa
             return ModelResponse(parts=[ToolCallPart("probe_deps", {"label": "bound"})])
         return ModelResponse(
             parts=[
-                ToolCallPart(
-                    "final_result",
-                    {"status": "completed", "outcome": "done"},
-                )
+                TextPart(content="done")
             ]
         )
 
@@ -272,7 +269,7 @@ def test_gateway_service_injects_bound_case_into_run(tmp_path: Path, monkeypatch
     settings = _settings(tmp_path)
     captured: dict[str, object] = {}
 
-    from pydantic_ai.messages import ModelResponse, ToolCallPart
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
     from pydantic_ai.models.function import FunctionModel
 
     def fn(messages, info):
@@ -291,10 +288,7 @@ def test_gateway_service_injects_bound_case_into_run(tmp_path: Path, monkeypatch
             return ModelResponse(parts=[ToolCallPart("probe_deps", {"label": "bound"})])
         return ModelResponse(
             parts=[
-                ToolCallPart(
-                    "final_result",
-                    {"status": "completed", "outcome": "done"},
-                )
+                TextPart(content="done")
             ]
         )
 

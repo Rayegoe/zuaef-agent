@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
 REPO = Path(__file__).resolve().parents[1]
@@ -25,7 +25,7 @@ from zuaef_case.models import CaseDoc, CaseError
 from zuaef_case.store import CaseStore
 from zuaef_case.toolset import build_case_toolset
 
-from zuaef_agent.models import CoreDeps, RunSummary
+from zuaef_agent.models import CoreDeps
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def _agent(store: CaseStore) -> Agent:
     return Agent(
         "test",
         deps_type=CoreDeps,
-        output_type=[RunSummary],
+        output_type=[str],
         toolsets=[build_case_toolset(store)],
     )
 
@@ -63,10 +63,7 @@ def _run(agent: Agent, sequence: list[tuple[str, dict]], case_id: str | None):
             return ModelResponse(parts=[ToolCallPart(name, args)])
         return ModelResponse(
             parts=[
-                ToolCallPart(
-                    "final_result",
-                    {"status": "completed", "outcome": "done"},
-                )
+                TextPart(content="done")
             ]
         )
 

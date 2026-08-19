@@ -17,7 +17,7 @@ import asyncio
 from pathlib import Path
 
 from pydantic_ai import models
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai_harness.step_persistence import FileStepStore, continue_run
 
@@ -117,14 +117,7 @@ class FakeSurface:
 
 
 def _final():
-    return ModelResponse(
-        parts=[
-            ToolCallPart(
-                "final_result",
-                {"status": "completed", "outcome": "done", "artifacts": [], "evidence": []},
-            )
-        ]
-    )
+    return ModelResponse(parts=[TextPart(content="done")])
 
 
 def _envelope(text: str, n: int) -> InboundEnvelope:

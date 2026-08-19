@@ -22,7 +22,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic_ai import models
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
 from zuaef_agent import core as core_module
@@ -115,11 +115,13 @@ def _has_tool_return(messages) -> bool:
 
 
 def _return_outcomes(messages) -> list[tuple[str, str]]:
+    """(tool_name, content) of every resolved call the model observed — with a
+    natural-text terminal this is the structural view of what an approval did."""
     return [
-        (getattr(part, "tool_name", ""), getattr(part, "outcome", ""))
+        (getattr(part, "tool_name", ""), str(getattr(part, "content", "")))
         for message in messages
         for part in getattr(message, "parts", [])
-        if getattr(part, "part_kind", None) == "tool-return"
+        if getattr(part, "part_kind", None) in ("tool-return", "tool-retry")
     ]
 
 
@@ -130,19 +132,7 @@ def _model_fn(seen: dict):
             return ModelResponse(
                 parts=[ToolCallPart("publish_article", {"article_id": "a1"})]
             )
-        return ModelResponse(
-            parts=[
-                ToolCallPart(
-                    "final_result",
-                    {
-                        "status": "completed",
-                        "outcome": "article handled",
-                        "artifacts": [],
-                        "evidence": [],
-                    },
-                )
-            ]
-        )
+        return ModelResponse(parts=[TextPart(content="article handled")])
 
     return fn
 
@@ -194,8 +184,8 @@ def test_resume_approve_executes_tool_and_settles(tmp_path: Path, monkeypatch):
     assert outcome.receipt.continued_from_run_id == paused.pause_receipt.run_id
     assert outcome.receipt.conversation_id == paused.pause_receipt.conversation_id
     assert any(
-        (name, status) == ("publish_article", "success")
-        for name, status in seen["returns"]
+        name == "publish_article" and "published a1" in content
+        for name, content in seen["returns"]
     )
     settled = [
         e
@@ -219,9 +209,9 @@ def test_resume_deny_delivers_tool_denied_no_execution(tmp_path: Path, monkeypat
     )
 
     assert isinstance(outcome, TerminalRun)
-    assert any(
-        (name, status) == ("publish_article", "denied")
-        for name, status in seen["returns"]
+    assert not any(
+        name == "publish_article" and "published a1" in content
+        for name, content in seen["returns"]
     )
     assert not [
         e

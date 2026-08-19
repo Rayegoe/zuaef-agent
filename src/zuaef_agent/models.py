@@ -20,23 +20,22 @@ class SourceRef(BaseModel):
 
 
 class RunSummary(BaseModel):
-    """Small terminal contract; large work belongs in artifacts.
+    """Host-generated settlement summary over one terminal run.
 
-    `artifacts` holds workspace-relative paths the model claims this run created
-    or modified; `evidence` holds parseable refs of the form
-    ``artifact:<path>`` / ``knowledge:<id>`` / ``tool-effect:<tool_call_id>``.
-    Both are model proposals — the host verifies before the receipt finalizes.
+    This is NOT a model output type: the runtime constructs it from the
+    terminal presentation, runtime exceptions, the verified artifact diff,
+    knowledge writes and the tool-effect ledger. `artifacts`/`evidence` are
+    host-verified facts, not model claims.
 
-    `deliverable` is the PRESENTATION contract, not evidence: the full text of
-    the work product the current user asked to see (e.g. a rewritten article).
-    Authoring tasks default their outcome to "show the supervisor the result" —
-    this field is how it reaches the main surface. Like `outcome` it is
-    unverified free text; verified proof stays in artifacts/effects.
+    `deliverable` is deprecated (P3B-2): it is kept only so receipts written
+    before P3B-2 still deserialize; new runs never produce it. User-facing
+    presentation lives on ``TerminalRun.presentation``. The field is scheduled
+    for removal in the next receipt schema revision.
     """
 
     status: Literal["completed", "partial", "blocked"]
     outcome: str
-    deliverable: str | None = None
+    deliverable: str | None = Field(default=None, deprecated=True)
     artifacts: list[str] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
     unknowns: list[str] = Field(default_factory=list)

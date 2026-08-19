@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from pydantic_ai import models
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
 from zuaef_agent import core as core_module
@@ -69,14 +69,7 @@ def _config_root(tmp_path: Path) -> Path:
 
 
 def _final(status="completed", outcome="done"):
-    return ModelResponse(
-        parts=[
-            ToolCallPart(
-                "final_result",
-                {"status": status, "outcome": outcome, "artifacts": [], "evidence": []},
-            )
-        ]
-    )
+    return ModelResponse(parts=[TextPart(content=outcome)])
 
 
 def _use_model(monkeypatch, fn):

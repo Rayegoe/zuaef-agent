@@ -135,10 +135,21 @@ def _assert_pending_case_isolation(
 
 @dataclass(kw_only=True)
 class TerminalRun:
-    """A run that reached a business terminal state with a host-verified receipt."""
+    """A run that reached a business terminal state with a host-verified receipt.
 
-    summary: RunSummary
+    ``presentation`` is the user-facing natural-language result (the model's
+    terminal text on a normal completion, a bounded user-safe explanation on
+    partial/blocked); ``receipt`` is the host-generated settlement. Presentation
+    never depends on the receipt schema.
+    """
+
+    presentation: str
     receipt: RunReceipt
+
+    @property
+    def summary(self) -> RunSummary:
+        """Compatibility alias for the receipt's settlement summary."""
+        return self.receipt.summary
 
 
 @dataclass(kw_only=True)
@@ -153,6 +164,10 @@ class PausedRun:
 
 RuntimeOutcome = TerminalRun | PausedRun
 
+# Bounded host summary for a natural-text terminal (P3B-2 §4.1): the receipt
+# records that the run returned its result, never the result text itself.
+NATURAL_COMPLETION_OUTCOME = "Returned the result to the current user."
+
 
 def finalize_terminal(
     summary: RunSummary,
@@ -164,6 +179,7 @@ def finalize_terminal(
     started_at: datetime,
     usage: dict[str, Any],
     snapshot: dict[str, str],
+    presentation: str | None = None,
     prior_pause_receipt: PauseReceipt | None = None,
     error: str | None = None,
     composition: CompositionSnapshot | None = None,
@@ -387,7 +403,10 @@ def finalize_terminal(
         composition=composition,
     )
     receipt_store.write(receipt)
-    return TerminalRun(summary=final_summary, receipt=receipt)
+    return TerminalRun(
+        presentation=presentation if presentation is not None else final_summary.outcome,
+        receipt=receipt,
+    )
 
 
 def _persist_pause_frontier(
@@ -577,7 +596,9 @@ def execute_run(
 
     usage_tracker = RunUsage()
 
-    def _partial_or_blocked(summary: RunSummary, error: str | None) -> TerminalRun:
+    def _partial_or_blocked(
+        summary: RunSummary, error: str | None, *, presentation: str | None = None
+    ) -> TerminalRun:
         return finalize_terminal(
             summary,
             settings=settings,
@@ -587,6 +608,7 @@ def execute_run(
             started_at=started_at,
             usage=_usage_payload(usage_tracker),
             snapshot=snapshot,
+            presentation=presentation,
             prior_pause_receipt=prior_pause_receipt,
             error=error,
             composition=composition,
@@ -627,6 +649,10 @@ def execute_run(
                 next_action="Inspect the receipt error field and the step store, then retry.",
             ),
             error=f"{type(exc).__name__}: {exc}",
+            presentation=(
+                "The run failed before completing. The technical detail is "
+                "recorded in the run receipt."
+            ),
         )
 
     usage = _usage_payload(result)
@@ -659,11 +685,10 @@ def execute_run(
             composition=composition,
             case_id=deps.case_id,
         )
-    summary = (
-        output
-        if isinstance(output, RunSummary)
-        else RunSummary(status="partial", outcome=str(output))
-    )
+    # Natural terminal: the model returned plain text. The host settles the
+    # receipt from verified state (artifact diff, effect ledger, knowledge
+    # writes) — never from model-crafted settlement fields.
+    summary = RunSummary(status="completed", outcome=NATURAL_COMPLETION_OUTCOME)
     return finalize_terminal(
         summary,
         settings=settings,
@@ -673,6 +698,7 @@ def execute_run(
         started_at=started_at,
         usage=usage,
         snapshot=snapshot,
+        presentation=str(output),
         prior_pause_receipt=prior_pause_receipt,
         composition=composition,
         case_id=deps.case_id,

@@ -41,7 +41,7 @@ def _terminal(status: str = "completed") -> TerminalRun:
         status=status,  # type: ignore[arg-type]
         summary=summary,
     )
-    return TerminalRun(summary=summary, receipt=receipt)
+    return TerminalRun(presentation=summary.outcome, receipt=receipt)
 
 
 def test_resume_requires_exactly_one_decision(tmp_path: Path, capsys):

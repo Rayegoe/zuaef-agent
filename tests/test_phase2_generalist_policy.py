@@ -186,7 +186,7 @@ def _capture_tools(agent, settings: AgentSettings) -> list[str]:
     """Visible tool names on the first model step (deterministic)."""
     import asyncio
 
-    from pydantic_ai.messages import ModelResponse, ToolCallPart
+    from pydantic_ai.messages import ModelResponse, TextPart
     from pydantic_ai.models.function import FunctionModel
 
     captured: dict[str, list[str]] = {"tools": []}
@@ -198,10 +198,7 @@ def _capture_tools(agent, settings: AgentSettings) -> list[str]:
             )
         return ModelResponse(
             parts=[
-                ToolCallPart(
-                    "final_result",
-                    {"status": "completed", "outcome": "done"},
-                )
+                TextPart(content="done")
             ]
         )
 

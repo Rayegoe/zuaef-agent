@@ -15,27 +15,34 @@ from pydantic_ai_harness.tool_output_limits import LocalFileStore, ToolOutputLim
 
 from .config import AgentSettings
 from .knowledge_capability import Knowledge
-from .models import CoreDeps, RunSummary
+from .models import CoreDeps
 from .providers import resolve_model
 
 CORE_INSTRUCTIONS = """\
-You are the single outcome-owning core agent.
+You are the single outcome-owning FDE agent.
 
-Execution rules:
-1. Own the user's outcome, not merely the next message.
-2. For complex work, make a short plan and then execute it; do not create process for its own sake.
-3. Inspect existing files/knowledge before creating replacements.
-4. Put long deliverables in workspace/artifacts and return only a thin RunSummary.
-5. Durable knowledge belongs under workspace/knowledge via the Knowledge tools; knowledge/** is read-only for general file tools. concept/claim/method/reference nodes require at least one observed source; never fabricate sources.
-6. Prefer an existing Capability, Toolset, or deferred Skill over changing the core.
-7. If evidence or access is insufficient, end partial/blocked and name the unknown instead of guessing.
-8. Large tool outputs are retrieval material, not prompt material. Use spill handles and progressively read only what is needed.
-9. External or destructive side effects must use PydanticAI native approval on the tool definition. Model intent is not authorization.
-10. Durable step logs and receipts are evidence of execution; do not invent success when a tool effect is unresolved.
+Own the user's real outcome, not merely the next message. Use available context
+and tools when they materially help — tools are capabilities, not a required
+workflow; judge for yourself what the task actually needs. For complex work a
+short plan helps; do not create process for its own sake.
 
-RunSummary claims are verified by the host, not trusted:
-11. `artifacts` lists workspace-relative paths under artifacts/ that THIS run created or modified. Claiming a pre-existing unchanged file is rejected and downgrades the run.
-12. `evidence` entries must be parseable refs: `artifact:<path>`, `knowledge:<id>`, or `tool-effect:<tool_call_id>`. Unverifiable refs are dropped and downgrade a completed claim.
+Inspect existing files and knowledge before creating replacements. Durable
+knowledge belongs under workspace/knowledge via the Knowledge tools (knowledge/**
+is read-only for general file tools) and requires an observed source; never
+fabricate sources. Distinguish observed facts from assumptions and name
+unknowns instead of guessing.
+
+For normal analysis, writing, revision and planning, return the useful result
+directly to the current user. Long durable work products may be persisted under
+workspace/artifacts when the task or domain calls for it.
+
+An external or destructive action may only happen through the corresponding
+approval-gated tool. Never infer external delivery merely because a customer
+Case exists. Do not claim an external action happened unless the corresponding
+tool actually completed.
+
+Large tool outputs are retrieval material, not prompt material: use spill
+handles and progressively read only what is needed.
 """
 
 # Harness FileSystem default protections plus the knowledge area: general file
@@ -182,7 +189,7 @@ def build_agent(
     extra_toolsets: Sequence[AbstractToolset[CoreDeps]] = (),
     extra_skill_dirs: Sequence[Path] = (),
     sub_agents: Sequence[Any] = (),
-) -> Agent[CoreDeps, RunSummary | DeferredToolRequests]:
+) -> Agent[CoreDeps, str | DeferredToolRequests]:
     """Build one core agent through explicit composition; there is intentionally no registry.
 
     ``instructions`` defaults to ``CORE_INSTRUCTIONS``; single-purpose surfaces
@@ -246,7 +253,7 @@ def build_agent(
     return Agent(
         resolve_model(settings),
         deps_type=CoreDeps,
-        output_type=[RunSummary, DeferredToolRequests],
+        output_type=[str, DeferredToolRequests],
         instructions=instructions or CORE_INSTRUCTIONS,
         capabilities=capabilities,
         toolsets=list(extra_toolsets),

@@ -17,7 +17,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic_ai import RunContext, RunUsage
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
 from zuaef_agent.composition import (
@@ -133,8 +133,8 @@ def _user_tool_names(agent) -> set[str]:
     }
 
 
-def _final(summary: dict) -> ModelResponse:
-    return ModelResponse(parts=[ToolCallPart("final_result", summary)])
+def _final(text: str = "done") -> ModelResponse:
+    return ModelResponse(parts=[TextPart(content=text)])
 
 
 def _has_tool_return(messages) -> bool:
@@ -150,14 +150,7 @@ def _publish_fn(messages, info):
         return ModelResponse(
             parts=[ToolCallPart("publish_article", {"article_id": "a1"})]
         )
-    return _final(
-        {
-            "status": "completed",
-            "outcome": "published",
-            "artifacts": [],
-            "evidence": [],
-        }
-    )
+    return _final("published")
 
 
 # ── §39 Static ───────────────────────────────────────────────────────────────
@@ -500,7 +493,7 @@ def test_terminal_receipt_carries_composition(tmp_path):
     deps = _deps(settings, run_id)
 
     def fn(messages, info):
-        return _final({"status": "completed", "outcome": "done", "artifacts": [], "evidence": []})
+        return _final("done")
 
     with agent.override(model=FunctionModel(fn)):
         outcome = execute_run(

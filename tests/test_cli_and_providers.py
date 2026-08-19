@@ -30,7 +30,7 @@ def test_exit_code_mapping(tmp_path, monkeypatch):
             status=status,  # type: ignore[arg-type]
             summary=summary,
         )
-        return TerminalRun(summary=summary, receipt=receipt)
+        return TerminalRun(presentation=summary.outcome, receipt=receipt)
 
     assert cli._outcome_exit_code(make("completed")) == cli.EXIT_COMPLETED
     assert cli._outcome_exit_code(make("partial")) == cli.EXIT_PARTIAL
@@ -73,7 +73,7 @@ def test_cli_run_prints_receipt_and_exits_by_status(monkeypatch, tmp_path, capsy
         summary=summary,
     )
     monkeypatch.setattr(sys, "argv", ["zuaef-agent", "run", "task", "--workspace", str(tmp_path)])
-    monkeypatch.setattr(cli, "run_task", lambda task, settings=None: TerminalRun(summary=summary, receipt=receipt))
+    monkeypatch.setattr(cli, "run_task", lambda task, settings=None: TerminalRun(presentation=summary.outcome, receipt=receipt))
     with pytest.raises(SystemExit) as exc:
         cli.main()
     assert exc.value.code == cli.EXIT_COMPLETED

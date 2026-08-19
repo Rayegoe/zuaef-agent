@@ -12,7 +12,7 @@ from importlib.metadata import EntryPoint
 from pathlib import Path
 from uuid import uuid4
 
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
 from zuaef_agent.composition import (
@@ -181,19 +181,7 @@ class TestSliceComposition:
                         )
                     ]
                 )
-            return ModelResponse(
-                parts=[
-                    ToolCallPart(
-                        "final_result",
-                        {
-                            "status": "completed",
-                            "outcome": "资格审查草稿完成",
-                            "artifacts": [],
-                            "evidence": [],
-                        },
-                    )
-                ]
-            )
+            return ModelResponse(parts=[TextPart(content="资格审查草稿完成")])
 
         with agent.override(model=FunctionModel(fn)):
             outcome = execute_run(
@@ -292,19 +280,7 @@ class TestSliceComposition:
         deps2 = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id2)
 
         def fn2(messages, info):
-            return ModelResponse(
-                parts=[
-                    ToolCallPart(
-                        "final_result",
-                        {
-                            "status": "completed",
-                            "outcome": "交互已记录",
-                            "artifacts": [],
-                            "evidence": [],
-                        },
-                    )
-                ]
-            )
+            return ModelResponse(parts=[TextPart(content="交互已记录")])
 
         with agent2.override(model=FunctionModel(fn2)):
             outcome2 = execute_run(

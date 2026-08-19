@@ -14,7 +14,7 @@ from importlib.metadata import EntryPoint
 from pathlib import Path
 
 from pydantic_ai import models
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
 from zuaef_agent import core as core_module
@@ -140,17 +140,9 @@ def _fixture_validate(profile, settings, *, config_root=None, **kw):
 
 
 def _final(status="completed", outcome="done", deliverable=None):
-    payload = {"status": status, "outcome": outcome, "artifacts": [], "evidence": []}
-    if deliverable is not None:
-        payload["deliverable"] = deliverable
-    return ModelResponse(
-        parts=[
-            ToolCallPart(
-                "final_result",
-                payload,
-            )
-        ]
-    )
+    """Natural terminal (P3B-2): the reply text IS the model output. ``status``
+    shapes nothing at the model layer — it only documents the scripted case."""
+    return ModelResponse(parts=[TextPart(content=deliverable or outcome)])
 
 
 def _pause_fn(seen: dict):
@@ -440,7 +432,41 @@ def test_status_is_host_grounded_and_never_calls_model(tmp_path: Path, monkeypat
 
 def test_status_after_terminal_shows_last_state(tmp_path: Path, monkeypatch):
     surface = FakeSurface()
-    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final(status="partial"))
+    # Host-decided partial: the enforced usage boundary trips when the model
+    # needs a second request after its tool call — never a model claim.
+    def fn(messages, info):
+        has_return = any(
+            getattr(part, "part_kind", None) == "tool-return"
+            for message in messages
+            for part in getattr(message, "parts", [])
+        )
+        if not has_return:
+            return ModelResponse(parts=[ToolCallPart("list_materials", {"query": "q"})])
+        return _final()
+
+    settings = _settings(tmp_path)
+    settings = settings.with_overrides(request_limit=1)
+    _write_profile(tmp_path)
+    store = GatewayStore(tmp_path / "gateway.sqlite3")
+    monkeypatch.setattr(
+        core_module, "resolve_model", lambda s: FunctionModel(fn)
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.continuation.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.validate_profile", _fixture_validate
+    )
+    service = GatewayService(
+        settings=settings,
+        store=store,
+        surface=surface,
+        default_profile="writing",
+        config_root=tmp_path / "config",
+    )
 
     service.handle(_envelope("do it", n=1))
     service.handle(_envelope("/status", n=2))
@@ -867,8 +893,9 @@ def test_authoring_task_presents_deliverable_without_approval(
     assert "Verified artifacts" not in text  # audit counts are Console-only
     session = _session(service)
     assert session.paused_run_id is None
+    # P3B-2: presentation lives on the terminal, not on a settlement field.
     receipt = service.receipts.read(session.last_terminal_run_id)
-    assert receipt.summary.deliverable == article
+    assert receipt.summary.deliverable is None
 
 
 def _paused_send(draft_ref: str, run_id: str = "run-send-1"):

@@ -19,7 +19,7 @@ from importlib.metadata import EntryPoint
 from pathlib import Path
 
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 
 from zuaef_agent.composition import build_agent_from_snapshot, resolve_profile
@@ -100,10 +100,7 @@ def _surface_steps(agent: Agent, sequence: list[tuple[str, dict]], settings: Age
             return ModelResponse(parts=[ToolCallPart(name, args)])
         return ModelResponse(
             parts=[
-                ToolCallPart(
-                    "final_result",
-                    {"status": "completed", "outcome": "done"},
-                )
+                TextPart(content="done")
             ]
         )
 

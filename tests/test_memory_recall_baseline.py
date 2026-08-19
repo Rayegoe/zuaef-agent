@@ -22,6 +22,7 @@ from pydantic_ai import Agent
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
+    TextPart,
     ToolCallPart,
     UserPromptPart,
 )
@@ -80,7 +81,7 @@ def _run_script_recording(agent: Agent, sequence: list[tuple[str, dict]]) -> dic
                 getattr(returns_now[-1], "content", "") or ""
             )
         return ModelResponse(
-            parts=[ToolCallPart("final_result", {"status": "completed", "outcome": "done"})]
+            parts=[TextPart(content="done")]
         )
 
     with agent.override(model=FunctionModel(handler)):

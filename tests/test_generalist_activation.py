@@ -59,7 +59,7 @@ def _run_capture(
     """Run ``agent`` with a scripted model; return (visible_tools, invoked_tools).
 
     The script is an ordered list of ``(tool_name, args)`` the model "chooses"
-    to call; once exhausted the model emits the RunSummary ``final_result``.
+    to call; once exhausted the model returns natural text.
     """
     captured: dict[str, list[str]] = {"tools": [], "invoked": []}
     seq = list(sequence)
@@ -71,11 +71,7 @@ def _run_capture(
             name, args = seq.pop(0)
             captured["invoked"].append(name)
             return ModelResponse(parts=[ToolCallPart(name, args)])
-        return ModelResponse(
-            parts=[
-                ToolCallPart("final_result", {"status": "completed", "outcome": "done"})
-            ]
-        )
+        return ModelResponse(parts=[TextPart(content="done")])
 
     with agent.override(model=FunctionModel(handler)):
         asyncio.run(agent.run("proceed"))

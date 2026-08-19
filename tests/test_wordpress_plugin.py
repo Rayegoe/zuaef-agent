@@ -9,7 +9,7 @@ from uuid import uuid4
 import httpx
 import pytest
 from pydantic_ai import RunContext, RunUsage, models
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from zuaef_wordpress import create_plugin
 from zuaef_wordpress.client import WordPressClient, WordPressError
@@ -121,14 +121,7 @@ def _settings(tmp_path: Path) -> AgentSettings:
 
 
 def _final():
-    return ModelResponse(
-        parts=[
-            ToolCallPart(
-                "final_result",
-                {"status": "completed", "outcome": "done", "artifacts": [], "evidence": []},
-            )
-        ]
-    )
+    return ModelResponse(parts=[TextPart(content="done")])
 
 
 def _has_tool_return(messages) -> bool:

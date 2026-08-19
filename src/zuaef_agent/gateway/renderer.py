@@ -50,20 +50,20 @@ def _short(run_id: str) -> str:
 
 
 def render_terminal(outcome: TerminalRun) -> str:
-    """Terminal card (SPEC §41). When the run carries a ``deliverable`` the
-    work product IS the reply (outcome-first presentation); audit counts stay
-    in /status and the receipt. Without one, the classic summary card."""
+    """Terminal card (SPEC §41). The presentation IS the reply (outcome-first);
+    audit counts stay in /status and the receipt. When the presentation is
+    empty (e.g. a legacy settlement-only terminal), the classic summary card."""
     receipt = outcome.receipt
     emoji = {
         "completed": "✅ Completed",
         "partial": "⚠️ Partial",
         "blocked": "⛔ Blocked",
     }[receipt.status]
-    deliverable = (receipt.summary.deliverable or "").strip()
-    if deliverable:
+    presentation = outcome.presentation.strip()
+    if presentation:
         return "\n".join(
             [
-                deliverable,
+                presentation,
                 "",
                 "—",
                 emoji,

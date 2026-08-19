@@ -45,9 +45,9 @@ def _paused(approvals: list[dict]) -> PausedRun:
     )
 
 
-def _terminal(status="completed", deliverable=None) -> TerminalRun:
+def _terminal(status="completed", presentation=None) -> TerminalRun:
     now = datetime.now(UTC)
-    summary = RunSummary(status=status, outcome="post published", deliverable=deliverable)  # type: ignore[arg-type]
+    summary = RunSummary(status=status, outcome="post published")  # type: ignore[arg-type]
     receipt = RunReceipt(
         run_id="run-term-1234",
         model="test",
@@ -60,7 +60,9 @@ def _terminal(status="completed", deliverable=None) -> TerminalRun:
             ToolEffectVerification(tool_call_id="c1", tool_name="wordpress_publish_post", status="completed")
         ],
     )
-    return TerminalRun(summary=summary, receipt=receipt)
+    if presentation is None:
+        presentation = summary.outcome
+    return TerminalRun(presentation=presentation, receipt=receipt)
 
 
 def test_preview_redacts_secret_named_keys():
@@ -87,8 +89,8 @@ def test_preview_bounded_to_1200_chars():
     assert preview.endswith("…")
 
 
-def test_render_terminal_status_and_counts():
-    text = render_terminal(_terminal())
+def test_render_terminal_classic_card_when_no_presentation():
+    text = render_terminal(_terminal(presentation=""))
     assert "✅ Completed" in text
     assert "post published" in text
     assert "Verified artifacts: 1" in text
@@ -101,9 +103,9 @@ def test_render_terminal_partial_and_blocked():
     assert "⛔ Blocked" in render_terminal(_terminal("blocked"))
 
 
-def test_render_terminal_deliverable_is_the_reply():
+def test_render_terminal_presentation_is_the_reply():
     article = "### 夏天的指尖\n\n到了八月,美甲似乎也该从好看里退一步。"
-    text = render_terminal(_terminal(deliverable=article))
+    text = render_terminal(_terminal(presentation=article))
     assert text.startswith(article)
     assert "✅ Completed" in text
     assert "Run: run-term" in text  # short id on the outcome-first card
