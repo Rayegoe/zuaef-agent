@@ -133,6 +133,26 @@ inbound run threads the bound `case_id` into `CoreDeps`, the receipts record
 it, and the real Case tools reject any operation naming a different Case (a
 cross-case `send_to_customer` is a blocked run, not an operator queue entry).
 
+### Interaction contract: outcome-first, approval only at the boundary
+
+Two rules govern every conversation turn:
+
+1. **Work process is never approval-gated.** Reading, thinking, research,
+   writing, revising and saving working artifacts are internal work. Only a
+   true External Effect — sending to the customer, publishing, mutating
+   production data — pauses for approval (`send_to_customer` stays the single
+   customer-visible gate).
+2. **Write/revise/analyze defaults to presenting the result to the current
+   user** (the supervisor), not to delivering it to the business object. The
+   full final text rides in the terminal `deliverable` and is rendered as the
+   main reply; audit details (counts, effects, run internals) live in
+   `/status` and the receipts.
+
+A customer-visible send therefore looks like: "改写这篇文章" → the rewritten
+article as the bot's reply, zero buttons; "发给客户" → an approval card that
+shows the outbound draft content itself — the operator never approves unseen
+text.
+
 ### Authoritative Phase-2 proof
 
 ```bash
