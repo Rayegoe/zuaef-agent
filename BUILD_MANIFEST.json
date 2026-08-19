@@ -1213,8 +1213,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 26619,
-      "sha256": "da23b4955f5ec53b89f88cfc3bb6f0caf5d181040024accf8a8bd710cfa90d21"
+      "bytes": 27808,
+      "sha256": "af9bd540ed905b9b2d74a9fd293602fb1eebb5e9bc5fda9cf65591ab98fa4d13"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
@@ -1378,8 +1378,8 @@
     },
     {
       "path": "tests/test_gateway_service.py",
-      "bytes": 27710,
-      "sha256": "dc1bd9e5ab8f0df9dc05988d08fedb8c82ca01a2404a34963d35aebf32c9eda1"
+      "bytes": 29205,
+      "sha256": "401d9b72be5f4ed49f42d0e1d40ce5ff62ac88ceffaad563930af8573d5f26fd"
     },
     {
       "path": "tests/test_gateway_store.py",

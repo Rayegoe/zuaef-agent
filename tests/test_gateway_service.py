@@ -799,3 +799,42 @@ def test_control_plane_never_calls_the_model(tmp_path: Path, monkeypatch):
     assert session.paused_run_id is None
     receipts_dir = service.settings.state_root / "receipts"
     assert not receipts_dir.exists() or not list(receipts_dir.glob("*.json"))
+
+
+def test_case_listing_excludes_callback_unsafe_names(tmp_path: Path, monkeypatch):
+    """Callback contract regression: ':' would break zc: framing and an
+    overlong id would exceed Telegram's 64-byte callback_data limit — both
+    must be invisible to /cases and unbindable by name."""
+    from zuaef_agent.gateway.service import CASE_ID_MAX
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    cases = service.settings.workspace_root / "cases"
+    (cases / "evil:case").mkdir(parents=True)
+    (cases / ("x" * (CASE_ID_MAX + 4))).mkdir()
+    _make_case_dir(service, "safe-case", 1_000_000.0)
+    _ensure_session(service)
+
+    service.handle(_envelope("/cases", n=1))
+    kb = surface.keyboards[-1]
+    assert [label for label, _ in kb["buttons"]] == ["Bind safe-case"]
+    assert "evil:case" not in kb["text"]
+
+    service.handle(_envelope("/case evil:case", n=2))
+    assert _session(service).case_id is None
+    assert "unknown case: evil:case" in surface.last_text()
+
+
+def test_callback_data_framing_fits_telegram_limit():
+    from zuaef_agent.gateway.service import CALLBACK_DATA_MAX, CASE_ID_MAX
+
+    longest = "a" * CASE_ID_MAX
+    assert _CASE_ID_SHAPE_OK(longest)
+    assert len(f"zc:bind:{longest}") <= CALLBACK_DATA_MAX
+    assert len(f"zc:bind:{'a' * (CASE_ID_MAX + 1)}") > CALLBACK_DATA_MAX
+
+
+def _CASE_ID_SHAPE_OK(name: str) -> bool:
+    import re
+
+    return bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", name))

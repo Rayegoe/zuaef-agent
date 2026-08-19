@@ -15,6 +15,7 @@ output is ever interpreted as approval.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -85,6 +86,15 @@ GATEWAY_DENY_REASON = "denied by operator from gateway"
 
 # /cases shows the most recent case directories; one keyboard row per case.
 CASES_LIST_LIMIT = 20
+
+# Callback-framing contract: a case id rides inside ``zc:bind:<id>`` Telegram
+# callback_data, which the Bot API caps at 64 bytes, and the framing uses ":"
+# as its separator — so an id must fit the remainder and must not contain a
+# colon. The charset matches the case plugin's validate_case_id (duplicated
+# here as one regex: the gateway must not import a business plugin).
+CALLBACK_DATA_MAX = 64
+CASE_ID_MAX = CALLBACK_DATA_MAX - len("zc:bind:")
+_CASE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 
 
 class GatewayService:
@@ -339,9 +349,14 @@ class GatewayService:
         for entry in root.iterdir():
             if not entry.is_dir():
                 continue
+            name = entry.name
+            if len(name) > CASE_ID_MAX or not _CASE_ID.fullmatch(name):
+                # not addressable through the callback channel — invisible to
+                # /cases and unbindable by name, by contract
+                continue
             marker = entry / "situation.json"
             stamp = marker.stat().st_mtime if marker.is_file() else entry.stat().st_mtime
-            stamped.append((stamp, entry.name))
+            stamped.append((stamp, name))
         stamped.sort(reverse=True)
         return [
             (name, datetime.fromtimestamp(stamp, tz=UTC).strftime("%Y-%m-%d"))
@@ -377,8 +392,9 @@ class GatewayService:
         self, session: SessionBinding, case_id: str
     ) -> tuple[SessionBinding, str | None]:
         """Deterministic bind (or error). Membership in the cases-root listing
-        is the whole validation — a name that is not an existing directory can
-        never be bound, which also structurally rules out path traversal."""
+        is the whole validation — a name that is not an existing
+        callback-addressable directory can never be bound, which also
+        structurally rules out path traversal and framing breakage."""
         if session.paused_run_id:
             return session, CASE_BLOCKED_BY_PAUSE
         known = {name for name, _ in self._case_entries()}
@@ -425,7 +441,13 @@ class GatewayService:
         self, envelope: InboundEnvelope, session: SessionBinding
     ) -> None:
         """zc:<action>:<payload> — supervisor buttons. Same deterministic
-        operations as the slash commands; every callback gets answered."""
+        operations as the slash commands; every callback gets answered.
+
+        UX invariant (deliberately no token/TTL machinery): supervisor
+        buttons never expire, so a stale tap is allowed — every
+        state-changing control callback re-checks the CURRENT session state
+        (pause guard, live cases-root membership) instead of trusting the
+        button's age. ``new`` rotates the conversation on tap by design."""
         callback_id = envelope.transport_context.get("callback_query_id")
         action = envelope.callback_action
         if action == "new":
