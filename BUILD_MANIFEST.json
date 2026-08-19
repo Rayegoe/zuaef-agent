@@ -1297,6 +1297,11 @@
       "sha256": "60821d5b35342d88deb1aac40b64fdb64adc809be7bd3c56e82fe0aee3b4bdda"
     },
     {
+      "path": "tests/test_context_management_baseline.py",
+      "bytes": 6532,
+      "sha256": "69a516b96358695e384f4afa3d25e0b0bd68b22508d997a956b6b49f223596d9"
+    },
+    {
       "path": "tests/test_continuation.py",
       "bytes": 9393,
       "sha256": "527569db87f63c0b2c545c7c04b8e8720f644a6856bd28fecab8b17cacfa933c"
@@ -1405,6 +1410,11 @@
       "path": "tests/test_manifest_integrity.py",
       "bytes": 2402,
       "sha256": "8576cc5222153a86f49d85c2780b7f4cc9b2e033a785e14040f7b7e531372645"
+    },
+    {
+      "path": "tests/test_memory_recall_baseline.py",
+      "bytes": 6992,
+      "sha256": "79f1d85e098a56ecfd4c2b149420988a3fa2ae065fe777f7a6b9875a43d3549c"
     },
     {
       "path": "tests/test_plugin_composition.py",
