@@ -2,9 +2,10 @@
 
 Implements the §14 pipeline without ever touching the model: resolving a
 profile, loading enabled factories, validating bundles, enforcing the
-capability policy, detecting tool conflicts, and freezing a
-CompositionSnapshot is all pre-run work (``profile check`` runs it with no
-credentials).
+capability policy, and freezing a CompositionSnapshot is all pre-run work
+(``profile check`` runs it with no credentials). Tool-name collisions are
+owned by upstream composition (T003 DELETE): PydanticAI raises its own
+error at schema collection, so this module runs no second conflict preflight.
 
 The same {@link build_agent_from_snapshot} path composes a new run after
 resolve and a resumed run from a frozen snapshot, which is what makes resume
@@ -210,8 +211,9 @@ def resolve_profile(
 ) -> CompositionSnapshot:
     """Full §14 pipeline for one profile: parse, validate, resolve enabled
     plugin ids to exactly one entry point each, load factories, validate
-    bundles, enforce the capability policy and tool-conflict rules, and freeze
-    a snapshot. No model request happens here.
+    bundles, enforce the capability policy, and freeze a snapshot. No model
+    request happens here. Tool-name collisions are owned by upstream
+    composition (PydanticAI raises at schema collection), not by this module.
     """
     profile = load_profile(name, config_root)
     installed = discover()

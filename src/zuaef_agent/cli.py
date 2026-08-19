@@ -78,8 +78,8 @@ def _parser() -> argparse.ArgumentParser:
     profile_show.add_argument("name")
     profile_check = profile_sub.add_parser(
         "check",
-        help="fully resolve one profile (loads factories, validates bundles,"
-        " detects conflicts) without any model request",
+        help="fully resolve one profile (loads factories, validates bundles)"
+        " without any model request",
     )
     profile_check.add_argument("name")
     for command in (profile_show, profile_check):

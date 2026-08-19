@@ -997,6 +997,11 @@
       "sha256": "3ac89fe3cde85543c7d7feb8d8284580ed3440e30d48eeb1887697e45e9a48e2"
     },
     {
+      "path": "docs/gateway-continuity-trace.md",
+      "bytes": 10848,
+      "sha256": "a960385349852077660e90b6143989f3d7aa67104c67123bec50377871954868"
+    },
+    {
       "path": "docs/upstream-baseline.md",
       "bytes": 4086,
       "sha256": "370e8d7a950637e035d8ae014d002b524720db61d8086519b5b94488c6bb8e80"
@@ -1108,13 +1113,13 @@
     },
     {
       "path": "src/zuaef_agent/cli.py",
-      "bytes": 9007,
-      "sha256": "332d3f7976861796879a093a72cf49bab4c6937c76061f8e1eb55f75424e36b8"
+      "bytes": 8988,
+      "sha256": "7cccc7e207577eb4fcde3836a92d9fc3cc901a72aaf1422302626a423cb138af"
     },
     {
       "path": "src/zuaef_agent/composition.py",
-      "bytes": 11109,
-      "sha256": "52e1cf1045c378b9ead948cf65bd5252a4cc86c603e9124aa44824810ac167da"
+      "bytes": 11354,
+      "sha256": "ca22107f4124458c4ff269e6c406bf144e222da33430dc479a960f8f6d62dfe5"
     },
     {
       "path": "src/zuaef_agent/config.py",
@@ -1163,8 +1168,8 @@
     },
     {
       "path": "src/zuaef_agent/providers.py",
-      "bytes": 3943,
-      "sha256": "73673bb71cbf78fe89328e4504e16319a75047db84043fccb75a97fef219f02c"
+      "bytes": 4350,
+      "sha256": "476fdc1fef23a53d4658874623352f3b5633042b96e55d6fee0d17f7491345b3"
     },
     {
       "path": "src/zuaef_agent/receipt_store.py",
@@ -1787,14 +1792,19 @@
       "sha256": "4aa4b8645b9ec9b1e4a46c6e249eb8124209ee5bbeb35138102b4dddcddc2a7f"
     },
     {
+      "path": "tools/fde_two_turn_proof.py",
+      "bytes": 12381,
+      "sha256": "0bca6eb2a8fbaf6e43c2473f61df8135b1af5302b6bfd38a4e238e6254039bca"
+    },
+    {
       "path": "tools/probe_upstream_baseline.py",
       "bytes": 3941,
       "sha256": "c493a77c1f6dec7e6d40d21919ddb916a227511e4c00e3863531c3e311485a02"
     },
     {
       "path": "tools/regen_manifest.py",
-      "bytes": 2979,
-      "sha256": "2ebdd2dd116fb77001dfda34c522544202ae9441d14eb593d91172d7637539b4"
+      "bytes": 3369,
+      "sha256": "17ad514b8f32e2b413b75068b66d7048d63db487dd428b2554a1f9dde6b64d19"
     },
     {
       "path": "tools/run_writing_eval.py",
@@ -1850,26 +1860,6 @@
       "path": "benchmarks/editorial-learning/compiled/techniques.jsonl",
       "bytes": 15794,
       "sha256": "db90e7a7368973f066b764f15d47e68afed54dba8efc3a128b838ad704bbba58"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/__pycache__/compare_paths.cpython-313.pyc",
-      "bytes": 24280,
-      "sha256": "2f5562d2d8452630669d6f5ea2d3d11538d00becbf5d555fa6aec21108ede4c9"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/__pycache__/host_projection_legacy.cpython-313.pyc",
-      "bytes": 22108,
-      "sha256": "cbcec2c4eabd7ad529ea4adc6eee8cb418e4f5719504a8c76b5a4fed6959a500"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/__pycache__/run_benchmark.cpython-313.pyc",
-      "bytes": 15311,
-      "sha256": "5d3d0b5a3ac765c2f9a773ee97891d865a15ce1b5672afe9499310d6e08ae5f1"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/__pycache__/task_inputs.cpython-313.pyc",
-      "bytes": 2193,
-      "sha256": "9f592f92584d79fd9b0cbb19807679e22d4f2b4a868cda152e1f973bcdadeaf4"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/build_tasks.py",

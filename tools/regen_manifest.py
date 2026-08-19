@@ -62,6 +62,12 @@ def main() -> None:
         for path in sorted(REPO_ROOT.glob(pattern)):
             if not path.is_file():
                 continue
+            # Interpreter build artifacts (`__pycache__/*.pyc`) are runtime
+            # state, not delivery source: their bytes drift with the Python
+            # version/mtime, so locking them into the manifest makes the
+            # integrity check environment-fragile. Never include them.
+            if "__pycache__" in path.parts or path.suffix == ".pyc":
+                continue
             data = path.read_bytes()
             files.append(
                 {

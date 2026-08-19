@@ -40,8 +40,16 @@ def _openai_client(settings: AgentSettings):
         if proxy
         else httpx.AsyncClient(trust_env=False)
     )
+    base_url = settings.openai_base_url
+    if base_url:
+        # Deployment transport glue: operators often paste a full endpoint
+        # (…/chat/completions) into LLM_API_BASE, but the OpenAI SDK appends
+        # the chat path itself — normalize to the API root so the request is
+        # not double-suffixed.
+        base_url = base_url.rstrip("/")
+        base_url = base_url.removesuffix("/chat/completions")
     return AsyncOpenAI(
-        base_url=settings.openai_base_url,
+        base_url=base_url,
         api_key=settings.openai_api_key or "not-required",
         timeout=settings.openai_timeout_seconds,
         max_retries=settings.openai_max_retries,
