@@ -122,7 +122,13 @@ def resume_paused_run(
         )
     else:
         agent = build_agent(settings, run_id=run_id)
-    deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
+    deps = CoreDeps(
+        workspace_root=settings.workspace_root.resolve(),
+        run_id=run_id,
+        # The pause receipt freezes Case identity: a continuation resumes the
+        # SAME bound Case, never a different one (SPEC v1.0 §5.6/§7.3).
+        case_id=getattr(receipt, "case_id", None),
+    )
     return execute_run(
         agent,
         deps,

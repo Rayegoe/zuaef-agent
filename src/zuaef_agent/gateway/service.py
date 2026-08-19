@@ -151,6 +151,9 @@ class GatewayService:
                 config_root=self.config_root,
                 run_id=run_id,
                 message_history=history,
+                # Deterministic Case binding: the session's bound case is
+                # threaded into the run's CoreDeps — the model never guesses it.
+                case_id=session.case_id,
             )
         except CompositionError as exc:
             session = session.model_copy(update={"active_run_id": None})

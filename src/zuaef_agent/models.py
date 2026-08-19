@@ -67,6 +67,7 @@ class RunReceipt(BaseModel):
     run_id: str
     conversation_id: str | None = None
     continued_from_run_id: str | None = None
+    case_id: str | None = None
     model: str
     started_at: datetime
     finished_at: datetime
@@ -97,6 +98,7 @@ class PauseReceipt(BaseModel):
     state: Literal["paused"] = "paused"
     run_id: str
     conversation_id: str
+    case_id: str | None = None
     model: str
     started_at: datetime
     finished_at: datetime
@@ -119,3 +121,8 @@ AnyReceipt = RunReceipt | PauseReceipt
 class CoreDeps:
     workspace_root: Path
     run_id: str
+    # Server-owned business identity (SPEC v1.0 §5.6): the Gateway binds a
+    # channel/thread to exactly one Case and threads it into the run. Case
+    # tools enforce isolation against this value; None keeps the legacy
+    # unbound CLI/test behavior.
+    case_id: str | None = None

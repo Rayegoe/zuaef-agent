@@ -58,6 +58,11 @@ class SessionBinding(BaseModel):
     ``conversation_id`` is a correlation identity only — not automatic model
     chat memory. Pause/resume continuity comes from StepPersistence history;
     terminal runs do not pretend to share model memory.
+
+    ``case_id`` is the deterministically bound business work item (SPEC v1.0
+    §5): a supervisor binds a channel/thread to exactly one Case — no model
+    identity guessing. Conversation identity and Case identity stay separate;
+    ``/new`` rotates the conversation but keeps the Case binding.
     """
 
     surface: str
@@ -69,6 +74,7 @@ class SessionBinding(BaseModel):
 
     conversation_id: str
     profile: str | None
+    case_id: str | None = None
 
     active_run_id: str | None = None
     paused_run_id: str | None = None

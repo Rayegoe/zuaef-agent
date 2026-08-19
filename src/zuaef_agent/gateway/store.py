@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS session_bindings (
 
     conversation_id TEXT NOT NULL,
     profile TEXT,
+    case_id TEXT,
 
     active_run_id TEXT,
     paused_run_id TEXT,
@@ -96,7 +97,19 @@ class GatewayStore:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         self._conn.executescript(_SCHEMA)
+        self._migrate()
         self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Idempotent column migrations for databases created by earlier
+        releases (no migration framework — SPEC §9)."""
+        columns = {
+            row["name"] for row in self._conn.execute("PRAGMA table_info(session_bindings)")
+        }
+        if "case_id" not in columns:
+            self._conn.execute(
+                "ALTER TABLE session_bindings ADD COLUMN case_id TEXT"
+            )
 
     def close(self) -> None:
         self._conn.close()
@@ -144,14 +157,15 @@ class GatewayStore:
             """
             INSERT INTO session_bindings (
                 surface, tenant_id, user_id, channel_id, thread_key,
-                conversation_id, profile,
+                conversation_id, profile, case_id,
                 active_run_id, paused_run_id, last_terminal_run_id,
                 created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (surface, tenant_id, channel_id, thread_key) DO UPDATE SET
                 user_id = excluded.user_id,
                 conversation_id = excluded.conversation_id,
                 profile = excluded.profile,
+                case_id = excluded.case_id,
                 active_run_id = excluded.active_run_id,
                 paused_run_id = excluded.paused_run_id,
                 last_terminal_run_id = excluded.last_terminal_run_id,
@@ -165,6 +179,7 @@ class GatewayStore:
                 binding.thread_key,
                 binding.conversation_id,
                 binding.profile,
+                binding.case_id,
                 binding.active_run_id,
                 binding.paused_run_id,
                 binding.last_terminal_run_id,
@@ -173,6 +188,18 @@ class GatewayStore:
             ),
         )
         self._conn.commit()
+
+    def bind_case(
+        self,
+        session: SessionBinding,
+        case_id: str | None,
+    ) -> SessionBinding:
+        """Deterministic supervisor operation: bind (or unbind, with ``None``)
+        this channel/thread to one Case. Conversation identity is untouched;
+        the model can never bind itself to a Case (SPEC v1.0 §5.4)."""
+        updated = session.model_copy(update={"case_id": case_id})
+        self.save_session(updated)
+        return updated
 
     def get_session(
         self,
@@ -199,8 +226,9 @@ class GatewayStore:
     def reset_session(self, session: SessionBinding) -> SessionBinding:
         """Start a fresh conversation in the same session: invalidate the
         paused run's pending approval tokens, clear run pointers, mint a new
-        conversation_id, keep the profile. The old PauseReceipt is untouched —
-        it remains historical evidence."""
+        conversation_id, keep the profile. The business Case binding survives
+        a ``/new`` unless a supervisor explicitly unbinds it (SPEC v1.0 §5.3).
+        The old PauseReceipt is untouched — it remains historical evidence."""
         if session.paused_run_id:
             self.expire_approvals_for_run(session.paused_run_id)
         updated = session.model_copy(
@@ -224,6 +252,7 @@ class GatewayStore:
             thread_key=row["thread_key"],
             conversation_id=row["conversation_id"],
             profile=row["profile"],
+            case_id=row["case_id"],
             active_run_id=row["active_run_id"],
             paused_run_id=row["paused_run_id"],
             last_terminal_run_id=row["last_terminal_run_id"],

@@ -106,6 +106,7 @@ def start_profile_run(
     config_root: Path | None = None,
     run_id: str | None = None,
     message_history: Sequence[Any] | None = None,
+    case_id: str | None = None,
 ) -> RuntimeOutcome:
     """Compose a new run through the shared seam (SPEC §27).
 
@@ -116,6 +117,10 @@ def start_profile_run(
 
     ``message_history`` carries the prior turn's restored history (T010) so a
     new run in the same conversation starts from real prior context.
+
+    ``case_id`` is the session's deterministically bound Case (SPEC v1.0 §5):
+    the server threads it into the run's CoreDeps, where Case tools enforce
+    isolation. The model never guesses it.
     """
     run_id = run_id or uuid4().hex
     agent, snapshot = build_profile_agent(
@@ -127,6 +132,7 @@ def start_profile_run(
     deps = CoreDeps(
         workspace_root=settings.workspace_root.resolve(),
         run_id=run_id,
+        case_id=case_id,
     )
     return execute_run(
         agent,

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "case_id": "stillevo-beauty",
   "updated_at": "2026-08-17T16:31:04.772918+00:00",
-  "updated_by": "run:fde-stillevo-beauty-e03",
+  "updated_by": "barry",
   "state": {
     "customer": {
       "company": "云朵美妆",
@@ -28,6 +28,9 @@
     "article_ace_status": "save_article 失败：Unknown article workspace，demo 文章未在 ACE 登记，需补充登记后重试",
     "feedback": {
       "rework": "老板反馈：开头太长、要结论前置；价格段落不写"
+    },
+    "resources": {
+      "ace_article_id": "fde-case-stillevo-beauty"
     }
   },
   "open_questions": [
@@ -42,5 +45,5 @@
     "trajectory-seq-1",
     "trajectory-seq-8"
   ],
-  "barry_override": "barry-onboard"
+  "barry_override": "barry-onboard; p2-fixture:case-resource-refs"
 }

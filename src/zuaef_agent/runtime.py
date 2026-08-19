@@ -106,6 +106,33 @@ def _call_snapshot(call: Any) -> dict[str, Any]:
     }
 
 
+def _assert_pending_case_isolation(
+    requests: DeferredToolRequests,
+    deps: CoreDeps,
+) -> None:
+    """Business authorization boundary at the pause frontier (SPEC v1.0 §5.6).
+
+    Approval-gated tools (e.g. ``send_to_customer``) never execute their
+    function body — the framework pauses the run BEFORE the tool's own guard
+    could run. The host therefore re-checks every pending approval against the
+    run's bound Case here: a pending call naming a different ``case_id`` fails
+    the run loudly instead of pausing, so a bound run can never reach an
+    operator queue for the wrong Case. Unbound runs are untouched.
+    """
+    if deps.case_id is None:
+        return
+    for call in requests.approvals:
+        snapshot = _call_snapshot(call)
+        args = snapshot["args"]
+        requested = args.get("case_id") if isinstance(args, dict) else None
+        if requested is not None and requested != deps.case_id:
+            raise ValueError(
+                f"pending approval {snapshot['tool_name']!r} targets case "
+                f"{requested!r} but this run is bound to case {deps.case_id!r} "
+                "— Case operations are isolated to the bound Case"
+            )
+
+
 @dataclass(kw_only=True)
 class TerminalRun:
     """A run that reached a business terminal state with a host-verified receipt."""
@@ -140,6 +167,7 @@ def finalize_terminal(
     prior_pause_receipt: PauseReceipt | None = None,
     error: str | None = None,
     composition: CompositionSnapshot | None = None,
+    case_id: str | None = None,
 ) -> TerminalRun:
     """Host verification boundary: verify model claims, degrade, and settle the receipt.
 
@@ -335,6 +363,7 @@ def finalize_terminal(
         continued_from_run_id=prior_pause_receipt.run_id
         if prior_pause_receipt is not None
         else None,
+        case_id=case_id,
         model=model_label,
         started_at=started_at,
         finished_at=datetime.now(UTC),
@@ -420,6 +449,7 @@ def _build_paused(
     usage: dict[str, Any],
     snapshot: dict[str, str],
     composition: CompositionSnapshot | None = None,
+    case_id: str | None = None,
 ) -> PausedRun:
     effect_records = (
         latest_tool_effects(read_tool_effects(settings.step_store_dir, run_id))
@@ -449,6 +479,7 @@ def _build_paused(
     pause_receipt = PauseReceipt(
         run_id=run_id,
         conversation_id=conversation_id,
+        case_id=case_id,
         model=model_label,
         started_at=started_at,
         finished_at=datetime.now(UTC),
@@ -508,6 +539,10 @@ def execute_run(
     ``composition`` is frozen into the receipt; a continuation must pass the
     pause receipt's own snapshot.
 
+    ``case_id`` comes from ``deps`` (server-owned): the Gateway threads the
+    session's bound Case into the run and the receipts record it, so Case
+    identity survives pause/resume and is part of the durable evidence.
+
     ``retries`` is passed through to ``agent.run`` as the tool-retry budget
     (a bare int, or ``{"tools": N}`` / ``{"output": N}``). It only raises the
     ceiling for how many times the model may retry a failing or withdrawn
@@ -555,6 +590,7 @@ def execute_run(
             prior_pause_receipt=prior_pause_receipt,
             error=error,
             composition=composition,
+            case_id=deps.case_id,
         )
 
     try:
@@ -596,6 +632,20 @@ def execute_run(
     usage = _usage_payload(result)
     output = result.output
     if isinstance(output, DeferredToolRequests):
+        # Host authorization boundary: a bound run must not pause for an
+        # approval that targets a different Case — that is a blocked run, not
+        # an operator queue entry (SPEC v1.0 §5.6).
+        try:
+            _assert_pending_case_isolation(output, deps)
+        except ValueError as exc:
+            return _partial_or_blocked(
+                RunSummary(
+                    status="blocked",
+                    outcome=str(exc),
+                    unknowns=[str(exc)],
+                ),
+                error=str(exc),
+            )
         return _build_paused(
             output,
             result=result,
@@ -607,6 +657,7 @@ def execute_run(
             usage=usage,
             snapshot=snapshot,
             composition=composition,
+            case_id=deps.case_id,
         )
     summary = (
         output
@@ -624,6 +675,7 @@ def execute_run(
         snapshot=snapshot,
         prior_pause_receipt=prior_pause_receipt,
         composition=composition,
+        case_id=deps.case_id,
     )
 
 

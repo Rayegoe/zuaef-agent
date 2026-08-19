@@ -17,6 +17,7 @@ from .composition import (
 )
 from .config import AgentSettings
 from .continuation import resume_paused_run
+from .gateway.store import GatewayStore
 from .models import CoreDeps
 from .profiles import list_profiles, load_profile
 from .runtime import PausedRun, RuntimeOutcome, execute_run, run_task
@@ -97,6 +98,20 @@ def _parser() -> argparse.ArgumentParser:
     gateway_start.add_argument("--workspace", type=Path)
     gateway_start.add_argument("--model")
     gateway_start.add_argument("--config-root", type=Path)
+    gateway_bind = gateway_sub.add_parser(
+        "bind-case",
+        help="deterministic supervisor operation: bind a channel/thread to "
+        "one Case (SPEC v1.0 §5.4). The model can never bind itself.",
+    )
+    gateway_bind.add_argument("--surface", required=True)
+    gateway_bind.add_argument("--tenant", default="default")
+    gateway_bind.add_argument("--user", required=True)
+    gateway_bind.add_argument("--channel", required=True)
+    gateway_bind.add_argument("--thread", default=None)
+    gateway_bind.add_argument("--case", default=None, help="case_id to bind")
+    gateway_bind.add_argument("--unbind", action="store_true", help="remove the binding")
+    gateway_bind.add_argument("--workspace", type=Path)
+    gateway_bind.add_argument("--state-root", type=Path)
     return p
 
 
@@ -225,6 +240,60 @@ def _gateway(args: argparse.Namespace) -> int:
     return runner.run_gateway(config=config, settings=settings)
 
 
+def _gateway_bind_case(args: argparse.Namespace) -> int:
+    """Supervisor-only deterministic binding (SPEC v1.0 §5.4).
+
+    Resolves the session through the existing SQLite store and writes
+    ``case_id`` into the session binding. Conversation identity, profile and
+    run pointers are untouched; ``/new`` keeps the binding. This is the only
+    place a channel/thread may acquire a Case — no inbound text can.
+    """
+    settings = _settings_from_args(args)
+    if args.workspace:
+        settings = settings.with_overrides(workspace_root=args.workspace)
+    if args.state_root:
+        settings = settings.with_overrides(runtime_state_root=args.state_root)
+    case_id = None if args.unbind else args.case
+    if case_id is None and not args.unbind:
+        print("process error: --case is required unless --unbind is given", file=sys.stderr)
+        return EXIT_PROCESS_ERROR
+    store = GatewayStore(settings.state_root / "gateway.sqlite3")
+    try:
+        session = store.get_or_create_session(
+            surface=args.surface,
+            tenant_id=args.tenant,
+            user_id=args.user,
+            channel_id=args.channel,
+            thread_id=args.thread,
+            default_profile=None,
+        )
+        bound = store.bind_case(
+            session,
+            case_id,
+        )
+    except ValueError as exc:
+        print(f"process error: {exc}", file=sys.stderr)
+        store.close()
+        return EXIT_PROCESS_ERROR
+    store.close()
+    print(
+        json.dumps(
+            {
+                "surface": bound.surface,
+                "tenant_id": bound.tenant_id,
+                "channel_id": bound.channel_id,
+                "thread_key": bound.thread_key,
+                "conversation_id": bound.conversation_id,
+                "case_id": bound.case_id,
+                "action": "unbound" if args.unbind else "bound",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return EXIT_COMPLETED
+
+
 def main() -> None:
     parser = _parser()
     try:
@@ -242,7 +311,10 @@ def main() -> None:
         elif args.command == "plugin":
             code = _plugin(args)
         elif args.command == "gateway":
-            code = _gateway(args)
+            if args.gateway_command == "bind-case":
+                code = _gateway_bind_case(args)
+            else:
+                code = _gateway(args)
         else:
             code = _profile(args)
     except (ValueError, FileNotFoundError, LookupError, UserError, httpx.HTTPError) as exc:
