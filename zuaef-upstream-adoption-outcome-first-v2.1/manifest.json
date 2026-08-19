@@ -1,0 +1,38 @@
+{
+  "package": "zuaef-upstream-adoption-outcome-first",
+  "version": "2.1",
+  "created_date": "2026-08-19",
+  "target_repository": "https://github.com/Rayegoe/zuaef-agent",
+  "core_rule": "Capability Surface complete; Active Context minimal.",
+  "supersedes": "zuaef-upstream-adoption-outcome-first-v2.0",
+  "files": {
+    "OUTCOME_FIRST_REVIEW.md": {
+      "sha256": "00e17719a275382fba3fb8eb332ec8ea5be8da6cd76bef142aae6ca4922742fc",
+      "bytes": 2285
+    },
+    "PLAN.md": {
+      "sha256": "d989f077f603f7a39e23c41b771ee19f600d3a1565611ab3315f96aa49107ce3",
+      "bytes": 3665
+    },
+    "PROMPT.md": {
+      "sha256": "947983f52ea964a538e60c46b65082a9a0c5a81023116138296684396c5a3dbb",
+      "bytes": 4160
+    },
+    "README.md": {
+      "sha256": "2a11668efa75c9974935eb2bc8ba2fe9ddca936c1032e2c93dbdde2f248dcc3d",
+      "bytes": 2609
+    },
+    "SPEC.md": {
+      "sha256": "941aaa1d0588d99b578b8d43ace06eef94362847be2b57d17c2535c63dadc58b",
+      "bytes": 15664
+    },
+    "TASKS.md": {
+      "sha256": "fc97f223083074a04c6cc36f29a1ee161ec0ded429c12a9c750d9f8b805e25d8",
+      "bytes": 5837
+    },
+    "UPSTREAM_BASELINE.md": {
+      "sha256": "b06555eeb639aee01f0f97333e709c756922cb09a12763565fd523d3a9267c2e",
+      "bytes": 3445
+    }
+  }
+}

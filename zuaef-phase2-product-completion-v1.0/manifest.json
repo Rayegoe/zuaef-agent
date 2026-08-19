@@ -1,0 +1,33 @@
+{
+  "package": "zuaef-phase2-product-completion",
+  "version": "1.0",
+  "created_date": "2026-08-19",
+  "target_repository": "https://github.com/Rayegoe/zuaef-agent",
+  "goal": "Push Phase 2 to 100% product acceptance without expanding generic harness infrastructure.",
+  "files": {
+    "README.md": {
+      "bytes": 1457,
+      "sha256": "c7860ef41e701cab462e6c918faa37c2bcf3c8d6cc3779468fbab34d9e45560e"
+    },
+    "BASELINE.md": {
+      "bytes": 1992,
+      "sha256": "e84ff721624672e3c1a66e563a6963063635d81f559c22708c428e50a2eefa55"
+    },
+    "SPEC.md": {
+      "bytes": 14319,
+      "sha256": "4fb9949ea3f8fc25c9f2cb40b2f2707dab3f49ffe6f24693a7c89770dbedbad2"
+    },
+    "PLAN.md": {
+      "bytes": 1743,
+      "sha256": "4a4f585c86f8eea81f019796f46381340e0e67ac6de3f527f34b9118798432e2"
+    },
+    "TASKS.md": {
+      "bytes": 5339,
+      "sha256": "96e1faa33d5f23d799e74eda0e0433359f13cb089c88c5c0a0f00b391800b89b"
+    },
+    "PROMPT.md": {
+      "bytes": 5073,
+      "sha256": "8a81c273464cc739b030bb5d210806fa2e6d8f79763ebac895e5fadbc858325b"
+    }
+  }
+}

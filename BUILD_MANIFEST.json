@@ -923,8 +923,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 992,
-      "sha256": "f727926f9edf96f85e902ae0574af17120b3cd116d8ac16b5a7fa7cab08fbd7c"
+      "bytes": 3025,
+      "sha256": "0e18e1d6f449db9a05ececba12773b3c25acc52d511c021860633225a264d68d"
     },
     {
       "path": ".gitignore",
@@ -958,8 +958,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 11776,
-      "sha256": "9d98ff81e24d347b5c4111d6f0777dba05bdc007b8741b9623a4e868baab4764"
+      "bytes": 15736,
+      "sha256": "ae73205bdd120f78553450c05400dcb6d63fbde1c6bd2b97e698f6aac22d8f3d"
     },
     {
       "path": "REFACTOR_NOTES.md",
@@ -1028,8 +1028,8 @@
     },
     {
       "path": "examples/fde_loop.py",
-      "bytes": 20972,
-      "sha256": "20ff1a1f2c78ccc3e6c29a71a579a88b9aeebdaa714de5bc755f37269f85cd5b"
+      "bytes": 21584,
+      "sha256": "bc8f1cb777daf27a101bc0b0e68738664623f9f12c68096818a1b0f9e8877841"
     },
     {
       "path": "examples/host_fixture.py",
@@ -1073,8 +1073,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 1179,
-      "sha256": "2fb763c88e5d3563efb836e9c8fa0763670f887950d6c28978d2b6be6adecc4b"
+      "bytes": 1568,
+      "sha256": "aa995a4fcf9a34ae364a7e9ef977858e129c799ef97de08aa361e8327bd99670"
     },
     {
       "path": "uv.lock",
@@ -1113,23 +1113,23 @@
     },
     {
       "path": "src/zuaef_agent/cli.py",
-      "bytes": 8988,
-      "sha256": "7cccc7e207577eb4fcde3836a92d9fc3cc901a72aaf1422302626a423cb138af"
+      "bytes": 11914,
+      "sha256": "a2284976b60b58959863a1758eef757ce9ed3f0815933edddfaea099f52936e9"
     },
     {
       "path": "src/zuaef_agent/composition.py",
-      "bytes": 11354,
-      "sha256": "ca22107f4124458c4ff269e6c406bf144e222da33430dc479a960f8f6d62dfe5"
+      "bytes": 14086,
+      "sha256": "b9a2f083807eb481ca44a80d387d510fea9baca3756981e757a0524a4251cd65"
     },
     {
       "path": "src/zuaef_agent/config.py",
-      "bytes": 8459,
-      "sha256": "9a31d79c22acd6a97e2af3b93984cd55c0023a0e85d9ab3bd482b7020d744dbc"
+      "bytes": 9930,
+      "sha256": "96c63bbca8c36f9458746e22c67e561e7f274e5c1107878a4211b1e80ee30e46"
     },
     {
       "path": "src/zuaef_agent/continuation.py",
-      "bytes": 4960,
-      "sha256": "2a1f916c0b23ed9afa5ea9d2e1fbe0eb92a9c65c17bd50ba86bad6943ebbe16a"
+      "bytes": 5186,
+      "sha256": "4133acae6979fccb13b2fb18052c16cf8e0ddfb431633292a186f33b2291970d"
     },
     {
       "path": "src/zuaef_agent/core.py",
@@ -1153,18 +1153,18 @@
     },
     {
       "path": "src/zuaef_agent/models.py",
-      "bytes": 4000,
-      "sha256": "cbbd66c3552ab70b722c266275640951d6f06a85e14948fe400c6cc3d49e6684"
+      "bytes": 4349,
+      "sha256": "4b84137dcf613cec30286a82ae9bd0d99507377f6a85b898036de67d8941fce1"
     },
     {
       "path": "src/zuaef_agent/plugin_api.py",
-      "bytes": 4450,
-      "sha256": "5e1b81d6d39c0afadcdf589f16ae73269e4811d1fb9dbf47426022c87ce10606"
+      "bytes": 5277,
+      "sha256": "95d2cf444166a2819b0d1536775cb6a05f0c1e3b4e43005c10394f722a3d9a62"
     },
     {
       "path": "src/zuaef_agent/profiles.py",
-      "bytes": 4881,
-      "sha256": "c5ad3caa2547034410a05ef03b669a5d321ffd74e04f20e64a6a0193ed706035"
+      "bytes": 6579,
+      "sha256": "b43bd1f09b23920e7b037e9f3d168e35b809146e224f8db09f81302abad023be"
     },
     {
       "path": "src/zuaef_agent/providers.py",
@@ -1178,8 +1178,8 @@
     },
     {
       "path": "src/zuaef_agent/runtime.py",
-      "bytes": 23894,
-      "sha256": "3c12a68205647c5bb3ede91c0723c1f455ab57cd373307f4512e65324dee4ce5"
+      "bytes": 26095,
+      "sha256": "d1b5996f4c356773f8dc8ad7fd23b3921d34982a4f711faaec2b29683fd8c10b"
     },
     {
       "path": "src/zuaef_agent/verification.py",
@@ -1193,13 +1193,13 @@
     },
     {
       "path": "src/zuaef_agent/gateway/bridge.py",
-      "bytes": 4967,
-      "sha256": "48b3b217d2fa344614d2cce0443243ead150068d73ee9988cb47f1ee33e8d5d9"
+      "bytes": 5223,
+      "sha256": "8876f05a199be40e5689c1a18b6dd677948265854be75fe57bccf240ef8c8435"
     },
     {
       "path": "src/zuaef_agent/gateway/models.py",
-      "bytes": 2681,
-      "sha256": "696f2e73c6117191db70dfe7019a9d8fe606104402152612b1e71f31fbc34a85"
+      "bytes": 3013,
+      "sha256": "a9526ded27e48ee9a9cdaa07b2f046d100c06f28c5ca7e64fa4ca947a7f89662"
     },
     {
       "path": "src/zuaef_agent/gateway/renderer.py",
@@ -1213,13 +1213,13 @@
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 19620,
-      "sha256": "1d9a4d79278bb4ea1ea18ec47fa71f23b16fc71fa483d23c410dfca0070b817e"
+      "bytes": 19818,
+      "sha256": "375c4bc60afa36b498654f472b2cfeef5555010ef7688a9ea7286d34c84b99dc"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
-      "bytes": 13018,
-      "sha256": "82545f9ffca4db99b036d8b328530b5a4770387c77f39c96a9bdbe01637e9418"
+      "bytes": 14215,
+      "sha256": "5b8bef226321fc288d2cfd7427f4932b7cbc07b72118c72b55225aed985dbe60"
     },
     {
       "path": "src/zuaef_agent/gateway/surface.py",
@@ -1427,9 +1427,34 @@
       "sha256": "79f1d85e098a56ecfd4c2b149420988a3fa2ae065fe777f7a6b9875a43d3549c"
     },
     {
+      "path": "tests/test_phase2_case_binding.py",
+      "bytes": 13778,
+      "sha256": "4b750908710cc2b2ed246262e94dc2044018c48e81594aa918102171f79960ea"
+    },
+    {
+      "path": "tests/test_phase2_case_isolation.py",
+      "bytes": 7398,
+      "sha256": "c62dedcccb45aa6f520605228edfe1b330aaff92c7b404d6db33a66c517b1a83"
+    },
+    {
+      "path": "tests/test_phase2_deferred_tools.py",
+      "bytes": 7979,
+      "sha256": "a4e415825d947bbd3e51164145560e660a6096a8653d01d6334747af9b2117ca"
+    },
+    {
+      "path": "tests/test_phase2_generalist_policy.py",
+      "bytes": 9113,
+      "sha256": "7147034cd9d83d6d727f69ab9f397d1eb61a6e1ef416dd2cf4f3dcb4c3f75183"
+    },
+    {
+      "path": "tests/test_phase2_golden_turn_literal.py",
+      "bytes": 2649,
+      "sha256": "7fb7b1ac0b0df035eb0ed4a8c71f8b5ead93c044f8a8d75a41dbe69bed7dba77"
+    },
+    {
       "path": "tests/test_plugin_composition.py",
-      "bytes": 23520,
-      "sha256": "0371e847112d48ff205d21cc6fabdc641f658d6b7b7224f923086c27e6f1ca40"
+      "bytes": 23542,
+      "sha256": "e7e93e635d05b76683e1811989b4697b31e28efecd7a584ecb6394c2d6a3904d"
     },
     {
       "path": "tests/test_production_writing.py",
@@ -1492,9 +1517,19 @@
       "sha256": "8357f092bcbdc54d534018ea2b267398151aa8adaff8fa47a448a200ac5e8d80"
     },
     {
+      "path": "tests/fixture_plugins/fixture_plugins/case_probe.py",
+      "bytes": 921,
+      "sha256": "70e8cbe4652b2e29af7c64e14d684ebdca7f8ed6859d40dae58358db2d13c7db"
+    },
+    {
       "path": "tests/fixture_plugins/fixture_plugins/conflict.py",
       "bytes": 603,
       "sha256": "4961b1a8fc4b1bb86917853f4055e4e5cbd3f2143d238b0da3f4211000941220"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/deps_probe.py",
+      "bytes": 910,
+      "sha256": "74b16a48de79acb0f098f13a43d791b92332bf981618fcb98eace4a336e82103"
     },
     {
       "path": "tests/fixture_plugins/fixture_plugins/hardware.py",
@@ -1558,8 +1593,8 @@
     },
     {
       "path": "plugins/zuaef-case/zuaef_case/toolset.py",
-      "bytes": 7898,
-      "sha256": "6abed2cc13eaa6dc837abb4d48b4806200f7221f4e9f7a8e97e7158ae7a92648"
+      "bytes": 11753,
+      "sha256": "59940c8699effd4a49ac8b8db8f6cb0dfc6f0584b7a5abb5a6674ea1115675f7"
     },
     {
       "path": "plugins/zuaef-client-service/zuaef_client_service/__init__.py",
@@ -1753,8 +1788,8 @@
     },
     {
       "path": "profiles/stillevo-fde.toml",
-      "bytes": 1163,
-      "sha256": "05a212d928608d0ebe1560725686f95d0a8c56acb16b2318379a658cf340ac33"
+      "bytes": 2107,
+      "sha256": "72e80f9f2d229e28c3199839dfeb4b95b33585427b127f4ec0ca5a72a05c5014"
     },
     {
       "path": "profiles/wordpress-operator.toml",
@@ -1793,8 +1828,8 @@
     },
     {
       "path": "tools/fde_two_turn_proof.py",
-      "bytes": 12381,
-      "sha256": "0bca6eb2a8fbaf6e43c2473f61df8135b1af5302b6bfd38a4e238e6254039bca"
+      "bytes": 30795,
+      "sha256": "38a088902865acefecab418a755ac0a77d8b14db8d58ebf97b16827234aaa661"
     },
     {
       "path": "tools/probe_upstream_baseline.py",
