@@ -1127,6 +1127,11 @@
       "sha256": "96c63bbca8c36f9458746e22c67e561e7f274e5c1107878a4211b1e80ee30e46"
     },
     {
+      "path": "src/zuaef_agent/context_projection.py",
+      "bytes": 6263,
+      "sha256": "0b21623d3f570022cd4441058222addacb306fb4ea1cc9bd84d9ea7e830c72cd"
+    },
+    {
       "path": "src/zuaef_agent/continuation.py",
       "bytes": 5186,
       "sha256": "4133acae6979fccb13b2fb18052c16cf8e0ddfb431633292a186f33b2291970d"
@@ -1193,8 +1198,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/bridge.py",
-      "bytes": 5223,
-      "sha256": "8876f05a199be40e5689c1a18b6dd677948265854be75fe57bccf240ef8c8435"
+      "bytes": 5779,
+      "sha256": "b614e38d9e9854c012b0cabfe145e6a50931e85865342a765149b572d7479828"
     },
     {
       "path": "src/zuaef_agent/gateway/models.py",
@@ -1305,6 +1310,11 @@
       "path": "tests/test_context_management_baseline.py",
       "bytes": 6450,
       "sha256": "823400fbe26d8de96aa0926f286dd2839939d4e0386745442e79f9f707370086"
+    },
+    {
+      "path": "tests/test_context_projection.py",
+      "bytes": 8063,
+      "sha256": "8101084f9335ce2d02c5442fe0b2e77609008ee756e68d3c56765b4a6d664372"
     },
     {
       "path": "tests/test_continuation.py",
@@ -1593,8 +1603,8 @@
     },
     {
       "path": "plugins/zuaef-case/zuaef_case/toolset.py",
-      "bytes": 12515,
-      "sha256": "42cc40dc37ca3e6784979aad1993d378b27db0af8372437252b7cc37c4135ea2"
+      "bytes": 10496,
+      "sha256": "0cf7af1fdd487f37fafedac3ef44e3c3d15a9cad3ec78f5153dbc69791441b0b"
     },
     {
       "path": "plugins/zuaef-client-service/zuaef_client_service/__init__.py",
@@ -1788,8 +1798,8 @@
     },
     {
       "path": "profiles/stillevo-fde.toml",
-      "bytes": 2107,
-      "sha256": "72e80f9f2d229e28c3199839dfeb4b95b33585427b127f4ec0ca5a72a05c5014"
+      "bytes": 2231,
+      "sha256": "96b4a641c8bfc1c90821d447a17f4b66704cb3013ee3308300843957136c1dd8"
     },
     {
       "path": "profiles/wordpress-operator.toml",

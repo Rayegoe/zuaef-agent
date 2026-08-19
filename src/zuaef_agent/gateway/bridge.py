@@ -25,6 +25,7 @@ from ..composition import (
     version_for,
 )
 from ..config import AgentSettings
+from ..context_projection import project_case_context
 from ..continuation import resume_paused_run
 from ..models import CoreDeps
 from ..receipt_store import ReceiptStore
@@ -32,6 +33,7 @@ from ..runtime import RuntimeOutcome, execute_run
 from .models import InboundEnvelope
 
 ATTACHMENT_BLOCK = "Attached files available in the workspace:"
+CASE_CONTEXT_SEPARATOR = "\n\n---\n\n"
 
 
 def project_prompt(envelope: InboundEnvelope) -> str:
@@ -134,10 +136,18 @@ def start_profile_run(
         run_id=run_id,
         case_id=case_id,
     )
+    # Case is context, not workflow (P3B-2 §6): a bound Case contributes a
+    # bounded host-projected brief before the model request — the model does
+    # not need Case tools loaded to know the durable background.
+    projected_prompt = prompt
+    if case_id is not None:
+        brief = project_case_context(case_id, workspace_root=settings.workspace_root)
+        if brief:
+            projected_prompt = brief + CASE_CONTEXT_SEPARATOR + prompt
     return execute_run(
         agent,
         deps,
-        prompt=prompt,
+        prompt=projected_prompt,
         settings=settings,
         run_id=run_id,
         conversation_id=conversation_id,

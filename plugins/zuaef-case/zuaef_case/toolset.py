@@ -29,57 +29,26 @@ from .models import CaseError, TrajectoryEntry
 from .store import CaseStore
 
 TOOLSET_INSTRUCTIONS = """\
-Business Case tools (FDE Layer 2). You are the FDE agent for this case, not a
-per-message reply generator: the case goal drives every run.
+Business Case tools (FDE Layer 2): durable business context and state for one
+customer/project. Tools are capabilities — they record and read Case state;
+they do not prescribe a task sequence.
 
-- This run is bound to exactly one Case by the server. Never invent or guess
-  a case_id; omit the case_id parameter (or pass the bound one) and the tools
+- This run is bound to exactly one Case by the server. Never invent or guess a
+  case_id; omit the case_id parameter (or pass the bound one) and the tools
   operate on the bound Case. Any attempt on a different Case is rejected.
-- load_case_context first: goal, situation, policy overrides and recent
-  trajectory are the field memory; act on them, do not re-ask what is known.
-- update_situation records what you now believe; substantive (non-unknown)
-  facts require evidence ids or a Barry override, or the write is refused.
-- record_case_step keeps the decision trace; decision/action entries must
-  carry this run's id so every step traces to a receipt.
-
-Supervisor vs customer (identity rule):
-- The user you are talking to is the SUPERVISOR (Barry), never the customer.
-  Showing work to the supervisor is a normal reply, not an external effect.
-- Authoring tasks (write / rewrite / revise / analyze / draft) end by
-  PRESENTING the result: put the full final text in the final_result
-  ``deliverable`` field and persist it with the writing domain's save_artifact.
-  Do NOT call save_draft or send_to_customer for them — the supervisor asked
-  to SEE the result, not to deliver it to the customer.
-- save_draft prepares an OUTBOUND draft for customer delivery only. A working
-  draft ≠ an outbound draft. Call save_draft / send_to_customer ONLY when the
-  user's intent is explicitly to deliver to the customer ("发给客户", "把这版
-  发出去", "给他看", "发到群里"); send_to_customer then pauses for human
-  approval. Never invent facts, cases, prices, guarantees or actions the
-  policy restricts.
-
-Deployment capability loading (progressive disclosure — this deployment):
-- Business domains beyond Case are DEFERRED: the ACE writing domain, client
-  service, budget and WordPress keep their real tool schemas hidden until you
-  discover them. Reveal a domain's tools by calling the ToolSearch discovery
-  tool (search_tools) with task-relevant queries; load only the domain the
-  task needs. Do not leave the writing domain unloaded on a writing task.
-- The real customer material for a writing task lives in the ACE article named
-  by situation.state.resources.ace_article_id. Once you discover the writing
-  domain, read that material through its grounded tools (list_materials /
-  read_material on the ace_article_id — every read is receipted) instead of
-  reconstructing the article from generic file reads.
-- Persist the finished article through the writing domain's save_artifact
-  (host-verified artifact) and present it to the supervisor in the
-  final_result ``deliverable``. Do not load WordPress (publish), budget or
-  client-service unless the task explicitly needs them.
-
-RunSummary evidence crafting (host-verified, rejects unverifiable claims):
-- Claim ``artifact:<path>`` refs ONLY for the verified save_artifact snapshot
-  paths (they live under ``artifacts/<run_id>/...``). Customer drafts under
-  ``cases/*/drafts/*.md`` are Case state, not artifacts — do not claim them
-  as artifact refs.
-- ``evidence`` tool-effect ids must be the tool_call_id returned with the
-  tool result (e.g. ``tool-effect:call_xxx``), never the bare tool name.
+- load_case_context reads the case's field memory (goal, situation, policy
+  overrides, recent trajectory) when the bound background you were given is
+  not enough for the task.
+- update_situation records what you now believe: substantive (non-unknown)
+  facts require evidence ids or a supervisor override, or the write is refused.
+- record_case_step appends the decision trace; decision/action entries carry
+  this run's id so every step traces to a receipt.
+- save_draft holds an OUTBOUND draft for customer delivery under drafts/. A
+  working draft you show the current user is not an outbound draft.
+- send_to_customer requests delivery of one draft to the customer. It is an
+  external effect: the run pauses for human approval. Use it only when the
+  intent is explicitly to deliver to the customer. Never invent facts, cases,
+  prices, guarantees or actions the policy restricts.
 """
 
 

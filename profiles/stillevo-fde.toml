@@ -32,12 +32,15 @@ subagents = true
 shell = false
 repo_context = false
 
-# Business progressive disclosure (SPEC v1.0 §4): zuaef-case (id "case") is the
-# FDE orientation layer and stays eager; every other business domain is deferred
-# (defer_tools = true) — its tool schemas are hidden from the model until
-# tool search discovers the domain actually needed by the task.
+# Business progressive disclosure (SPEC v1.0 §4): every business domain —
+# including zuaef-case — is deferred (defer_tools = true). Tool schemas stay
+# hidden until tool search discovers the domain a task actually needs. A
+# bound Case still contributes its durable background through the host
+# projection (context_projection), so Case context arrives without loading
+# Case mutation/delivery tools.
 [[plugins]]
 id = "case"
+defer_tools = true
 
 [[plugins]]
 id = "client-service"
