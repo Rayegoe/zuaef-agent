@@ -1113,8 +1113,8 @@
     },
     {
       "path": "src/zuaef_agent/composition.py",
-      "bytes": 12629,
-      "sha256": "0a06c1d4006ccb32de6d3d41051b669d008aa463ac8ef27f19b4bbf0b0b6f40f"
+      "bytes": 11109,
+      "sha256": "52e1cf1045c378b9ead948cf65bd5252a4cc86c603e9124aa44824810ac167da"
     },
     {
       "path": "src/zuaef_agent/config.py",
@@ -1178,8 +1178,8 @@
     },
     {
       "path": "src/zuaef_agent/verification.py",
-      "bytes": 6864,
-      "sha256": "50669f13292fb1554a47683007a47af144e6d6e20148327890e57c9b093931e5"
+      "bytes": 8129,
+      "sha256": "9fd05562678485e1cd5af5207799800f102d80ba8e17bdd5b79a9227bd1a5ae5"
     },
     {
       "path": "src/zuaef_agent/gateway/__init__.py",
@@ -1323,8 +1323,8 @@
     },
     {
       "path": "tests/test_execute_run_seam.py",
-      "bytes": 18730,
-      "sha256": "076b053be9255d5ac1b92aeff05f0f146e62b495ac40668f3d547f6556dc1636"
+      "bytes": 19320,
+      "sha256": "7c8f75033c6ed835929d797fe7735688d4d8f62080abd1b6d250cd71ecddc03e"
     },
     {
       "path": "tests/test_fde_loop.py",
@@ -1403,8 +1403,8 @@
     },
     {
       "path": "tests/test_plugin_composition.py",
-      "bytes": 22556,
-      "sha256": "f9848c16ae431e903bb25c7c3bc8d858d53afcd3411e37fdea393a2782586fd1"
+      "bytes": 23520,
+      "sha256": "0371e847112d48ff205d21cc6fabdc641f658d6b7b7224f923086c27e6f1ca40"
     },
     {
       "path": "tests/test_production_writing.py",
@@ -1428,8 +1428,8 @@
     },
     {
       "path": "tests/test_verification.py",
-      "bytes": 4936,
-      "sha256": "9ac8e41ae684d63f387eb44ae6bcc229e59c09d2b6cd4e02f5815d3679fa5921"
+      "bytes": 5903,
+      "sha256": "5728829970ec7253b0dfb65355bd4e1b81011f925e15f8b9dc6626de6b31f528"
     },
     {
       "path": "tests/test_wordpress_plugin.py",

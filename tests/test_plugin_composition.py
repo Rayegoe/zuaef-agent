@@ -412,16 +412,41 @@ def test_plugin_skill_dirs_reach_skills_capability(tmp_path):
 
 
 def test_duplicate_tool_fails_no_silent_override(tmp_path):
+    """Collision regression: upstream composition owns tool-name conflicts.
+
+    ZUAEF no longer runs its own tool-conflict preflight (T003 DELETE) — the
+    combined upstream toolset refuses duplicate names. Proof that a conflict
+    still cannot silently override: resolution succeeds, but materializing
+    the composed agent's tool schema raises PydanticAI's own ``UserError``.
+    """
+    from pydantic_ai.exceptions import UserError
+    from pydantic_ai.messages import ModelResponse, TextPart
+    from pydantic_ai.models.function import FunctionModel
+
     settings = _settings(tmp_path)
     config_root = _write_profile(
         tmp_path,
         "clash",
         text='schema = 1\nname = "clash"\n\n[[plugins]]\nid = "fixture-ace-writing"\n\n[[plugins]]\nid = "conflict-plugin"\n',
     )
-    with pytest.raises(CompositionError, match="tool conflict"):
-        resolve_profile(
-            "clash", settings, config_root=config_root, discover=lambda: DISCOVER, version_for=_vf
-        )
+    # Resolution no longer performs the conflict check; it must not raise.
+    snapshot = resolve_profile(
+        "clash", settings, config_root=config_root, discover=lambda: DISCOVER, version_for=_vf
+    )
+    agent = build_agent_from_snapshot(
+        settings,
+        snapshot=snapshot,
+        discover=lambda: DISCOVER,
+        version_for=_vf,
+    )
+
+    async def handler(messages, info):
+        return ModelResponse(parts=[TextPart("x")])
+
+    with agent.override(model=FunctionModel(handler)), pytest.raises(
+        UserError, match="conflicts"
+    ):
+        asyncio.run(agent.run("go"))
 
 
 # ── §42 Receipt ──────────────────────────────────────────────────────────────

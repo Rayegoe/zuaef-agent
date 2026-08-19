@@ -6,7 +6,7 @@ may only cover deterministic branches — the real-model slice is the Gate's job
 
 from __future__ import annotations
 
-import json
+import asyncio
 from pathlib import Path
 from uuid import uuid4
 
@@ -16,6 +16,7 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.usage import RunUsage
+from pydantic_ai_harness.step_persistence import FileStepStore, StepEvent
 
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.core import build_agent
@@ -342,20 +343,17 @@ def test_pause_settles_and_resume_inherits_artifact_and_knowledge(tmp_path: Path
 def test_unresolved_started_effect_blocks_run(tmp_path: Path):
     settings = _settings(tmp_path)
     run_id = uuid4().hex
-    ledger_dir = settings.step_store_dir / run_id
-    ledger_dir.mkdir(parents=True)
-    (ledger_dir / "tool_effects.jsonl").write_text(
-        json.dumps(
-            {
-                "tool_call_id": "call_x",
-                "tool_name": "record_external_effect",
-                "run_id": run_id,
-                "status": "started",
-                "started_at": "2026-08-14T00:00:00Z",
-            }
+    store = FileStepStore(settings.step_store_dir)
+    asyncio.run(
+        store.append_event(
+            StepEvent(
+                run_id=run_id,
+                kind="tool_call_started",
+                step_index=0,
+                tool_call_id="call_x",
+                tool_name="record_external_effect",
+            )
         )
-        + "\n",
-        encoding="utf-8",
     )
 
     outcome = finalize_terminal(
@@ -374,22 +372,34 @@ def test_unresolved_started_effect_blocks_run(tmp_path: Path):
     assert outcome.summary.status == "blocked"
 
 
-def test_foreign_completed_effect_is_not_verified(tmp_path: Path):
+def test_foreign_run_effects_are_not_verified(tmp_path: Path):
+    """A completed effect owned by a different run is not verifiable: the
+    public StepStore keeps per-run ledgers, so a foreign event never enters
+    this run's ledger and is neither verified nor treated as resolved here."""
     settings = _settings(tmp_path)
     run_id = uuid4().hex
-    ledger_dir = settings.step_store_dir / run_id
-    ledger_dir.mkdir(parents=True)
-    (ledger_dir / "tool_effects.jsonl").write_text(
-        json.dumps(
-            {
-                "tool_call_id": "call_foreign",
-                "tool_name": "record_external_effect",
-                "run_id": "another-run",
-                "status": "completed",
-            }
+    store = FileStepStore(settings.step_store_dir)
+    asyncio.run(
+        store.append_event(
+            StepEvent(
+                run_id=run_id,
+                kind="tool_call_completed",
+                step_index=0,
+                tool_call_id="call_own",
+                tool_name="record_external_effect",
+            )
         )
-        + "\n",
-        encoding="utf-8",
+    )
+    asyncio.run(
+        store.append_event(
+            StepEvent(
+                run_id="another-run",
+                kind="tool_call_completed",
+                step_index=0,
+                tool_call_id="call_foreign",
+                tool_name="record_external_effect",
+            )
+        )
     )
 
     outcome = finalize_terminal(
@@ -403,8 +413,11 @@ def test_foreign_completed_effect_is_not_verified(tmp_path: Path):
         snapshot={},
     )
 
-    assert outcome.receipt.verified_tool_effects == []
-    assert any("not owned" in note for note in outcome.receipt.degraded)
+    own_ids = {e.tool_call_id for e in outcome.receipt.verified_tool_effects}
+    assert "call_own" in own_ids
+    assert "call_foreign" not in own_ids
+    # No degraded note about a foreign effect — it is simply outside this run.
+    assert not any("not owned" in note for note in outcome.receipt.degraded)
 
 
 def test_host_discovered_invalid_knowledge_is_not_verified(tmp_path: Path):

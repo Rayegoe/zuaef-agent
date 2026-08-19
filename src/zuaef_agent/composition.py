@@ -15,13 +15,12 @@ snapshot is a pre-run process error.
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Callable, Mapping, Sequence
 from importlib.metadata import EntryPoint, entry_points
 from pathlib import Path
 from typing import Any
 
-from pydantic_ai import Agent, RunContext, RunUsage
+from pydantic_ai import Agent
 
 from .config import AgentSettings
 from .core import build_agent
@@ -150,55 +149,6 @@ def _check_capability_policy(ref: PluginRef, bundle: PluginBundle) -> None:
         )
 
 
-async def _tool_names(toolset: Any, deps: CoreDeps) -> set[str]:
-    ctx = RunContext(deps=deps, usage=RunUsage(), prompt="", model=None)
-    return set(await toolset.get_tools(ctx))
-
-
-def _check_tool_conflicts(
-    refs: Sequence[PluginRef],
-    bundles: Sequence[PluginBundle],
-    deps: CoreDeps,
-) -> None:
-    """Every tool name must be owned by exactly one plugin; a duplicate is a
-    composition error, never a silent override."""
-    owners: dict[str, str] = {}
-    for ref, bundle in zip(refs, bundles):
-        for toolset in bundle.toolsets:
-            try:
-                names = asyncio.run(_tool_names(toolset, deps))
-            except Exception as exc:
-                raise CompositionError(
-                    f"plugin {ref.id!r} toolset failed to enumerate tools: "
-                    f"{type(exc).__name__}: {exc}"
-                ) from exc
-            for name in names:
-                _claim(owners, ref.id, name)
-        for capability in bundle.capabilities:
-            toolset = capability.get_toolset()
-            if toolset is None:
-                continue
-            try:
-                names = asyncio.run(_tool_names(toolset, deps))
-            except Exception as exc:
-                raise CompositionError(
-                    f"plugin {ref.id!r} capability failed to enumerate tools: "
-                    f"{type(exc).__name__}: {exc}"
-                ) from exc
-            for name in names:
-                _claim(owners, ref.id, name)
-
-
-def _claim(owners: dict[str, str], plugin_id: str, tool_name: str) -> None:
-    existing = owners.get(tool_name)
-    if existing is not None and existing != plugin_id:
-        raise CompositionError(
-            f"tool conflict: {tool_name!r} is provided by both {existing!r} "
-            f"and {plugin_id!r}; no silent override"
-        )
-    owners[tool_name] = plugin_id
-
-
 def _resolve_bundles(
     refs: Sequence[PluginRef],
     *,
@@ -283,13 +233,14 @@ def resolve_profile(
                 capabilities_allowed=plugin.allow_capabilities,
             )
         )
-    bundles = _resolve_bundles(
+    # Loading/validating every enabled bundle stays pre-run work (it surfaces
+    # factory/version/entry-point drift before any model request). Tool-name
+    # collisions are owned by upstream composition: registering two
+    # toolsets/capabilities that expose the same tool name raises PydanticAI's
+    # own UserError at schema collection — there is no silent override. ZUAEF
+    # does not run a second conflict preflight on top of it.
+    _bundles = _resolve_bundles(
         refs, settings=settings, discover=discover, version_for=version_for
-    )
-    _check_tool_conflicts(
-        refs,
-        bundles,
-        CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=""),
     )
     return _freeze(refs, profile.name)
 
@@ -314,11 +265,9 @@ def build_agent_from_snapshot(
         discover=discover,
         version_for=version_for,
     )
-    _check_tool_conflicts(
-        snapshot.plugins,
-        bundles,
-        CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=""),
-    )
+    # Conflicts surface through upstream composition (PydanticAI UserError on
+    # the combined toolset) at the first schema-materialization point — before
+    # any run outcome; the runtime boundary records it as a blocked receipt.
     toolsets = [ts for bundle in bundles for ts in bundle.toolsets]
     capabilities = [cap for bundle in bundles for cap in bundle.capabilities]
     skill_dirs = [d for bundle in bundles for d in bundle.skill_dirs]

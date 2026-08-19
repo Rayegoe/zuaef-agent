@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-import json
+import asyncio
 from pathlib import Path
 
 import pytest
+from pydantic_ai_harness.step_persistence import FileStepStore, StepEvent
 
 from zuaef_agent.knowledge_store import KnowledgeStore
 from zuaef_agent.models import SourceRef
 from zuaef_agent.verification import (
     VerificationError,
     parse_evidence_ref,
+    read_tool_effects,
     sha256_file,
     snapshot_artifacts,
     verify_artifact,
@@ -99,23 +101,49 @@ def test_knowledge_verification_ownership_and_sources(tmp_path: Path):
         verify_knowledge("concepts/missing", store=store, run_id="run-a")
 
 
-def test_tool_effect_verification(tmp_path: Path):
+def test_tool_effect_verification_via_public_stepstore(tmp_path: Path):
+    """Tool-effect verification reads the public StepStore event ledger, never
+    the private ``tool_effects.jsonl`` backend (T004)."""
     step_dir = tmp_path / "steps"
-    ledger = step_dir / "run-a" / "tool_effects.jsonl"
-    ledger.parent.mkdir(parents=True)
-    records = [
-        {"tool_call_id": "c1", "tool_name": "write_report", "run_id": "run-a", "status": "completed"},
-        {"tool_call_id": "c2", "tool_name": "boom", "run_id": "run-a", "status": "started"},
-        {"tool_call_id": "c3", "tool_name": "other", "run_id": "run-z", "status": "completed"},
-    ]
-    ledger.write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
+    store = FileStepStore(step_dir)
+    asyncio.run(
+        store.append_event(
+            StepEvent(
+                run_id="run-a", kind="tool_call_started", step_index=0, tool_call_id="c2", tool_name="boom"
+            )
+        )
+    )
+    asyncio.run(
+        store.append_event(
+            StepEvent(
+                run_id="run-a", kind="tool_call_completed", step_index=1, tool_call_id="c1", tool_name="write_report"
+            )
+        )
+    )
+
+    # The public read collapses the event stream to latest-per-call.
+    records = read_tool_effects(step_dir, "run-a")
+    assert {r["tool_call_id"] for r in records} == {"c1", "c2"}
 
     verified = verify_tool_effect("c1", step_store_dir=step_dir, run_id="run-a")
     assert verified["status"] == "completed"
 
     with pytest.raises(VerificationError, match="started but never settled"):
         verify_tool_effect("c2", step_store_dir=step_dir, run_id="run-a")
-    with pytest.raises(VerificationError, match="not owned"):
-        verify_tool_effect("c3", step_store_dir=step_dir, run_id="run-a")
     with pytest.raises(VerificationError, match="not in ledger"):
         verify_tool_effect("c4", step_store_dir=step_dir, run_id="run-a")
+
+    # An empty run has no ledger entries at all.
+    assert read_tool_effects(step_dir, "run-ghost") == []
+
+
+def test_tool_effect_ownership_check_on_raw_records(tmp_path: Path):
+    """The defensive ownership check still rejects a record owned by another
+    run when injected as raw records (unit-level; the public store cannot
+    produce a foreign row inside a run's own ledger)."""
+    step_dir = tmp_path / "steps"
+    records = [
+        {"tool_call_id": "c3", "tool_name": "other", "run_id": "run-z", "status": "completed"},
+    ]
+    with pytest.raises(VerificationError, match="not owned"):
+        verify_tool_effect("c3", step_store_dir=step_dir, run_id="run-a", records=records)
