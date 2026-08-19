@@ -1,5 +1,17 @@
 """FDE Decision Loop — event-seeded case run (SPEC v0.3 §7.1).
 
+STATUS: HISTORICAL / DIAGNOSTIC — NOT the product authority (SPEC v1.0 §9.1).
+
+Phase 2 moved the real FDE product proof onto the production seam:
+`tools/fde_two_turn_proof.py` now runs GatewayService + `profile="stillevo-fde"`
++ a deterministically bound real Case + the real model + real StepPersistence,
+with both literal golden turns and the shared approval seam. This CLI runner
+(surface = console) kept its custom composition (conversation_id == case_id =
+case_directory memory) from the pre-Phase-2 Field Interface contract. It is
+retained here as historical/diagnostic field evidence only. It is NOT the
+product authority — do not maintain or extend two FDE architectures. New FDE
+proof work goes through the Gateway/stillevo-fde seam above.
+
 The FDE agent is the product; writing/receipts are its capabilities and
 evidence. This runner is the loop itself:
 
@@ -15,9 +27,6 @@ evidence. This runner is the loop itself:
 Cross-run continuity: conversation_id == case_id; the case directory
 (case.md / situation.json / trajectory.jsonl / drafts/) is the memory —
 never a second message-history database.
-
-This is a CLI proof of the loop (surface = console). The same seam feeds the
-Telegram Field Interface; the loop is what is being proven here.
 """
 
 from __future__ import annotations

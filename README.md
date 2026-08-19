@@ -66,6 +66,77 @@ closed), `ZUAEF_WORDPRESS_USERNAME`, `ZUAEF_WORDPRESS_APP_PASSWORD`. The
 `wordpress-operator` profile carries non-secret config only; credentials
 never enter a profile, snapshot or receipt.
 
+## Phase 2 — the product seam is one deployment (`stillevo-fde`)
+
+Phase 2 does not expand the harness. It finishes the product: a real bound
+customer conversation enters the Gateway, the one FDE agent owns a Case,
+sees only a compact initial business surface, loads the relevant business
+domain when needed, writes/updates from real customer material, respects
+approval/side-effect policy, and carries the user's next-turn correction.
+
+### Capability lifecycle: available ≠ authorized ≠ loaded ≠ invoked
+
+```text
+available   the upstream primitive exists in the platform (Memory, ToolSearch,
+            SubAgents, WebSearch, … — this repo consumes, never reimplements)
+authorized  effective deployment policy = host ceiling ∩ profile [generalist]
+loaded      the model-visible tool surface at this step (progressive: deferred
+            domains are hidden until ToolSearch discovers them)
+invoked     a tool actually called this run
+```
+
+Profiles request capabilities in a `[generalist]` section; the host ceiling
+(`AgentSettings` / `ZUAEF_ENABLE_*` env) is the outer guard. The composition
+layer freezes `host ∩ request` into the `CompositionSnapshot`, so a
+continuation after pause/resume reproduces the exact deployment authority
+even if the profile file changed. Shell/RepoContext stay unauthorized in
+business deployments.
+
+### Business progressive disclosure
+
+`profiles/stillevo-fde.toml` composes the FDE deployment: the Case orientation
+plugin stays eager; client-service, ACE writing, budget and WordPress are
+`defer_tools = true`, so their real tool schemas are hidden from the model
+until it discovers the relevant domain through ToolSearch (`search_tools`).
+Available ≠ loaded: on a writing task the model loads only the writing
+domain; budget/WordPress stay dormant unless that work is actually requested.
+
+### Gateway → Case binding (supervisor only)
+
+A channel/thread is mechanically bound to one Customer Case — the model never
+guesses identity. The supervisor writes the durable mapping once:
+
+```bash
+zuaef-agent gateway bind-case \
+  --surface telegram --user 42 --channel 42 \
+  --case stillevo-beauty --state-root ./.zuaef-state
+```
+
+Conversation identity and Case identity stay separate: `conversation_id` is
+the dialogue lifecycle, `case_id` the business work item; `/new` rotates the
+conversation but keeps the Case. Every inbound run threads the bound
+`case_id` into `CoreDeps`, the receipts record it, and the real Case tools
+reject any operation naming a different Case (a cross-case `send_to_customer`
+is a blocked run, not an operator queue entry).
+
+### Authoritative Phase-2 proof
+
+```bash
+uv run python tools/fde_two_turn_proof.py
+```
+
+runs the Golden Outcome (two literal turns, no hidden constraint reinjection)
+through `GatewayService + profile=stillevo-fde + bound real Case + real model
++ real StepPersistence + real ACE materials`, then exercises approve/deny on
+a customer-visible send through the shared `resume_paused_run` seam. Output
+covers the model-visible surface before/after domain load, invoked/dormant
+domains, Case reads/writes, artifacts, no-price scan, publish calls, pause/
+approval receipts, and the Turn-2 prior-history proof. `--no-model` runs the
+deterministic surface + approval evidence only.
+
+The pre-Phase-2 FDE CLI proof (`examples/fde_loop.py`) is historical/
+diagnostic only — the Gateway/stillevo-fde seam is the product authority.
+
 ## Why this shape
 
 The core is intentionally not a business-agent registry. A business domain should normally arrive as a deferred Skill or a Toolset. A Capability is reserved for cross-domain behavior that legitimately bundles tools/instructions/hooks/settings. Knowledge remains Markdown + YAML frontmatter with source provenance; it is an OKF-compatible local profile rather than a fork of Google's reference agent.
@@ -143,12 +214,20 @@ The current search is lexical on purpose. Add embeddings only after a measured r
 
 ## What v1.1 still does not contain
 
+The platform ABSORBS host primitives from PydanticAI / pydantic-ai-harness
+(Memory, ConversationSearch, ToolSearch, WebSearch/WebFetch, planning, skills,
+sub-agents, native approval, step persistence). This project does not contain
+custom reimplementations of them:
+
 - Agent registry or one agent class per business domain.
 - Graph runtime or custom state machine.
 - Custom checkpoint/durable runtime.
-- Long-term-memory service.
-- Vector database/RAG service.
-- Multi-agent/team orchestration.
+- A custom long-term-memory service (upstream Memory is used) — nor a second
+  memory database alongside the Case store.
+- Vector database/RAG service (lexical retrieval stays; add embeddings only
+  after a measured failure).
+- Custom multi-agent/team orchestration framework (upstream SubAgents
+  capability is available; the one FDE Agent owns the outcome).
 - A generic source-ingestion framework.
 - A custom steering/inbox runtime.
 
