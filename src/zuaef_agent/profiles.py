@@ -20,6 +20,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from .config import GENERALIST_FLAGS
 from .plugin_api import CompositionError
 
 DEFAULT_CONFIG_ROOT = Path.home() / ".config" / "zuaef"
@@ -36,6 +37,45 @@ _SECRET_KEY = re.compile(
 _PROFILE_NAME = re.compile(r"[A-Za-z0-9_.-]+")
 
 
+_GENERALIST_FLAGS = tuple(GENERALIST_FLAGS)
+
+
+class ProfileGeneralistPolicy(BaseModel):
+    """Deployment-level generalist authorization request (SPEC v1.0 §3).
+
+    One small top-level profile section. It answers what THIS deployment needs/
+    permits; the effective authorization is always ``host ceiling ∩ request``,
+    computed by the composition layer and frozen into the snapshot. The model
+    never decides either half. Absent section keeps the narrow default surface.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    web_search: bool = False
+    web_fetch: bool = False
+    tool_search: bool = False
+    memory: bool = False
+    conversation_search: bool = False
+    context_controls: bool = False
+    subagents: bool = False
+    shell: bool = False
+    repo_context: bool = False
+
+    def as_flag_map(self) -> dict[str, bool]:
+        """Requested policy keyed by AgentSettings generalist flag."""
+        return {
+            "enable_web_search": self.web_search,
+            "enable_web_fetch": self.web_fetch,
+            "enable_tool_search": self.tool_search,
+            "enable_memory": self.memory,
+            "enable_conversation_search": self.conversation_search,
+            "enable_context_controls": self.context_controls,
+            "enable_subagents": self.subagents,
+            "enable_shell": self.shell,
+            "enable_repo_context": self.repo_context,
+        }
+
+
 class ProfilePluginConfig(BaseModel):
     """One enabled plugin row inside a profile."""
 
@@ -43,6 +83,9 @@ class ProfilePluginConfig(BaseModel):
 
     id: str = Field(min_length=1)
     allow_capabilities: bool = False
+    # Business progressive disclosure (SPEC v1.0 §4): defer this plugin's tool
+    # schemas until the model discovers the domain through released ToolSearch.
+    defer_tools: bool = False
     config: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -60,6 +103,7 @@ class ProfileConfig(BaseModel):
     )
     name: str
     plugins: list[ProfilePluginConfig] = Field(default_factory=list)
+    generalist: ProfileGeneralistPolicy | None = None
 
     def check_secret_policy(self) -> None:
         """Fail the load when any plugin config key looks like a secret."""

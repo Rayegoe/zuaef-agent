@@ -22,8 +22,9 @@ from pathlib import Path
 from typing import Any
 
 from pydantic_ai import Agent
+from pydantic_ai.toolsets import DeferredLoadingToolset
 
-from .config import AgentSettings
+from .config import GENERALIST_FLAGS, AgentSettings, apply_generalist_policy
 from .core import build_agent
 from .models import CoreDeps
 from .plugin_api import (
@@ -193,12 +194,50 @@ def _resolve_bundles(
     return bundles
 
 
-def _freeze(refs: Sequence[PluginRef], profile: str | None) -> CompositionSnapshot:
+def _freeze(
+    refs: Sequence[PluginRef],
+    profile: str | None,
+    generalist: dict[str, bool] | None = None,
+) -> CompositionSnapshot:
     return CompositionSnapshot(
         profile=profile,
         plugins=list(refs),
-        composition_id=compute_composition_id(profile=profile, plugins=refs),
+        generalist=generalist,
+        composition_id=compute_composition_id(
+            profile=profile, plugins=refs, generalist=generalist
+        ),
     )
+
+
+def _effective_generalist(
+    profile_config, settings: AgentSettings
+) -> dict[str, bool] | None:
+    """Effective deployment authorization: host ceiling ∩ profile request.
+
+    Profiles without a ``[generalist]`` section keep the current narrow host
+    behavior (returns None and leaves settings untouched).
+    """
+    if profile_config is None or profile_config.generalist is None:
+        return None
+    requested = profile_config.generalist.as_flag_map()
+    effective_settings = apply_generalist_policy(settings, requested)
+    return {
+        flag: bool(getattr(effective_settings, flag)) for flag in GENERALIST_FLAGS
+    }
+
+
+def _wrap_deferred_toolsets(
+    ref: PluginRef, bundle: PluginBundle
+) -> list[Any]:
+    """Mechanically wrap an existing plugin toolset in the released
+    ``DeferredLoadingToolset`` (SPEC v1.0 §4.2) — no plugin business logic is
+    rewritten. The wrapped toolset keeps the plugin's own behavior (budgets,
+    action-space withdrawal) and only marks its tool schemas ``defer_loading``
+    so the model cannot see them until ToolSearch discovers the domain."""
+    toolsets = list(bundle.toolsets)
+    if not ref.defer_tools:
+        return toolsets
+    return [DeferredLoadingToolset(wrapped=ts) for ts in toolsets]
 
 
 def resolve_profile(
@@ -233,7 +272,17 @@ def resolve_profile(
                 entry_point=ep.value,
                 config=dict(plugin.config),
                 capabilities_allowed=plugin.allow_capabilities,
+                defer_tools=plugin.defer_tools,
             )
+        )
+    effective = _effective_generalist(profile, settings)
+    deferred_ids = {ref.id for ref in refs if ref.defer_tools}
+    if deferred_ids and not (effective or {}).get("enable_tool_search", False):
+        raise CompositionError(
+            "defer_tools requires tool_search authorization: "
+            f"plugins {sorted(deferred_ids)} mark tools deferred but the "
+            "effective generalist policy does not enable tool_search "
+            "(host ceiling and/or profile [generalist] request must allow it)"
         )
     # Loading/validating every enabled bundle stays pre-run work (it surfaces
     # factory/version/entry-point drift before any model request). Tool-name
@@ -244,7 +293,7 @@ def resolve_profile(
     _bundles = _resolve_bundles(
         refs, settings=settings, discover=discover, version_for=version_for
     )
-    return _freeze(refs, profile.name)
+    return _freeze(refs, profile.name, generalist=effective)
 
 
 def build_agent_from_snapshot(
@@ -257,9 +306,12 @@ def build_agent_from_snapshot(
 ) -> Agent[CoreDeps, Any]:
     """Compose an agent exactly from a frozen snapshot — the resume authority.
 
-    The current profile is never consulted. Version or entry-point drift
-    between the snapshot and the installed environment fails here, before any
-    model request.
+    The current profile is never consulted: ``snapshot.generalist`` freezes the
+    effective deployment authorization (host ∩ request at composition time) and
+    is applied exactly, and per-plugin ``defer_tools`` identity mechanically
+    wraps the plugin's toolset in the released DeferredLoadingToolset. Version
+    or entry-point drift between the snapshot and the installed environment
+    fails here, before any model request.
     """
     bundles = _resolve_bundles(
         snapshot.plugins,
@@ -267,10 +319,18 @@ def build_agent_from_snapshot(
         discover=discover,
         version_for=version_for,
     )
+    # Frozen deployment authority: the snapshot's effective generalist policy
+    # replaces the mutable host/profile flags, so a profile change after a
+    # pause can never alter the resumed capabilities.
+    settings = apply_generalist_policy(settings, snapshot.generalist, frozen=True)
     # Conflicts surface through upstream composition (PydanticAI UserError on
     # the combined toolset) at the first schema-materialization point — before
     # any run outcome; the runtime boundary records it as a blocked receipt.
-    toolsets = [ts for bundle in bundles for ts in bundle.toolsets]
+    toolsets = [
+        ts
+        for ref, bundle in zip(snapshot.plugins, bundles)
+        for ts in _wrap_deferred_toolsets(ref, bundle)
+    ]
     capabilities = [cap for bundle in bundles for cap in bundle.capabilities]
     skill_dirs = [d for bundle in bundles for d in bundle.skill_dirs]
     return build_agent(

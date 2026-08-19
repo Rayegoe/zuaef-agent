@@ -174,6 +174,7 @@ def test_plugin_bundle_fields_are_the_only_primitives():
         "schema_version",
         "profile",
         "plugins",
+        "generalist",
         "composition_id",
     }
 

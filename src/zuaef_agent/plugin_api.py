@@ -76,6 +76,11 @@ class PluginRef(BaseModel):
     entry_point: str
     config: dict[str, Any] = Field(default_factory=dict)
     capabilities_allowed: bool = False
+    # Business progressive disclosure (SPEC v1.0 §4): when true the plugin's
+    # toolset is mechanically wrapped in the released DeferredLoadingToolset,
+    # so its tool schemas stay hidden until model-driven tool search discovers
+    # the domain. Frozen in the composition identity.
+    defer_tools: bool = False
 
 
 class CompositionSnapshot(BaseModel):
@@ -84,11 +89,17 @@ class CompositionSnapshot(BaseModel):
     A snapshot is the single authority for resume: a continued run must
     reproduce the exact plugin versions, entry points and config recorded
     here, ignoring whatever the current profile says.
+
+    ``generalist`` freezes the EFFECTIVE deployment authorization
+    (host ceiling ∩ profile request, SPEC v1.0 §3.5): a continuation rebuilds
+    the agent with exactly these flags, so a profile change after a pause can
+    never alter the resumed capabilities.
     """
 
     schema_version: Literal["1"] = "1"
     profile: str | None = None
     plugins: list[PluginRef] = Field(default_factory=list)
+    generalist: dict[str, bool] | None = None
     composition_id: str
 
 
@@ -100,19 +111,22 @@ def compute_composition_id(
     *,
     profile: str | None,
     plugins: Sequence[PluginRef],
+    generalist: dict[str, bool] | None = None,
 ) -> str:
     """SHA-256 of the canonical composition payload.
 
     The payload covers every fact that must change the hash: profile, plugin
-    id, plugin version, entry point, non-secret config, plugin order, and
-    capability permission. A non-JSON-serializable config value is a
-    composition error — the snapshot must always be JSON-safe.
+    id, version, entry point, non-secret config, plugin order, capability
+    permission, deferred-tool marking, and effective generalist policy. A
+    non-JSON-serializable config value is a composition error — the snapshot
+    must always be JSON-safe.
     """
     try:
         payload = _canonical_json(
             {
                 "schema_version": "1",
                 "profile": profile,
+                "generalist": generalist,
                 "plugins": [
                     {
                         "id": ref.id,
@@ -120,6 +134,7 @@ def compute_composition_id(
                         "entry_point": ref.entry_point,
                         "config": ref.config,
                         "capabilities_allowed": ref.capabilities_allowed,
+                        "defer_tools": ref.defer_tools,
                     }
                     for ref in plugins
                 ],

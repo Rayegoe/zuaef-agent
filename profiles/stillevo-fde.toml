@@ -1,4 +1,4 @@
-# FDE Deployment Profile: stillevo-fde — SPEC v0.3 FDE Platform §8.
+# FDE Deployment Profile: stillevo-fde — SPEC v0.3 FDE Platform §8 + v1.0 §3-§4.
 #
 # One FDE agent deployed to the Stillevo field: case context + client service
 # + ACE writing + budget + wordpress. A deployment profile is a capability
@@ -10,29 +10,53 @@
 #   zuaef-agent profile check stillevo-fde --config-root ~/.config/zuaef
 #
 # Field requirements (non-secret config only; secrets stay in the environment):
-#   - ZUAEF_WORDPRESS_USERNAME / ZUAEF_WORDPRESS_APP_PASSWORD
+#   - ZUAEF_WORDPRESS_USERNAME / ZUAEF_WORDPRESS_APP_PASSWORD (wordpress compose)
 #   - client-service private corpus (default ~/.local/share/zuaef/client-service)
 #   - ACE checkout at the ace_root below (tools/ctx.py must exist)
 schema = 1
 name = "stillevo-fde"
 
+# Deployment-level generalist authorization (SPEC v1.0 §3): what THIS deployment
+# requests. Effective capability = host ceiling ∩ request, frozen into the
+# composition identity at resolve time. The model decides neither half.
+# shell/repo_context are NOT requested: this business deployment never exposes
+# them, even when the host process could.
+[generalist]
+web_search = true
+web_fetch = true
+tool_search = true
+memory = true
+conversation_search = true
+context_controls = true
+subagents = true
+shell = false
+repo_context = false
+
+# Business progressive disclosure (SPEC v1.0 §4): zuaef-case (id "case") is the
+# FDE orientation layer and stays eager; every other business domain is deferred
+# (defer_tools = true) — its tool schemas are hidden from the model until
+# tool search discovers the domain actually needed by the task.
 [[plugins]]
-id = "zuaef-case"
+id = "case"
 
 [[plugins]]
 id = "client-service"
+defer_tools = true
 
 [[plugins]]
 id = "ace-writing"
+defer_tools = true
 
 [plugins.config]
 ace_root = "~/projects/article-context-engine/article-context-engine"
 
 [[plugins]]
 id = "zuaef-emtb-budget"
+defer_tools = true
 
 [[plugins]]
 id = "wordpress"
+defer_tools = true
 
 [plugins.config]
 site_url = "https://stillevo.example"

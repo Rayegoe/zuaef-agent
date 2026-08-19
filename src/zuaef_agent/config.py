@@ -37,6 +37,47 @@ def _first_env_bool(*names: str) -> bool | None:
     return None
 
 
+# The generalist platform surface (SPEC v2.1 §4 / v1.0 §3). Availability is
+# broad, authorization is per-deployment: AgentSettings holds the host ceiling,
+# a profile's ``[generalist]`` section holds the deployment request, and the
+# composition layer freezes ``host ∩ request`` as the effective policy.
+GENERALIST_FLAGS = (
+    "enable_web_search",
+    "enable_web_fetch",
+    "enable_tool_search",
+    "enable_memory",
+    "enable_conversation_search",
+    "enable_context_controls",
+    "enable_subagents",
+    "enable_shell",
+    "enable_repo_context",
+)
+
+
+def apply_generalist_policy(
+    settings: AgentSettings,
+    policy: dict[str, bool] | None,
+    *,
+    frozen: bool = False,
+) -> AgentSettings:
+    """Compute an effective-settings view from a generalist policy.
+
+    ``frozen=False`` (composition time): ``effective = host ceiling ∩ request`` —
+    a flag is on only when both the host allows it and the profile asks for it.
+
+    ``frozen=True`` (resume): the snapshot's effective policy is the authority —
+    it is applied exactly, reproducing the same deployment authority even when
+    the current profile file changed after the pause.
+    """
+    if not policy:
+        return settings
+    changes: dict[str, object] = {}
+    for flag in GENERALIST_FLAGS:
+        requested = bool(policy.get(flag, False))
+        changes[flag] = requested if frozen else getattr(settings, flag) and requested
+    return settings.with_overrides(**changes)
+
+
 @dataclass(frozen=True)
 class AgentSettings:
     model: str = "openai:gpt-5.2"
