@@ -26,10 +26,17 @@ class RunSummary(BaseModel):
     or modified; `evidence` holds parseable refs of the form
     ``artifact:<path>`` / ``knowledge:<id>`` / ``tool-effect:<tool_call_id>``.
     Both are model proposals — the host verifies before the receipt finalizes.
+
+    `deliverable` is the PRESENTATION contract, not evidence: the full text of
+    the work product the current user asked to see (e.g. a rewritten article).
+    Authoring tasks default their outcome to "show the supervisor the result" —
+    this field is how it reaches the main surface. Like `outcome` it is
+    unverified free text; verified proof stays in artifacts/effects.
     """
 
     status: Literal["completed", "partial", "blocked"]
     outcome: str
+    deliverable: str | None = None
     artifacts: list[str] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
     unknowns: list[str] = Field(default_factory=list)

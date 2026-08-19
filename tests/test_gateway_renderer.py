@@ -45,9 +45,9 @@ def _paused(approvals: list[dict]) -> PausedRun:
     )
 
 
-def _terminal(status="completed") -> TerminalRun:
+def _terminal(status="completed", deliverable=None) -> TerminalRun:
     now = datetime.now(UTC)
-    summary = RunSummary(status=status, outcome="post published")  # type: ignore[arg-type]
+    summary = RunSummary(status=status, outcome="post published", deliverable=deliverable)  # type: ignore[arg-type]
     receipt = RunReceipt(
         run_id="run-term-1234",
         model="test",
@@ -99,6 +99,28 @@ def test_render_terminal_status_and_counts():
 def test_render_terminal_partial_and_blocked():
     assert "⚠️ Partial" in render_terminal(_terminal("partial"))
     assert "⛔ Blocked" in render_terminal(_terminal("blocked"))
+
+
+def test_render_terminal_deliverable_is_the_reply():
+    article = "### 夏天的指尖\n\n到了八月,美甲似乎也该从好看里退一步。"
+    text = render_terminal(_terminal(deliverable=article))
+    assert text.startswith(article)
+    assert "✅ Completed" in text
+    assert "Run: run-term" in text  # short id on the outcome-first card
+    assert "post published" not in text  # audit prose is Console-only here
+    assert "Verified artifacts" not in text
+
+
+def test_render_pause_shows_outbound_content():
+    text = render_pause(
+        _paused(
+            [{"tool_name": "send_to_customer", "args": {"draft_ref": "msg-004.md"}}]
+        ),
+        content="给客户的正文——不会批没看过的东西",
+    )
+    assert "Content to send:" in text
+    assert "给客户的正文——不会批没看过的东西" in text
+    assert "[Approve]" in text and "[Deny]" in text
 
 
 def test_render_pause_single_approval():

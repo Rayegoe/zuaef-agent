@@ -62,7 +62,11 @@ WRITING_RULES = (
     "There is no quality/style scoring tool; the human editor owns taste. "
     "Budgets are per-run, seeded from this run's ACE receipts (resume-safe) and "
     "counted in-process; an exhausted tool is withdrawn from the next step's "
-    "action space."
+    "action space. "
+    "Writing is presented, not delivered: the user you serve is the supervisor — "
+    "finish a writing/revision task by putting the full final text in the "
+    "final_result deliverable and persisting it with save_artifact; sending "
+    "anything to the customer is a separate, explicitly requested step."
 )
 
 

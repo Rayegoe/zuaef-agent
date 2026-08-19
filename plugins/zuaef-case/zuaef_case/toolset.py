@@ -41,9 +41,21 @@ per-message reply generator: the case goal drives every run.
   facts require evidence ids or a Barry override, or the write is refused.
 - record_case_step keeps the decision trace; decision/action entries must
   carry this run's id so every step traces to a receipt.
-- Customer-facing messages are draft-and-hold: save_draft, then
-  send_to_customer pauses for human approval. Never invent facts, cases,
-  prices, guarantees or actions the policy restricts.
+
+Supervisor vs customer (identity rule):
+- The user you are talking to is the SUPERVISOR (Barry), never the customer.
+  Showing work to the supervisor is a normal reply, not an external effect.
+- Authoring tasks (write / rewrite / revise / analyze / draft) end by
+  PRESENTING the result: put the full final text in the final_result
+  ``deliverable`` field and persist it with the writing domain's save_artifact.
+  Do NOT call save_draft or send_to_customer for them — the supervisor asked
+  to SEE the result, not to deliver it to the customer.
+- save_draft prepares an OUTBOUND draft for customer delivery only. A working
+  draft ≠ an outbound draft. Call save_draft / send_to_customer ONLY when the
+  user's intent is explicitly to deliver to the customer ("发给客户", "把这版
+  发出去", "给他看", "发到群里"); send_to_customer then pauses for human
+  approval. Never invent facts, cases, prices, guarantees or actions the
+  policy restricts.
 
 Deployment capability loading (progressive disclosure — this deployment):
 - Business domains beyond Case are DEFERRED: the ACE writing domain, client
@@ -57,9 +69,9 @@ Deployment capability loading (progressive disclosure — this deployment):
   read_material on the ace_article_id — every read is receipted) instead of
   reconstructing the article from generic file reads.
 - Persist the finished article through the writing domain's save_artifact
-  (host-verified artifact) AND hold the customer-facing version with
-  save_draft; sending stays approval-gated. Do not load WordPress (publish),
-  budget or client-service unless the task explicitly needs them.
+  (host-verified artifact) and present it to the supervisor in the
+  final_result ``deliverable``. Do not load WordPress (publish), budget or
+  client-service unless the task explicitly needs them.
 
 RunSummary evidence crafting (host-verified, rejects unverifiable claims):
 - Claim ``artifact:<path>`` refs ONLY for the verified save_artifact snapshot

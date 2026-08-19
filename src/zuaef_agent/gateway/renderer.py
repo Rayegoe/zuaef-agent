@@ -50,14 +50,26 @@ def _short(run_id: str) -> str:
 
 
 def render_terminal(outcome: TerminalRun) -> str:
-    """Terminal result card (SPEC §41): status emoji, outcome, verified counts,
-    run id — never the full receipt."""
+    """Terminal card (SPEC §41). When the run carries a ``deliverable`` the
+    work product IS the reply (outcome-first presentation); audit counts stay
+    in /status and the receipt. Without one, the classic summary card."""
     receipt = outcome.receipt
     emoji = {
         "completed": "✅ Completed",
         "partial": "⚠️ Partial",
         "blocked": "⛔ Blocked",
     }[receipt.status]
+    deliverable = (receipt.summary.deliverable or "").strip()
+    if deliverable:
+        return "\n".join(
+            [
+                deliverable,
+                "",
+                "—",
+                emoji,
+                f"Run: {_short(receipt.run_id)}",
+            ]
+        )
     return "\n".join(
         [
             emoji,
@@ -72,8 +84,10 @@ def render_terminal(outcome: TerminalRun) -> str:
     )
 
 
-def render_pause(paused: PausedRun) -> str:
-    """Approval card (SPEC §42, §26): batch-level, redacted argument preview."""
+def render_pause(paused: PausedRun, *, content: str | None = None) -> str:
+    """Approval card (SPEC §42, §26): batch-level, redacted argument preview.
+    ``content`` is the host-read outbound draft text for customer-visible
+    sends — the operator never approves unseen content."""
     approvals = paused.pause_receipt.pending_approvals
     lines = ["⚠️ Approval required"]
     if len(approvals) > 1:
@@ -87,6 +101,8 @@ def render_pause(paused: PausedRun) -> str:
         else:
             lines.extend(["", "Action:", tool_name])
         lines.extend(["", "Arguments:", preview_arguments(args)])
+    if content:
+        lines.extend(["", "Content to send:", content])
     lines.extend(["", "Run:", _short(paused.pause_receipt.run_id)])
     if len(approvals) > 1:
         lines.extend(["", "[Approve all]", "[Deny all]"])

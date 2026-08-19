@@ -139,12 +139,15 @@ def _fixture_validate(profile, settings, *, config_root=None, **kw):
     )
 
 
-def _final(status="completed", outcome="done"):
+def _final(status="completed", outcome="done", deliverable=None):
+    payload = {"status": status, "outcome": outcome, "artifacts": [], "evidence": []}
+    if deliverable is not None:
+        payload["deliverable"] = deliverable
     return ModelResponse(
         parts=[
             ToolCallPart(
                 "final_result",
-                {"status": status, "outcome": outcome, "artifacts": [], "evidence": []},
+                payload,
             )
         ]
     )
@@ -838,3 +841,95 @@ def _CASE_ID_SHAPE_OK(name: str) -> bool:
     import re
 
     return bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", name))
+
+
+# ── P3B-1 golden failure case: authoring presents the result, no outbound ──
+
+
+def test_authoring_task_presents_deliverable_without_approval(
+    tmp_path: Path, monkeypatch
+):
+    """"改写这篇文章" must surface the rewritten article as the main reply
+    with ZERO approval cards — work process is never approval-gated."""
+    article = "### 夏天的指尖,不必太热闹\n\n到了八月,美甲似乎也该从好看里退一步。"
+    surface = FakeSurface()
+    service = _service(
+        tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="已改写", deliverable=article)
+    )
+    _ensure_session(service)
+
+    service.handle(_envelope("改写这篇文章", n=1))
+
+    assert surface.approvals == []
+    text = surface.last_text()
+    assert text.startswith(article)
+    assert "✅ Completed" in text
+    assert "Verified artifacts" not in text  # audit counts are Console-only
+    session = _session(service)
+    assert session.paused_run_id is None
+    receipt = service.receipts.read(session.last_terminal_run_id)
+    assert receipt.summary.deliverable == article
+
+
+def _paused_send(draft_ref: str, run_id: str = "run-send-1"):
+    from zuaef_agent.runtime import PausedRun
+
+    now = datetime.now(UTC)
+    receipt = PauseReceipt(
+        run_id=run_id,
+        conversation_id="conv-1",
+        model="test",
+        started_at=now,
+        finished_at=now,
+        pending_approvals=[
+            {"tool_name": "send_to_customer", "args": {"draft_ref": draft_ref}}
+        ],
+    )
+    return PausedRun(
+        requests=None,  # type: ignore[arg-type]
+        message_history=[],
+        conversation_id="conv-1",
+        pause_receipt=receipt,
+    )
+
+
+def test_outbound_draft_content_reads_bound_case_draft(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    drafts = service.settings.workspace_root / "cases" / "acme" / "drafts"
+    drafts.mkdir(parents=True)
+    (drafts / "msg-004.md").write_text("给客户的正文", encoding="utf-8")
+    session = _ensure_session(service)
+    session = service.store.bind_case(session, "acme")
+
+    content = service._outbound_draft_content(session, _paused_send("msg-004.md"))
+
+    assert content == "给客户的正文"
+
+
+def test_outbound_draft_content_rejects_unsafe_refs(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    session = _ensure_session(service)
+    session = service.store.bind_case(session, "acme")
+
+    assert service._outbound_draft_content(session, _paused_send("../evil.md")) is None
+    assert service._outbound_draft_content(session, _paused_send("msg-04.md")) is None
+
+
+def test_outbound_draft_content_truncates_long_drafts(tmp_path: Path, monkeypatch):
+    from zuaef_agent.gateway.service import DRAFT_PREVIEW_MAX
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    drafts = service.settings.workspace_root / "cases" / "acme" / "drafts"
+    drafts.mkdir(parents=True)
+    (drafts / "msg-004.md").write_text("x" * (DRAFT_PREVIEW_MAX + 100), encoding="utf-8")
+    session = _ensure_session(service)
+    session = service.store.bind_case(session, "acme")
+
+    content = service._outbound_draft_content(session, _paused_send("msg-004.md"))
+
+    assert content is not None
+    assert "truncated" in content
+    assert len(content) < DRAFT_PREVIEW_MAX + 100

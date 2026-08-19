@@ -95,6 +95,11 @@ CASES_LIST_LIMIT = 20
 CALLBACK_DATA_MAX = 64
 CASE_ID_MAX = CALLBACK_DATA_MAX - len("zc:bind:")
 _CASE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
+_DRAFT_REF = re.compile(r"msg-[A-Za-z0-9_.-]+\.md")
+
+# The approval card shows the outbound draft content so the operator never
+# approves unseen text; Telegram caps one message, so long drafts truncate.
+DRAFT_PREVIEW_MAX = 2800
 
 
 class GatewayService:
@@ -206,6 +211,39 @@ class GatewayService:
         logger.info("gateway run %s settled %s", outcome.receipt.run_id, outcome.receipt.status)
         self._send_text(session, render_terminal(outcome))
 
+    def _outbound_draft_content(
+        self, session: SessionBinding, paused: PausedRun
+    ) -> str | None:
+        """Host-side read of the draft a pending ``send_to_customer`` proposes.
+        Shape-validated draft_ref + case-scoped containment — never a model
+        claim; the operator approves content they can see."""
+        for entry in paused.pause_receipt.pending_approvals:
+            if entry.get("tool_name") != "send_to_customer":
+                continue
+            args = entry.get("args") or {}
+            draft_ref = args.get("draft_ref")
+            case_id = args.get("case_id") or session.case_id
+            if (
+                not isinstance(draft_ref, str)
+                or not _DRAFT_REF.fullmatch(draft_ref)
+                or not isinstance(case_id, str)
+                or not _CASE_ID.fullmatch(case_id)
+            ):
+                continue
+            drafts_dir = (
+                self.settings.workspace_root / "cases" / case_id / "drafts"
+            ).resolve()
+            path = (drafts_dir / draft_ref).resolve()
+            if not path.is_relative_to(drafts_dir) or not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace").strip()
+            if not text:
+                continue
+            if len(text) > DRAFT_PREVIEW_MAX:
+                return text[:DRAFT_PREVIEW_MAX] + f"\n…(truncated — full text: {draft_ref})"
+            return text
+        return None
+
     def _settle_paused(self, session: SessionBinding, paused: PausedRun) -> None:
         session = session.model_copy(
             update={
@@ -223,7 +261,9 @@ class GatewayService:
         batch = len(paused.pause_receipt.pending_approvals) > 1
         self.surface.send_approval(
             session.channel_id,
-            text=render_pause(paused),
+            text=render_pause(
+                paused, content=self._outbound_draft_content(session, paused)
+            ),
             approve_token=token,
             approve_label="Approve all" if batch else "Approve",
             deny_label="Deny all" if batch else "Deny",
