@@ -7,26 +7,36 @@ from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.toolsets import AgentToolset
 
 from .knowledge_store import KnowledgeStore
-from .models import CoreDeps, SourceRef
+from .models import CoreDeps
 
 
 @dataclass
 class Knowledge(AbstractCapability[CoreDeps]):
-    """File-native knowledge operations with evidence-preserving writes."""
+    """File-native document storage (document-first, v1.2 SPEC §7).
+
+    The store records Markdown documents with optional tags and run
+    provenance. It does NOT assign semantic types or enforce source fields —
+    the kernel never claims a document is \"verified\" because frontmatter
+    contains a source field. If a deliverable depends on factual sources,
+    the URLs belong in the document body where a reader can follow them.
+    """
 
     def get_toolset(self) -> AgentToolset[CoreDeps] | None:
         toolset: FunctionToolset[CoreDeps] = FunctionToolset(
             instructions=(
-                "Knowledge files are durable evidence-backed artifacts. Search/read before writing. "
-                "Never invent a source URL or evidence locator. Use knowledge ids such as "
-                "concepts/agent-harness or sources/youtube-abc123. Valid doc types: "
-                "concept, claim, method, reference (each requires >=1 source) or "
-                "project-note, decision, user-authored-note (no source required)."
+                "Workspace knowledge files are durable Markdown documents. "
+                "Search/read before writing. Never invent a source URL or "
+                "evidence locator. When a document depends on factual "
+                "material, include the real source URLs inside the body (a "
+                "link section) so a reader can follow them. Use knowledge "
+                "ids such as concepts/agent-harness or sources/youtube-abc123."
             )
         )
 
         @toolset.tool
-        def search_knowledge(ctx: RunContext[CoreDeps], query: str, limit: int = 12) -> list[dict[str, str]]:
+        def search_knowledge(
+            ctx: RunContext[CoreDeps], query: str, limit: int = 12
+        ) -> list[dict[str, str]]:
             """Lexically search the file-native knowledge corpus."""
             return KnowledgeStore(ctx.deps.workspace_root).search(query, limit=limit)
 
@@ -57,20 +67,17 @@ class Knowledge(AbstractCapability[CoreDeps]):
         def write_knowledge(
             ctx: RunContext[CoreDeps],
             knowledge_id: str,
-            doc_type: str,
             title: str,
             body: str,
             tags: list[str] | None = None,
-            sources: list[SourceRef] | None = None,
         ) -> str:
-            """Write one Markdown+frontmatter knowledge node and rebuild the progressive index."""
+            """Write one Markdown+frontmatter knowledge document and rebuild
+            the progressive index. Real source URLs belong in the body."""
             return KnowledgeStore(ctx.deps.workspace_root).write_doc(
                 knowledge_id=knowledge_id,
-                doc_type=doc_type,
                 title=title,
                 body=body,
                 tags=tags or [],
-                sources=sources or [],
                 run_id=ctx.deps.run_id,
             )
 

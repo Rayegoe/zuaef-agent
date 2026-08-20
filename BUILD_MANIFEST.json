@@ -1158,18 +1158,18 @@
     },
     {
       "path": "src/zuaef_agent/knowledge_capability.py",
-      "bytes": 3341,
-      "sha256": "ec583ebb6605839264d8ae85e1bab4a84dc18c56616c80b2d5cbae247f9641fa"
+      "bytes": 3634,
+      "sha256": "25ba0fca0d12493c0d6a440e1877e50828a1fbbe142d8b2d0ecbcf4c01c3a231"
     },
     {
       "path": "src/zuaef_agent/knowledge_store.py",
-      "bytes": 6680,
-      "sha256": "13027a9ece2c431fb8c65890ec8a699529f9a87b15c1ac5a834a1afa6f7e429d"
+      "bytes": 6659,
+      "sha256": "62924bf575ca2fa58aa14e7555fe445b725f69acca1b2e42d9e87d3ab6ba80c8"
     },
     {
       "path": "src/zuaef_agent/models.py",
-      "bytes": 4258,
-      "sha256": "fa2c78595c950997a287961b3c9db1a1e49467db5175f98b0a2d51200f30dd1c"
+      "bytes": 3861,
+      "sha256": "5ef1b7a551466c61619d0283492b9db1763e736b469345f2d04c8ba89028b33c"
     },
     {
       "path": "src/zuaef_agent/plugin_api.py",
@@ -1348,8 +1348,8 @@
     },
     {
       "path": "tests/test_execute_run_seam.py",
-      "bytes": 17179,
-      "sha256": "856ce37d33304a223fb78deccc5104b4d43fe72b4578cb399a7c2c7cd527a7b0"
+      "bytes": 16988,
+      "sha256": "fe6e18e1bf482e504821353d769279419a0aac1e8520514f6a5db0151defa893"
     },
     {
       "path": "tests/test_fde_loop.py",
@@ -1428,13 +1428,13 @@
     },
     {
       "path": "tests/test_knowledge_invariants.py",
-      "bytes": 3496,
-      "sha256": "d56b976038e2611b96de56f6d8cfdb69800e1f1d89ca5901c0142f84d7a86c31"
+      "bytes": 2799,
+      "sha256": "884ee2a43c83932390936f8b3bc0ec625b7dfbe206b8e2666280c8a580b1bf7e"
     },
     {
       "path": "tests/test_knowledge_store.py",
-      "bytes": 1361,
-      "sha256": "0cbc59bec1bc71a8dd3b90e779ecc0492f006859a8a6ef44389d330f66e23a69"
+      "bytes": 1957,
+      "sha256": "3031bc36c4e471e6006d769bec616eec14b3c48d2837b36bc425839564366f8b"
     },
     {
       "path": "tests/test_learning_pack_compiler.py",

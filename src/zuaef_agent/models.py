@@ -11,19 +11,6 @@ from pydantic import BaseModel, Field
 from .plugin_api import CompositionSnapshot
 
 
-class SourceRef(BaseModel):
-    """A source actually observed by the system (knowledge-module type).
-
-    Retained only until the knowledge-store simplification (v1.2 T007)
-    removes its last kernel consumer; it is NOT part of the receipt contract.
-    """
-
-    id: str = Field(min_length=1)
-    resource: str = Field(min_length=1)
-    title: str | None = None
-    evidence: str | None = None
-
-
 class ArtifactFact(BaseModel):
     """Operational byte fact about one workspace artifact.
 

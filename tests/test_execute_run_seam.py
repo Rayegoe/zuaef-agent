@@ -430,13 +430,9 @@ def test_knowledge_written_via_capability_is_a_provenance_fact(tmp_path: Path):
                         "write_knowledge",
                         {
                             "knowledge_id": "concepts/shared-seam",
-                            "doc_type": "concept",
                             "title": "Shared Seam",
-                            "body": "One runtime, many compositions.",
+                            "body": "One runtime, many compositions. Source: https://ai.pydantic.dev/capabilities",
                             "tags": [],
-                            "sources": [
-                                {"id": "src-1", "resource": "file:///guide.md", "title": None, "evidence": None}
-                            ],
                         },
                     )
                 ]

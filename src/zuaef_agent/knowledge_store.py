@@ -9,29 +9,25 @@ from uuid import uuid4
 
 import yaml
 
-from .models import SourceRef
-
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_./-]*$")
 
 MAX_SEARCH_RESULTS = 100
-
-# Knowledge types that must carry at least one SourceRef.
-REQUIRED_SOURCE_TYPES = frozenset({"concept", "claim", "method", "reference"})
-# Knowledge types explicitly allowed without sources.
-NO_SOURCE_TYPES = frozenset({"project-note", "decision", "user-authored-note"})
-KNOWN_TYPES = REQUIRED_SOURCE_TYPES | NO_SOURCE_TYPES
 
 # Reserved ids that must never be overwritten by a run.
 RESERVED_IDS = frozenset({"index"})
 
 
 class KnowledgeStore:
-    """Small file-native knowledge store using Markdown + YAML frontmatter.
+    """Small file-native document store using Markdown + YAML frontmatter.
 
-    This is an OKF-compatible profile, not a reimplementation of the upstream
-    OKF reference agent. It intentionally keeps storage deterministic and thin:
-    ``knowledge/*.md`` is the authoritative truth, ``index.md`` is a rebuildable
-    projection, and document writes are atomic (same-dir temp + ``os.replace``).
+    Document-first (v1.2 SPEC §7): the store is a safe file container for
+    Markdown documents with optional tags and optional run provenance. It
+    does NOT enforce a semantic type taxonomy and does NOT pretend a
+    ``sources`` frontmatter field proves a claim is supported — source URLs
+    belong in the document body where a reader can follow them.
+
+    ``index.md`` is a rebuildable projection; document writes are atomic
+    (same-dir temp + ``os.replace``).
     """
 
     def __init__(self, workspace_root: Path):
@@ -57,35 +53,32 @@ class KnowledgeStore:
         self,
         *,
         knowledge_id: str,
-        doc_type: str,
         title: str,
         body: str,
         tags: Iterable[str] = (),
-        sources: Iterable[SourceRef] = (),
         generated_by: str = "zuaef-agent",
         run_id: str | None = None,
     ) -> str:
-        doc_type = doc_type.strip().lower()
-        if doc_type not in KNOWN_TYPES:
-            raise ValueError(
-                f"unknown knowledge type {doc_type!r}; expected one of {sorted(KNOWN_TYPES)}"
-            )
-        source_list = list(sources)
-        if doc_type in REQUIRED_SOURCE_TYPES and not source_list:
-            raise ValueError(f"knowledge type {doc_type!r} requires at least one source")
+        """Write one Markdown+frontmatter document and rebuild the index.
+
+        No semantic type requirement, no source-requirement gate: the store
+        records the document and optional provenance, never an epistemic
+        verdict. Source URLs live in ``body`` where a reader can follow them.
+        """
         target = self.path_for(knowledge_id)
         target.parent.mkdir(parents=True, exist_ok=True)
-        source_dicts = [s.model_dump(exclude_none=True) for s in source_list]
         frontmatter: dict[str, Any] = {
-            "type": doc_type,
             "title": title,
             "tags": sorted(set(tags)),
-            "sources": source_dicts,
             "generated": {"by": generated_by},
         }
         if run_id:
             frontmatter["generated"]["run_id"] = run_id
-        rendered = "---\n" + yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False).strip() + "\n---\n\n"
+        rendered = (
+            "---\n"
+            + yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False).strip()
+            + "\n---\n\n"
+        )
         rendered += body.strip() + "\n"
         tmp = target.with_name(f"{target.name}.{uuid4().hex}.tmp")
         try:
@@ -114,8 +107,20 @@ class KnowledgeStore:
             score = sum(low.count(term) for term in terms)
             if not score:
                 continue
-            compact = " ".join(line.strip() for line in text.splitlines() if line.strip() and line != "---")
-            hits.append((score, {"path": str(path.relative_to(self.root.parent)), "snippet": compact[:500]}))
+            compact = " ".join(
+                line.strip()
+                for line in text.splitlines()
+                if line.strip() and line != "---"
+            )
+            hits.append(
+                (
+                    score,
+                    {
+                        "path": str(path.relative_to(self.root.parent)),
+                        "snippet": compact[:500],
+                    },
+                )
+            )
         hits.sort(key=lambda item: (-item[0], item[1]["path"]))
         return [item for _, item in hits[:limit]]
 
@@ -127,7 +132,11 @@ class KnowledgeStore:
         )
 
     def list_generated_by_run(self, run_id: str) -> list[str]:
-        """Return knowledge docs whose frontmatter records this run as generator."""
+        """Return knowledge docs whose frontmatter records this run as generator.
+
+        Provenance only: the returned paths record that THIS run wrote the
+        document, not that its content is correct.
+        """
         matched: list[str] = []
         for path in self.root.rglob("*.md"):
             if path.name == "index.md":
@@ -140,14 +149,21 @@ class KnowledgeStore:
                 frontmatter = yaml.safe_load(raw_frontmatter) or {}
             except (ValueError, yaml.YAMLError):
                 continue
-            generated = frontmatter.get("generated") if isinstance(frontmatter, dict) else None
+            generated = (
+                frontmatter.get("generated") if isinstance(frontmatter, dict) else None
+            )
             if isinstance(generated, dict) and generated.get("run_id") == run_id:
                 matched.append(str(path.relative_to(self.root.parent)))
         return sorted(matched)
 
     def rebuild_index(self) -> str:
         index = self.root / "index.md"
-        lines = ["# Knowledge Index", "", "Read only the relevant nodes; do not load the whole corpus by default.", ""]
+        lines = [
+            "# Knowledge Index",
+            "",
+            "Read only the relevant nodes; do not load the whole corpus by default.",
+            "",
+        ]
         for rel in self.list_docs():
             target = Path(rel)
             link = target.relative_to("knowledge").as_posix()
