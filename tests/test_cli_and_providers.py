@@ -9,7 +9,7 @@ import pytest
 from zuaef_agent import cli
 from zuaef_agent import config as config_module
 from zuaef_agent.config import AgentSettings
-from zuaef_agent.models import PauseReceipt, RunSummary
+from zuaef_agent.models import PauseReceipt
 from zuaef_agent.runtime import PausedRun, TerminalRun
 
 
@@ -20,21 +20,20 @@ def test_exit_code_mapping(tmp_path, monkeypatch):
 
     now = datetime.now(UTC)
 
-    def make(status: str) -> TerminalRun:
-        summary = RunSummary(status=status, outcome="x")  # type: ignore[arg-type]
+    def make(state: str) -> TerminalRun:
         receipt = RunReceipt(
             run_id="r",
             model="m",
             started_at=now,
             finished_at=now,
-            status=status,  # type: ignore[arg-type]
-            summary=summary,
+            execution_state=state,  # type: ignore[arg-type]
+            outcome="x",
         )
-        return TerminalRun(presentation=summary.outcome, receipt=receipt)
+        return TerminalRun(presentation="x", receipt=receipt)
 
     assert cli._outcome_exit_code(make("completed")) == cli.EXIT_COMPLETED
-    assert cli._outcome_exit_code(make("partial")) == cli.EXIT_PARTIAL
-    assert cli._outcome_exit_code(make("blocked")) == cli.EXIT_BLOCKED
+    assert cli._outcome_exit_code(make("limit_reached")) == cli.EXIT_PARTIAL
+    assert cli._outcome_exit_code(make("failed")) == cli.EXIT_BLOCKED
 
     pause = PauseReceipt(
         run_id="r",
@@ -63,17 +62,16 @@ def test_cli_run_prints_receipt_and_exits_by_status(monkeypatch, tmp_path, capsy
     from zuaef_agent.models import RunReceipt
 
     now = datetime.now(UTC)
-    summary = RunSummary(status="completed", outcome="done")
     receipt = RunReceipt(
         run_id="r1",
         model="m",
         started_at=now,
         finished_at=now,
-        status="completed",
-        summary=summary,
+        execution_state="completed",
+        outcome="done",
     )
     monkeypatch.setattr(sys, "argv", ["zuaef-agent", "run", "task", "--workspace", str(tmp_path)])
-    monkeypatch.setattr(cli, "run_task", lambda task, settings=None: TerminalRun(presentation=summary.outcome, receipt=receipt))
+    monkeypatch.setattr(cli, "run_task", lambda task, settings=None: TerminalRun(presentation=receipt.outcome, receipt=receipt))
     with pytest.raises(SystemExit) as exc:
         cli.main()
     assert exc.value.code == cli.EXIT_COMPLETED

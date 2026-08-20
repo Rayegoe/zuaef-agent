@@ -391,7 +391,7 @@ def test_publish_after_approval_executes_and_settles(tmp_path: Path, monkeypatch
     assert len(fake.requests) == 1
     assert json.loads(fake.requests[0].content) == {"status": "publish"}
     settled = [
-        e for e in terminal.receipt.verified_tool_effects
+        e for e in terminal.receipt.tool_effect_facts
         if e.tool_name == "wordpress_publish_post"
     ]
     assert settled and settled[0].status == "completed"

@@ -2,6 +2,8 @@
 
 FunctionModel drives deterministic branches (per the Gate: TestModel/FunctionModel
 may only cover deterministic branches — the real-model slice is the Gate's job).
+Receipt assertions use v2 operational facts (artifact_facts / tool_effect_facts /
+execution_state) — never semantic verification fields.
 """
 
 from __future__ import annotations
@@ -20,7 +22,8 @@ from pydantic_ai_harness.step_persistence import FileStepStore, StepEvent
 
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.core import build_agent
-from zuaef_agent.models import CoreDeps, RunSummary
+from zuaef_agent.integrity import sha256_file
+from zuaef_agent.models import CoreDeps
 from zuaef_agent.runtime import (
     PausedRun,
     TerminalRun,
@@ -29,7 +32,6 @@ from zuaef_agent.runtime import (
     execute_run,
     finalize_terminal,
 )
-from zuaef_agent.verification import sha256_file
 
 models.ALLOW_MODEL_REQUESTS = False
 
@@ -88,7 +90,7 @@ def _has_tool_return(messages) -> bool:
     )
 
 
-def test_seam_tool_run_verified_completed(tmp_path: Path):
+def test_seam_tool_run_records_completed_with_artifact_fact(tmp_path: Path):
     settings = _settings(tmp_path)
     marker_root = tmp_path / ".state-proof"
     run_id = uuid4().hex
@@ -103,19 +105,19 @@ def test_seam_tool_run_verified_completed(tmp_path: Path):
         outcome = execute_run(agent, deps, prompt="write the report", settings=settings, run_id=run_id)
 
     assert isinstance(outcome, TerminalRun)
-    assert outcome.summary.status == "completed"
+    assert outcome.receipt.execution_state == "completed"
     assert outcome.presentation == "Report written."
     report = settings.workspace_root / "artifacts" / "report.md"
     assert report.is_file()
-    assert outcome.receipt.verified_artifacts[0].path == "artifacts/report.md"
-    assert outcome.receipt.verified_artifacts[0].sha256 == sha256_file(report)
-    assert outcome.summary.artifacts == ["artifacts/report.md"]
-    assert Path(outcome.receipt.summary.receipt).is_file()
+    assert outcome.receipt.artifact_facts[0].path == "artifacts/report.md"
+    assert outcome.receipt.artifact_facts[0].sha256 == sha256_file(report)
+    assert outcome.receipt.artifact_facts[0].change == "created"
+    assert not outcome.receipt.unresolved_effects
 
 
 def test_natural_terminal_settles_completed_with_zero_artifacts(tmp_path: Path):
-    """P3B-2 L4: a plain answer with no artifact claim is a full completion —
-    the settlement never requires model-crafted artifact/evidence refs."""
+    """A plain answer with no artifact claim is a full completion — the
+    settlement never requires model-crafted artifact/evidence refs."""
     settings = _settings(tmp_path)
     run_id = uuid4().hex
     agent, deps = _compose(settings, tmp_path / ".state-proof", run_id)
@@ -127,10 +129,9 @@ def test_natural_terminal_settles_completed_with_zero_artifacts(tmp_path: Path):
         outcome = execute_run(agent, deps, prompt="改写这篇文章", settings=settings, run_id=run_id)
 
     assert isinstance(outcome, TerminalRun)
-    assert outcome.summary.status == "completed"
-    assert outcome.receipt.verified_artifacts == []
+    assert outcome.receipt.execution_state == "completed"
+    assert outcome.receipt.artifact_facts == []
     assert outcome.presentation == "这是改写后的正文。"
-    assert not outcome.receipt.degraded
 
 
 def test_usage_payload_accepts_run_usage_tracker_directly():
@@ -155,9 +156,8 @@ def test_unchanged_preexisting_artifact_not_owned_by_run(tmp_path: Path):
         outcome = execute_run(agent, deps, prompt="claim it", settings=settings, run_id=run_id)
 
     assert isinstance(outcome, TerminalRun)
-    assert outcome.summary.status == "completed"
-    assert outcome.receipt.verified_artifacts == []
-    assert not any("unchanged" in note for note in outcome.receipt.degraded)
+    assert outcome.receipt.execution_state == "completed"
+    assert outcome.receipt.artifact_facts == []
 
 
 def _approval_fn(messages, info):
@@ -231,12 +231,12 @@ def test_pause_then_approve_executes_and_settles_effect(tmp_path: Path):
     assert isinstance(outcome2, TerminalRun)
     markers = list(marker_root.glob("*.marker"))
     assert len(markers) == 1, "approved side effect executed exactly once"
-    settled = [e for e in outcome2.receipt.verified_tool_effects if e.tool_name == "record_external_effect"]
+    settled = [e for e in outcome2.receipt.tool_effect_facts if e.tool_name == "record_external_effect"]
     assert settled and settled[0].status == "completed"
     assert not outcome2.receipt.unresolved_effects
 
 
-def test_pause_settles_and_resume_inherits_artifact_and_knowledge(tmp_path: Path):
+def test_pause_settles_and_resume_inherits_artifact_facts(tmp_path: Path):
     settings = _settings(tmp_path)
     marker_root = tmp_path / ".state-proof"
     run_id = uuid4().hex
@@ -249,29 +249,6 @@ def test_pause_settles_and_resume_inherits_artifact_and_knowledge(tmp_path: Path
             for part in getattr(message, "parts", [])
             if getattr(part, "part_kind", None) == "tool-call"
         ]
-        if "write_knowledge" not in called:
-            return ModelResponse(
-                parts=[
-                    ToolCallPart(
-                        "write_knowledge",
-                        {
-                            "knowledge_id": "concepts/pause-proof",
-                            "doc_type": "concept",
-                            "title": "Pause Proof",
-                            "body": "Evidence survives a native approval pause.",
-                            "tags": [],
-                            "sources": [
-                                {
-                                    "id": "guide",
-                                    "resource": "file:///guide.md",
-                                    "title": "Guide",
-                                    "evidence": "section 1",
-                                }
-                            ],
-                        },
-                    )
-                ]
-            )
         if "write_report" not in called:
             return ModelResponse(parts=[ToolCallPart("write_report", {"content": "# Pause proof"})])
         if "record_external_effect" not in called:
@@ -282,8 +259,7 @@ def test_pause_settles_and_resume_inherits_artifact_and_knowledge(tmp_path: Path
         paused = execute_run(agent, deps, prompt="prove pause inheritance", settings=settings, run_id=run_id)
 
     assert isinstance(paused, PausedRun)
-    assert [item.path for item in paused.pause_receipt.verified_artifacts] == ["artifacts/report.md"]
-    assert paused.pause_receipt.verified_knowledge == ["concepts/pause-proof"]
+    assert [item.path for item in paused.pause_receipt.artifact_facts] == ["artifacts/report.md"]
 
     run_id2 = uuid4().hex
     agent2, deps2 = _compose(settings, marker_root, run_id2)
@@ -300,13 +276,12 @@ def test_pause_settles_and_resume_inherits_artifact_and_knowledge(tmp_path: Path
         )
 
     assert isinstance(terminal, TerminalRun)
-    assert terminal.summary.status == "completed", terminal.receipt.degraded
+    assert terminal.receipt.execution_state == "completed"
     assert terminal.receipt.continued_from_run_id == run_id
-    assert [item.path for item in terminal.receipt.verified_artifacts] == ["artifacts/report.md"]
-    assert terminal.receipt.verified_knowledge == ["concepts/pause-proof"]
+    assert [item.path for item in terminal.receipt.artifact_facts] == ["artifacts/report.md"]
 
 
-def test_unresolved_started_effect_blocks_run(tmp_path: Path):
+def test_unresolved_started_effect_is_failed_execution(tmp_path: Path):
     settings = _settings(tmp_path)
     run_id = uuid4().hex
     store = FileStepStore(settings.step_store_dir)
@@ -323,7 +298,6 @@ def test_unresolved_started_effect_blocks_run(tmp_path: Path):
     )
 
     outcome = finalize_terminal(
-        RunSummary(status="completed", outcome="claims success", artifacts=[], evidence=[]),
         settings=settings,
         run_id=run_id,
         conversation_id="conv-x",
@@ -331,17 +305,18 @@ def test_unresolved_started_effect_blocks_run(tmp_path: Path):
         started_at=__import__("datetime").datetime.now(__import__("datetime").timezone.utc),
         usage={},
         snapshot={},
+        execution_state="completed",
+        outcome="claims success",
     )
 
-    assert outcome.receipt.status == "blocked"
+    assert outcome.receipt.execution_state == "failed"
     assert outcome.receipt.unresolved_effects[0].tool_call_id == "call_x"
-    assert outcome.summary.status == "blocked"
 
 
-def test_foreign_run_effects_are_not_verified(tmp_path: Path):
-    """A completed effect owned by a different run is not verifiable: the
-    public StepStore keeps per-run ledgers, so a foreign event never enters
-    this run's ledger and is neither verified nor treated as resolved here."""
+def test_foreign_run_effects_are_not_recorded(tmp_path: Path):
+    """A completed effect owned by a different run is not in this run's ledger:
+    the public StepStore keeps per-run ledgers, so a foreign event never enters
+    this run's facts."""
     settings = _settings(tmp_path)
     run_id = uuid4().hex
     store = FileStepStore(settings.step_store_dir)
@@ -369,7 +344,6 @@ def test_foreign_run_effects_are_not_verified(tmp_path: Path):
     )
 
     outcome = finalize_terminal(
-        RunSummary(status="completed", outcome="claims success"),
         settings=settings,
         run_id=run_id,
         conversation_id="conv-x",
@@ -377,27 +351,30 @@ def test_foreign_run_effects_are_not_verified(tmp_path: Path):
         started_at=__import__("datetime").datetime.now(__import__("datetime").timezone.utc),
         usage={},
         snapshot={},
+        execution_state="completed",
+        outcome="claims success",
     )
 
-    own_ids = {e.tool_call_id for e in outcome.receipt.verified_tool_effects}
+    own_ids = {e.tool_call_id for e in outcome.receipt.tool_effect_facts}
     assert "call_own" in own_ids
     assert "call_foreign" not in own_ids
-    # No degraded note about a foreign effect — it is simply outside this run.
-    assert not any("not owned" in note for note in outcome.receipt.degraded)
+    assert outcome.receipt.execution_state == "completed"
 
 
-def test_host_discovered_invalid_knowledge_is_not_verified(tmp_path: Path):
+def test_unsourced_knowledge_write_is_still_a_provenance_fact(tmp_path: Path):
+    """v1.2: a knowledge doc written by the run is recorded as a provenance
+    fact even without semantic source validation — the kernel never claims a
+    source field proves support."""
     settings = _settings(tmp_path)
     run_id = uuid4().hex
-    target = settings.workspace_root / "knowledge" / "concepts" / "invalid.md"
+    target = settings.workspace_root / "knowledge" / "concepts" / "note.md"
     target.parent.mkdir(parents=True)
     target.write_text(
-        f"---\ntype: concept\ntitle: Invalid\nsources: []\ngenerated:\n  run_id: {run_id}\n---\nbody\n",
+        f"---\ntype: project-note\ntitle: Note\ngenerated:\n  run_id: {run_id}\n---\nbody\n",
         encoding="utf-8",
     )
 
     outcome = finalize_terminal(
-        RunSummary(status="completed", outcome="claims success"),
         settings=settings,
         run_id=run_id,
         conversation_id="conv-x",
@@ -405,10 +382,12 @@ def test_host_discovered_invalid_knowledge_is_not_verified(tmp_path: Path):
         started_at=__import__("datetime").datetime.now(__import__("datetime").timezone.utc),
         usage={},
         snapshot={},
+        execution_state="completed",
+        outcome="claims success",
     )
 
-    assert outcome.receipt.verified_knowledge == []
-    assert any("sources" in note for note in outcome.receipt.degraded)
+    assert outcome.receipt.knowledge_updates == ["knowledge/concepts/note.md"]
+    assert outcome.receipt.execution_state == "completed"
 
 
 def test_execute_run_rejects_identity_mismatch(tmp_path: Path):
@@ -419,7 +398,7 @@ def test_execute_run_rejects_identity_mismatch(tmp_path: Path):
         execute_run(object(), deps, prompt="x", settings=settings, run_id="other-run")
 
 
-def test_provider_failure_leaves_blocked_receipt(tmp_path: Path):
+def test_provider_failure_leaves_failed_receipt(tmp_path: Path):
     settings = _settings(tmp_path)
     run_id = uuid4().hex
     agent, deps = _compose(settings, tmp_path / ".state-proof", run_id)
@@ -431,15 +410,14 @@ def test_provider_failure_leaves_blocked_receipt(tmp_path: Path):
         outcome = execute_run(agent, deps, prompt="go", settings=settings, run_id=run_id)
 
     assert isinstance(outcome, TerminalRun)
-    assert outcome.summary.status == "blocked"
+    assert outcome.receipt.execution_state == "failed"
     assert "provider exploded" in (outcome.receipt.error or "")
     assert outcome.receipt.usage_complete is False
     assert outcome.receipt.run_id == run_id
     assert outcome.receipt.conversation_id
-    assert Path(outcome.summary.receipt).is_file(), "failure must not exit without a receipt"
 
 
-def test_knowledge_written_via_capability_is_verified(tmp_path: Path):
+def test_knowledge_written_via_capability_is_a_provenance_fact(tmp_path: Path):
     settings = _settings(tmp_path)
     run_id = uuid4().hex
     agent, deps = _compose(settings, tmp_path / ".state-proof", run_id)
@@ -469,7 +447,8 @@ def test_knowledge_written_via_capability_is_verified(tmp_path: Path):
         outcome = execute_run(agent, deps, prompt="capture knowledge", settings=settings, run_id=run_id)
 
     assert isinstance(outcome, TerminalRun)
-    assert outcome.summary.status == "completed", outcome.receipt.degraded
-    assert "concepts/shared-seam" in outcome.receipt.verified_knowledge
+    assert outcome.receipt.execution_state == "completed"
     assert outcome.receipt.knowledge_updates == ["knowledge/concepts/shared-seam.md"]
-    assert "knowledge:concepts/shared-seam" in outcome.summary.evidence
+    # No evidence refs are synthesized from the write — the doc records
+    # provenance, not proof.
+    assert not hasattr(outcome.receipt, "verified_knowledge")

@@ -134,8 +134,12 @@ def _settings_from_args(args: argparse.Namespace) -> AgentSettings:
 def _outcome_exit_code(outcome: RuntimeOutcome) -> int:
     if isinstance(outcome, PausedRun):
         return EXIT_PAUSED
-    status = outcome.summary.status
-    return {"completed": EXIT_COMPLETED, "partial": EXIT_PARTIAL, "blocked": EXIT_BLOCKED}[status]
+    state = outcome.receipt.execution_state
+    return {
+        "completed": EXIT_COMPLETED,
+        "failed": EXIT_BLOCKED,
+        "limit_reached": EXIT_PARTIAL,
+    }[state]
 
 
 def _print_outcome(outcome: RuntimeOutcome) -> None:

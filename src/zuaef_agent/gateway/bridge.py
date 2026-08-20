@@ -146,6 +146,12 @@ def start_profile_run(
     deps = CoreDeps(
         workspace_root=settings.workspace_root.resolve(),
         run_id=run_id,
+        # Opaque bindings (v1.2 SPEC §4): the server threads the session's
+        # bound identities into the run; the kernel preserves them across
+        # pause/resume but never inspects their meaning.
+        bindings={"case": case_id} if case_id else {},
+        # Transitional alias (v1.2 T006 removes it once the case plugin reads
+        # bindings).
         case_id=case_id,
     )
     # Context assembly (P3B-2 §6 / P3B-3 T003): host-grounded blocks precede

@@ -230,8 +230,8 @@ def test_full_publish_slice_through_gateway(world):
     assert receipt.continued_from_run_id == paused_run_id
     assert receipt.conversation_id == conversation_id
     assert receipt.composition.composition_id == composition_id
-    assert receipt.status == "completed"
-    effects = [e for e in receipt.verified_tool_effects if e.tool_name == "wordpress_publish_post"]
+    assert receipt.execution_state == "completed"
+    effects = [e for e in receipt.tool_effect_facts if e.tool_name == "wordpress_publish_post"]
     assert len(effects) == 1 and effects[0].status == "completed"
     assert "✅ Completed" in surface.last_text()
     assert surface.callback_answers == [("cb-1", "Approved. Resuming…")]
@@ -259,5 +259,5 @@ def test_deny_never_touches_wordpress(world):
     )
     receipt = service.receipts.read(session.last_terminal_run_id)
     assert not [
-        e for e in receipt.verified_tool_effects if e.status == "completed"
+        e for e in receipt.tool_effect_facts if e.status == "completed"
     ]

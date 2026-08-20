@@ -18,11 +18,10 @@ from zuaef_agent.gateway.renderer import (
     render_terminal,
 )
 from zuaef_agent.models import (
-    ArtifactVerification,
+    ArtifactFact,
     PauseReceipt,
     RunReceipt,
-    RunSummary,
-    ToolEffectVerification,
+    ToolEffectFact,
 )
 from zuaef_agent.runtime import PausedRun, TerminalRun
 
@@ -45,23 +44,22 @@ def _paused(approvals: list[dict]) -> PausedRun:
     )
 
 
-def _terminal(status="completed", presentation=None) -> TerminalRun:
+def _terminal(state="completed", presentation=None) -> TerminalRun:
     now = datetime.now(UTC)
-    summary = RunSummary(status=status, outcome="post published")  # type: ignore[arg-type]
     receipt = RunReceipt(
         run_id="run-term-1234",
         model="test",
         started_at=now,
         finished_at=now,
-        status=status,  # type: ignore[arg-type]
-        summary=summary,
-        verified_artifacts=[ArtifactVerification(path="a.md", size=1, sha256="x" * 64)],
-        verified_tool_effects=[
-            ToolEffectVerification(tool_call_id="c1", tool_name="wordpress_publish_post", status="completed")
+        execution_state=state,  # type: ignore[arg-type]
+        outcome="post published",
+        artifact_facts=[ArtifactFact(path="a.md", size=1, sha256="x" * 64, change="created")],
+        tool_effect_facts=[
+            ToolEffectFact(tool_call_id="c1", tool_name="wordpress_publish_post", status="completed")
         ],
     )
     if presentation is None:
-        presentation = summary.outcome
+        presentation = receipt.outcome
     return TerminalRun(presentation=presentation, receipt=receipt)
 
 
@@ -93,14 +91,14 @@ def test_render_terminal_classic_card_when_no_presentation():
     text = render_terminal(_terminal(presentation=""))
     assert "✅ Completed" in text
     assert "post published" in text
-    assert "Verified artifacts: 1" in text
-    assert "Verified effects: 1" in text
+    assert "Artifact byte facts: 1" in text
+    assert "Tool-effect facts: 1" in text
     assert "Run: run-term-1234" in text
 
 
-def test_render_terminal_partial_and_blocked():
-    assert "⚠️ Partial" in render_terminal(_terminal("partial"))
-    assert "⛔ Blocked" in render_terminal(_terminal("blocked"))
+def test_render_terminal_failed_and_limit():
+    assert "⛔ Failed" in render_terminal(_terminal("failed"))
+    assert "⏹ Limit reached" in render_terminal(_terminal("limit_reached"))
 
 
 def test_render_terminal_presentation_is_the_reply():
@@ -110,7 +108,7 @@ def test_render_terminal_presentation_is_the_reply():
     assert "✅ Completed" in text
     assert "Run: run-term" in text  # short id on the outcome-first card
     assert "post published" not in text  # audit prose is Console-only here
-    assert "Verified artifacts" not in text
+    assert "Artifact byte facts" not in text
 
 
 def test_render_pause_shows_outbound_content():

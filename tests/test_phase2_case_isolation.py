@@ -170,9 +170,9 @@ def test_bound_run_cross_case_send_is_blocked_not_paused(cases, tmp_path):
             agent, deps, prompt="send it", settings=settings, run_id=run_id
         )
     assert not isinstance(outcome, PausedRun)
-    assert outcome.receipt.status == "blocked"
+    assert outcome.receipt.execution_state == "failed"
     assert "isolated to the bound Case" in (outcome.receipt.error or "")
-    assert outcome.receipt.case_id == bound
+    assert outcome.receipt.bindings.get("case") == bound
 
 
 def test_bound_run_own_case_send_pauses_for_approval(cases, tmp_path):
@@ -218,7 +218,7 @@ def test_bound_run_own_case_send_pauses_for_approval(cases, tmp_path):
             agent, deps, prompt="send it", settings=settings, run_id=run_id
         )
     assert isinstance(outcome, PausedRun)
-    assert outcome.pause_receipt.case_id == bound
+    assert outcome.pause_receipt.bindings.get("case") == bound
     assert [c["tool_name"] for c in outcome.pause_receipt.pending_approvals] == [
         "send_to_customer"
     ]

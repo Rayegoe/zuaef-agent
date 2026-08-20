@@ -22,6 +22,7 @@ from uuid import uuid4
 
 from ..composition import CompositionError
 from ..config import AgentSettings
+from ..models import PauseReceipt, RunReceipt
 from ..profiles import list_profiles
 from ..receipt_store import ReceiptStore
 from ..runtime import PausedRun, TerminalRun
@@ -212,7 +213,7 @@ class GatewayService:
             }
         )
         self.store.save_session(session)
-        logger.info("gateway run %s settled %s", outcome.receipt.run_id, outcome.receipt.status)
+        logger.info("gateway run %s settled %s", outcome.receipt.run_id, outcome.receipt.execution_state)
         self._send_text(session, render_terminal(outcome))
 
     def _outbound_draft_content(
@@ -339,7 +340,7 @@ class GatewayService:
         logger.info(
             "gateway run %s settled %s (continued from %s)",
             outcome.receipt.run_id,
-            outcome.receipt.status,
+            outcome.receipt.execution_state,
             paused_run_id,
         )
         self._send_text(session, render_terminal(outcome))
@@ -557,7 +558,10 @@ class GatewayService:
         # Fully host-grounded: receipts only, never the model.
         if session.paused_run_id:
             receipt = self._read_receipt_or_none(session.paused_run_id)
-            if receipt is None or getattr(receipt, "state", "") != "paused":
+            if (
+                not isinstance(receipt, PauseReceipt)
+                or getattr(receipt, "state", "") != "paused"
+            ):
                 session = session.model_copy(update={"paused_run_id": None})
                 self.store.save_session(session)
                 self._send_text(session, render_status(
@@ -607,11 +611,21 @@ class GatewayService:
                     state="READY",
                 ))
                 return
+            if not isinstance(receipt, RunReceipt):
+                session = session.model_copy(update={"last_terminal_run_id": None})
+                self.store.save_session(session)
+                self._send_text(session, render_status(
+                    profile=session.profile,
+                    conversation_id=session.conversation_id,
+                    case_id=session.case_id,
+                    state="READY",
+                ))
+                return
             state = {
                 "completed": "LAST COMPLETED",
-                "partial": "LAST PARTIAL",
-                "blocked": "LAST BLOCKED",
-            }[receipt.status]
+                "failed": "LAST FAILED",
+                "limit_reached": "LAST LIMIT REACHED",
+            }[receipt.execution_state]
             self._send_text(
                 session,
                 render_status(
@@ -661,7 +675,7 @@ class GatewayService:
         logger.info(
             "gateway run %s settled %s (continued from %s)",
             outcome.receipt.run_id,
-            outcome.receipt.status,
+            outcome.receipt.execution_state,
             paused_run_id,
         )
         self._send_text(session, render_terminal(outcome))
@@ -674,9 +688,9 @@ class GatewayService:
         if receipt is None:
             self._send_text(session, "No receipt found for the last run.")
             return
-        verified = receipt.verified_artifacts
+        verified = receipt.artifact_facts
         if not verified:
-            self._send_text(session, "No verified artifacts.")
+            self._send_text(session, "No artifact byte facts.")
             return
         workspace = self.settings.workspace_root.resolve()
         for artifact in verified:

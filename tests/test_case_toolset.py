@@ -270,7 +270,7 @@ def test_send_to_customer_pauses_for_approval(tmp_path: Path):
     terminal = resume_paused_run(settings, run_id, decision="approve")
     assert isinstance(terminal, TerminalRun)
     settled = [
-        e for e in terminal.receipt.verified_tool_effects
+        e for e in terminal.receipt.tool_effect_facts
         if e.tool_name == "send_to_customer"
     ]
     assert settled and settled[0].status == "completed"

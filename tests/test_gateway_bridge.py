@@ -242,7 +242,7 @@ def test_deny_resume_delivers_tool_denied(tmp_path: Path, monkeypatch):
     assert isinstance(terminal, TerminalRun)
     assert not [
         e
-        for e in terminal.receipt.verified_tool_effects
+        for e in terminal.receipt.tool_effect_facts
         if e.tool_name == "publish_article" and e.status == "completed"
     ]
 

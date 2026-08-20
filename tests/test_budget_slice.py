@@ -52,10 +52,10 @@ from zuaef_emtb_budget.toolset import build_budget_toolset
 
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.core import build_agent
+from zuaef_agent.integrity import sha256_file
 from zuaef_agent.models import CoreDeps
 from zuaef_agent.plugin_api import PluginBundle, PluginEnv
 from zuaef_agent.runtime import TerminalRun, execute_run
-from zuaef_agent.verification import sha256_file
 
 SAMPLE = (
     PROJECT_ROOT
@@ -332,19 +332,19 @@ class TestCompositionSeam(unittest.TestCase):
                 )
 
             self.assertIsInstance(outcome, TerminalRun)
-            self.assertEqual(outcome.summary.status, "completed")
+            self.assertEqual(outcome.receipt.execution_state, "completed")
             self.assertEqual(calls, ["parse", "health", "save"])
             report = workspace / "artifacts" / run_id / "emtb_budget-report.md"
             self.assertTrue(report.is_file())
             self.assertEqual(
-                outcome.receipt.verified_artifacts[0].path,
+                outcome.receipt.artifact_facts[0].path,
                 f"artifacts/{run_id}/emtb_budget-report.md",
             )
             self.assertEqual(
-                outcome.receipt.verified_artifacts[0].sha256,
+                outcome.receipt.artifact_facts[0].sha256,
                 sha256_file(report),
             )
-            effect_names = [e.tool_name for e in outcome.receipt.verified_tool_effects]
+            effect_names = [e.tool_name for e in outcome.receipt.tool_effect_facts]
             self.assertIn("parse_budget_csv", effect_names)
             self.assertIn("save_budget_report", effect_names)
 
@@ -410,10 +410,10 @@ class TestZeroArtifactBudgetAnswer(unittest.TestCase):
                 )
 
             self.assertIsInstance(outcome, TerminalRun)
-            self.assertEqual(outcome.summary.status, "completed")
-            self.assertEqual(outcome.receipt.verified_artifacts, [])
+            self.assertEqual(outcome.receipt.execution_state, "completed")
+            self.assertEqual(outcome.receipt.artifact_facts, [])
             self.assertIn("场地租赁", outcome.presentation)
-            effect_names = [e.tool_name for e in outcome.receipt.verified_tool_effects]
+            effect_names = [e.tool_name for e in outcome.receipt.tool_effect_facts]
             self.assertIn("parse_budget_csv", effect_names)
             self.assertNotIn("save_budget_report", effect_names)
 

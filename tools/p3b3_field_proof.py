@@ -233,7 +233,7 @@ def _session(service: GatewayService) -> SessionBinding:
 
 
 def _tool_effects(settings: AgentSettings, run_id: str) -> list[dict]:
-    from zuaef_agent.verification import latest_tool_effects, read_tool_effects
+    from zuaef_agent.integrity import latest_tool_effects, read_tool_effects
 
     if not settings.enable_step_persistence:
         return []
@@ -406,7 +406,7 @@ def _explicit_delivery_turn(
         ),
         "send_settled": any(
             e.tool_name == "send_to_customer" and e.status == "completed"
-            for e in settled.verified_tool_effects
+            for e in settled.tool_effect_facts
         ),
         "merged_effects": _merged_effects(settings, paused_run_id, settled_run_id),
     }
@@ -457,9 +457,9 @@ def _explicit_delivery_turn(
                 "valid": denied_receipt is not None
                 and not any(
                     e.tool_name == "send_to_customer" and e.status == "completed"
-                    for e in denied_receipt.verified_tool_effects
+                    for e in denied_receipt.tool_effect_facts
                 ),
-                "settled_status": denied_receipt.status if denied_receipt else None,
+                "settled_state": denied_receipt.execution_state if denied_receipt else None,
             }
     finally:
         core_module.resolve_model = original

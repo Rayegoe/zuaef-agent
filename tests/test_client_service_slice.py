@@ -169,7 +169,7 @@ class TestSliceComposition:
             )
 
         assert isinstance(outcome, TerminalRun)
-        assert outcome.summary.status == "completed"
+        assert outcome.receipt.execution_state == "completed"
         assert calls == ["retrieve"]
         receipt = outcome.receipt
         assert receipt.run_id == run_id
@@ -244,7 +244,7 @@ class TestSliceComposition:
             )
 
         assert isinstance(outcome, TerminalRun), type(outcome)
-        assert outcome.summary.status == "completed", outcome.receipt.degraded
+        assert outcome.receipt.execution_state == "completed"
         interactions = list((slice_root / "state" / "interactions").glob("INT-*.json"))
         assert len(interactions) == 1
         state_text = (

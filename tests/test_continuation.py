@@ -29,7 +29,7 @@ from zuaef_agent import core as core_module
 from zuaef_agent.composition import build_profile_agent
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.continuation import resume_paused_run
-from zuaef_agent.models import CoreDeps, RunReceipt, RunSummary
+from zuaef_agent.models import CoreDeps, RunReceipt
 from zuaef_agent.receipt_store import ReceiptStore
 from zuaef_agent.runtime import PausedRun, TerminalRun, execute_run
 
@@ -189,7 +189,7 @@ def test_resume_approve_executes_tool_and_settles(tmp_path: Path, monkeypatch):
     )
     settled = [
         e
-        for e in outcome.receipt.verified_tool_effects
+        for e in outcome.receipt.tool_effect_facts
         if e.tool_name == "publish_article"
     ]
     assert settled and settled[0].status == "completed"
@@ -215,7 +215,7 @@ def test_resume_deny_delivers_tool_denied_no_execution(tmp_path: Path, monkeypat
     )
     assert not [
         e
-        for e in outcome.receipt.verified_tool_effects
+        for e in outcome.receipt.tool_effect_facts
         if e.tool_name == "publish_article" and e.status == "completed"
     ]
 
@@ -227,8 +227,8 @@ def test_resume_rejects_non_paused_receipt(tmp_path: Path):
         model="test",
         started_at=datetime.now(UTC),
         finished_at=datetime.now(UTC),
-        status="completed",
-        summary=RunSummary(status="completed", outcome="done"),
+        execution_state="completed",
+        outcome="done",
     )
     ReceiptStore(settings.state_root).write(receipt)
 

@@ -56,9 +56,9 @@ def render_terminal(outcome: TerminalRun) -> str:
     receipt = outcome.receipt
     emoji = {
         "completed": "✅ Completed",
-        "partial": "⚠️ Partial",
-        "blocked": "⛔ Blocked",
-    }[receipt.status]
+        "failed": "⛔ Failed",
+        "limit_reached": "⏹ Limit reached",
+    }[receipt.execution_state]
     presentation = outcome.presentation.strip()
     if presentation:
         return "\n".join(
@@ -74,10 +74,10 @@ def render_terminal(outcome: TerminalRun) -> str:
         [
             emoji,
             "",
-            receipt.summary.outcome,
+            receipt.outcome,
             "",
-            f"Verified artifacts: {len(receipt.verified_artifacts)}",
-            f"Verified effects: {len(receipt.verified_tool_effects)}",
+            f"Artifact byte facts: {len(receipt.artifact_facts)}",
+            f"Tool-effect facts: {len(receipt.tool_effect_facts)}",
             "",
             f"Run: {receipt.run_id}",
         ]

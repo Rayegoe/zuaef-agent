@@ -260,7 +260,7 @@ def test_start_profile_run_threads_bound_case_into_deps(tmp_path: Path, monkeypa
         case_id=session.case_id,
     )
     assert captured["probe_result"] == f"bound:{outcome.receipt.run_id}:case=stillevo-beauty"
-    assert outcome.receipt.case_id == "stillevo-beauty"
+    assert outcome.receipt.bindings.get("case") == "stillevo-beauty"
 
 
 def test_gateway_service_injects_bound_case_into_run(tmp_path: Path, monkeypatch):
@@ -324,7 +324,7 @@ def test_gateway_service_injects_bound_case_into_run(tmp_path: Path, monkeypatch
     from zuaef_agent.receipt_store import ReceiptStore
 
     receipt = ReceiptStore(settings.state_root).read(after.last_terminal_run_id)
-    assert receipt.case_id == "stillevo-beauty"
+    assert receipt.bindings.get("case") == "stillevo-beauty"
 
 
 # ── CLI supervisor binding operation ─────────────────────────────────────────

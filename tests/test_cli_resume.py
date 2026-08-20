@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from zuaef_agent import cli
-from zuaef_agent.models import RunReceipt, RunSummary
+from zuaef_agent.models import RunReceipt
 from zuaef_agent.runtime import TerminalRun
 
 
@@ -30,18 +30,17 @@ def _args(run_id: str, *, approve: bool = False, deny: bool = False, reason: str
     )
 
 
-def _terminal(status: str = "completed") -> TerminalRun:
+def _terminal(state: str = "completed") -> TerminalRun:
     now = datetime.now(UTC)
-    summary = RunSummary(status=status, outcome="ok")  # type: ignore[arg-type]
     receipt = RunReceipt(
         run_id="new-run",
         model="m",
         started_at=now,
         finished_at=now,
-        status=status,  # type: ignore[arg-type]
-        summary=summary,
+        execution_state=state,  # type: ignore[arg-type]
+        outcome="ok",
     )
-    return TerminalRun(presentation=summary.outcome, receipt=receipt)
+    return TerminalRun(presentation=receipt.outcome, receipt=receipt)
 
 
 def test_resume_requires_exactly_one_decision(tmp_path: Path, capsys):
@@ -74,10 +73,10 @@ def test_cli_resume_delegates_to_shared_continuation(tmp_path: Path, monkeypatch
 
 
 def test_cli_resume_keeps_exit_codes_for_shared_outcomes(tmp_path: Path, monkeypatch):
-    monkeypatch.setattr(cli, "resume_paused_run", lambda *a, **kw: _terminal("blocked"))
+    monkeypatch.setattr(cli, "resume_paused_run", lambda *a, **kw: _terminal("failed"))
     assert cli._resume(_args("r", approve=True)) == cli.EXIT_BLOCKED
 
-    monkeypatch.setattr(cli, "resume_paused_run", lambda *a, **kw: _terminal("partial"))
+    monkeypatch.setattr(cli, "resume_paused_run", lambda *a, **kw: _terminal("limit_reached"))
     assert cli._resume(_args("r", approve=True)) == cli.EXIT_PARTIAL
 
 

@@ -2,6 +2,6 @@
 
 from .config import AgentSettings
 from .effects import EffectClass, requires_approval
-from .models import RunReceipt, RunSummary
+from .models import RunReceipt
 
-__all__ = ["AgentSettings", "EffectClass", "RunReceipt", "RunSummary", "requires_approval"]
+__all__ = ["AgentSettings", "EffectClass", "RunReceipt", "requires_approval"]

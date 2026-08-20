@@ -19,10 +19,10 @@ from pydantic_ai.models.function import FunctionModel
 
 from zuaef_agent import core as core_module
 from zuaef_agent.config import AgentSettings
-from zuaef_agent.gateway.models import InboundEnvelope
+from zuaef_agent.gateway.models import InboundEnvelope, SessionBinding
 from zuaef_agent.gateway.service import WAITING_FOR_APPROVAL, GatewayService
 from zuaef_agent.gateway.store import GatewayStore
-from zuaef_agent.models import PauseReceipt, RunReceipt, RunSummary
+from zuaef_agent.models import ArtifactFact, PauseReceipt, RunReceipt
 from zuaef_agent.receipt_store import ReceiptStore
 
 models.ALLOW_MODEL_REQUESTS = False
@@ -199,14 +199,16 @@ def _envelope(text: str, n: int = 1, **overrides) -> InboundEnvelope:
     return InboundEnvelope(**base)
 
 
-def _session(service: GatewayService) -> object:
-    return service.store.get_session(
+def _session(service: GatewayService) -> SessionBinding:
+    session = service.store.get_session(
         surface="telegram",
         tenant_id="default",
         user_id="42",
         channel_id="42",
         thread_id=None,
     )
+    assert session is not None
+    return session
 
 
 def _ensure_session(
@@ -296,10 +298,10 @@ def test_approve_callback_resumes_and_settles(tmp_path: Path, monkeypatch):
     assert session.last_terminal_run_id
     assert session.last_terminal_run_id != paused_run_id
     assert surface.callback_answers == [("cb-1", "Approved. Resuming…")]
-    receipt = service.receipts.read(session.last_terminal_run_id)
-    assert receipt.continued_from_run_id == paused_run_id
+    receipt = service.receipts.read(session.last_terminal_run_id)  # type: ignore[arg-type]
+    assert getattr(receipt, "continued_from_run_id", None) == paused_run_id
     assert receipt.conversation_id == session.conversation_id
-    assert any(e.tool_name == "publish_article" for e in receipt.verified_tool_effects)
+    assert any(e.tool_name == "publish_article" for e in receipt.tool_effect_facts)
     assert "✅ Completed" in surface.last_text()
 
 
@@ -318,7 +320,7 @@ def test_deny_callback_resumes_without_effect(tmp_path: Path, monkeypatch):
     assert session.paused_run_id is None
     receipt = service.receipts.read(session.last_terminal_run_id)
     assert not [
-        e for e in receipt.verified_tool_effects if e.status == "completed"
+        e for e in getattr(receipt, "tool_effect_facts", []) if e.status == "completed"
     ]
 
 
@@ -377,7 +379,7 @@ def test_new_invalidates_interactive_gate(tmp_path: Path, monkeypatch):
     assert session.conversation_id != old_conversation
     assert session.profile == "writing", "/new keeps the profile"
     binding = service.store.resolve_approval(token)
-    assert binding.state == "expired"
+    assert binding is not None and binding.state == "expired"
     assert "New ZUAEF conversation started" in surface.last_text()
 
 
@@ -471,7 +473,7 @@ def test_status_after_terminal_shows_last_state(tmp_path: Path, monkeypatch):
     service.handle(_envelope("do it", n=1))
     service.handle(_envelope("/status", n=2))
 
-    assert "State: LAST PARTIAL" in surface.last_text()
+    assert "State: LAST LIMIT REACHED" in surface.last_text()
 
 
 def test_slash_approve_and_deny_share_resume_semantics(tmp_path: Path, monkeypatch):
@@ -486,9 +488,9 @@ def test_slash_approve_and_deny_share_resume_semantics(tmp_path: Path, monkeypat
 
     session = _session(service)
     assert session.paused_run_id is None
-    receipt = service.receipts.read(session.last_terminal_run_id)
-    assert receipt.continued_from_run_id == paused_run_id
-    assert any(e.tool_name == "publish_article" for e in receipt.verified_tool_effects)
+    receipt = service.receipts.read(session.last_terminal_run_id)  # type: ignore[arg-type]
+    assert getattr(receipt, "continued_from_run_id", None) == paused_run_id
+    assert any(e.tool_name == "publish_article" for e in receipt.tool_effect_facts)
     # stale button dies after slash resume
     assert service.store.resolve_approval(token).state == "expired"
 
@@ -514,11 +516,10 @@ def test_artifacts_delivers_verified_files_only(tmp_path: Path, monkeypatch):
         model="test",
         started_at=now,
         finished_at=now,
-        status="completed",
-        summary=RunSummary(status="completed", outcome="done"),
-        verified_artifacts=[
-            {"path": "artifacts/report.md", "size": 8, "sha256": "x" * 64},
-            # claimed by the model but never host-verified → absent here
+        execution_state="completed",
+        outcome="done",
+        artifact_facts=[
+            ArtifactFact(path="artifacts/report.md", size=8, sha256="x" * 64, change="created"),
         ],
     )
     ReceiptStore(settings.state_root).write(receipt)
@@ -543,10 +544,10 @@ def test_artifacts_missing_file_sends_path_and_size(tmp_path: Path, monkeypatch)
         model="test",
         started_at=now,
         finished_at=now,
-        status="completed",
-        summary=RunSummary(status="completed", outcome="done"),
-        verified_artifacts=[
-            {"path": "artifacts/ghost.md", "size": 4096, "sha256": "y" * 64}
+        execution_state="completed",
+        outcome="done",
+        artifact_facts=[
+            ArtifactFact(path="artifacts/ghost.md", size=4096, sha256="y" * 64, change="created")
         ],
     )
     ReceiptStore(settings.state_root).write(receipt)
@@ -594,8 +595,8 @@ def test_recover_sessions_reconciles_routing_state(tmp_path: Path, monkeypatch):
             model="test",
             started_at=now,
             finished_at=now,
-            status="completed",
-            summary=RunSummary(status="completed", outcome="done"),
+            execution_state="completed",
+            outcome="done",
         )
     )
     s1 = _ensure_session(service)
@@ -610,26 +611,22 @@ def test_recover_sessions_reconciles_routing_state(tmp_path: Path, monkeypatch):
 
     assert any("run-gone" in w for w in warnings)
     assert _session(service).paused_run_id == "run-p"
-    assert (
-        service.store.get_session(
-            surface="telegram",
-            tenant_id="default",
-            user_id="43",
-            channel_id="43",
-            thread_id=None,
-        ).last_terminal_run_id
-        == "run-t"
+    s43 = service.store.get_session(
+        surface="telegram",
+        tenant_id="default",
+        user_id="43",
+        channel_id="43",
+        thread_id=None,
     )
-    assert (
-        service.store.get_session(
-            surface="telegram",
-            tenant_id="default",
-            user_id="44",
-            channel_id="44",
-            thread_id=None,
-        ).active_run_id
-        is None
+    assert s43 is not None and s43.last_terminal_run_id == "run-t"
+    s44 = service.store.get_session(
+        surface="telegram",
+        tenant_id="default",
+        user_id="44",
+        channel_id="44",
+        thread_id=None,
     )
+    assert s44 is not None and s44.active_run_id is None
 
 
 def test_unauthorized_user_rejected_at_service(tmp_path: Path, monkeypatch):
@@ -894,8 +891,8 @@ def test_authoring_task_presents_deliverable_without_approval(
     session = _session(service)
     assert session.paused_run_id is None
     # P3B-2: presentation lives on the terminal, not on a settlement field.
-    receipt = service.receipts.read(session.last_terminal_run_id)
-    assert receipt.summary.deliverable is None
+    receipt = service.receipts.read(session.last_terminal_run_id)  # type: ignore[arg-type]
+    assert receipt.outcome != ""
 
 
 def _paused_send(draft_ref: str, run_id: str = "run-send-1"):

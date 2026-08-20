@@ -216,7 +216,7 @@ def test_gateway_service_threads_surface_and_actor_role_into_the_run(
         captured.update(kwargs)
         return SimpleNamespace(
             presentation="ok",
-            receipt=SimpleNamespace(run_id="r-x", status="completed"),
+            receipt=SimpleNamespace(run_id="r-x", execution_state="completed"),
         )
 
     monkeypatch.setattr(bridge, "start_profile_run", fake_start)

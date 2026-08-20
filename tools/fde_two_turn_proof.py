@@ -325,7 +325,7 @@ def _session(service: GatewayService) -> SessionBinding:
 
 
 def _tool_effects(settings: AgentSettings, run_id: str) -> list[str]:
-    from zuaef_agent.verification import latest_tool_effects, read_tool_effects
+    from zuaef_agent.integrity import latest_tool_effects, read_tool_effects
 
     if not settings.enable_step_persistence:
         return []
@@ -364,7 +364,7 @@ def _artifact_texts(settings: AgentSettings, run_ids: list[str]) -> dict[str, st
             receipt = receipts.read(run_id)
         except (FileNotFoundError, ValueError):
             continue
-        for artifact in getattr(receipt, "verified_artifacts", []):
+        for artifact in getattr(receipt, "artifact_facts", []):
             path = settings.workspace_root / artifact.path
             if path.is_file():
                 found[artifact.path] = path.read_text(encoding="utf-8", errors="replace")
@@ -395,7 +395,7 @@ def _handle_real_turn(
         "paused": bool(session.paused_run_id),
     }
     turn["verified_artifact_count"] = len(
-        getattr(receipt, "verified_artifacts", None) or []
+        getattr(receipt, "artifact_facts", None) or []
     )
     if session.paused_run_id and surface.approvals:
         approval = surface.approvals[-1]

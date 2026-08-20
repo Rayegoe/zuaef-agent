@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -11,7 +12,11 @@ from .plugin_api import CompositionSnapshot
 
 
 class SourceRef(BaseModel):
-    """A source actually observed by the system."""
+    """A source actually observed by the system (knowledge-module type).
+
+    Retained only until the knowledge-store simplification (v1.2 T007)
+    removes its last kernel consumer; it is NOT part of the receipt contract.
+    """
 
     id: str = Field(min_length=1)
     resource: str = Field(min_length=1)
@@ -19,74 +24,60 @@ class SourceRef(BaseModel):
     evidence: str | None = None
 
 
-class RunSummary(BaseModel):
-    """Host-generated settlement summary over one terminal run.
+class ArtifactFact(BaseModel):
+    """Operational byte fact about one workspace artifact.
 
-    This is NOT a model output type: the runtime constructs it from the
-    terminal presentation, runtime exceptions, the verified artifact diff,
-    knowledge writes and the tool-effect ledger. `artifacts`/`evidence` are
-    host-verified facts, not model claims.
-
-    `deliverable` is deprecated (P3B-2): it is kept only so receipts written
-    before P3B-2 still deserialize; new runs never produce it. User-facing
-    presentation lives on ``TerminalRun.presentation``. The field is scheduled
-    for removal in the next receipt schema revision.
+    A hash proves byte identity/change — never content correctness.
     """
-
-    status: Literal["completed", "partial", "blocked"]
-    outcome: str
-    deliverable: str | None = Field(default=None, deprecated=True)
-    artifacts: list[str] = Field(default_factory=list)
-    evidence: list[str] = Field(default_factory=list)
-    unknowns: list[str] = Field(default_factory=list)
-    next_action: str | None = None
-    run_id: str | None = None
-    receipt: str | None = None
-
-
-class ArtifactVerification(BaseModel):
-    """Host-verified facts about one artifact claimed by a run."""
 
     path: str
     size: int
     sha256: str
+    change: Literal["created", "modified"]
 
 
-class ToolEffectVerification(BaseModel):
-    """Host-verified tool-effect ledger entry."""
+class ToolEffectFact(BaseModel):
+    """Operational fact from the StepStore tool-call ledger.
+
+    A completed tool call proves the call finished — never that the business
+    outcome was good.
+    """
 
     tool_call_id: str
     tool_name: str
     status: Literal["started", "completed", "failed"]
 
 
-class RunReceipt(BaseModel):
-    """Machine-readable index over one terminal run's durable evidence.
+# Terminal execution state. Pause is a separate receipt state (``state="paused"``).
+ExecutionState = Literal["completed", "failed", "limit_reached"]
 
-    ``composition`` freezes the plugin composition (profile, plugin refs,
-    composition_id) for receipts of composed runs; runs without a profile
-    keep ``composition = None``.
+
+class RunReceipt(BaseModel):
+    """Operational record of one terminal run — never a semantic verdict.
+
+    Answers what ran, with which composition, when, with which usage, which
+    execution state occurred, which byte facts changed, and why it failed or
+    was limited. It does NOT claim an answer is true, a source supports a
+    claim, or a business decision is correct.
     """
 
-    schema_version: Literal["1.2"] = "1.2"
+    schema_version: Literal["2.0"] = "2.0"
     state: Literal["terminal"] = "terminal"
     run_id: str
     conversation_id: str | None = None
     continued_from_run_id: str | None = None
-    case_id: str | None = None
+    bindings: Mapping[str, str] = Field(default_factory=dict)
     model: str
     started_at: datetime
     finished_at: datetime
-    status: Literal["completed", "partial", "blocked"]
-    summary: RunSummary
+    execution_state: ExecutionState
+    outcome: str
     usage: dict[str, Any] = Field(default_factory=dict)
     usage_complete: bool = False
-    verified_artifacts: list[ArtifactVerification] = Field(default_factory=list)
-    verified_knowledge: list[str] = Field(default_factory=list)
-    verified_tool_effects: list[ToolEffectVerification] = Field(default_factory=list)
+    artifact_facts: list[ArtifactFact] = Field(default_factory=list)
+    tool_effect_facts: list[ToolEffectFact] = Field(default_factory=list)
     knowledge_updates: list[str] = Field(default_factory=list)
-    unresolved_effects: list[ToolEffectVerification] = Field(default_factory=list)
-    degraded: list[str] = Field(default_factory=list)
+    unresolved_effects: list[ToolEffectFact] = Field(default_factory=list)
     error: str | None = None
     step_store: str | None = None
     tool_result_store: str | None = None
@@ -94,25 +85,25 @@ class RunReceipt(BaseModel):
 
 
 class PauseReceipt(BaseModel):
-    """Receipt for a run that paused awaiting approval — not a terminal state.
+    """Receipt for a run paused awaiting approval — pending work, not a verdict.
 
     ``composition`` is the resume authority: a continuation must reconstruct
     the exact frozen composition and must ignore the mutable current profile.
     """
 
-    schema_version: Literal["1.2"] = "1.2"
+    schema_version: Literal["2.0"] = "2.0"
     state: Literal["paused"] = "paused"
     run_id: str
     conversation_id: str
-    case_id: str | None = None
+    bindings: Mapping[str, str] = Field(default_factory=dict)
     model: str
     started_at: datetime
     finished_at: datetime
     pending_approvals: list[dict[str, Any]] = Field(default_factory=list)
     pending_calls: list[dict[str, Any]] = Field(default_factory=list)
-    settled_evidence: list[str] = Field(default_factory=list)
-    verified_artifacts: list[ArtifactVerification] = Field(default_factory=list)
-    verified_knowledge: list[str] = Field(default_factory=list)
+    artifact_facts: list[ArtifactFact] = Field(default_factory=list)
+    tool_effect_facts: list[ToolEffectFact] = Field(default_factory=list)
+    knowledge_updates: list[str] = Field(default_factory=list)
     usage: dict[str, Any] = Field(default_factory=dict)
     usage_complete: bool = False
     step_store: str | None = None
@@ -127,8 +118,12 @@ AnyReceipt = RunReceipt | PauseReceipt
 class CoreDeps:
     workspace_root: Path
     run_id: str
-    # Server-owned business identity (SPEC v1.0 §5.6): the Gateway binds a
-    # channel/thread to exactly one Case and threads it into the run. Case
-    # tools enforce isolation against this value; None keeps the legacy
-    # unbound CLI/test behavior.
+    # Opaque host-provided bindings (v1.2 SPEC §4): the kernel preserves them
+    # across pause/resume but never inspects their meaning or validates
+    # domain-specific keys. Examples: {"case": "stillevo-beauty"},
+    # {"project": "wp-redesign"}, {"tenant": "stillevo", "case": "beauty-001"}.
+    bindings: Mapping[str, str] = field(default_factory=dict)
+    # Transitional alias: removed once the case plugin reads bindings (T006).
+    # Kept so the pending-approval isolation check and existing plugin code
+    # keep working during the migration.
     case_id: str | None = None

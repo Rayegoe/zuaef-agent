@@ -3,21 +3,20 @@ from pathlib import Path
 
 import pytest
 
-from zuaef_agent.models import RunReceipt, RunSummary
+from zuaef_agent.models import RunReceipt
 from zuaef_agent.receipt_store import ReceiptStore
 
 
 def test_receipt_roundtrip(tmp_path: Path):
     now = datetime.now(UTC)
     store = ReceiptStore(tmp_path / ".zuaef-state")
-    summary = RunSummary(status="completed", outcome="done", run_id="run-1", receipt=".zuaef-state/receipts/run-1.json")
     receipt = RunReceipt(
         run_id="run-1",
         model="test:model",
         started_at=now,
         finished_at=now,
-        status="completed",
-        summary=summary,
+        execution_state="completed",
+        outcome="done",
         knowledge_updates=["knowledge/concepts/x.md"],
         step_store=".state/steps",
         tool_result_store=".state/tool-results",

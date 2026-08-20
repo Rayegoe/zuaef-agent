@@ -32,7 +32,8 @@ from examples.research_toolset import (
 )
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.core import build_agent
-from zuaef_agent.models import CoreDeps, RunSummary
+from zuaef_agent.models import CoreDeps
+from zuaef_agent.receipt_store import ReceiptStore
 from zuaef_agent.runtime import (
     PausedRun,
     TerminalRun,
@@ -82,10 +83,10 @@ def scenario_a_approve(settings: AgentSettings) -> list[tuple[str, bool, str]]:
         "list_directory, search_knowledge, or any other read tool. The exact source locator is "
         f"'{DEFAULT_SOURCE}'. "
         "Produce artifacts/report.md summarizing 5 real findings with section references. "
-        f"Write one evidence-backed knowledge node (doc_type=concept, id like {KNOWLEDGE_HINT}, sources pointing at the guide file). "
+        f"Write one knowledge node (doc_type=concept, id like {KNOWLEDGE_HINT}, sources pointing at the guide file). "
         "Finish by calling publish_digest with a one-line digest. "
-        "In your final summary, claim artifact and knowledge evidence refs. The host settles publish_digest "
-        "from its effect ledger; do not invent or copy a tool-effect id into the summary."
+        "Your final message is the natural result for the current user — the host records artifact "
+        "byte facts, knowledge provenance and the tool-effect ledger automatically."
     )
     outcome = execute_run(agent, deps, prompt=prompt, settings=settings, run_id=run_id)
 
@@ -117,14 +118,14 @@ def scenario_a_approve(settings: AgentSettings) -> list[tuple[str, bool, str]]:
 
     receipt = outcome2.receipt
     results += [
-        ("A report verified", bool(receipt.verified_artifacts), f"artifacts={[a.path for a in receipt.verified_artifacts]}"),
+        ("A artifact byte fact", bool(receipt.artifact_facts), f"artifacts={[a.path for a in receipt.artifact_facts]}"),
         ("A report on disk", REPORT.is_file(), str(REPORT)),
-        ("A knowledge verified", bool(receipt.verified_knowledge), f"knowledge={receipt.verified_knowledge}"),
-        ("A settled tool-effect", any(e.tool_name == "publish_digest" and e.status == "completed" for e in receipt.verified_tool_effects), f"effects={[ (e.tool_name, e.status) for e in receipt.verified_tool_effects]}"),
+        ("A knowledge provenance", bool(receipt.knowledge_updates), f"knowledge={receipt.knowledge_updates}"),
+        ("A settled tool-effect", any(e.tool_name == "publish_digest" and e.status == "completed" for e in receipt.tool_effect_facts), f"effects={[ (e.tool_name, e.status) for e in receipt.tool_effect_facts]}"),
         ("A marker exists", expected_marker.is_file(), str(expected_marker)),
         ("A conversation preserved", receipt.conversation_id == outcome.conversation_id, f"conv={receipt.conversation_id}"),
         ("A new run id", receipt.run_id != outcome.pause_receipt.run_id, f"{outcome.pause_receipt.run_id} -> {receipt.run_id}"),
-        ("A status terminal", receipt.status == "completed", f"status={receipt.status} degraded={receipt.degraded}"),
+        ("A execution completed", receipt.execution_state == "completed", f"state={receipt.execution_state}"),
         ("A no unresolved effects", not receipt.unresolved_effects, f"unresolved={receipt.unresolved_effects}"),
         ("A receipt usage complete", receipt.usage_complete, f"usage={receipt.usage}"),
     ]
@@ -158,7 +159,7 @@ def scenario_b_deny(settings: AgentSettings) -> list[tuple[str, bool, str]]:
     after = {p.name for p in DEFAULT_MARKER_ROOT.glob("*.marker")}
     return [
         ("B denied: no new marker", after == before, f"before={sorted(before)} after={sorted(after)}"),
-        ("B receipt written", Path(outcome2.summary.receipt).is_file(), str(outcome2.summary.receipt)),
+        ("B receipt written", ReceiptStore(settings.state_root).path_for(outcome2.receipt.run_id).is_file(), str(ReceiptStore(settings.state_root).path_for(outcome2.receipt.run_id))),
         ("B conversation preserved", outcome2.receipt.conversation_id == outcome.conversation_id, outcome2.receipt.conversation_id),
     ]
 
@@ -173,11 +174,11 @@ def scenario_c_failure_receipt(settings: AgentSettings) -> list[tuple[str, bool,
         return [("C terminal", False, f"expected TerminalRun, got {type(outcome).__name__}")]
     receipt = outcome.receipt
     return [
-        ("C failure receipt status", receipt.status in ("partial", "blocked"), f"status={receipt.status}"),
+        ("C failure execution state", receipt.execution_state in ("failed", "limit_reached"), f"state={receipt.execution_state}"),
         ("C identity recorded", bool(receipt.run_id and receipt.conversation_id), f"run={receipt.run_id}"),
-        ("C error summary present", bool(receipt.error or receipt.summary.unknowns), f"error={(receipt.error or '')[:80]}"),
+        ("C error present", bool(receipt.error), f"error={(receipt.error or '')[:80]}"),
         ("C settled usage retained", bool(receipt.usage) and receipt.usage.get("requests", 0) >= 1, f"usage={receipt.usage}"),
-        ("C receipt on disk", Path(outcome.summary.receipt).is_file(), str(outcome.summary.receipt)),
+        ("C receipt on disk", ReceiptStore(settings.state_root).path_for(receipt.run_id).is_file(), str(ReceiptStore(settings.state_root).path_for(receipt.run_id))),
     ]
 
 
@@ -200,7 +201,6 @@ def scenario_d_unresolved(settings: AgentSettings) -> list[tuple[str, bool, str]
         encoding="utf-8",
     )
     outcome = finalize_terminal(
-        RunSummary(status="completed", outcome="claims success", artifacts=[], evidence=[]),
         settings=settings,
         run_id=run_id,
         conversation_id=f"gate-{run_id}",
@@ -208,10 +208,12 @@ def scenario_d_unresolved(settings: AgentSettings) -> list[tuple[str, bool, str]
         started_at=datetime.now(UTC),
         usage={},
         snapshot={},
+        execution_state="completed",
+        outcome="claims success",
     )
     receipt = outcome.receipt
     return [
-        ("D blocked", receipt.status == "blocked", f"status={receipt.status}"),
+        ("D failed execution", receipt.execution_state == "failed", f"state={receipt.execution_state}"),
         ("D unresolved_effect recorded", any(e.tool_call_id == "gate_unresolved" for e in receipt.unresolved_effects), f"unresolved={[e.tool_call_id for e in receipt.unresolved_effects]}"),
     ]
 

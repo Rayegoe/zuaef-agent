@@ -20,41 +20,24 @@ from pydantic_ai import (
 
 from .config import AgentSettings
 from .core import build_agent
-from .knowledge_store import KnowledgeStore
-from .models import (
-    ArtifactVerification,
-    CompositionSnapshot,
-    CoreDeps,
-    PauseReceipt,
-    RunReceipt,
-    RunSummary,
-    ToolEffectVerification,
-)
-from .receipt_store import ReceiptStore
-from .verification import (
-    VerificationError,
+from .integrity import (
+    IntegrityError,
     latest_tool_effects,
-    parse_evidence_ref,
     read_tool_effects,
     snapshot_artifacts,
     verify_artifact,
-    verify_knowledge,
-    verify_tool_effect,
 )
-
-
-def _verify_inherited_artifact(
-    recorded: ArtifactVerification,
-    *,
-    workspace_root: Any,
-) -> ArtifactVerification:
-    """Re-read a pause-settled artifact and require its bytes to remain unchanged."""
-    current = verify_artifact(recorded.path, workspace_root=workspace_root, snapshot={})
-    if current.size != recorded.size or current.sha256 != recorded.sha256:
-        raise VerificationError(
-            f"inherited artifact changed after pause: {recorded.path!r}"
-        )
-    return current
+from .knowledge_store import KnowledgeStore
+from .models import (
+    ArtifactFact,
+    CompositionSnapshot,
+    CoreDeps,
+    ExecutionState,
+    PauseReceipt,
+    RunReceipt,
+    ToolEffectFact,
+)
+from .receipt_store import ReceiptStore
 
 
 def _usage_payload(result: object) -> dict[str, Any]:
@@ -65,9 +48,9 @@ def _usage_payload(result: object) -> dict[str, Any]:
     if value is None:
         return {}
     if hasattr(value, "model_dump"):
-        return dict(value.model_dump())
+        return dict(value.model_dump())  # type: ignore[attr-defined,union-attr]
     if is_dataclass(value):
-        return asdict(value)
+        return asdict(value)  # type: ignore[arg-type]
     if isinstance(value, dict):
         return dict(value)
     return {"repr": repr(value)}
@@ -118,6 +101,9 @@ def _assert_pending_case_isolation(
     run's bound Case here: a pending call naming a different ``case_id`` fails
     the run loudly instead of pausing, so a bound run can never reach an
     operator queue for the wrong Case. Unbound runs are untouched.
+
+    NOTE: transitional — this check moves into the Case plugin's tool
+    validation (v1.2 T006) and is removed from the kernel.
     """
     if deps.case_id is None:
         return
@@ -135,21 +121,16 @@ def _assert_pending_case_isolation(
 
 @dataclass(kw_only=True)
 class TerminalRun:
-    """A run that reached a business terminal state with a host-verified receipt.
+    """A run that reached a business terminal state with an operational receipt.
 
     ``presentation`` is the user-facing natural-language result (the model's
     terminal text on a normal completion, a bounded user-safe explanation on
-    partial/blocked); ``receipt`` is the host-generated settlement. Presentation
-    never depends on the receipt schema.
+    failure); ``receipt`` records execution facts only. Presentation never
+    depends on the receipt schema.
     """
 
     presentation: str
     receipt: RunReceipt
-
-    @property
-    def summary(self) -> RunSummary:
-        """Compatibility alias for the receipt's settlement summary."""
-        return self.receipt.summary
 
 
 @dataclass(kw_only=True)
@@ -169,65 +150,63 @@ RuntimeOutcome = TerminalRun | PausedRun
 NATURAL_COMPLETION_OUTCOME = "Returned the result to the current user."
 
 
-def finalize_terminal(
-    summary: RunSummary,
+def _recheck_inherited_artifact(
+    recorded: ArtifactFact,
     *,
+    workspace_root: Any,
+) -> ArtifactFact:
+    """Re-read a pause-settled artifact and require its bytes to remain unchanged."""
+    current = verify_artifact(recorded.path, workspace_root=workspace_root, snapshot={})
+    if current.size != recorded.size or current.sha256 != recorded.sha256:
+        raise IntegrityError(
+            f"inherited artifact changed after pause: {recorded.path!r}"
+        )
+    return current
+
+
+def _changed_artifact_facts(
+    workspace_root: Any,
+    snapshot: dict[str, str],
+    *,
+    inherited: Sequence[ArtifactFact] = (),
+) -> list[ArtifactFact]:
+    """Byte facts for every artifact this run created or modified.
+
+    ``inherited`` are pause-settled facts whose bytes must remain unchanged.
+    """
+    facts: list[ArtifactFact] = []
+    seen: set[str] = set()
+    for recorded in inherited:
+        try:
+            facts.append(_recheck_inherited_artifact(recorded, workspace_root=workspace_root))
+        except IntegrityError:
+            continue  # integrity anomaly is recorded by the caller as unresolved
+        seen.add(recorded.path)
+    for path, digest in snapshot_artifacts(workspace_root).items():
+        if snapshot.get(path) == digest:
+            continue
+        if path in seen:
+            continue
+        try:
+            facts.append(verify_artifact(path, workspace_root=workspace_root, snapshot=snapshot))
+        except IntegrityError:
+            continue
+    return facts
+
+
+def _tool_effect_facts(
     settings: AgentSettings,
     run_id: str,
-    conversation_id: str,
-    model_label: str,
-    started_at: datetime,
-    usage: dict[str, Any],
-    snapshot: dict[str, str],
-    presentation: str | None = None,
-    prior_pause_receipt: PauseReceipt | None = None,
-    error: str | None = None,
-    composition: CompositionSnapshot | None = None,
-    case_id: str | None = None,
-) -> TerminalRun:
-    """Host verification boundary: verify model claims, degrade, and settle the receipt.
-
-    Importable and unit-testable on its own; this is where "completed" stops
-    being the model's opinion and becomes a verified fact.
-    """
-    degraded: list[str] = []
-    verified_artifacts: list[ArtifactVerification] = []
-    verified_knowledge: list[str] = []
-    verified_tool_effects: list[ToolEffectVerification] = []
-    verified_evidence_refs: list[str] = []
-
-    workspace = settings.workspace_root.resolve()
-    knowledge_store = KnowledgeStore(workspace)
-    inherited_artifacts: dict[str, ArtifactVerification] = {}
-    inherited_knowledge: set[str] = set()
-    if prior_pause_receipt is not None:
-        for recorded in prior_pause_receipt.verified_artifacts:
-            try:
-                inherited_artifacts[recorded.path] = _verify_inherited_artifact(
-                    recorded,
-                    workspace_root=workspace,
-                )
-                verified_artifacts.append(inherited_artifacts[recorded.path])
-            except VerificationError as exc:
-                degraded.append(str(exc))
-        for knowledge_id in prior_pause_receipt.verified_knowledge:
-            try:
-                verify_knowledge(
-                    knowledge_id,
-                    store=knowledge_store,
-                    run_id=prior_pause_receipt.run_id,
-                )
-                inherited_knowledge.add(knowledge_id)
-                verified_knowledge.append(knowledge_id)
-            except VerificationError as exc:
-                degraded.append(str(exc))
-    raw_effect_records = (
+) -> tuple[list[ToolEffectFact], list[ToolEffectFact]]:
+    """Ledger facts and unresolved (started-never-settled) facts for a run."""
+    effect_records = (
         latest_tool_effects(read_tool_effects(settings.step_store_dir, run_id))
         if settings.enable_step_persistence
         else []
     )
-    effect_records: list[dict[str, Any]] = []
-    for record in raw_effect_records:
+    facts: list[ToolEffectFact] = []
+    unresolved: list[ToolEffectFact] = []
+    for record in effect_records:
         call_id = record.get("tool_call_id")
         tool_name = record.get("tool_name")
         status = record.get("status")
@@ -237,162 +216,84 @@ def finalize_terminal(
             or not isinstance(tool_name, str)
             or not tool_name
         ):
-            degraded.append("malformed tool-effect ledger record")
-        elif status not in {"started", "completed", "failed"}:
-            degraded.append(f"invalid tool-effect status for {call_id!r}: {status!r}")
-        elif record.get("run_id") != run_id:
-            degraded.append(f"tool-effect not owned by run {run_id}: {call_id!r}")
-        else:
-            effect_records.append(record)
-
-    # Host-discover artifacts changed before any terminal path, including a
-    # provider/usage failure whose model summary cannot restate those files.
-    for path, digest in snapshot_artifacts(workspace).items():
-        if snapshot.get(path) == digest:
+            continue  # malformed ledger row — not a settled fact
+        if status not in {"started", "completed", "failed"}:
             continue
-        try:
-            verified = verify_artifact(
-                path, workspace_root=workspace, snapshot=snapshot
-            )
-            if all(existing.path != verified.path for existing in verified_artifacts):
-                verified_artifacts.append(verified)
-        except VerificationError as exc:
-            degraded.append(str(exc))
-
-    for path_str in summary.artifacts:
-        try:
-            verified = inherited_artifacts.get(path_str) or verify_artifact(
-                path_str,
-                workspace_root=workspace,
-                snapshot=snapshot,
-            )
-            if all(existing.path != verified.path for existing in verified_artifacts):
-                verified_artifacts.append(verified)
-        except VerificationError as exc:
-            degraded.append(str(exc))
-
-    for ref in summary.evidence:
-        try:
-            kind, value = parse_evidence_ref(ref)
-            if kind == "artifact":
-                verified = inherited_artifacts.get(value) or verify_artifact(
-                    value,
-                    workspace_root=workspace,
-                    snapshot=snapshot,
-                )
-                if all(
-                    existing.path != verified.path for existing in verified_artifacts
-                ):
-                    verified_artifacts.append(verified)
-            elif kind == "knowledge":
-                knowledge_id = value.removesuffix(".md")
-                if knowledge_id not in inherited_knowledge:
-                    verify_knowledge(value, store=knowledge_store, run_id=run_id)
-                if knowledge_id not in verified_knowledge:
-                    verified_knowledge.append(knowledge_id)
-                verified_evidence_refs.append(f"knowledge:{knowledge_id}")
-            else:
-                record = verify_tool_effect(
-                    value,
-                    step_store_dir=settings.step_store_dir,
-                    run_id=run_id,
-                    records=effect_records,
-                )
-                verification = ToolEffectVerification(
-                    tool_call_id=record["tool_call_id"],
-                    tool_name=record["tool_name"],
-                    status=record["status"],
-                )
-                verified_tool_effects.append(verification)
-                verified_evidence_refs.append(f"tool-effect:{value}")
-        except (VerificationError, ValueError) as exc:
-            degraded.append(str(exc))
-
-    # The host owns the effect ledger; do not require the model to copy opaque
-    # tool_call_ids into its final prose before a completed effect can settle.
-    for record in effect_records:
-        if record.get("status") != "completed":
-            continue
-        if any(
-            existing.tool_call_id == record["tool_call_id"]
-            for existing in verified_tool_effects
-        ):
-            continue
-        verified_tool_effects.append(
-            ToolEffectVerification(
-                tool_call_id=record["tool_call_id"],
-                tool_name=record["tool_name"],
-                status=record["status"],
-            )
+        if record.get("run_id") != run_id:
+            continue  # foreign run: outside this ledger
+        fact = ToolEffectFact(
+            tool_call_id=call_id,
+            tool_name=tool_name,
+            status=status,  # type: ignore[arg-type]
         )
-        verified_evidence_refs.append(f"tool-effect:{record['tool_call_id']}")
+        if status == "started":
+            unresolved.append(fact)
+        facts.append(fact)
+    return facts, unresolved
 
-    verified_evidence_refs = [
-        f"artifact:{v.path}" for v in verified_artifacts
-    ] + verified_evidence_refs
 
-    # Host-discovered knowledge written by this run, even when the model forgot to claim it.
-    knowledge_updates = knowledge_store.list_generated_by_run(run_id)
-    for path in knowledge_updates:
-        knowledge_id = path.removesuffix(".md").removeprefix("knowledge/")
-        try:
-            verify_knowledge(knowledge_id, store=knowledge_store, run_id=run_id)
-            if knowledge_id not in verified_knowledge:
-                verified_knowledge.append(knowledge_id)
-                verified_evidence_refs.append(f"knowledge:{knowledge_id}")
-        except VerificationError as exc:
-            degraded.append(str(exc))
+def finalize_terminal(
+    *,
+    settings: AgentSettings,
+    run_id: str,
+    conversation_id: str,
+    model_label: str,
+    started_at: datetime,
+    usage: dict[str, Any],
+    snapshot: dict[str, str],
+    execution_state: ExecutionState,
+    outcome: str,
+    presentation: str | None = None,
+    prior_pause_receipt: PauseReceipt | None = None,
+    error: str | None = None,
+    composition: CompositionSnapshot | None = None,
+    bindings: dict[str, str] | None = None,
+) -> TerminalRun:
+    """Host settlement boundary: record operational execution facts only.
 
-    unresolved = [
-        ToolEffectVerification(
-            tool_call_id=r["tool_call_id"], tool_name=r["tool_name"], status=r["status"]
-        )
-        for r in effect_records
-        if r.get("status") == "started"
-    ]
+    This is where the run's execution state becomes a durable fact. The
+    runtime never parses model-claimed evidence, never validates knowledge
+    semantics, and never downgrades a run because a source field is absent.
+    """
+    workspace = settings.workspace_root.resolve()
 
-    status = summary.status
-    if unresolved:
-        status = "blocked"
-    elif status == "completed" and degraded:
-        status = "partial"
+    inherited = (
+        list(prior_pause_receipt.artifact_facts)
+        if prior_pause_receipt is not None
+        else []
+    )
+    artifact_facts = _changed_artifact_facts(
+        workspace, snapshot, inherited=inherited
+    )
+    tool_effect_facts, unresolved_effects = _tool_effect_facts(settings, run_id)
+    knowledge_updates = KnowledgeStore(workspace).list_generated_by_run(run_id)
 
-    unknowns = list(summary.unknowns)
-    if degraded:
-        unknowns = unknowns + degraded
+    if unresolved_effects and execution_state == "completed":
+        # A started-but-never-settled tool call means execution did not
+        # cleanly finish: represent that as failed execution, not a semantic
+        # downgrade. The unresolved facts remain inspectable.
+        execution_state = "failed"  # type: ignore[assignment]
+        error = error or "run ended with unresolved tool call(s)"
 
     receipt_store = ReceiptStore(settings.state_root)
-    receipt_path = receipt_store.display_path_for(run_id)
-    final_summary = summary.model_copy(
-        update={
-            "status": status,
-            "artifacts": [v.path for v in verified_artifacts],
-            "evidence": verified_evidence_refs,
-            "unknowns": unknowns,
-            "run_id": run_id,
-            "receipt": receipt_path,
-        }
-    )
     receipt = RunReceipt(
         run_id=run_id,
         conversation_id=conversation_id,
         continued_from_run_id=prior_pause_receipt.run_id
         if prior_pause_receipt is not None
         else None,
-        case_id=case_id,
+        bindings=bindings or {},
         model=model_label,
         started_at=started_at,
         finished_at=datetime.now(UTC),
-        status=final_summary.status,
-        summary=final_summary,
+        execution_state=execution_state,
+        outcome=outcome,
         usage=usage,
         usage_complete=_usage_complete(usage),
-        verified_artifacts=verified_artifacts,
-        verified_knowledge=verified_knowledge,
-        verified_tool_effects=verified_tool_effects,
+        artifact_facts=artifact_facts,
+        tool_effect_facts=tool_effect_facts,
         knowledge_updates=knowledge_updates,
-        unresolved_effects=unresolved,
-        degraded=degraded,
+        unresolved_effects=unresolved_effects,
         error=error,
         step_store=str(settings.step_store_dir)
         if settings.enable_step_persistence
@@ -404,7 +305,7 @@ def finalize_terminal(
     )
     receipt_store.write(receipt)
     return TerminalRun(
-        presentation=presentation if presentation is not None else final_summary.outcome,
+        presentation=presentation if presentation is not None else outcome,
         receipt=receipt,
     )
 
@@ -468,45 +369,23 @@ def _build_paused(
     usage: dict[str, Any],
     snapshot: dict[str, str],
     composition: CompositionSnapshot | None = None,
-    case_id: str | None = None,
+    bindings: dict[str, str] | None = None,
 ) -> PausedRun:
-    effect_records = (
-        latest_tool_effects(read_tool_effects(settings.step_store_dir, run_id))
-        if settings.enable_step_persistence
-        else []
-    )
-    settled = [
-        f"tool-effect:{record['tool_call_id']}"
-        for record in effect_records
-        if record.get("status") in ("completed", "failed")
-    ]
     workspace = settings.workspace_root.resolve()
-    current_artifacts = snapshot_artifacts(workspace)
-    verified_artifacts = [
-        verify_artifact(path, workspace_root=workspace, snapshot=snapshot)
-        for path, digest in current_artifacts.items()
-        if snapshot.get(path) != digest
-    ]
-    knowledge_store = KnowledgeStore(workspace)
-    verified_knowledge: list[str] = []
-    for path in knowledge_store.list_generated_by_run(run_id):
-        knowledge_id = path.removesuffix(".md").removeprefix("knowledge/")
-        verify_knowledge(knowledge_id, store=knowledge_store, run_id=run_id)
-        verified_knowledge.append(knowledge_id)
-    settled += [f"artifact:{item.path}" for item in verified_artifacts]
-    settled += [f"knowledge:{knowledge_id}" for knowledge_id in verified_knowledge]
+    artifact_facts = _changed_artifact_facts(workspace, snapshot)
+    tool_effect_facts, _ = _tool_effect_facts(settings, run_id)
     pause_receipt = PauseReceipt(
         run_id=run_id,
         conversation_id=conversation_id,
-        case_id=case_id,
+        bindings=bindings or {},
         model=model_label,
         started_at=started_at,
         finished_at=datetime.now(UTC),
         pending_approvals=[_call_snapshot(call) for call in requests.approvals],
         pending_calls=[_call_snapshot(call) for call in requests.calls],
-        settled_evidence=settled,
-        verified_artifacts=verified_artifacts,
-        verified_knowledge=verified_knowledge,
+        artifact_facts=artifact_facts,
+        tool_effect_facts=tool_effect_facts,
+        knowledge_updates=KnowledgeStore(workspace).list_generated_by_run(run_id),
         usage=usage,
         usage_complete=_usage_complete(usage),
         step_store=str(settings.step_store_dir)
@@ -551,21 +430,16 @@ def execute_run(
     """Shared execution seam: run an already-composed agent through the common runtime.
 
     The runtime owns usage limits, the exception boundary, pause/continuation,
-    host outcome verification and receipt settlement. It never builds agents —
-    composition (build_agent + deps + business toolsets) is the caller's job.
-    Run acceptance happens here: any failure after this point leaves a receipt.
+    operational receipt settlement. It never builds agents — composition
+    (build_agent + deps + business toolsets) is the caller's job. Run
+    acceptance happens here: any failure after this point leaves a receipt.
 
     ``composition`` is frozen into the receipt; a continuation must pass the
     pause receipt's own snapshot.
 
-    ``case_id`` comes from ``deps`` (server-owned): the Gateway threads the
-    session's bound Case into the run and the receipts record it, so Case
-    identity survives pause/resume and is part of the durable evidence.
-
-    ``retries`` is passed through to ``agent.run`` as the tool-retry budget
-    (a bare int, or ``{"tools": N}`` / ``{"output": N}``). It only raises the
-    ceiling for how many times the model may retry a failing or withdrawn
-    tool call before the run is blocked — it never re-offers withdrawn tools.
+    ``bindings`` come from ``deps`` (host-owned, opaque to the kernel): the
+    Gateway threads the session's bound identities into the run and the
+    receipts preserve them across pause/resume.
     """
     settings = settings or AgentSettings.from_env()
     run_id = run_id or deps.run_id
@@ -586,6 +460,13 @@ def execute_run(
     model_label = _model_label(settings)
     started_at = datetime.now(UTC)
 
+    bindings = dict(deps.bindings)
+    # Transitional (v1.2 T006 removes case_id once the case plugin reads
+    # bindings): a legacy caller that sets only ``case_id`` still produces the
+    # same receipt binding.
+    if not bindings and deps.case_id:
+        bindings = {"case": deps.case_id}
+
     # Run acceptance: bounded pre-run artifact snapshot (ownership never uses mtime).
     snapshot = snapshot_artifacts(settings.workspace_root.resolve())
     limits = UsageLimits(
@@ -596,11 +477,14 @@ def execute_run(
 
     usage_tracker = RunUsage()
 
-    def _partial_or_blocked(
-        summary: RunSummary, error: str | None, *, presentation: str | None = None
+    def _settle(
+        execution_state: ExecutionState,
+        outcome: str,
+        *,
+        error: str | None = None,
+        presentation: str | None = None,
     ) -> TerminalRun:
         return finalize_terminal(
-            summary,
             settings=settings,
             run_id=run_id,
             conversation_id=conversation_id,
@@ -608,11 +492,13 @@ def execute_run(
             started_at=started_at,
             usage=_usage_payload(usage_tracker),
             snapshot=snapshot,
+            execution_state=execution_state,
+            outcome=outcome,
             presentation=presentation,
             prior_pause_receipt=prior_pause_receipt,
             error=error,
             composition=composition,
-            case_id=deps.case_id,
+            bindings=bindings,
         )
 
     try:
@@ -631,23 +517,19 @@ def execute_run(
             )
         )
     except UsageLimitExceeded as exc:
-        return _partial_or_blocked(
-            RunSummary(
-                status="partial",
-                outcome="Run stopped at an enforced usage boundary.",
-                unknowns=[str(exc)],
-                next_action="Review produced artifacts/evidence and resume with a narrower task if needed.",
-            ),
+        return _settle(
+            "limit_reached",
+            "Run stopped at an enforced usage boundary.",
             error=str(exc),
+            presentation=(
+                "The run stopped at an enforced usage boundary. The technical "
+                "detail is recorded in the run receipt."
+            ),
         )
     except Exception as exc:  # noqa: BLE001 — receipt boundary: no unrecorded runtime failure
-        return _partial_or_blocked(
-            RunSummary(
-                status="blocked",
-                outcome="Run failed before reaching a business terminal state.",
-                unknowns=[f"{type(exc).__name__}: {exc}"],
-                next_action="Inspect the receipt error field and the step store, then retry.",
-            ),
+        return _settle(
+            "failed",
+            "Run failed before reaching a business terminal state.",
             error=f"{type(exc).__name__}: {exc}",
             presentation=(
                 "The run failed before completing. The technical detail is "
@@ -658,18 +540,16 @@ def execute_run(
     usage = _usage_payload(result)
     output = result.output
     if isinstance(output, DeferredToolRequests):
-        # Host authorization boundary: a bound run must not pause for an
-        # approval that targets a different Case — that is a blocked run, not
-        # an operator queue entry (SPEC v1.0 §5.6).
+        # Transitional host authorization check (v1.2 T006 moves this into the
+        # Case plugin): a bound run must not pause for an approval that
+        # targets a different Case — that is a failed run, not an operator
+        # queue entry.
         try:
             _assert_pending_case_isolation(output, deps)
         except ValueError as exc:
-            return _partial_or_blocked(
-                RunSummary(
-                    status="blocked",
-                    outcome=str(exc),
-                    unknowns=[str(exc)],
-                ),
+            return _settle(
+                "failed",
+                str(exc),
                 error=str(exc),
             )
         return _build_paused(
@@ -683,25 +563,15 @@ def execute_run(
             usage=usage,
             snapshot=snapshot,
             composition=composition,
-            case_id=deps.case_id,
+            bindings=bindings,
         )
     # Natural terminal: the model returned plain text. The host settles the
-    # receipt from verified state (artifact diff, effect ledger, knowledge
-    # writes) — never from model-crafted settlement fields.
-    summary = RunSummary(status="completed", outcome=NATURAL_COMPLETION_OUTCOME)
-    return finalize_terminal(
-        summary,
-        settings=settings,
-        run_id=run_id,
-        conversation_id=conversation_id,
-        model_label=model_label,
-        started_at=started_at,
-        usage=usage,
-        snapshot=snapshot,
+    # receipt from operational facts (artifact byte diff, effect ledger,
+    # knowledge writes) — never from model-crafted settlement fields.
+    return _settle(
+        "completed",
+        NATURAL_COMPLETION_OUTCOME,
         presentation=str(output),
-        prior_pause_receipt=prior_pause_receipt,
-        composition=composition,
-        case_id=deps.case_id,
     )
 
 

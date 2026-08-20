@@ -501,9 +501,11 @@ def test_terminal_receipt_carries_composition(tmp_path):
         )
 
     assert isinstance(outcome, TerminalRun)
-    assert outcome.receipt.schema_version == "1.2"
+    assert outcome.receipt.schema_version == "2.0"
     assert outcome.receipt.composition == snapshot
-    stored = outcome.receipt.summary.receipt
+    from zuaef_agent.receipt_store import ReceiptStore
+
+    stored = ReceiptStore(settings.state_root).path_for(run_id)
     on_disk = json.loads(Path(stored).read_text(encoding="utf-8"))
     assert on_disk["composition"]["composition_id"] == snapshot.composition_id
     assert on_disk["composition"]["plugins"][0]["config"] == {"ace_root": "/v1"}
@@ -531,7 +533,7 @@ def test_pause_receipt_roundtrip_with_composition(tmp_path):
     )
     path = ReceiptStore(settings.state_root).write(pause)
     stored = ReceiptStore(settings.state_root).read("p1")
-    assert stored.schema_version == "1.2"
+    assert stored.schema_version == "2.0"
     assert stored.composition.composition_id == snapshot.composition_id
     assert Path(path).is_file()
 

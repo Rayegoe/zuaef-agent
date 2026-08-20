@@ -64,7 +64,7 @@ from host_projection_legacy import (
     render_writing_context,
     run_production_article,
 )
-from pydantic_ai import Agent
+from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai_harness.step_persistence import FileStepStore, StepPersistence
 from task_inputs import resolve_task_inputs
 from zuaef_ace_writing.editorial import (
@@ -85,7 +85,7 @@ from examples.production_writing import (
 )
 from examples.writing_case import WRITING_AGENT_INSTRUCTIONS, build_prompt
 from zuaef_agent.config import AgentSettings
-from zuaef_agent.models import CoreDeps, RunSummary
+from zuaef_agent.models import CoreDeps
 from zuaef_agent.providers import resolve_model
 from zuaef_agent.runtime import PausedRun, execute_run
 
@@ -175,7 +175,7 @@ def material_file(task_id: str, before_text: str) -> Path:
 
 def build_old_agent(
     settings: AgentSettings, *, run_id: str
-) -> Agent[CoreDeps, RunSummary]:
+) -> Agent[CoreDeps, str | DeferredToolRequests]:
     """Proof trajectory composition (mirrors examples/writing_case.py) plus
     the same editorial capability both modes share."""
     settings.workspace_root.mkdir(parents=True, exist_ok=True)
@@ -197,7 +197,7 @@ def build_old_agent(
     return Agent(
         resolve_model(settings),
         deps_type=CoreDeps,
-        output_type=[RunSummary],
+        output_type=[str, DeferredToolRequests],
         instructions=WRITING_AGENT_INSTRUCTIONS,
         capabilities=capabilities,
         toolsets=[build_writing_toolset(DEFAULT_ACE_ROOT)],
@@ -282,7 +282,7 @@ def run_writer_editor(task_id: str, settings: AgentSettings, base_run_id: str) -
         return {
             "mode": "writer_editor",
             "task_id": task_id,
-            "status": "blocked",
+            "status": "failed",
             "detail": "writer pass produced no artifact",
             "writer": writer,
         }
@@ -345,13 +345,13 @@ def _record_from_outcome(outcome, run_id: str, task_id: str, *, mode: str, limit
         "task_id": task_id,
         "run_id": run_id,
         "request_limit": limit,
-        "status": receipt.status,
-        "summary_outcome": receipt.summary.outcome,
+        "status": receipt.execution_state,
+        "outcome": receipt.outcome,
         "model_requests": receipt.usage.get("requests"),
         "usage": receipt.usage,
-        "verified_artifacts": [v.path for v in receipt.verified_artifacts],
+        "verified_artifacts": [v.path for v in receipt.artifact_facts],
         "verified_tool_effects": [
-            (v.tool_name, v.status) for v in receipt.verified_tool_effects
+            (v.tool_name, v.status) for v in receipt.tool_effect_facts
         ],
         "unresolved_effects": [
             (v.tool_name, v.status) for v in receipt.unresolved_effects
