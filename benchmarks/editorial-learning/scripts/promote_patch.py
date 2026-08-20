@@ -33,10 +33,11 @@ from pathlib import Path
 BENCH = Path(__file__).resolve().parents[1]
 REPO = BENCH.parents[1]
 sys.path[:0] = [
+    str(Path(__file__).resolve().parents[1] / "legacy"),
     str(REPO / "plugins" / "zuaef-ace-writing"),
     str(REPO / "src"),
 ]
-from zuaef_ace_writing.editorial import EditorialEvidenceStore
+from editorial_capability import EditorialEvidenceStore
 
 
 def load_pool() -> dict[str, list[dict]]:

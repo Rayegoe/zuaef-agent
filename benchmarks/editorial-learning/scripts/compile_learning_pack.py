@@ -29,10 +29,11 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [
+    str(Path(__file__).resolve().parents[1] / "legacy"),
     str(REPO / "plugins" / "zuaef-ace-writing"),
     str(REPO / "src"),
 ]
-from zuaef_ace_writing.editorial import COGNITIVE_ACTIONS, EditorialEvidenceStore
+from editorial_capability import COGNITIVE_ACTIONS, EditorialEvidenceStore
 
 FROZEN_ACTIONS = set(COGNITIVE_ACTIONS)
 FROZEN_SENSORS = {

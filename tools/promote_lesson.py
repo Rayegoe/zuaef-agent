@@ -40,7 +40,26 @@ def _human_review(case_dir: Path) -> str:
             f"no human-review.md in {case_dir} — promotion requires explicit "
             "human review (ACCEPT/EDIT/PARTIAL) before anything is promoted"
         )
-    return review.read_text(encoding="utf-8")
+    text = review.read_text(encoding="utf-8")
+    # Anti-impersonation (T012): an ACCEPT string is not human authority by
+    # itself. No tool may write human-review.md (static guard in
+    # test_learning_cases.py), and a human review that is a copy of the LLM
+    # review is refused here — the two must be independently authored.
+    llm_review = case_dir / "llm-review.md"
+    if llm_review.is_file():
+        llm_text = llm_review.read_text(encoding="utf-8")
+        normalized_human = "".join(text.split())
+        normalized_llm = "".join(llm_text.split())
+        if normalized_human == normalized_llm or (
+            len(normalized_llm) > 200 and normalized_llm in normalized_human
+        ):
+            raise SystemExit(
+                "human-review.md is a copy of llm-review.md — an LLM-written "
+                "ACCEPT cannot impersonate human authority. Edit the human "
+                "review by hand (it may quote the LLM review, but must carry "
+                "the human's own decision and comments)."
+            )
+    return text
 
 
 def _decide(text: str) -> tuple[bool, str]:
@@ -72,6 +91,10 @@ def _promotion_payload(case_dir: Path, review_text: str, decision: str) -> dict:
         "case_id": manifest["case_id"],
         "promoted_at": "see-version-control",  # promotion is a committed asset
         "decision": decision,
+        "decision_source": (
+            "human-review.md — hand-authored file; no tool may write it "
+            "(T012 anti-impersonation rule)"
+        ),
         # The promoted unit: preserve the raw human text + the accepted
         # output. Derived labels are NOT promoted.
         "lesson": review_text,
@@ -104,8 +127,10 @@ def promote(case_dir: Path, *, dry_run: bool = False) -> Path:
     except OSError as exc:
         raise SystemExit(f"could not write promotion {target}: {exc}") from exc
     print(f"promoted {case_dir.name} -> {target}")
-    print("NEXT: turn the accepted lesson into a versionable Skill / example "
-          "pack item / plugin change, then compare later output (T012).")
+    print(
+        "NEXT: turn the accepted lesson into a versionable Skill / example "
+        "pack item / plugin change, then compare later output (T012)."
+    )
     return target
 
 

@@ -24,6 +24,7 @@ from pathlib import Path
 BENCH = Path(__file__).resolve().parents[3]
 REPO = BENCH.parents[1]
 sys.path[:0] = [
+    str(Path(__file__).resolve().parents[3] / "legacy"),
     str(REPO / "plugins" / "zuaef-ace-writing"),
     str(REPO / "src"),
 ]
@@ -32,7 +33,7 @@ sys.path[:0] = [str(Path(__file__).resolve().parent)]
 # pyright: reportMissingImports=false
 # (deliberate sys.path-bootstrapped seam imports)
 import common
-from zuaef_ace_writing.editorial import (
+from editorial_capability import (
     COGNITIVE_ACTIONS,
     EditorialEvidenceStore,
 )

@@ -52,12 +52,19 @@ from pathlib import Path
 BENCH = Path(__file__).resolve().parents[1]
 REPO = BENCH.parents[1]
 sys.path[:0] = [
+    str(Path(__file__).resolve().parents[1] / "legacy"),
     str(REPO),
     str(REPO / "examples"),
     str(REPO / "src"),
     str(REPO / "plugins" / "zuaef-ace-writing"),
 ]
 
+from editorial_capability import (
+    EditorialControlCapability,
+    EditorialEvidenceStore,
+    EditorialSettings,
+    run_trajectory_sensors,
+)
 from host_projection_legacy import (
     COMPILED_EVIDENCE,
     prepare_writing_context,
@@ -67,12 +74,6 @@ from host_projection_legacy import (
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai_harness.step_persistence import FileStepStore, StepPersistence
 from task_inputs import resolve_task_inputs
-from zuaef_ace_writing.editorial import (
-    EditorialControlCapability,
-    EditorialEvidenceStore,
-    EditorialSettings,
-    run_trajectory_sensors,
-)
 from zuaef_ace_writing.writing_toolset import (
     DEFAULT_ACE_ROOT,
     ace_prepare,

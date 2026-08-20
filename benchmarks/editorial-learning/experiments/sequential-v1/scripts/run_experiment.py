@@ -38,7 +38,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-sys.path[:0] = [str(Path(__file__).resolve().parent)]
+sys.path[:0] = [str(Path(__file__).resolve().parents[3] / "legacy")]
 
 import common
 from common import (
@@ -144,7 +144,7 @@ async def run_task_real(task_id: str, mode: str) -> tuple[dict, str]:
     writes through save_artifact inside the ACE workspace, and planning/skills
     are off for the same reason run_benchmark disables them.
     """
-    from zuaef_ace_writing.editorial import (
+    from editorial_capability import (
         EditorialControlCapability,
         EditorialEvidenceStore,
         EditorialSettings,
@@ -326,7 +326,7 @@ def run_one(task_id: str, mode: str, *, stub: bool) -> Path:
     else:
         trace, draft = asyncio.run(run_task_real(task_id, mode))
         model = "real"
-    from zuaef_ace_writing.editorial import run_trajectory_sensors
+    from editorial_capability import run_trajectory_sensors
 
     signals = run_trajectory_sensors(draft) if mode != "base" else {}
     finished = utcnow()
@@ -449,7 +449,7 @@ def check() -> None:
     n_corpus = len(common.corpus_entries())
     if n_corpus != 20:
         problems.append(f"compiled corpus: {n_corpus}/20")
-    from zuaef_ace_writing.editorial import EditorialEvidenceStore
+    from editorial_capability import EditorialEvidenceStore
 
     EditorialEvidenceStore(common.COMPILED_EVIDENCE)
     if common.RUNTIME_EVIDENCE.is_file():

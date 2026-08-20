@@ -1,4 +1,4 @@
-# Example profile: ACE Writing plugin (SPEC §34 + editorial control v0.1).
+# Example profile: ACE Writing plugin (SPEC §34).
 # Install: cp profiles/ace-writing.toml ~/.config/zuaef/profiles/ace-writing.toml
 # (config root: $ZUAEF_CONFIG_ROOT, default ~/.config/zuaef). "ace-writing"
 # must match the file name. Config keys are non-secret only.
@@ -7,8 +7,8 @@ name = "ace-writing"
 
 [[plugins]]
 id = "ace-writing"
-# Required for the editorial-control capability (plugin returns a capability
-# only when editorial_control = true; the composition layer rejects
+# Required for the CodeMode capability (plugin returns a capability
+# only when code_mode = true; the composition layer rejects
 # capabilities without this flag).
 allow_capabilities = true
 
@@ -18,25 +18,16 @@ allow_capabilities = true
 # Not pinned here so deployments can point ACE_ROOT at their checkout.
 # ace_root = "~/projects/article-context-engine/article-context-engine"
 
-# --- Editorial control (SPEC zuaef-editorial-control-v0.1) ---
-# Phase 9 blind A/B verdict (2026-08): OFF beat ON on the anonymous sample
-# (样品Y > 样品X). Per SPEC §20, editorial control shows no stable advantage
-# and stays OPTIONAL — the production default is OFF. To run the ON side for
-# your own evaluation, copy profiles/ace-writing-editorial.toml.
-editorial_control = false
-editorial_max_injections = 4        # normal interventions per run
-editorial_max_save_vetoes = 1       # save_artifact rejections per run
-editorial_evidence_limit = 3        # evidence refs per intervention
-editorial_veto_threshold = 1.50     # combined drift score that triggers a veto
-editorial_temperature_nudge = 0.0   # 0.0 = sampling untouched (default)
-# Optional overrides:
-# editorial_evidence_path = "~/.config/zuaef/editorial/evidence.jsonl"
-# editorial_base_temperature = 0.7
+# Editorial control was removed from the production surface in v1.2 T014B:
+# no stable advantage in the Phase 9 blind A/B, and a machine veto on taste
+# is forbidden as semantic authority. Any editorial_* key now fails
+# composition; the capability is benchmark/legacy only under
+# benchmarks/editorial-learning/legacy/.
 
 # --- CodeMode (Writing SPEC v0.2 §9-§10, experimental) ---
-# OFF by default (writing_code_mode = false). When true, the observation
-# tools (list/read/retrieve/check, tagged code_mode=True in the toolset) are
-# sandboxed behind a single run_code tool; save_artifact always stays a
-# normal explicit tool call. Enable only for the A/B comparison
-# (same task/materials, ON vs OFF) — see tools/run_writing_eval.py.
+# OFF by default. When true, the observation tools (list/read/retrieve/check,
+# tagged code_mode=True in the toolset) are sandboxed behind a single run_code
+# tool; save_artifact always stays a normal explicit tool call. Enable only
+# for the A/B comparison (same task/materials, ON vs OFF) — see
+# tools/run_writing_eval.py.
 code_mode = false

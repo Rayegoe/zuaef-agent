@@ -1,10 +1,10 @@
 # ZUAEF Agent Core v0.1.1
 
-A deliberately thin PydanticAI core: one outcome-owning agent, explicit Capability/Toolset composition, deferred Skills, bounded runs, file-native artifacts, evidence-first knowledge, bounded tool outputs, durable step evidence, and native approval for side effects.
+A deliberately thin PydanticAI core: one outcome-owning agent, explicit Capability/Toolset composition, deferred Skills, bounded runs, file-native artifacts and knowledge, bounded tool outputs, durable operational step facts, and native approval for side effects.
 
 ## v1.1 in one sentence
 
-Keep the loop thin, but make long-running work inspectable and recoverable enough to trust: **spill oversized tool results, persist step/tool-effect evidence, require native approval for external/destructive effects, and write one machine-readable receipt per run.**
+Keep the loop thin, but make long-running work inspectable and recoverable enough to trust: **spill oversized tool results, persist step/tool-effect facts, require native approval for external/destructive effects, and write one machine-readable receipt per run.**
 
 ## Architecture
 
@@ -25,8 +25,8 @@ one PydanticAI Agent
 Toolsets / Skills / Capabilities
        |
        v
-Pause / Resume / Verification  # native approval, shared continuation seam,
-       |                       # host-verified effects
+Pause / Resume / Settlement    # native approval, shared continuation seam,
+       |                       # host-recorded operational facts
        v
 Artifacts + Knowledge + Receipts
 ```
@@ -58,7 +58,8 @@ runs one blocking foreground process: Telegram long polling → normalized
 callback resolves an opaque approval token and resumes through the same
 `resume_paused_run` seam the CLI uses. Every external write (WordPress
 create/update/publish) is approval-gated by PydanticAI native
-`requires_approval` and settles in the `RunReceipt`'s verified tool effects.
+`requires_approval` and settles as operational tool-effect facts in the
+`RunReceipt`.
 
 Required environment: `ZUAEF_TELEGRAM_BOT_TOKEN`,
 `ZUAEF_TELEGRAM_ALLOWED_USERS` (comma-separated user ids — empty means fail
@@ -158,11 +159,13 @@ channel separate from approval tokens. Binding/unbinding is refused while a
 run waits for approval — a resumed run must keep the Case it was bound to.
 
 Conversation identity and Case identity stay separate: `conversation_id` is
-the dialogue lifecycle, `case_id` the business work item; `/new` (and the New
-conversation button) rotates the conversation but keeps the Case. Every
-inbound run threads the bound `case_id` into `CoreDeps`, the receipts record
-it, and the real Case tools reject any operation naming a different Case (a
-cross-case `send_to_customer` is a blocked run, not an operator queue entry).
+the dialogue lifecycle, while `case_id` is Gateway routing state; `/new` (and
+the New conversation button) rotates the conversation but keeps the Case.
+The Gateway maps that routing value to the opaque `CoreDeps.bindings["case"]`
+entry, and receipts freeze the same bindings without interpreting them. Only
+the Case plugin understands the key and rejects an operation naming a
+different Case (a cross-case `send_to_customer` never reaches an approval
+card).
 
 ### Interaction contract: outcome-first, approval only at the boundary
 
@@ -216,7 +219,7 @@ diagnostic only — the Gateway/stillevo-fde seam is the product authority.
 
 ## Why this shape
 
-The core is intentionally not a business-agent registry. A business domain should normally arrive as a deferred Skill or a Toolset. A Capability is reserved for cross-domain behavior that legitimately bundles tools/instructions/hooks/settings. Knowledge remains Markdown + YAML frontmatter with source provenance; it is an OKF-compatible local profile rather than a fork of Google's reference agent.
+The core is intentionally not a business-agent registry. A business domain should normally arrive as a deferred Skill or a Toolset. A Capability bundles reusable tools/instructions/hooks/settings when that lifecycle is genuinely needed. Knowledge remains file-native Markdown: plain documents are valid, while factual deliverables expose real source links where readers need to inspect support.
 
 v1.1 borrows operational invariants from mature harness designs without copying their runtime architecture:
 
@@ -241,7 +244,7 @@ Set a provider credential supported by the selected PydanticAI model. For an Ope
 uv run zuaef-agent run "Read the available project material, identify the highest-impact next action, execute what is safe, and persist any long artifact."
 ```
 
-The returned JSON includes `run_id` and `receipt`. The receipt points back to the step store, spill store, artifacts, knowledge updates, usage, and terminal summary.
+The returned JSON includes `run_id` and `receipt`. The receipt points back to the step store, spill store, artifact byte facts, knowledge updates, usage, and operational outcome.
 
 ## Native approval boundary
 
@@ -372,7 +375,7 @@ Final proof run:
 model           deepseek-v4-flash
 run             2639102722814111b9b9be253a50d8be
 receipt         completed
-artifacts       artifacts/…/emtb_budget-report.md (host-verified)
+artifacts       artifacts/…/emtb_budget-report.md (host-recorded byte fact)
 machine checks  all PASS
 unknown         none
 ```
@@ -380,10 +383,10 @@ unknown         none
 What this proved (and did not prove):
 
 - A deterministic business domain composes through `extra_toolsets` with zero
-  core changes; the host still owns artifact ownership (SHA-256 snapshot) and
-  receipt settlement.
-- Tool-effect refs: the host settles completed effects automatically; the
-  slice's instructions teach the model to declare only `artifact:` refs.
+  core changes; the host still owns changed-artifact detection (SHA-256
+  snapshot) and operational receipt settlement.
+- Completed tool calls are projected from StepPersistence into receipt facts;
+  the model does not declare evidence refs or receipt fields.
 - Not proved: multi-toolset composition, budget caps, pause/resume inside a
   budget run. Those stay deferred until a real run needs them.
 
@@ -404,7 +407,7 @@ model           deepseek-v4-flash
 run             8a8a5b539cb14144994298edd455f4a7
 receipt         completed
 composition     present (plugins=[zuaef-emtb-budget])
-artifact        emtb_budget-report.md (host-verified)
+artifact        emtb_budget-report.md (host-recorded byte fact)
 machine checks  all PASS
 unknown         none
 ```
@@ -422,7 +425,7 @@ $ zuaef-agent profile check emtb-budget --config-root <repo>
 ```
 
 Zero core change: `core.py`, `runtime.py`, `composition.py` untouched (diff
-verified). The direct-toolset path stays as proof evidence and the plugin
+confirmed). The direct-toolset path stays as proof evidence and the plugin
 toolset is tool-for-tool identical to it (parity test).
 
 ## Next

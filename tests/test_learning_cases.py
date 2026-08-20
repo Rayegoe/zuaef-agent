@@ -56,7 +56,9 @@ def test_output_and_revised_are_real_full_text(packet: dict):
     raw texts this case exists to preserve (QUALITY_LOOP §11: preserve
     original before/after text and human comments; they are authoritative)."""
     output = (packet["dir"] / packet["manifest"]["output"]).read_text(encoding="utf-8")
-    revised = (packet["dir"] / packet["manifest"]["revised"]).read_text(encoding="utf-8")
+    revised = (packet["dir"] / packet["manifest"]["revised"]).read_text(
+        encoding="utf-8"
+    )
     assert output.startswith("李姐，这篇我按您老板的口味现场改了一版")
     assert "夏天的指尖，不必太热闹" in output
     assert "今年我把美甲的标准改了" in revised or "我们做平价彩妆" in revised
@@ -153,3 +155,76 @@ def test_promotion_script_accepts_explicit_human_review(tmp_path):
         encoding="utf-8"
     )
     assert "第二行" in (tmp_case / "rev.md").read_text(encoding="utf-8")
+
+
+# --- T012: an ACCEPT string is not human authority by itself ------------------
+
+
+def _load_promote_lesson():
+    spec = __import__("importlib.util").util.spec_from_file_location(
+        "promote_lesson", REPO / "tools" / "promote_lesson.py"
+    )
+    mod = __import__("importlib.util").util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return mod
+
+
+def test_promotion_refuses_llm_review_copy(tmp_path):
+    """T012 anti-impersonation: a human-review.md that is a copy of
+    llm-review.md (even with ACCEPT inside) is refused — an LLM-written ACCEPT
+    must not impersonate human authority."""
+    mod = _load_promote_lesson()
+    tmp_case = tmp_path / "copied-case"
+    tmp_case.mkdir()
+    (tmp_case / "manifest.json").write_text(
+        json.dumps({"case_id": "copied-case", "output": "out.md"}),
+        encoding="utf-8",
+    )
+    (tmp_case / "out.md").write_text("output", encoding="utf-8")
+    llm_text = (
+        "# LLM Review\n\n总体不错。Decision: ACCEPT（模型认为可以采纳）。\n"
+        "本评审由 LLM 生成，认为该案例的教训值得推广，建议直接采纳，无需人工修改。"
+    ) * 3
+    (tmp_case / "llm-review.md").write_text(llm_text, encoding="utf-8")
+    (tmp_case / "human-review.md").write_text(llm_text, encoding="utf-8")
+    with pytest.raises(SystemExit, match="impersonate"):
+        mod.promote(tmp_case, dry_run=True)
+
+
+def test_promotion_refuses_pending_scaffold(tmp_path):
+    """A PENDING/PENDING-HUMAN scaffold carries no decision: nothing promotes."""
+    mod = _load_promote_lesson()
+    tmp_case = tmp_path / "pending-case"
+    tmp_case.mkdir()
+    (tmp_case / "manifest.json").write_text(
+        json.dumps({"case_id": "pending-case", "output": "out.md"}),
+        encoding="utf-8",
+    )
+    (tmp_case / "out.md").write_text("output", encoding="utf-8")
+    (tmp_case / "human-review.md").write_text(
+        "STATUS: PENDING-HUMAN\n\nWhich version would you send?\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(SystemExit):
+        mod.promote(tmp_case, dry_run=True)
+
+
+def test_no_tool_writes_human_authority_files():
+    """T012: machine tools never write human authority files. The only tool
+    allowed to mention human-review.md is promote_lesson.py (read-only + the
+    anti-copy check); the only tool allowed to mention human-judgment.md is
+    pairwise_review.py, and only to create the explicit PENDING-HUMAN
+    scaffold."""
+    tools = sorted((REPO / "tools").glob("*.py"))
+    assert tools, "tools directory unexpectedly empty"
+    for tool in tools:
+        text = tool.read_text(encoding="utf-8")
+        if "human-review.md" in text:
+            assert tool.name == "promote_lesson.py", (
+                f"{tool.name} must not touch human-review.md"
+            )
+        if "human-judgment.md" in text:
+            assert tool.name == "pairwise_review.py", (
+                f"{tool.name} must not touch human-judgment.md"
+            )
+            assert "PENDING-HUMAN" in text and "no tool fills this" in text

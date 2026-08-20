@@ -27,7 +27,7 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-ace-writing"),
     str(REPO / "src"),
 ]
-from zuaef_ace_writing.editorial import (
+from editorial_capability import (
     COGNITIVE_ACTIONS,
     EditorialEvidenceStore,
     seed_evidence,

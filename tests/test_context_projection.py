@@ -1,12 +1,11 @@
-"""Case context projection — P3B-2 T004/T006, P3B-3 T004/T013.
+"""Case-owned context capability — P3B-2 T004/T006, P3B-3 T004/T013.
 
 A bound Case contributes a bounded natural-language brief (context, not
-workflow): the bridge injects it before the model request, the brief is
-bounded, unknown cases inject nothing, and the stillevo-fde profile marks the
-Case plugin deferred so its mutation/delivery tools never appear in the
-initial model surface. Since P3B-3 the default brief carries durable business
-background ONLY — agent trajectory (audit history) is excluded so a previous
-wrong action cannot re-enter the next prompt as Case background.
+workflow) through the Case plugin's dynamic instructions. The brief is bounded,
+unknown cases inject nothing, and the stillevo-fde profile defers Case mutation/
+delivery tools from the initial model surface. Since P3B-3 the default brief
+carries durable business background ONLY — agent trajectory (audit history)
+cannot re-enter the next prompt as Case background.
 """
 
 from __future__ import annotations

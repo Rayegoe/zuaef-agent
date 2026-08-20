@@ -10,11 +10,11 @@ Own the user outcome with the smallest reliable agent loop. Business behavior is
 - Prefer explicit Python composition over discovery/registry machinery.
 - Reuse PydanticAI and pydantic-ai-harness primitives; do not clone filesystem, planning, skills, tool-output limiting, approval, usage-limit, or durable-runtime implementations.
 - Keep run output thin. Long deliverables go under `workspace/artifacts/`.
-- Knowledge is file-native under `workspace/knowledge/`; important claims carry source/evidence metadata.
+- Knowledge is file-native under `workspace/knowledge/`; plain documents are valid, and factual deliverables expose inspectable source URLs where support matters.
 - Full oversized tool outputs belong under `.zuaef-state/tool-results/`; pass a handle/preview to the model and retrieve progressively.
-- Durable step/tool-effect evidence belongs to Harness `StepPersistence`; `RunReceipt` is only an index, never a second source of truth.
+- Durable step/tool-effect facts belong to Harness `StepPersistence`; `RunReceipt` is only an index, never a second source of truth.
 - External writes and destructive actions use PydanticAI native approval. Never interpret model intent as authorization.
-- Surface/Gateway is an external interaction layer. It may own transport, authorization, session bindings and approval presentation, but must not implement agent execution, business policy, approval semantics, durable execution truth or receipts.
+- Surface/Gateway is an external interaction layer. It may own transport, authorization, session bindings, host-grounded interaction projection and approval presentation, but must not implement agent execution, business policy, approval semantics, durable execution truth or receipts.
 - Do not add a vector database until lexical/file navigation is measurably insufficient.
 - Do not add a graph runtime, custom state machine, long-term-memory service, multi-agent team, custom event bus, custom steering runtime, or custom durable runtime without a measured failure that requires it.
 
@@ -40,3 +40,5 @@ Every user-facing run ends as `completed`, `partial`, or `blocked` and states un
 ## Change rule
 
 For a new business domain, first add a Skill or Toolset; add a Capability only when the behavior needs to bundle tools/instructions/hooks/settings/lifecycle semantics as one reusable unit (see Layer model and Elevation rule). Modify the core only for cross-domain semantics.
+
+After the v1.2 kernel freeze, a Kernel change is admissible only for PydanticAI/Harness compatibility, execution correctness, a security boundary, durability/resume correctness, the composition ABI, or generic operational run facts. “A business capability needs it” is not sufficient; implement that behavior in its Skill, Toolset, Capability, plugin, or Gateway interaction layer.

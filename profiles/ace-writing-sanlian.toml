@@ -8,7 +8,6 @@ id = "ace-writing"
 allow_capabilities = true
 
 [plugins.config]
-editorial_control = false
 code_mode = false
 
 [[plugins]]

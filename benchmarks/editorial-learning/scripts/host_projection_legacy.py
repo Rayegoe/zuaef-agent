@@ -34,13 +34,14 @@ from pydantic_ai.messages import ModelResponse, ToolCallPart
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [
+    str(Path(__file__).resolve().parents[1] / "legacy"),
     str(REPO),
     str(REPO / "examples"),
     str(REPO / "src"),
     str(REPO / "plugins" / "zuaef-ace-writing"),
 ]
 
-from zuaef_ace_writing.editorial import (
+from editorial_capability import (
     EditorialControlCapability,
     EditorialEvidenceStore,
     EditorialSettings,

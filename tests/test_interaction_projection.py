@@ -19,9 +19,9 @@ sys.path[:0] = [str(REPO), str(REPO / "src")]
 
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.gateway import bridge
+from zuaef_agent.gateway.interaction_projection import project_interaction_context
 from zuaef_agent.gateway.models import InboundEnvelope
 from zuaef_agent.gateway.telegram import TelegramAdapter
-from zuaef_agent.interaction_projection import project_interaction_context
 
 
 def test_supervisor_on_bound_case_projects_full_identity_block():

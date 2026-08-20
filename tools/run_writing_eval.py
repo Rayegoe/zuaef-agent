@@ -78,12 +78,18 @@ def run_case(
     feedback: str | None = None,
     request_limit: int | None = None,
     out_dir: Path | None = None,
+    variant: str = "baseline",
 ) -> dict:
-    """One case through the production profile; returns the bundle record."""
+    """One case through the production profile; returns the bundle record.
+
+    ``variant`` (T012) only labels the output directory and bundle: "baseline"
+    runs happen BEFORE a promoted lesson becomes a repo skill, "learned" runs
+    after — the skills surface (``.agents/skills``) is the only difference
+    between the two sides."""
     manifest = case["manifest"]
     case_id = manifest["id"]
     article_id = manifest["article_id"]
-    out_dir = out_dir or (EVAL_ROOT / case_id)
+    out_dir = out_dir or (EVAL_ROOT / case_id / variant)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     task = WritingTask(
@@ -140,6 +146,7 @@ def run_case(
         "case_id": case_id,
         "article_id": article_id,
         "profile": profile,
+        "variant": variant,
         "manifest": {k: v for k, v in manifest.items() if k != "feedback"},
         "materials": [str(p) for p in case["materials"]],
         "rights": rights,
@@ -153,6 +160,7 @@ def run_case(
         f"# {case_id} — evaluation bundle",
         "",
         f"- profile: {profile}",
+        f"- variant: {variant} (T012: skills surface is the only difference)",
         f"- assignment: {manifest['assignment']}",
         f"- audience: {manifest.get('audience')}",
         f"- constraints: {json.dumps(manifest.get('constraints') or [], ensure_ascii=False)}",
@@ -197,6 +205,9 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--feedback", default=None)
     ap.add_argument("--request-limit", type=int, default=None)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--variant", choices=("baseline", "learned"), default="baseline",
+                    help="T012 label only: run 'baseline' BEFORE a promoted lesson "
+                         "becomes a repo skill, 'learned' after")
     ap.add_argument("--materials", action="append", default=None,
                     help="optional explicit material list (default: all files under raw/)")
     args = ap.parse_args(argv)
@@ -219,6 +230,7 @@ def main(argv: list[str] | None = None) -> None:
         feedback=args.feedback,
         request_limit=args.request_limit,
         out_dir=Path(args.out) if args.out else None,
+        variant=args.variant,
     )
     print(json.dumps(bundle, ensure_ascii=False, indent=2))
 

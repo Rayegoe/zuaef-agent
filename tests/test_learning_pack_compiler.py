@@ -29,7 +29,7 @@ sys.path[:0] = [
 ]
 # sys.path bootstrapping is required because the ACE plugin is an editable
 # install; pyright cannot resolve it without the venv, hence the ignore.
-from zuaef_ace_writing.editorial import (  # pyright: ignore[reportMissingImports]
+from editorial_capability import (  # pyright: ignore[reportMissingImports]
     EditorialEvidenceStore,
 )
 

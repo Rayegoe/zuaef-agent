@@ -159,9 +159,9 @@ def test_prompt_has_no_host_plan(tmp_path):
     assert "- 不虚构" in prompt
     assert "- 只用素材里的内容" in prompt
     assert "list_materials" in prompt
-    # RunSummary guidance carries the literal full path INCLUDING the
-    # artifacts/ prefix (field defect: an earlier revision run dropped the
-    # prefix and the host rejected the artifact ref -> partial).
+    # Capability guidance carries the literal save path INCLUDING the
+    # artifacts/ prefix (an earlier revision dropped the prefix and failed
+    # the host's artifact path-containment boundary).
     assert "artifacts/" in prompt and "final.md" in prompt
     for banned in (
         "writing plan",

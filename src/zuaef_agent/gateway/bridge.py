@@ -26,10 +26,10 @@ from ..composition import (
 )
 from ..config import AgentSettings
 from ..continuation import resume_paused_run
-from ..interaction_projection import ActorRole, project_interaction_context
 from ..models import CoreDeps
 from ..receipt_store import ReceiptStore
 from ..runtime import RuntimeOutcome, execute_run
+from .interaction_projection import ActorRole, project_interaction_context
 from .models import InboundEnvelope
 
 ATTACHMENT_BLOCK = "Attached files available in the workspace:"

@@ -502,7 +502,7 @@ def test_slash_approve_without_paused_run(tmp_path: Path, monkeypatch):
     assert "Nothing is awaiting approval" in surface.last_text()
 
 
-def test_artifacts_delivers_verified_files_only(tmp_path: Path, monkeypatch):
+def test_artifacts_delivers_integrity_checked_files_only(tmp_path: Path, monkeypatch):
     surface = FakeSurface()
     service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
     settings = service.settings

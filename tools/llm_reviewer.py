@@ -74,22 +74,22 @@ def load_packet(case_dir: Path) -> dict:
 
 def render_prompt(packet: dict) -> str:
     m = packet["manifest"]
-    return f"""# Learning case: {m['case_id']}
+    return f"""# Learning case: {m["case_id"]}
 
 ## Request
-{packet.get('request', '<missing>')}
+{packet.get("request", "<missing>")}
 
 ## Context / material
-{packet.get('context', '<missing>')}
+{packet.get("context", "<missing>")}
 
 ## Model output (the evaluated version)
-{packet.get('output', '<missing>')}
+{packet.get("output", "<missing>")}
 
 ## Sources / resource pointers
-{packet.get('sources', '<missing>')}
+{packet.get("sources", "<missing>")}
 
 ## Revised / preferred text (may be absent for the reviewed output)
-{packet.get('revised', '<missing>')}
+{packet.get("revised", "<missing>")}
 
 ---
 {REVIEW_PROMPT}"""
@@ -97,8 +97,14 @@ def render_prompt(packet: dict) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--case", required=True, type=Path, help="case directory under learning/cases/")
-    ap.add_argument("--prompt-only", action="store_true", help="print the prompt and exit (no model call)")
+    ap.add_argument(
+        "--case", required=True, type=Path, help="case directory under learning/cases/"
+    )
+    ap.add_argument(
+        "--prompt-only",
+        action="store_true",
+        help="print the prompt and exit (no model call)",
+    )
     args = ap.parse_args()
 
     case_dir = args.case.resolve()
@@ -115,9 +121,9 @@ def main() -> int:
     from zuaef_agent.providers import resolve_model
 
     settings = AgentSettings.from_env()
-    has_credentials = bool(settings.openai_base_url and settings.openai_api_key) or bool(
-        __import__("os").getenv("OPENAI_API_KEY")
-    )
+    has_credentials = bool(
+        settings.openai_base_url and settings.openai_api_key
+    ) or bool(__import__("os").getenv("OPENAI_API_KEY"))
     if not has_credentials:
         print(
             "REVIEWER: no real model credentials — use --prompt-only to inspect "

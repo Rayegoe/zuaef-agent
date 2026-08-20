@@ -1,7 +1,16 @@
-"""Runtime cognitive editorial control for ACE Writing (SPEC v0.1, 2026-08-17).
+"""LEGACY / BENCHMARK-ONLY (v1.2 T014B demotion) — runtime cognitive editorial
+control for ACE Writing (SPEC v0.1, 2026-08-17).
 
-Spec: ``zuaef-editorial-control-v0.1`` (repository ``Rayegoe/zuaef-agent``,
-plugin ``zuaef-ace-writing``). One capability, no new runtime:
+This module moved out of the production plugin (``plugins/zuaef-ace-writing``)
+in v1.2 T014B. It is retained because the editorial-learning benchmark
+experiments still exercise it; per QUALITY_LOOP §11 its sensors, vetoes,
+evidence weights and ``approved_by`` fields are LEGACY DERIVED FEATURES, not
+human truth, and no production capability may require them. The production
+factory rejects ``editorial_*`` config keys loudly (see ``legacy/README.md``).
+
+Original spec: ``zuaef-editorial-control-v0.1`` (repository
+``Rayegoe/zuaef-agent``, plugin ``zuaef-ace-writing``). One capability, no new
+runtime:
 
 - ``EditorialControlCapability`` changes the *conditions of the next model
   step* from approved editorial evidence: minimal invariants on the first

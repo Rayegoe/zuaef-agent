@@ -161,14 +161,19 @@ class AgentSettings:
             raise ValueError("compat_model is required when openai_base_url is set")
         if self.openai_api_mode not in {"chat", "responses"}:
             raise ValueError("openai_api_mode must be one of chat/responses")
-        if not math.isfinite(self.openai_timeout_seconds) or self.openai_timeout_seconds <= 1:
+        if (
+            not math.isfinite(self.openai_timeout_seconds)
+            or self.openai_timeout_seconds <= 1
+        ):
             raise ValueError("openai_timeout_seconds must be finite and > 1")
         if not 0 <= self.openai_max_retries <= 10:
             raise ValueError("openai_max_retries must be between 0 and 10")
         workspace = self.workspace_root.resolve()
         state = self.state_root.resolve()
         if state == workspace or state.is_relative_to(workspace):
-            raise ValueError("runtime state must live outside the model-writable workspace")
+            raise ValueError(
+                "runtime state must live outside the model-writable workspace"
+            )
 
     @property
     def state_root(self) -> Path:
@@ -191,11 +196,15 @@ class AgentSettings:
     @classmethod
     def from_env(cls) -> AgentSettings:
         load_dotenv(PROJECT_ROOT / ".env", override=False)
-        max_snapshots = _env_int("ZUAEF_MAX_SNAPSHOTS_PER_RUN", cls.max_snapshots_per_run)
+        max_snapshots = _env_int(
+            "ZUAEF_MAX_SNAPSHOTS_PER_RUN", cls.max_snapshots_per_run
+        )
         return cls(
             model=os.getenv("ZUAEF_MODEL", cls.model),
             workspace_root=Path(os.getenv("ZUAEF_WORKSPACE", str(cls.workspace_root))),
-            runtime_state_root=Path(os.environ["ZUAEF_STATE_ROOT"]) if os.getenv("ZUAEF_STATE_ROOT") else None,
+            runtime_state_root=Path(os.environ["ZUAEF_STATE_ROOT"])
+            if os.getenv("ZUAEF_STATE_ROOT")
+            else None,
             request_limit=_env_int("ZUAEF_REQUEST_LIMIT", cls.request_limit),
             tool_calls_limit=_env_int("ZUAEF_TOOL_CALLS_LIMIT", cls.tool_calls_limit),
             total_tokens_limit=(
@@ -205,7 +214,9 @@ class AgentSettings:
             ),
             enable_planning=_env_bool("ZUAEF_ENABLE_PLANNING", cls.enable_planning),
             enable_skills=_env_bool("ZUAEF_ENABLE_SKILLS", cls.enable_skills),
-            enable_filesystem=_env_bool("ZUAEF_ENABLE_FILESYSTEM", cls.enable_filesystem),
+            enable_filesystem=_env_bool(
+                "ZUAEF_ENABLE_FILESYSTEM", cls.enable_filesystem
+            ),
             enable_knowledge=_env_bool("ZUAEF_ENABLE_KNOWLEDGE", cls.enable_knowledge),
             enable_tool_output_limits=_env_bool(
                 "ZUAEF_ENABLE_TOOL_OUTPUT_LIMITS", cls.enable_tool_output_limits
@@ -219,9 +230,13 @@ class AgentSettings:
             enable_repo_context=_env_bool(
                 "ZUAEF_ENABLE_REPO_CONTEXT", cls.enable_repo_context
             ),
-            enable_web_search=_env_bool("ZUAEF_ENABLE_WEB_SEARCH", cls.enable_web_search),
+            enable_web_search=_env_bool(
+                "ZUAEF_ENABLE_WEB_SEARCH", cls.enable_web_search
+            ),
             enable_web_fetch=_env_bool("ZUAEF_ENABLE_WEB_FETCH", cls.enable_web_fetch),
-            enable_tool_search=_env_bool("ZUAEF_ENABLE_TOOL_SEARCH", cls.enable_tool_search),
+            enable_tool_search=_env_bool(
+                "ZUAEF_ENABLE_TOOL_SEARCH", cls.enable_tool_search
+            ),
             enable_memory=_env_bool("ZUAEF_ENABLE_MEMORY", cls.enable_memory),
             enable_conversation_search=_env_bool(
                 "ZUAEF_ENABLE_CONVERSATION_SEARCH", cls.enable_conversation_search
@@ -239,12 +254,15 @@ class AgentSettings:
             openai_api_key=_first_env("ZUAEF_OPENAI_API_KEY", "LLM_API_KEY"),
             compat_model=_first_env("ZUAEF_COMPAT_MODEL", "LLM_MODEL"),
             openai_api_mode=(
-                _first_env("ZUAEF_OPENAI_API_MODE", "LLM_API_MODE") or cls.openai_api_mode
+                _first_env("ZUAEF_OPENAI_API_MODE", "LLM_API_MODE")
+                or cls.openai_api_mode
             ).lower(),
             openai_timeout_seconds=_env_float(
                 "ZUAEF_OPENAI_TIMEOUT_SECONDS", cls.openai_timeout_seconds
             ),
-            openai_max_retries=_env_int("ZUAEF_OPENAI_MAX_RETRIES", cls.openai_max_retries),
+            openai_max_retries=_env_int(
+                "ZUAEF_OPENAI_MAX_RETRIES", cls.openai_max_retries
+            ),
             openai_enable_thinking=_first_env_bool(
                 "ZUAEF_OPENAI_ENABLE_THINKING", "LLM_ENABLE_THINKING"
             ),

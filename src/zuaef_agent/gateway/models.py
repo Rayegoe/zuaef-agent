@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from ..interaction_projection import ActorRole
+from .interaction_projection import ActorRole
 
 # Supervisor control actions (Phase 3A): deterministic gateway operations that
 # ride the callback channel without an approval token. The prefix and action

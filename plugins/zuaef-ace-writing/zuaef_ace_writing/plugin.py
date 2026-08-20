@@ -5,39 +5,26 @@ Config wiring only: the writing domain adapter is the byte-identical copy in
 Context Engine. All host-side prep (ingest, gate) and settlement stay in the
 proof drivers, not in the plugin.
 
-Editorial control (SPEC ``zuaef-editorial-control-v0.1``, plugin 0.2.0): when
-``editorial_control = true`` the bundle additionally carries exactly one
-capability, ``EditorialControlCapability`` — a runtime cognitive editorial
-feedback loop over the unchanged writing toolset. The profile must set
-``allow_capabilities = true`` or composition fails loudly (Plugin Composition
-Layer policy). With ``editorial_control`` unset/false the bundle keeps the
-0.1.0 shape: one toolset, no capabilities.
+Editorial control (SPEC ``zuaef-editorial-control-v0.1``) was REMOVED from the
+production surface in v1.2 T014B: it showed no stable advantage in the Phase 9
+blind A/B and its sensor-driven save veto is a machine gate on taste, which
+the v1.2 architecture forbids as semantic authority. The capability, sensors
+and evidence rows survive as benchmark/legacy assets under
+``benchmarks/editorial-learning/legacy/`` (QUALITY_LOOP §11); any
+``editorial_*`` config key now fails composition loudly so a stale profile
+cannot silently re-enable it.
 """
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
 
 from pydantic_ai_harness.code_mode import CodeMode
 
 from zuaef_agent.plugin_api import CompositionError, PluginBundle, PluginEnv
 
-from .editorial import (
-    EditorialControlCapability,
-    EditorialEvidenceStore,
-    EditorialSettings,
-)
 from .writing_toolset import DEFAULT_ACE_ROOT, build_writing_toolset
-
-DEFAULT_EVIDENCE_PATH = Path.home() / ".config" / "zuaef" / "editorial" / "evidence.jsonl"
-
-_EDITORIAL_INT_KEYS = ("editorial_max_injections", "editorial_max_save_vetoes", "editorial_evidence_limit")
-_EDITORIAL_FLOAT_KEYS = ("editorial_veto_threshold", "editorial_temperature_nudge", "editorial_base_temperature")
-_KNOWN_EDITORIAL_KEYS = frozenset(
-    {"editorial_control", "editorial_evidence_path", *_EDITORIAL_INT_KEYS, *_EDITORIAL_FLOAT_KEYS}
-)
 
 
 def _resolve_ace_root(config: dict) -> Path:
@@ -57,57 +44,29 @@ def _resolve_ace_root(config: dict) -> Path:
     return ace_root
 
 
-def _editorial_settings(config: dict) -> EditorialSettings:
-    """Parse the ``editorial_*`` config block; typo or type error fails loud.
-
-    Non-editorial keys (``ace_root``) are not this function's business — only
-    ``editorial_*`` keys are validated here.
-    """
-    unknown = sorted(k for k in config if k.startswith("editorial_") and k not in _KNOWN_EDITORIAL_KEYS)
-    if unknown:
-        raise CompositionError(
-            f"unknown editorial config key(s): {', '.join(unknown)} — known "
-            f"keys: {', '.join(sorted(_KNOWN_EDITORIAL_KEYS))}"
-        )
-    parsed: dict[str, Any] = {}
-    for key in _EDITORIAL_INT_KEYS:
-        if key in config:
-            value = config[key]
-            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-                raise CompositionError(f"{key} must be a non-negative integer, got {value!r}")
-            parsed[key.removeprefix("editorial_")] = value
-    for key in _EDITORIAL_FLOAT_KEYS:
-        if key in config:
-            value = config[key]
-            if not isinstance(value, (int, float)) or isinstance(value, bool):
-                raise CompositionError(f"{key} must be a number, got {value!r}")
-            parsed[key.removeprefix("editorial_")] = float(value)
-    evidence_path: Path | None = DEFAULT_EVIDENCE_PATH
-    if "editorial_evidence_path" in config:
-        evidence_path = Path(str(config["editorial_evidence_path"])).expanduser()
-    return EditorialSettings(evidence_path=evidence_path, **parsed)
-
-
 def create_plugin(env: PluginEnv, config: dict) -> PluginBundle:
-    """Assemble the ACE writing plugin from config (SPEC §34 + editorial v0.1
-    + Writing v0.2 CodeMode).
+    """Assemble the ACE writing plugin from config (SPEC §34 + Writing v0.2
+    CodeMode).
 
     Returns exactly one toolset, plus capabilities that config opt-ins:
-    - ``editorial_control = true``  -> EditorialControlCapability
-    - ``code_mode = true``          -> Harness CodeMode wrapping the observe
-      tools tagged ``code_mode=True`` (list/read/retrieve/check), leaving
+    - ``code_mode = true`` -> Harness CodeMode wrapping the observe tools
+      tagged ``code_mode=True`` (list/read/retrieve/check), leaving
       ``save_artifact`` as a normal explicit tool call (Writing SPEC §10).
 
     No skills are shipped by the plugin; writing skills live in the repo's
     skill library (``.agents/skills``).
     """
+    stale = sorted(k for k in config if k.startswith("editorial_"))
+    if stale:
+        raise CompositionError(
+            f"editorial control was removed from the production plugin in "
+            f"v1.2 T014B; unknown editorial config key(s): {', '.join(stale)}. "
+            "The capability is benchmark/legacy only — see "
+            "benchmarks/editorial-learning/legacy/README.md."
+        )
     ace_root = _resolve_ace_root(config)
     toolset = build_writing_toolset(ace_root)
-    capabilities: list[Any] = []
-    if config.get("editorial_control", False) is True:
-        settings = _editorial_settings(config)
-        store = EditorialEvidenceStore(settings.evidence_path)
-        capabilities.append(EditorialControlCapability(settings=settings, store=store))
+    capabilities: list[CodeMode] = []
     if config.get("code_mode", False) is True:
         capabilities.append(
             CodeMode(

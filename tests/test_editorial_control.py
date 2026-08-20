@@ -1,9 +1,13 @@
 """Editorial control capability tests — SPEC ``zuaef-editorial-control-v0.1``.
 
-Covers the machine-checkable acceptance gates:
+Since v1.2 T014B the capability is BENCHMARK/LEGACY code living in
+``benchmarks/editorial-learning/legacy/editorial_capability.py``; the
+production plugin rejects ``editorial_*`` config (Gate A below). The remaining
+tests pin the legacy module's machine-checkable behavior for the benchmark
+experiments that still exercise it:
 
-- Gate A (no regression): tool surface and toolset unchanged, default bundle
-  keeps the 0.1.0 shape.
+- Gate A (no regression): production surface unchanged, editorial config
+  rejected loudly.
 - Gate B (bounded control): intervention cap, save-veto cap, identical-draft
   never rejected twice.
 - Gate C (provenance): every semantic intervention cites EditorialEvidence ids.
@@ -22,18 +26,18 @@ from importlib.metadata import EntryPoint
 from pathlib import Path
 
 import pytest
+from editorial_capability import (
+    COGNITIVE_ACTIONS,
+    EditorialControlCapability,
+    EditorialEvidenceStore,
+    EditorialSettings,
+)
 from pydantic_ai import RunContext, RunUsage
 from pydantic_ai.exceptions import ModelRetry
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models import ModelRequestContext
 from pydantic_ai.tools import ToolDefinition
-from zuaef_ace_writing import (
-    COGNITIVE_ACTIONS,
-    EditorialControlCapability,
-    EditorialEvidenceStore,
-    EditorialSettings,
-    create_plugin,
-)
+from zuaef_ace_writing import create_plugin
 
 from zuaef_agent.composition import build_agent_from_snapshot
 from zuaef_agent.config import AgentSettings
@@ -153,14 +157,18 @@ class TestGateANoRegression:
         assert bundle.capabilities == ()
         assert bundle.skill_dirs == ()
 
-    def test_editorial_on_tool_surface_unchanged(self, tmp_path: Path) -> None:
-        bundle = _bundle(tmp_path, {"editorial_control": True})
+    def test_editorial_control_is_rejected_by_production_factory(self, tmp_path: Path) -> None:
+        """v1.2 T014B: the production plugin no longer composes the editorial
+        capability; a stale profile with editorial_control = true fails
+        composition loudly instead of silently re-enabling a machine gate on
+        taste. The capability survives only as benchmark/legacy code."""
+        with pytest.raises(CompositionError, match="v1.2 T014B"):
+            _bundle(tmp_path, {"editorial_control": True})
+        # the plain toolset surface is unchanged by the demotion
+        bundle = _bundle(tmp_path)
         ctx = _ctx(tmp_path)
         names = set(asyncio.run(bundle.toolsets[0].get_tools(ctx)))
         assert names == WRITING_TOOLS
-        assert len(bundle.toolsets) == 1
-        assert len(bundle.capabilities) == 1
-        assert isinstance(bundle.capabilities[0], EditorialControlCapability)
 
     def test_exactly_five_cognitive_actions_frozen(self) -> None:
         assert COGNITIVE_ACTIONS == (
@@ -177,7 +185,7 @@ class TestGateANoRegression:
 
 class TestSensors:
     def test_templated_draft_crosses_threshold(self) -> None:
-        from zuaef_ace_writing.editorial import combined_drift, run_trajectory_sensors
+        from editorial_capability import combined_drift, run_trajectory_sensors
 
         signals = run_trajectory_sensors(TEMPLATED_DRAFT)
         assert set(signals) == {
@@ -190,13 +198,13 @@ class TestSensors:
         assert combined_drift(signals) >= 1.50
 
     def test_grounded_draft_stays_below_threshold(self) -> None:
-        from zuaef_ace_writing.editorial import combined_drift, run_trajectory_sensors
+        from editorial_capability import combined_drift, run_trajectory_sensors
 
         signals = run_trajectory_sensors(GROUNDED_DRAFT)
         assert combined_drift(signals) < 1.50
 
     def test_short_text_not_sensorable(self) -> None:
-        from zuaef_ace_writing.editorial import run_trajectory_sensors
+        from editorial_capability import run_trajectory_sensors
 
         assert run_trajectory_sensors("总之，这说明了问题的意义。") == {}
 
@@ -430,12 +438,9 @@ class TestGateCProvenance:
 
 class TestGateDHumanOwnership:
     def test_capability_exposes_no_tools(self, tmp_path: Path) -> None:
-        bundle = _bundle(tmp_path, {"editorial_control": True})
-        cap = bundle.capabilities[0]
+        cap = _capability()
         assert cap.get_toolset() is None
         assert list(cap.get_native_tools()) == []
-        ctx = _ctx(tmp_path)
-        assert set(asyncio.run(bundle.toolsets[0].get_tools(ctx))) == WRITING_TOOLS
 
     def test_evidence_file_never_written_by_capability(self, tmp_path: Path) -> None:
         evidence_path = tmp_path / "evidence.jsonl"
@@ -465,57 +470,25 @@ class TestGateDHumanOwnership:
         assert evidence_path.read_bytes() == before  # read-only at runtime
 
 
-# --- config wiring --------------------------------------------------------------------
+# --- config wiring: production surface rejects every editorial_* key (T014B) -----------
 
 
-class TestConfigWiring:
-    def test_editorial_defaults(self, tmp_path: Path) -> None:
-        bundle = _bundle(tmp_path, {"editorial_control": True})
-        cap = bundle.capabilities[0]
-        s = cap._settings
-        assert (s.max_injections, s.max_save_vetoes, s.evidence_limit) == (4, 1, 3)
-        assert s.veto_threshold == 1.50
-        assert s.temperature_nudge == 0.0
-
-    def test_editorial_overrides(self, tmp_path: Path) -> None:
-        bundle = _bundle(
-            tmp_path,
-            {
-                "editorial_control": True,
-                "editorial_max_injections": 2,
-                "editorial_max_save_vetoes": 0,
-                "editorial_veto_threshold": 2.5,
-                "editorial_evidence_path": str(tmp_path / "e.jsonl"),
-            },
+class TestEditorialConfigIsRejected:
+    def test_every_editorial_key_fails_loud(self, tmp_path: Path) -> None:
+        stale_keys = (
+            {"editorial_control": True},
+            {"editorial_control": False},  # even explicit OFF is now stale
+            {"editorial_max_injections": 4},
+            {"editorial_veto_threshold": 1.5},
+            {"editorial_evidence_path": str(tmp_path / "e.jsonl")},
         )
-        s = bundle.capabilities[0]._settings
-        assert (s.max_injections, s.max_save_vetoes, s.veto_threshold) == (2, 0, 2.5)
-        assert s.evidence_path == tmp_path / "e.jsonl"
+        for cfg in stale_keys:
+            with pytest.raises(CompositionError, match="v1.2 T014B"):
+                _bundle(tmp_path, cfg)
 
-    def test_unknown_editorial_key_fails_loud(self, tmp_path: Path) -> None:
-        with pytest.raises(CompositionError, match="unknown editorial config key"):
-            _bundle(tmp_path, {"editorial_control": True, "editorial_max_vetoes": 1})
-
-    def test_bad_editorial_type_fails_loud(self, tmp_path: Path) -> None:
-        with pytest.raises(CompositionError, match="non-negative integer"):
-            _bundle(tmp_path, {"editorial_control": True, "editorial_max_injections": "many"})
-
-    def test_evidence_file_loaded_from_config(self, tmp_path: Path) -> None:
-        evidence_path = tmp_path / "e.jsonl"
-        entry = {
-            "id": "human.patch.return-observation.001",
-            "source_type": "human_patch",
-            "situation_tags": ["drafting", "nonfiction", "material_observed"],
-            "trigger_signals": [],
-            "action": "return_to_observation",
-            "directive": "Back to the material.",
-            "rationale": "…",
-            "weight": 4.0,
-            "approved_by": "human-editor",
-        }
-        evidence_path.write_text(json.dumps(entry) + "\n", encoding="utf-8")
-        bundle = _bundle(tmp_path, {"editorial_control": True, "editorial_evidence_path": str(evidence_path)})
-        assert len(bundle.capabilities[0]._store) == 7
+    def test_rejection_message_points_to_legacy_location(self, tmp_path: Path) -> None:
+        with pytest.raises(CompositionError, match="benchmarks/editorial-learning/legacy"):
+            _bundle(tmp_path, {"editorial_control": True})
 
 
 # --- composition: version bump + capability policy (SPEC §9/§10) -----------------------
@@ -582,7 +555,7 @@ class TestComposition:
         snapshot = _snapshot(
             "0.2.0",
             capabilities_allowed=False,
-            config={"editorial_control": True},
+            config={"code_mode": True},
         )
         with pytest.raises(CompositionError, match="allow_capabilities"):
             build_agent_from_snapshot(
@@ -592,11 +565,11 @@ class TestComposition:
                 version_for=lambda ep: "0.2.0",
             )
 
-    def test_editorial_capability_composes_into_agent(self, tmp_path: Path) -> None:
+    def test_codemode_capability_composes_into_agent(self, tmp_path: Path) -> None:
         snapshot = _snapshot(
             "0.2.0",
             capabilities_allowed=True,
-            config={"editorial_control": True},
+            config={"code_mode": True},
         )
         agent = build_agent_from_snapshot(
             _agent_settings(tmp_path),
@@ -607,7 +580,7 @@ class TestComposition:
         from pydantic_ai.capabilities.abstract import leaf_capabilities
 
         caps = [type(c).__name__ for c in leaf_capabilities(agent.root_capability)]
-        assert "EditorialControlCapability" in caps
+        assert "CodeMode" in caps
 
 
 # --- real agent loop: veto → retry → pass (the loop pydantic-ai actually runs) ----

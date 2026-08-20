@@ -32,6 +32,9 @@ pythonpath = [
   "plugins/zuaef-emtb-budget",
   "plugins/zuaef-client-service",
   "plugins/zuaef-writing-pack",
+  # benchmark/legacy editorial-control capability (v1.2 T014B demotion):
+  # imported only by editorial benchmark tests, never by production code
+  "benchmarks/editorial-learning/legacy",
   ".",
 ]
 
