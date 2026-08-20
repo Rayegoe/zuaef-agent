@@ -1,7 +1,8 @@
-"""Case toolset tests — SPEC v0.3 FDE Platform Stage 2 gate.
+"""Case toolset tests — SPEC v0.3 FDE Platform Stage 2 gate, P3B-3 T008.
 
-Unit coverage of the five tools over a real CaseStore, plus the native
-approval proof: send_to_customer must pause before any execution.
+Unit coverage of the two toolsets (Case state / customer delivery) over a
+real CaseStore, plus the native approval proof: send_to_customer must pause
+before any execution.
 """
 
 from __future__ import annotations
@@ -16,7 +17,11 @@ from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from zuaef_case.models import CaseDoc, TrajectoryEntry
 from zuaef_case.store import CaseStore
-from zuaef_case.toolset import _CaseTools, build_case_toolset
+from zuaef_case.toolset import (
+    _CaseTools,
+    build_case_state_toolset,
+    build_customer_delivery_toolset,
+)
 
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.models import CoreDeps
@@ -62,15 +67,32 @@ def _settings(tmp_path: Path) -> AgentSettings:
     )
 
 
-def test_toolset_exposes_exact_tool_names(store: CaseStore):
-    toolset = build_case_toolset(store)
-    assert _tool_names(toolset) == {
+def test_state_toolset_exposes_exact_tool_names(store: CaseStore):
+    assert _tool_names(build_case_state_toolset(store)) == {
         "load_case_context",
         "update_situation",
         "record_case_step",
+    }
+
+
+def test_delivery_toolset_exposes_exact_tool_names(store: CaseStore):
+    assert _tool_names(build_customer_delivery_toolset(store)) == {
         "save_draft",
         "send_to_customer",
     }
+
+
+def test_state_toolset_carries_no_delivery_affordance(store: CaseStore):
+    """P3B-3 T008: the state toolset's instructions must not prime outbound
+    delivery — save_draft/send_to_customer semantics live in the delivery
+    toolset's tool docstrings only, and the delivery toolset itself carries
+    no toolset-level instructions (those inject even while deferred)."""
+    state = build_case_state_toolset(store)
+    state_instructions = asyncio.run(state.get_instructions(None))
+    assert "send_to_customer" not in state_instructions
+    assert "save_draft" not in state_instructions
+    delivery = build_customer_delivery_toolset(store)
+    assert not asyncio.run(delivery.get_instructions(None))
 
 
 # ── tool behavior via the logic holder (no ctx needed) ──────────────────────
@@ -84,11 +106,15 @@ def test_load_case_context_bounds_and_assembles(store: CaseStore):
         ),
     )
     tools = _CaseTools(store)
-    context = tools.load_case_context("beauty-003", limit=10)
+    context = tools.load_case_context("beauty-003", limit=10, include_trajectory=False)
     assert context["case_id"] == "beauty-003"
     assert "Pilot" in context["goal"]
-    assert context["trajectory_tail"][0]["summary"] == "客户发来问题稿"
     assert context["policy_overrides"] == ""
+    # P3B-3 T005: operational history is NOT mixed into normal Case context —
+    # trajectory appears only on the explicit include_trajectory request.
+    assert "trajectory_tail" not in context
+    explicit = tools.load_case_context("beauty-003", limit=10, include_trajectory=True)
+    assert explicit["trajectory_tail"][0]["summary"] == "客户发来问题稿"
 
 
 def test_update_situation_merges_with_provenance(store: CaseStore):

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.capabilities import AbstractCapability
@@ -17,6 +18,57 @@ from .config import AgentSettings
 from .knowledge_capability import Knowledge
 from .models import CoreDeps
 from .providers import resolve_model
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence as _Seq
+
+    from pydantic_ai import RunContext
+    from pydantic_ai.tools import ToolDefinition
+
+# Upstream keyword search tokenizes [a-z0-9] only, so a CJK query (e.g.
+# 发给客户) yields zero tokens and deferred tools are structurally
+# undiscoverable for this deployment's working language. Same overlap
+# scoring; CJK runs tokenize as bigrams (single chars when the run is one
+# char) — bigrams keep matching specific enough that a background query
+# (客户背景) does not light up the delivery domain (P3B-3 T008).
+_SEARCH_TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
+
+
+def _search_tokens(text: str) -> set[str]:
+    tokens: set[str] = set()
+    for token in _SEARCH_TOKEN_RE.findall(text.lower()):
+        if len(token) > 1 and not token.isascii():
+            tokens.update(
+                token[i : i + 2] for i in range(len(token) - 1)
+            )
+        else:
+            tokens.add(token)
+    return tokens
+
+
+def cjk_keywords_search_fn(
+    _ctx: RunContext[CoreDeps],
+    queries: _Seq[str],
+    tools: _Seq[ToolDefinition],
+) -> list[str]:
+    """Keyword-overlap tool search that also tokenizes CJK characters.
+
+    Behavior-identical to the upstream ``keywords_search_fn`` for pure-ASCII
+    queries (a superset otherwise): score each tool by query-token overlap
+    with its name + description, return names in descending score order.
+    """
+    terms = _search_tokens(" ".join(queries))
+    if not terms:
+        return []
+    scored: list[tuple[int, str]] = []
+    for tool_def in tools:
+        score = len(
+            terms & _search_tokens(f"{tool_def.name} {tool_def.description or ''}")
+        )
+        if score > 0:
+            scored.append((score, tool_def.name))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return [name for _, name in scored]
 
 CORE_INSTRUCTIONS = """\
 You are the single outcome-owning FDE agent.
@@ -119,8 +171,11 @@ def generalist_capabilities(
         from pydantic_ai.capabilities import ToolSearch
 
         # Official ToolSearch: compact capability catalog with on-demand tool
-        # activation — keeps the active tool/context surface bounded.
-        capabilities.append(ToolSearch[CoreDeps]())
+        # activation — keeps the active tool/context surface bounded. The
+        # strategy only extends tokenization to CJK so deferred business
+        # domains stay discoverable for Chinese queries (发给客户 →
+        # send_to_customer); scoring matches upstream keywords search.
+        capabilities.append(ToolSearch[CoreDeps](strategy=cjk_keywords_search_fn))
 
     if settings.enable_memory:
         from pydantic_ai_harness.memory import FileStore, Memory

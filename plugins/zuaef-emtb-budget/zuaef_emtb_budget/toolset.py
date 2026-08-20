@@ -45,12 +45,12 @@ from zuaef_emtb_budget.budget_lib.models import (
 )
 
 BUDGET_RULES = (
-    "EMTB 预算分析工具集。先用 parse_budget_csv 把 CSV 解析为结构化数据点，"
-    "再用 summary/variance/consistency/health/query/significant_changes 做确定性分析。"
-    "所有金额计算由库内确定性算法完成，不要手算或估算。"
+    "EMTB 预算分析工具集。用 parse_budget_csv 把 CSV 解析为结构化数据点，"
+    "再用 summary/variance/consistency/health/query/significant_changes 做确定性分析，"
+    "并用你自己的话解读结果。所有金额计算由库内确定性算法完成，不要手算或估算。"
     "预算健康检查基于 ADR-008 三态模型（健康/风险/严重）。"
-    "最终用 save_budget_report 把报告写入 artifact，并在 RunSummary.artifacts "
-    "中声明 artifact:<相对路径>。"
+    "save_budget_report 只在用户明确需要留存报告 artifact 时使用；"
+    "普通预算问题直接用自然语言回答即可，不需要保存任何报告。"
 )
 
 

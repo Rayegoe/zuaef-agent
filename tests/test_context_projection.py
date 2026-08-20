@@ -1,10 +1,12 @@
-"""Case context projection — P3B-2 T004/T006.
+"""Case context projection — P3B-2 T004/T006, P3B-3 T004/T013.
 
 A bound Case contributes a bounded natural-language brief (context, not
 workflow): the bridge injects it before the model request, the brief is
 bounded, unknown cases inject nothing, and the stillevo-fde profile marks the
 Case plugin deferred so its mutation/delivery tools never appear in the
-initial model surface.
+initial model surface. Since P3B-3 the default brief carries durable business
+background ONLY — agent trajectory (audit history) is excluded so a previous
+wrong action cannot re-enter the next prompt as Case background.
 """
 
 from __future__ import annotations
@@ -48,7 +50,9 @@ def _make_case(root: Path, case_id: str = "stillevo-beauty") -> None:
         encoding="utf-8",
     )
     (case_dir / "trajectory.jsonl").write_text(
-        '{"seq":1,"kind":"decision","summary":"对客户样本文进行现场改写：结论前置、场景保留。"}\n',
+        '{"seq":1,"kind":"decision","summary":"对客户样本文进行现场改写：结论前置、场景保留。"}\n'
+        '{"seq":2,"kind":"action","summary":"send_to_customer called for msg-005"}\n'
+        '{"seq":3,"kind":"approval","summary":"awaiting approval"}\n',
         encoding="utf-8",
     )
 
@@ -62,7 +66,6 @@ def test_bound_case_projects_bounded_brief(tmp_path: Path):
     assert "把客户从方案讨论推进到 Pilot" in brief
     assert "customer.company: 云朵美妆" in brief
     assert "demo.status: sample_rewrite_delivered_awaiting_approval" in brief
-    assert "[decision]" in brief
     assert "Open questions:" in brief
     assert "not an instruction sequence" in brief
     # unknown leaves carry no background and stay out of the projection
@@ -70,6 +73,23 @@ def test_bound_case_projects_bounded_brief(tmp_path: Path):
         1
     ]
     assert len(brief) <= MAX_BRIEF_CHARS
+
+
+def test_default_projection_excludes_agent_trajectory(tmp_path: Path):
+    """P3B-3 T004: agent decisions/actions/approval attempts are audit
+    history, not durable business background — they must not re-enter the
+    next prompt as world state."""
+    _make_case(tmp_path)
+    brief = project_case_context("stillevo-beauty", workspace_root=tmp_path)
+    assert brief is not None
+    assert "Recent trajectory" not in brief
+    assert "[decision]" not in brief
+    assert "[action]" not in brief
+    assert "[approval]" not in brief
+    assert "send_to_customer" not in brief
+    assert "awaiting approval" not in brief
+    # durable business facts remain
+    assert "云朵美妆" in brief
 
 
 def test_unknown_or_malformed_case_projects_nothing(tmp_path: Path):

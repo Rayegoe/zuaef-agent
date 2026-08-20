@@ -1,8 +1,10 @@
-"""zuaef-case plugin factory — SPEC v0.3 FDE Platform §8/§12.
+"""zuaef-case plugin factory — SPEC v0.3 FDE Platform §8/§12, P3B-3 T008.
 
 Validates config, resolves the cases root (explicit config >
 ``workspace/cases`` default; must live inside the workspace) and composes the
-case toolset over one CaseStore. No model calls, no corpus access, no threads.
+two Case toolsets over one CaseStore: durable Case state, and the separated
+customer-delivery affordances. Same store, no duplicated storage, no model
+calls, no corpus access, no threads.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ from typing import Any
 from zuaef_agent.plugin_api import CompositionError, PluginBundle, PluginEnv
 
 from .store import CaseStore
-from .toolset import build_case_toolset
+from .toolset import build_case_state_toolset, build_customer_delivery_toolset
 
 
 def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
@@ -24,4 +26,9 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
             f"cases_root must live inside the workspace: {cases_root}"
         )
     store = CaseStore(cases_root)
-    return PluginBundle(toolsets=[build_case_toolset(store)])
+    return PluginBundle(
+        toolsets=[
+            build_case_state_toolset(store),
+            build_customer_delivery_toolset(store),
+        ]
+    )

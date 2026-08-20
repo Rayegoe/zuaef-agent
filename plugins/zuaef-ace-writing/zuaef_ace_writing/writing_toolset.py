@@ -63,10 +63,13 @@ WRITING_RULES = (
     "Budgets are per-run, seeded from this run's ACE receipts (resume-safe) and "
     "counted in-process; an exhausted tool is withdrawn from the next step's "
     "action space. "
-    "Writing is presented, not delivered: the user you serve is the supervisor — "
-    "finish a writing/revision task by putting the full final text in the "
-    "final_result deliverable and persisting it with save_artifact; sending "
-    "anything to the customer is a separate, explicitly requested step."
+    "Grounded ACE articles (material with a real article identity) must keep "
+    "their evidence chain: read through these tools and, when a durable "
+    "artifact is wanted, save it with save_artifact (host-verified). A pasted "
+    "text with no legitimate ACE article/material identity can simply be "
+    "rewritten and returned — no ingest, no artifact, no workflow required. "
+    "Writing is presented, not delivered: the user you serve reads your reply; "
+    "sending anything to the customer is a separate, explicitly requested step."
 )
 
 
@@ -585,7 +588,8 @@ def build_writing_toolset(
                     "skipped": True,
                     "budget_exhausted": True,
                     "hint": "check_claim budget exhausted; batch validation is in "
-                    "save_artifact. Call save_artifact now, then return RunSummary.",
+                    "save_artifact. Call save_artifact if this article needs a "
+                    "durable artifact, otherwise finish your answer.",
                 },
                 ensure_ascii=False,
             )

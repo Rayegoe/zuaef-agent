@@ -1,15 +1,25 @@
-"""Case toolset — SPEC v0.3 FDE Platform §12 (Stage 2).
+"""Case toolsets — SPEC v0.3 FDE Platform §12 (Stage 2), P3B-3 T008.
 
-Five tools over one CaseStore, closure-registered like the other slices:
+Two independently deferred toolsets over one CaseStore, closure-registered
+like the other slices:
 
-- load_case_context: bounded assembly of the FDE field memory (goal /
-  situation / policy overrides / trajectory tail)
+CASE STATE (``build_case_state_toolset``)
+- load_case_context: bounded assembly of durable field memory (goal /
+  situation / policy overrides); trajectory audit only on explicit request
 - update_situation: host-validated situation write (provenance enforced)
 - record_case_step: append-only trajectory entry (decision/action carry run_id)
+
+CUSTOMER DELIVERY (``build_customer_delivery_toolset``)
 - save_draft: draft-and-hold outbound draft under drafts/
 - send_to_customer: approval-gated marker; on resume it resolves the draft
   text — the Field Interface performs the actual surface send after the run
   settles, so the plugin stays surface-agnostic
+
+The two surfaces are separate so progressive disclosure operates at the
+state ≠ delivery boundary: ordinary Case access never exposes customer-
+delivery affordances, and the delivery toolset deliberately carries no
+toolset-level instructions — its semantics live in the tool docstrings,
+which become model-visible only when the domain is actually discovered.
 
 The tools never touch receipts, private corpus contents, or credentials.
 """
@@ -28,27 +38,26 @@ from zuaef_agent.models import CoreDeps
 from .models import CaseError, TrajectoryEntry
 from .store import CaseStore
 
-TOOLSET_INSTRUCTIONS = """\
-Business Case tools (FDE Layer 2): durable business context and state for one
-customer/project. Tools are capabilities — they record and read Case state;
-they do not prescribe a task sequence.
+STATE_TOOLSET_INSTRUCTIONS = """\
+Business Case state tools (FDE Layer 2): durable business context and state
+for one customer/project. Tools are capabilities — they record and read Case
+state; they do not prescribe a task sequence.
 
 - This run is bound to exactly one Case by the server. Never invent or guess a
   case_id; omit the case_id parameter (or pass the bound one) and the tools
   operate on the bound Case. Any attempt on a different Case is rejected.
-- load_case_context reads the case's field memory (goal, situation, policy
-  overrides, recent trajectory) when the bound background you were given is
-  not enough for the task.
-- update_situation records what you now believe: substantive (non-unknown)
-  facts require evidence ids or a supervisor override, or the write is refused.
-- record_case_step appends the decision trace; decision/action entries carry
-  this run's id so every step traces to a receipt.
-- save_draft holds an OUTBOUND draft for customer delivery under drafts/. A
-  working draft you show the current user is not an outbound draft.
-- send_to_customer requests delivery of one draft to the customer. It is an
-  external effect: the run pauses for human approval. Use it only when the
-  intent is explicitly to deliver to the customer. Never invent facts, cases,
-  prices, guarantees or actions the policy restricts.
+- load_case_context reads the case's durable field memory (goal, situation,
+  policy overrides) when the bound background you were given is not enough for
+  the task.
+- update_situation records what you now believe about the customer/business:
+  substantive (non-unknown) facts require evidence ids or a supervisor
+  override, or the write is refused. The situation holds durable business
+  beliefs ONLY — never run status, approval state, tool attempts or delivery
+  workflow (those live in receipts and StepPersistence; attempted actions
+  belong in record_case_step).
+- record_case_step appends one entry to the append-only trajectory audit
+  (decision/action entries carry this run's id so every step traces to a
+  receipt). Trajectory is evidence for audit, not current world state.
 """
 
 
@@ -93,25 +102,31 @@ class _CaseTools:
                 "for this run — Case operations are isolated to the bound Case"
             )
 
-    def load_case_context(self, case_id: str, limit: int) -> dict[str, Any]:
+    def load_case_context(
+        self, case_id: str, limit: int, include_trajectory: bool
+    ) -> dict[str, Any]:
         doc = self._store.load_case(case_id)
         situation = self._store.read_situation(case_id)
-        trajectory = self._store.read_trajectory(case_id, tail=limit)
         overrides_path = self._store.case_dir(case_id) / "policy-overrides.md"
         overrides = (
             overrides_path.read_text(encoding="utf-8")[:4000]
             if overrides_path.is_file()
             else ""
         )
-        return {
+        payload: dict[str, Any] = {
             "case_id": doc.case_id,
             "goal": doc.goal,
             "status": doc.status,
             "stakeholders": doc.stakeholders,
             "situation": situation.model_dump(),
             "policy_overrides": overrides,
-            "trajectory_tail": [entry.model_dump() for entry in trajectory],
         }
+        if include_trajectory:
+            payload["trajectory_tail"] = [
+                entry.model_dump()
+                for entry in self._store.read_trajectory(case_id, tail=limit)
+            ]
+        return payload
 
     def update_situation(
         self,
@@ -176,10 +191,10 @@ class _CaseTools:
         return {"case_id": case_id, "draft_ref": draft_ref, "text": text}
 
 
-def build_case_toolset(store: CaseStore) -> AbstractToolset[CoreDeps]:
+def build_case_state_toolset(store: CaseStore) -> AbstractToolset[CoreDeps]:
     tools = _CaseTools(store)
     toolset: FunctionToolset[CoreDeps] = FunctionToolset(
-        instructions=TOOLSET_INSTRUCTIONS
+        instructions=STATE_TOOLSET_INSTRUCTIONS
     )
 
     @toolset.tool
@@ -187,13 +202,16 @@ def build_case_toolset(store: CaseStore) -> AbstractToolset[CoreDeps]:
         ctx: RunContext[CoreDeps],
         case_id: str | None = None,
         limit: int = 20,
+        include_trajectory: bool = False,
     ) -> dict:
-        """Load the case's field memory: goal, situation, policy overrides and
-        the recent trajectory tail. Bounded — never the whole corpus. Omit
-        case_id to operate on the server-bound Case."""
+        """Load the case's durable field memory: goal, situation, policy
+        overrides. Bounded — never the whole corpus. The append-only
+        trajectory (audit history of decisions/actions) is included ONLY when
+        include_trajectory is true and the task explicitly needs operational
+        history. Omit case_id to operate on the server-bound Case."""
         resolved = _resolve_case_id(case_id, ctx.deps)
         tools._guard_bound(resolved, ctx.deps)
-        return tools.load_case_context(resolved, limit)
+        return tools.load_case_context(resolved, limit, include_trajectory)
 
     @toolset.tool
     def update_situation(
@@ -203,9 +221,11 @@ def build_case_toolset(store: CaseStore) -> AbstractToolset[CoreDeps]:
         evidence_ids: list[str] | None = None,
         barry_override: str | None = None,
     ) -> dict:
-        """Merge a delta into the case situation. Substantive (non-unknown)
-        facts require evidence_ids or barry_override; the host refuses
-        unprovenanced writes. Omit case_id to operate on the bound Case."""
+        """Merge a delta into the case situation: durable customer/business
+        beliefs only, never run/approval status or attempted actions.
+        Substantive (non-unknown) facts require evidence_ids or
+        barry_override; the host refuses unprovenanced writes. Omit case_id to
+        operate on the server-bound Case."""
         resolved = _resolve_case_id(case_id, ctx.deps)
         tools._guard_bound(resolved, ctx.deps)
         return tools.update_situation(
@@ -220,14 +240,34 @@ def build_case_toolset(store: CaseStore) -> AbstractToolset[CoreDeps]:
         summary: str = "",
         refs: dict | None = None,
     ) -> dict:
-        """Append one trajectory entry (event/decision/action/feedback/
-        override/approval). decision/action entries carry this run's id. Omit
-        case_id to operate on the bound Case."""
+        """Append one audit entry to the append-only trajectory (event/
+        decision/action/feedback/override/approval). decision/action entries
+        carry this run's id. Recording an attempted action is evidence for
+        audit — it does not make the action a durable customer belief. Omit
+        case_id to operate on the server-bound Case."""
         resolved = _resolve_case_id(case_id, ctx.deps)
         tools._guard_bound(resolved, ctx.deps)
         return tools.record_case_step(
             resolved, ctx.deps.run_id, kind, summary, refs or {}
         )
+
+    return toolset
+
+
+def build_customer_delivery_toolset(store: CaseStore) -> AbstractToolset[CoreDeps]:
+    """Customer-delivery affordances, separated from Case state (P3B-3 T008).
+
+    Deliberately NO toolset-level instructions: toolset instructions are
+    injected into the system prompt even while the tools are deferred, so any
+    delivery semantics here would prime outbound behavior during ordinary
+    authoring work. The delivery contract lives in the tool docstrings, which
+    the model sees only once tool search actually discovers this domain. The
+    docstrings also deliberately avoid the generic word "case": a background
+    query (case/situation/goal) must not light this domain up — only
+    delivery-flavored terms (customer/deliver/发给客户/外发) should.
+    """
+    tools = _CaseTools(store)
+    toolset: FunctionToolset[CoreDeps] = FunctionToolset()
 
     @toolset.tool
     def save_draft(
@@ -235,9 +275,12 @@ def build_case_toolset(store: CaseStore) -> AbstractToolset[CoreDeps]:
         case_id: str | None = None,
         text: str = "",
     ) -> dict:
-        """Write a customer-facing draft under drafts/ (draft-and-hold).
-        Nothing is sent until send_to_customer is approved. Omit case_id to
-        operate on the bound Case."""
+        """Write a customer-facing OUTBOUND draft under drafts/
+        (draft-and-hold; 客户外发草稿). Nothing is sent until send_to_customer
+        is approved. A working draft you show the current user is NOT an
+        outbound draft — return work-in-progress as your normal reply instead.
+        The server-bound business object is targeted automatically; the id
+        parameter is only needed for unbound runs."""
         resolved = _resolve_case_id(case_id, ctx.deps)
         tools._guard_bound(resolved, ctx.deps)
         return tools.save_draft(resolved, text)
@@ -248,10 +291,13 @@ def build_case_toolset(store: CaseStore) -> AbstractToolset[CoreDeps]:
         case_id: str | None = None,
         draft_ref: str = "",
     ) -> dict:
-        """Request sending one draft to the customer. External effect: the run
-        pauses for human approval; on approval the Field Interface performs
-        the surface send after the run settles. Omit case_id to operate on
-        the bound Case."""
+        """Request sending one draft to the customer (发给客户 /
+        external delivery 外发). External effect: the run pauses for human
+        approval; on approval the Field Interface performs the surface send
+        after the run settles. Use it ONLY when the explicit intent is to
+        deliver to the customer — replying to the current user is NOT customer
+        delivery and needs no delivery tool. The server-bound business object
+        is targeted automatically."""
         resolved = _resolve_case_id(case_id, ctx.deps)
         tools._guard_bound(resolved, ctx.deps)
         return tools.send_to_customer(resolved, draft_ref)

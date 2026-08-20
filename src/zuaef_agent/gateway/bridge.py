@@ -27,13 +27,17 @@ from ..composition import (
 from ..config import AgentSettings
 from ..context_projection import project_case_context
 from ..continuation import resume_paused_run
+from ..interaction_projection import ActorRole, project_interaction_context
 from ..models import CoreDeps
 from ..receipt_store import ReceiptStore
 from ..runtime import RuntimeOutcome, execute_run
 from .models import InboundEnvelope
 
 ATTACHMENT_BLOCK = "Attached files available in the workspace:"
-CASE_CONTEXT_SEPARATOR = "\n\n---\n\n"
+CONTEXT_SEPARATOR = "\n\n---\n\n"
+# Backwards-compatible alias: the Case brief separator became the general
+# context-block separator once interaction context joined the assembly.
+CASE_CONTEXT_SEPARATOR = CONTEXT_SEPARATOR
 
 
 def project_prompt(envelope: InboundEnvelope) -> str:
@@ -109,6 +113,8 @@ def start_profile_run(
     run_id: str | None = None,
     message_history: Sequence[Any] | None = None,
     case_id: str | None = None,
+    surface: str | None = None,
+    actor_role: ActorRole | None = None,
 ) -> RuntimeOutcome:
     """Compose a new run through the shared seam (SPEC §27).
 
@@ -123,6 +129,12 @@ def start_profile_run(
     ``case_id`` is the session's deterministically bound Case (SPEC v1.0 §5):
     the server threads it into the run's CoreDeps, where Case tools enforce
     isolation. The model never guesses it.
+
+    ``surface``/``actor_role`` are host-grounded interaction facts (P3B-3
+    T001/T002): the model-visible request assembles in a deterministic order —
+    host-grounded current interaction (who is talking now, where a normal
+    reply goes), then the bound Case's durable background, then the literal
+    raw user request, untouched.
     """
     run_id = run_id or uuid4().hex
     agent, snapshot = build_profile_agent(
@@ -136,18 +148,21 @@ def start_profile_run(
         run_id=run_id,
         case_id=case_id,
     )
-    # Case is context, not workflow (P3B-2 §6): a bound Case contributes a
-    # bounded host-projected brief before the model request — the model does
-    # not need Case tools loaded to know the durable background.
-    projected_prompt = prompt
+    # Context assembly (P3B-2 §6 / P3B-3 T003): host-grounded blocks precede
+    # the raw user request, which stays byte-literal at the tail.
+    blocks: list[str] = []
+    interaction = project_interaction_context(surface, actor_role, case_id=case_id)
+    if interaction:
+        blocks.append(interaction)
     if case_id is not None:
         brief = project_case_context(case_id, workspace_root=settings.workspace_root)
         if brief:
-            projected_prompt = brief + CASE_CONTEXT_SEPARATOR + prompt
+            blocks.append(brief)
+    blocks.append(prompt)
     return execute_run(
         agent,
         deps,
-        prompt=projected_prompt,
+        prompt=CONTEXT_SEPARATOR.join(blocks),
         settings=settings,
         run_id=run_id,
         conversation_id=conversation_id,

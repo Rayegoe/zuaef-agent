@@ -168,6 +168,9 @@ class TelegramAdapter:
             thread_id=None,
             message_id=str(message.get("message_id", "")),
             text=message.get("text") or message.get("caption") or "",
+            # This console's allowlist IS the supervisor roster (P3B-3 T002):
+            # every authorized Telegram operator speaks as the supervisor.
+            actor_role="supervisor",
             attachments=attachments,
         )
 
@@ -252,6 +255,7 @@ class TelegramAdapter:
                 thread_id=None,
                 message_id=str(callback.get("id", "")),
                 text="",
+                actor_role="supervisor",
                 callback_action=action,
                 callback_payload=payload or None,
                 transport_context={"callback_query_id": str(callback.get("id", ""))},
@@ -267,6 +271,7 @@ class TelegramAdapter:
             thread_id=None,
             message_id=str(callback.get("id", "")),
             text="",
+            actor_role="supervisor",
             callback_token=token,
             callback_action="approve" if action == "a" else "deny",
             transport_context={"callback_query_id": str(callback.get("id", ""))},

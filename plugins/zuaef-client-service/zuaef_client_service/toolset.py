@@ -1,15 +1,21 @@
-"""ClientServiceToolset: the four domain tools (SPEC v0.1 §24-27).
+"""ClientServiceToolset: context and history tools for customer conversations.
+
+Production surface (P3B-2 §7):
 
 - retrieve_client_context: bounded context assembly for one customer message
-- assess_customer: deterministic structured assessment (state + evidence)
-- select_response_strategy: deterministic policy decision (§30/§31/§32)
-- record_interaction: human-approved interaction receipt + state update
+  (state, knowledge, precedents, evidence)
+- record_interaction: local-write business history (interaction receipt +
+  state update)
 
-Tools emit structured data only; the model composes natural language from the
-judgment (§9: Tool -> Judgment, Model -> Expression). record_interaction is
-approval-gated so a pause/resume cycle exercises the frozen-composition path
-(§33 shadow flow, Gate F). Tool registration follows the shared ZUAEF pattern
-(build_*_toolset factory registering closures), the same as the writing slice.
+The deterministic assessment/policy engine (``_ClientServiceTools.assess_customer``
+/ ``select_response_strategy`` over ``policy.decide``) remains in this module
+for offline regression, analytics, benchmark comparison and policy audits
+only — it is deliberately NOT registered as an agent tool: business judgment
+belongs to the FDE model, with hard constraints enforced as guards.
+
+record_interaction is a local write (no human approval): internal business
+history is not an external effect. An external CRM write, if one is ever
+added, would be a separate approval-gated tool.
 """
 
 from __future__ import annotations
@@ -349,17 +355,16 @@ def build_client_service_toolset(
     )
     toolset = ClientServiceToolset(
         instructions=(
-            "Client Service Decision Slice tools. "
-            "retrieve_client_context assembles the minimal business context "
-            "for a customer message; assess_customer produces the structured "
-            "assessment (stage/signals/authority/budget); "
-            "select_response_strategy returns the deterministic policy "
-            "decision (strategy, allowed/restricted actions, approval level, "
-            "disclosure ceiling, evidence ids). Compose natural language "
-            "from the strategy — never invent a fact, a case, a price, a "
-            "guarantee, or an action the policy restricts. R2/R3 decisions "
-            "are drafts for human approval; record_interaction only writes "
-            "after approval."
+            "Client Service context tools. retrieve_client_context assembles "
+            "the minimal business context for one customer message: customer "
+            "state, durable knowledge, semantic preferences, approved business "
+            "precedents and lexical evidence refs — bounded, never the whole "
+            "corpus. Precedents are guidance you judge, not decisions made "
+            "for you; the judgment and the wording of a reply are yours. "
+            "Never invent a fact, a case, a price, a guarantee, or an action "
+            "the policy restricts. record_interaction writes the business "
+            "history locally after an exchange; delivering anything to the "
+            "customer is a separate, approval-gated step."
         )
     )
 
@@ -372,65 +377,37 @@ def build_client_service_toolset(
     ) -> dict:
         """Assemble the minimal business context for one customer message.
 
-        Returns customer state, matching knowledge, semantic refs, policy
-        candidates and lexical evidence refs — bounded by `limit`, never the
-        whole corpus. All entries carry asset ids and provenance.
+        Returns customer state, matching knowledge, semantic refs, approved
+        business precedents and lexical evidence refs — bounded by `limit`,
+        never the whole corpus. All entries carry asset ids and provenance.
         """
         return tools.retrieve_client_context(customer_id, query, limit)
 
     @toolset.tool
-    def assess_customer(
-        ctx: RunContext[CoreDeps],
-        customer_id: str,
-        message: str,
-    ) -> dict:
-        """Produce the structured customer assessment for this message.
-
-        Deterministic: stage/signals/authority/budget come from the stored
-        customer state plus lexical message classification; every non-unknown
-        judgment carries the evidence ids it traces to. Uncertainties are
-        explicit — the model must not guess (SPEC §15/§48).
-        """
-        return tools.assess_customer(customer_id, message)
-
-    @toolset.tool
-    def select_response_strategy(
-        ctx: RunContext[CoreDeps],
-        customer_id: str,
-        assessment: dict,
-    ) -> dict:
-        """Run the deterministic policy engine over the assessment.
-
-        Returns the §30 strategy, matched policy ids, allowed/restricted
-        actions, approval level (R0-R3), disclosure ceiling (D0-D5) and the
-        evidence ids behind the decision. Never generates reply text.
-        """
-        return tools.select_response_strategy(customer_id, assessment)
-
-    @toolset.tool(requires_approval=True)
     def record_interaction(
         ctx: RunContext[CoreDeps],
         customer_id: str,
         incoming_message: str,
-        assessment: dict,
-        strategy: dict,
         draft_response: str,
+        assessment: dict | None = None,
+        strategy: dict | None = None,
         final_response: str = "",
         human_action: str = "APPROVED",
     ) -> dict:
-        """Record one interaction after human approval (shadow flow §33).
+        """Record one customer exchange into the local business history.
 
         Writes the InteractionReceipt under state/interactions/ and updates
-        the customer state under state/customers/. Requires approval because
-        it is the business history write; the pause lets an operator approve,
-        edit or reject before anything is recorded.
+        the customer state under state/customers/. This is a local write:
+        no external delivery happens here. `assessment`/`strategy` are
+        optional provenance fields — your judgment in free text is the
+        primary record.
         """
         return tools.record_interaction(
             ctx.deps.run_id,
             customer_id,
             incoming_message,
-            assessment,
-            strategy,
+            assessment or {},
+            strategy or {},
             draft_response,
             final_response,
             human_action,

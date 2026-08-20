@@ -12,7 +12,10 @@ import pytest
 from pydantic_ai import RunContext, RunUsage
 from pydantic_ai.models.test import TestModel
 from zuaef_client_service.store import ClientServiceStore
-from zuaef_client_service.toolset import build_client_service_toolset
+from zuaef_client_service.toolset import (
+    _ClientServiceTools,
+    build_client_service_toolset,
+)
 
 from zuaef_agent.models import CoreDeps
 
@@ -20,8 +23,6 @@ FIXTURE = Path(__file__).parent / "fixtures" / "synthetic_client_service"
 
 EXPECTED_TOOLS = {
     "retrieve_client_context",
-    "assess_customer",
-    "select_response_strategy",
     "record_interaction",
 }
 
@@ -57,7 +58,9 @@ def env(tmp_path: Path):
 
 
 class TestToolset:
-    def test_four_domain_tools_exposed(self, env) -> None:
+    def test_production_surface_is_context_and_history_only(self, env) -> None:
+        """P3B-2 INV-5: deterministic judgment tools are absent from the
+        production agent surface; they survive only as offline logic."""
         assert set(env["by_name"]) == EXPECTED_TOOLS
 
     def test_retrieve_client_context_shape(self, env) -> None:
@@ -72,67 +75,21 @@ class TestToolset:
         assert any(s["preference_id"] == "SEM-SYN-001" for s in out["semantic_refs"])
         assert any(e["evidence_id"] == "EVD-SYN-001" for e in out["evidence_refs"])
 
-    def test_assess_case_request(self, env) -> None:
-        out = _invoke_tool(
-            env["by_name"]["assess_customer"],
-            {"customer_id": "CASE-SYN-001", "message": "有没有成功案例可以分享呀？"},
-            env["ctx"](),
-        )
-        assert out["authority"] == "unknown"
-        assert out["feature"]["asks_case"] is True
-        assert "case_request" in out["signals"]
-        assert "decision_authority_unknown" in out["uncertainties"]
-
-    def test_strategy_for_case_request_qualifies_before_disclose(self, env) -> None:
-        assessment = _invoke_tool(
-            env["by_name"]["assess_customer"],
-            {"customer_id": "CASE-SYN-001", "message": "有没有成功案例可以分享呀？"},
-            env["ctx"](),
-        )
-        strategy = _invoke_tool(
-            env["by_name"]["select_response_strategy"],
-            {"customer_id": "CASE-SYN-001", "assessment": assessment},
-            env["ctx"](),
-        )
-        assert strategy["strategy"] == "QUALIFY_BEFORE_DISCLOSE"
-        assert "POL-C-006" in strategy["matched_policy_ids"]
-        assert strategy["approval_level"] == "R2"
-        assert "clarify_decision_authority" in strategy["allowed_actions"]
-        assert "send_detailed_case" in strategy["restricted_actions"]
-
-    def test_strategy_for_price_request(self, env) -> None:
-        assessment = _invoke_tool(
-            env["by_name"]["assess_customer"],
-            {"customer_id": "CASE-SYN-001", "message": "现在做内容要花多少钱？"},
-            env["ctx"](),
-        )
-        strategy = _invoke_tool(
-            env["by_name"]["select_response_strategy"],
-            {"customer_id": "CASE-SYN-001", "assessment": assessment},
-            env["ctx"](),
-        )
-        assert "POL-C-021" in strategy["matched_policy_ids"]
-        assert strategy["approval_level"] == "R2"
+    def test_record_interaction_is_local_write(self, env) -> None:
+        """P3B-2 INV-9: internal business history records automatically."""
+        tool = env["by_name"]["record_interaction"]
+        assert cast(Any, tool).requires_approval is False
+        assert cast(Any, tool).defer_loading is not True
 
     def test_record_interaction_writes_receipt_and_state(self, env) -> None:
-        assessment = _invoke_tool(
-            env["by_name"]["assess_customer"],
-            {"customer_id": "CASE-SYN-001", "message": "有没有成功案例可以分享呀？"},
-            env["ctx"](),
-        )
-        strategy = _invoke_tool(
-            env["by_name"]["select_response_strategy"],
-            {"customer_id": "CASE-SYN-001", "assessment": assessment},
-            env["ctx"](),
-        )
         result = _invoke_tool(
             env["by_name"]["record_interaction"],
             {
                 "customer_id": "CASE-SYN-001",
                 "incoming_message": "有没有成功案例可以分享呀？",
-                "assessment": assessment,
-                "strategy": strategy,
                 "draft_response": "先确认一下您这边的决策链和预算情况……",
+                "assessment": {"signals": ["case_request"], "authority": "unknown"},
+                "strategy": {},
                 "human_action": "APPROVED",
             },
             env["ctx"](),
@@ -148,10 +105,42 @@ class TestToolset:
         assert receipt_path.is_file()
         receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
         assert receipt["run_id"] == env["run_id"]
-        assert receipt["strategy"] == "QUALIFY_BEFORE_DISCLOSE"
         state_path = env["root"] / "state" / "customers" / "CASE-SYN-001.yaml"
-        assert "继续资格审查" in state_path.read_text(encoding="utf-8")
+        assert state_path.read_text(encoding="utf-8")
 
-    def test_record_interaction_is_approval_gated(self, env) -> None:
-        tool = env["by_name"]["record_interaction"]
-        assert cast(Any, tool).tool_def.defer is True
+
+class TestOfflinePolicyEngine:
+    """The deterministic engine stays available for offline regression and
+    policy audits (P3B-2 §7.2) — exercised through the logic holder, never
+    the production agent surface."""
+
+    @pytest.fixture()
+    def offline(self, env) -> _ClientServiceTools:
+        return _ClientServiceTools(
+            env["store"], plugin_id="client-service", plugin_version="0.1.0",
+            domain="beauty-content",
+        )
+
+    def test_assess_case_request(self, offline) -> None:
+        out = offline.assess_customer("CASE-SYN-001", "有没有成功案例可以分享呀？")
+        assert out["authority"] == "unknown"
+        assert out["feature"]["asks_case"] is True
+        assert "case_request" in out["signals"]
+        assert "decision_authority_unknown" in out["uncertainties"]
+
+    def test_strategy_for_case_request_qualifies_before_disclose(self, offline) -> None:
+        assessment = offline.assess_customer(
+            "CASE-SYN-001", "有没有成功案例可以分享呀？"
+        )
+        strategy = offline.select_response_strategy("CASE-SYN-001", assessment)
+        assert strategy["strategy"] == "QUALIFY_BEFORE_DISCLOSE"
+        assert "POL-C-006" in strategy["matched_policy_ids"]
+        assert strategy["approval_level"] == "R2"
+        assert "clarify_decision_authority" in strategy["allowed_actions"]
+        assert "send_detailed_case" in strategy["restricted_actions"]
+
+    def test_strategy_for_price_request(self, offline) -> None:
+        assessment = offline.assess_customer("CASE-SYN-001", "现在做内容要花多少钱？")
+        strategy = offline.select_response_strategy("CASE-SYN-001", assessment)
+        assert "POL-C-021" in strategy["matched_policy_ids"]
+        assert strategy["approval_level"] == "R2"

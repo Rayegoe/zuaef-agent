@@ -48,7 +48,10 @@ sys.path[:0] = [
 from pydantic_ai import FunctionToolset, RunContext
 from zuaef_case.models import CaseDoc, Situation, TrajectoryEntry
 from zuaef_case.store import CaseStore
-from zuaef_case.toolset import build_case_toolset
+from zuaef_case.toolset import (
+    build_case_state_toolset,
+    build_customer_delivery_toolset,
+)
 
 from examples.host_runner import json_default
 from examples.writing_toolset import DEFAULT_ACE_ROOT, ace_prepare, save_artifact_impl
@@ -378,7 +381,8 @@ def run_case_event(
         run_id=run_id,
         instructions=FDE_LOOP_INSTRUCTIONS,
         extra_toolsets=[
-            build_case_toolset(store),
+            build_case_state_toolset(store),
+            build_customer_delivery_toolset(store),
             build_fde_toolset(store, case_id, material_ids),
         ],
     )
@@ -413,7 +417,8 @@ def run_case_event(
             run_id=resume_run_id,
             instructions=FDE_LOOP_INSTRUCTIONS,
             extra_toolsets=[
-                build_case_toolset(store),
+                build_case_state_toolset(store),
+            build_customer_delivery_toolset(store),
                 build_fde_toolset(store, case_id, material_ids),
             ],
         )

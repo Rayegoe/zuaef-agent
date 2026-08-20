@@ -349,6 +349,75 @@ class TestCompositionSeam(unittest.TestCase):
             self.assertIn("save_budget_report", effect_names)
 
 
+class TestZeroArtifactBudgetAnswer(unittest.TestCase):
+    """P3B-2 T010: a budget question may be answered in natural language with
+    deterministic arithmetic and zero saved artifacts."""
+
+    def test_budget_question_natural_answer_zero_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            workspace = tmp / "workspace"
+            workspace.mkdir(exist_ok=True)
+            settings = AgentSettings(
+                model="test",
+                workspace_root=workspace,
+                runtime_state_root=tmp / ".zuaef-state",
+                enable_planning=False,
+                enable_skills=False,
+            )
+            run_id = uuid.uuid4().hex
+            agent = build_agent(
+                settings, run_id=run_id, extra_toolsets=[build_budget_toolset()]
+            )
+            deps = CoreDeps(
+                workspace_root=settings.workspace_root.resolve(), run_id=run_id
+            )
+
+            def fn(messages, info):
+                has_return = any(
+                    getattr(part, "part_kind", None) in ("tool-return", "tool-retry")
+                    for message in messages
+                    for part in getattr(message, "parts", [])
+                )
+                if not has_return:
+                    return ModelResponse(
+                        parts=[
+                            ToolCallPart(
+                                "parse_budget_csv",
+                                {"csv_text": SAMPLE.read_text(encoding="utf-8")},
+                            )
+                        ]
+                    )
+                if not any(
+                    getattr(part, "tool_name", "") == "budget_variance"
+                    for message in messages
+                    for part in getattr(message, "parts", [])
+                ):
+                    return ModelResponse(
+                        parts=[ToolCallPart("budget_variance", {"data": _json_points()})]
+                    )
+                return ModelResponse(
+                    parts=[TextPart(content="真正需要关注的是场地租赁连续三个月超支。")]
+                )
+
+            with agent.override(model=FunctionModel(fn)):
+                outcome = execute_run(
+                    agent,
+                    deps,
+                    prompt="算一下为什么这个预算超了，告诉我真正需要关注什么。",
+                    settings=settings,
+                    run_id=run_id,
+                )
+
+            self.assertIsInstance(outcome, TerminalRun)
+            self.assertEqual(outcome.summary.status, "completed")
+            self.assertEqual(outcome.receipt.verified_artifacts, [])
+            self.assertIn("场地租赁", outcome.presentation)
+            effect_names = [e.tool_name for e in outcome.receipt.verified_tool_effects]
+            self.assertIn("parse_budget_csv", effect_names)
+            self.assertNotIn("save_budget_report", effect_names)
+
+
 EXPECTED_PLUGIN_TOOLS = {
     "parse_budget_csv",
     "budget_summary",

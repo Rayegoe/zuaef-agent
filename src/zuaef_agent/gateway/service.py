@@ -189,6 +189,10 @@ class GatewayService:
                 # Deterministic Case binding: the session's bound case is
                 # threaded into the run's CoreDeps — the model never guesses it.
                 case_id=session.case_id,
+                # Host-grounded interaction identity (P3B-3 T001/T002): the
+                # surface states who is talking; the model never infers it.
+                surface=envelope.surface,
+                actor_role=envelope.actor_role,
             )
         except CompositionError as exc:
             session = session.model_copy(update={"active_run_id": None})

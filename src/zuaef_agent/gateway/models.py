@@ -13,6 +13,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from ..interaction_projection import ActorRole
+
 # Supervisor control actions (Phase 3A): deterministic gateway operations that
 # ride the callback channel without an approval token. The prefix and action
 # set are the shared vocabulary between the transport parser and the service
@@ -47,6 +49,13 @@ class InboundEnvelope(BaseModel):
 
     message_id: str
     text: str = ""
+
+    # Deterministic actor identity (P3B-3 T002): the surface adapter states
+    # who is talking — an authorized Telegram operator is a supervisor. It is
+    # host-owned fact threaded into the model-visible interaction projection;
+    # a Case binding never determines it and an unknown actor is never
+    # defaulted to the Case customer.
+    actor_role: ActorRole = "unknown"
 
     attachments: list[AttachmentRef] = Field(default_factory=list)
 

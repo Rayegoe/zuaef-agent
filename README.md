@@ -94,12 +94,43 @@ business deployments.
 
 ### Business progressive disclosure
 
-`profiles/stillevo-fde.toml` composes the FDE deployment: the Case orientation
-plugin stays eager; client-service, ACE writing, budget and WordPress are
-`defer_tools = true`, so their real tool schemas are hidden from the model
-until it discovers the relevant domain through ToolSearch (`search_tools`).
-Available ≠ loaded: on a writing task the model loads only the writing
-domain; budget/WordPress stay dormant unless that work is actually requested.
+`profiles/stillevo-fde.toml` composes the FDE deployment: every business
+domain — Case state included — is `defer_tools = true`, so real tool schemas
+are hidden from the model until it discovers the relevant domain through
+ToolSearch (`search_tools`). Available ≠ loaded: on a writing task the model
+loads only the writing domain; budget/WordPress stay dormant unless that
+work is actually requested.
+
+Disclosure also operates at the **state ≠ delivery** boundary (P3B-3): the
+`case` plugin composes two independently deferred toolsets over one store —
+Case state (`load_case_context` / `update_situation` / `record_case_step`)
+and customer delivery (`save_draft` / `send_to_customer`). Ordinary Case
+access never exposes delivery affordances; the delivery toolset carries no
+toolset-level instructions, so its semantics reach the model only when an
+explicit delivery intent (发给客户) actually discovers the domain. Tool-search
+tokenization is CJK-aware, so Chinese queries discover Chinese-described
+tools.
+
+### Interaction identity and the delivery boundary (P3B-3)
+
+Four concepts stay distinct in every turn: the **current interlocutor** (who
+is talking to the agent now — the Telegram console's allowlist IS the
+supervisor roster), the **bound Case customer** (the business party the Case
+is about — a different party by construction), a **normal reply** (the
+agent's final response, delivered by the host to the current conversation;
+no channel tool exists or is needed), and **external delivery** (a separate
+side effect through approval-gated tools). The host projects these facts into
+every model request (`interaction_projection`); the model never infers who it
+is replying to, and Case customer ≠ current interlocutor is stated, not
+assumed.
+
+Context hygiene: a bound Case contributes a bounded brief of **durable
+business beliefs** only. Agent trajectory (decisions, attempted actions,
+approval attempts) is audit evidence, deliberately absent from the default
+projection — a previous wrong action must not re-enter the next prompt as
+world state. Operational history is retrievable explicitly via
+`load_case_context(include_trajectory=true)`; execution truth lives in
+receipts and StepPersistence, never in `situation.json`.
 
 ### Gateway → Case binding (supervisor only)
 
@@ -144,29 +175,41 @@ Two rules govern every conversation turn:
    customer-visible gate).
 2. **Write/revise/analyze defaults to presenting the result to the current
    user** (the supervisor), not to delivering it to the business object. The
-   full final text rides in the terminal `deliverable` and is rendered as the
+   full final text rides in `TerminalRun.presentation` and is rendered as the
    main reply; audit details (counts, effects, run internals) live in
    `/status` and the receipts.
 
 A customer-visible send therefore looks like: "改写这篇文章" → the rewritten
 article as the bot's reply, zero buttons; "发给客户" → an approval card that
 shows the outbound draft content itself — the operator never approves unseen
-text.
+text. Telegram is the active interaction Surface: a normal terminal
+presentation is already delivered to that current conversation by the host,
+without any Telegram business tool.
 
-### Authoritative Phase-2 proof
+### Authoritative proofs
 
 ```bash
 uv run python tools/fde_two_turn_proof.py
+uv run python tools/p3b3_field_proof.py
 ```
 
-runs the Golden Outcome (two literal turns, no hidden constraint reinjection)
-through `GatewayService + profile=stillevo-fde + bound real Case + real model
-+ real StepPersistence + real ACE materials`, then exercises approve/deny on
-a customer-visible send through the shared `resume_paused_run` seam. Output
-covers the model-visible surface before/after domain load, invoked/dormant
-domains, Case reads/writes, artifacts, no-price scan, publish calls, pause/
-approval receipts, and the Turn-2 prior-history proof. `--no-model` runs the
-deterministic surface + approval evidence only.
+The Phase-2 proof runs the Golden Outcome (two literal turns, no hidden
+constraint reinjection) through `GatewayService + profile=stillevo-fde +
+bound real Case + real model + real StepPersistence + real ACE materials`,
+then exercises approve/deny on a customer-visible send through the shared
+`resume_paused_run` seam. Output covers the model-visible surface
+before/after domain load, invoked/dormant domains, Case reads/writes,
+artifacts, no-price scan, publish calls, pause/approval receipts, and the
+Turn-2 prior-history proof. `--no-model` runs the deterministic surface +
+approval evidence only.
+
+The P3B-3 proof replays the two real field Golden Failures (an ordinary
+rewrite and an explicit "给我看" that both became customer delivery), then
+follow-up continuity, the Telegram-perception diagnostic, and an explicit
+"发给客户" — asserting direct presentations with zero approval on the
+authoring turns, host-grounded prompt assembly (interaction block + Case
+brief without trajectory + the byte-literal request), and a real pause with
+visible outbound content on the delivery turn.
 
 The pre-Phase-2 FDE CLI proof (`examples/fde_loop.py`) is historical/
 diagnostic only — the Gateway/stillevo-fde seam is the product authority.

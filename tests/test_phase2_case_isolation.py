@@ -23,7 +23,7 @@ sys.path[:0] = [str(REPO), str(REPO / "src"), str(REPO / "plugins" / "zuaef-case
 
 from zuaef_case.models import CaseDoc, CaseError
 from zuaef_case.store import CaseStore
-from zuaef_case.toolset import build_case_toolset
+from zuaef_case.toolset import build_case_state_toolset, build_customer_delivery_toolset
 
 from zuaef_agent.models import CoreDeps
 
@@ -46,7 +46,10 @@ def _agent(store: CaseStore) -> Agent:
         "test",
         deps_type=CoreDeps,
         output_type=[str],
-        toolsets=[build_case_toolset(store)],
+        toolsets=[
+            build_case_state_toolset(store),
+            build_customer_delivery_toolset(store),
+        ],
     )
 
 
@@ -152,7 +155,10 @@ def test_bound_run_cross_case_send_is_blocked_not_paused(cases, tmp_path):
     agent = build_agent(
         settings,
         run_id=run_id,
-        extra_toolsets=[build_case_toolset(store)],
+        extra_toolsets=[
+            build_case_state_toolset(store),
+            build_customer_delivery_toolset(store),
+        ],
     )
     deps = CoreDeps(
         workspace_root=workspace.resolve(),
@@ -197,7 +203,10 @@ def test_bound_run_own_case_send_pauses_for_approval(cases, tmp_path):
     agent = build_agent(
         settings,
         run_id=run_id,
-        extra_toolsets=[build_case_toolset(store)],
+        extra_toolsets=[
+            build_case_state_toolset(store),
+            build_customer_delivery_toolset(store),
+        ],
     )
     deps = CoreDeps(
         workspace_root=workspace.resolve(),
