@@ -73,7 +73,7 @@ def _run(agent: Agent, sequence: list[tuple[str, dict]], case_id: str | None):
     deps = CoreDeps(
         workspace_root=Path("/tmp/unused-workspace"),
         run_id="r-isolation",
-        case_id=case_id,
+        bindings={"case": case_id} if case_id else {},
     )
     with agent.override(model=FunctionModel(handler)):
         try:
@@ -163,7 +163,7 @@ def test_bound_run_cross_case_send_is_blocked_not_paused(cases, tmp_path):
     deps = CoreDeps(
         workspace_root=workspace.resolve(),
         run_id=run_id,
-        case_id=bound,
+        bindings={"case": bound},
     )
     with agent.override(model=FunctionModel(handler)):
         outcome = execute_run(
@@ -211,7 +211,7 @@ def test_bound_run_own_case_send_pauses_for_approval(cases, tmp_path):
     deps = CoreDeps(
         workspace_root=workspace.resolve(),
         run_id=run_id,
-        case_id=bound,
+        bindings={"case": bound},
     )
     with agent.override(model=FunctionModel(handler)):
         outcome = execute_run(

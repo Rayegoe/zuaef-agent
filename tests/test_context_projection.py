@@ -17,10 +17,11 @@ from pathlib import Path
 
 from pydantic_ai.messages import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
+from zuaef_case.context import MAX_BRIEF_CHARS, project_case_brief
 
 from zuaef_agent.config import AgentSettings
-from zuaef_agent.context_projection import MAX_BRIEF_CHARS, project_case_context
 from zuaef_agent.gateway import bridge
+from zuaef_agent.models import CoreDeps
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -59,7 +60,7 @@ def _make_case(root: Path, case_id: str = "stillevo-beauty") -> None:
 
 def test_bound_case_projects_bounded_brief(tmp_path: Path):
     _make_case(tmp_path)
-    brief = project_case_context("stillevo-beauty", workspace_root=tmp_path)
+    brief = project_case_brief("stillevo-beauty", workspace_root=tmp_path)
 
     assert brief is not None
     assert brief.startswith("Customer context (bound case: stillevo-beauty):")
@@ -80,7 +81,7 @@ def test_default_projection_excludes_agent_trajectory(tmp_path: Path):
     history, not durable business background — they must not re-enter the
     next prompt as world state."""
     _make_case(tmp_path)
-    brief = project_case_context("stillevo-beauty", workspace_root=tmp_path)
+    brief = project_case_brief("stillevo-beauty", workspace_root=tmp_path)
     assert brief is not None
     assert "Recent trajectory" not in brief
     assert "[decision]" not in brief
@@ -94,14 +95,14 @@ def test_default_projection_excludes_agent_trajectory(tmp_path: Path):
 
 def test_unknown_or_malformed_case_projects_nothing(tmp_path: Path):
     _make_case(tmp_path)
-    assert project_case_context(None, workspace_root=tmp_path) is None
-    assert project_case_context("../escape", workspace_root=tmp_path) is None
-    assert project_case_context("no-such-case", workspace_root=tmp_path) is None
+    assert project_case_brief(None, workspace_root=tmp_path) is None
+    assert project_case_brief("../escape", workspace_root=tmp_path) is None
+    assert project_case_brief("no-such-case", workspace_root=tmp_path) is None
 
 
 def test_empty_case_directory_projects_nothing(tmp_path: Path):
     (tmp_path / "cases" / "hollow").mkdir(parents=True)
-    assert project_case_context("hollow", workspace_root=tmp_path) is None
+    assert project_case_brief("hollow", workspace_root=tmp_path) is None
 
 
 def test_projection_is_hard_bounded(tmp_path: Path):
@@ -112,7 +113,7 @@ def test_projection_is_hard_bounded(tmp_path: Path):
         for i in range(60)
     )
     target.write_text(fat, encoding="utf-8")
-    brief = project_case_context("stillevo-beauty", workspace_root=tmp_path)
+    brief = project_case_brief("stillevo-beauty", workspace_root=tmp_path)
     assert brief is not None
     assert len(brief) <= MAX_BRIEF_CHARS
 
@@ -129,17 +130,18 @@ def _capture_settings(tmp_path: Path) -> AgentSettings:
     )
 
 
-def test_bridge_injects_brief_for_bound_case_and_not_unbound(
-    tmp_path: Path, monkeypatch
-):
+def test_bridge_does_not_project_case_brief(tmp_path: Path, monkeypatch):
+    """v1.2 T005: the bridge passes interaction + raw request only; a bound
+    Case's durable background arrives through the composed Case plugin
+    capability (dynamic instructions), never a bridge-side context branch."""
 
     settings = _capture_settings(tmp_path)
     _make_case(settings.workspace_root)
-    captured: dict[str, str] = {}
+    captured: dict[str, object] = {}
 
     def fake_execute_run(agent, deps, *, prompt, **kwargs):
         captured["prompt"] = prompt
-        captured["case_id"] = deps.case_id
+        captured["bindings"] = dict(deps.bindings)
         from zuaef_agent.runtime import TerminalRun
 
         return TerminalRun(
@@ -157,9 +159,13 @@ def test_bridge_injects_brief_for_bound_case_and_not_unbound(
         case_id="stillevo-beauty",
     )
     prompt = captured["prompt"]
-    assert prompt.startswith("Customer context (bound case: stillevo-beauty):")
+    assert isinstance(prompt, str)
+    # The raw request stays byte-literal at the tail and the bridge does NOT
+    # synthesize a case brief into the prompt — the capability owns it.
     assert prompt.endswith("改写这篇文章")
-    assert "\n\n---\n\n" in prompt
+    assert "Customer context (bound case" not in prompt
+    # The binding still reaches the run's deps.
+    assert captured["bindings"] == {"case": "stillevo-beauty"}
 
     bridge.start_profile_run(
         settings=settings,
@@ -169,7 +175,7 @@ def test_bridge_injects_brief_for_bound_case_and_not_unbound(
         case_id=None,
     )
     assert captured["prompt"] == "改写这篇文章"
-    assert captured["case_id"] is None
+    assert captured["bindings"] == {}
 
 
 def test_stillevo_profile_defers_case_tools():
@@ -222,9 +228,8 @@ def test_deferred_case_plugin_absent_from_initial_surface(tmp_path: Path):
         discover=_entry_points,
         version_for=lambda ep: "0.0.1",
     )
-    assert snapshot.plugins[0].defer_tools is True
+    assert snapshot is not None and snapshot.plugins[0].defer_tools is True
 
-    from zuaef_agent.models import CoreDeps
 
     envelope = InboundEnvelope(
         surface="telegram",
@@ -249,3 +254,60 @@ def test_deferred_case_plugin_absent_from_initial_surface(tmp_path: Path):
     assert "load_case_context" not in visible, (
         "deferred Case tools must be absent from the initial model surface"
     )
+
+
+def test_case_context_capability_contributes_brief_via_instructions(
+    tmp_path: Path,
+):
+    """v1.2 T005: the bound Case brief reaches the model through the Case
+    plugin's PydanticAI Capability (dynamic per-run instructions), and an
+    unbound run contributes nothing."""
+    from zuaef_case.context import CaseContextCapability
+
+    settings = _capture_settings(tmp_path)
+    _make_case(settings.workspace_root)
+    run_id = "r-cap-brief"
+
+    from zuaef_agent.core import build_agent
+
+    agent = build_agent(
+        settings,
+        run_id=run_id,
+        extra_capabilities=[CaseContextCapability()],
+    )
+    instruction_text: list[str] = []
+
+    async def handler(messages, info):
+        joined = info.instructions or ""
+        if "Customer context (bound case" in joined:
+            instruction_text.append(joined)
+        return ModelResponse(parts=[TextPart(content="done")])
+
+    bound_deps = CoreDeps(
+        workspace_root=settings.workspace_root.resolve(),
+        run_id=run_id,
+        bindings={"case": "stillevo-beauty"},
+    )
+    with agent.override(model=FunctionModel(handler)):
+        asyncio.run(agent.run("改写这篇文章", deps=bound_deps))
+
+    joined = "\n".join(instruction_text)
+    assert "Customer context (bound case: stillevo-beauty):" in joined
+    assert "云朵美妆" in joined
+
+    # Unbound run (fresh run id — StepPersistence is single-shot per run_id):
+    # the capability contributes no brief.
+    instruction_text.clear()
+    unbound_agent = build_agent(
+        settings,
+        run_id="r-cap-brief-unbound",
+        extra_capabilities=[CaseContextCapability()],
+    )
+    unbound_deps = CoreDeps(
+        workspace_root=settings.workspace_root.resolve(),
+        run_id="r-cap-brief-unbound",
+    )
+    with unbound_agent.override(model=FunctionModel(handler)):
+        asyncio.run(unbound_agent.run("改写这篇文章", deps=unbound_deps))
+    joined = "\n".join(instruction_text)
+    assert "Customer context (bound case" not in joined

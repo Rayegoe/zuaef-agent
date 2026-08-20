@@ -1132,14 +1132,9 @@
       "sha256": "96c63bbca8c36f9458746e22c67e561e7f274e5c1107878a4211b1e80ee30e46"
     },
     {
-      "path": "src/zuaef_agent/context_projection.py",
-      "bytes": 6186,
-      "sha256": "9bff6b9ed2de82bdf2d79e70ae6d46fbd8c2c129f07b70a1c743ebdc438ae449"
-    },
-    {
       "path": "src/zuaef_agent/continuation.py",
-      "bytes": 5525,
-      "sha256": "4b122c820e2df48bb608449f4bb4c239a844003bdf7376cfb89d0ad9ac87c950"
+      "bytes": 5208,
+      "sha256": "2bf8a08236f7c8ecd3076f79cabfa0d1e2afcee3fcb79709682d8338ae436e41"
     },
     {
       "path": "src/zuaef_agent/core.py",
@@ -1173,8 +1168,8 @@
     },
     {
       "path": "src/zuaef_agent/models.py",
-      "bytes": 4484,
-      "sha256": "7f38835da0b8283887b869ba4802e89525fd7aeb07d0f66e3a4315692e5901ae"
+      "bytes": 4258,
+      "sha256": "fa2c78595c950997a287961b3c9db1a1e49467db5175f98b0a2d51200f30dd1c"
     },
     {
       "path": "src/zuaef_agent/plugin_api.py",
@@ -1198,8 +1193,8 @@
     },
     {
       "path": "src/zuaef_agent/runtime.py",
-      "bytes": 21491,
-      "sha256": "800463dfd29055509efe9b3a1714fd38ed7ae7fec8c10156588392d6d76a6bda"
+      "bytes": 19412,
+      "sha256": "224ea4fd8612cb95de618ca40f255bd247c5a1fc557800546b4a79eed1c42a9a"
     },
     {
       "path": "src/zuaef_agent/gateway/__init__.py",
@@ -1208,8 +1203,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/bridge.py",
-      "bytes": 6874,
-      "sha256": "4a181cad2da0cba40630c198d60db1387fe90b77f32a5ed1a7d2dd408bae838b"
+      "bytes": 6609,
+      "sha256": "f0100151b35c95ab3389ed2967b996061a5810436e94ec3acb4c9d4317f90695"
     },
     {
       "path": "src/zuaef_agent/gateway/models.py",
@@ -1263,8 +1258,8 @@
     },
     {
       "path": "tests/test_case_toolset.py",
-      "bytes": 9522,
-      "sha256": "0a0299ad88f845c4c38ad3fa1bc66e51869948a4bf6f9e280e1ebdbbc9bec007"
+      "bytes": 9549,
+      "sha256": "37930f300af5da40b948d6cf53871329ebee4afbf2f5290155b502ae6d748a37"
     },
     {
       "path": "tests/test_cli_and_providers.py",
@@ -1323,8 +1318,8 @@
     },
     {
       "path": "tests/test_context_projection.py",
-      "bytes": 9099,
-      "sha256": "0a85f80938376c0eeba1e02f174158666cc6979c8ac2968aab4702c0bfdff9bc"
+      "bytes": 11551,
+      "sha256": "1f8ca24ef5b3cfd029374d25290b32e3992666e93d33f3085261efddc782629f"
     },
     {
       "path": "tests/test_continuation.py",
@@ -1428,8 +1423,8 @@
     },
     {
       "path": "tests/test_interaction_projection.py",
-      "bytes": 8569,
-      "sha256": "61e360f26bf3cce3155c47b649b1a871806309442f84430bdb6d5538a8392e29"
+      "bytes": 9359,
+      "sha256": "5d22e3d1568a9166fec8c1cfaa1a30e9226715b86667ad0b6d7130417caed29c"
     },
     {
       "path": "tests/test_knowledge_invariants.py",
@@ -1458,8 +1453,8 @@
     },
     {
       "path": "tests/test_p3b3_tool_surface.py",
-      "bytes": 8474,
-      "sha256": "98e45ec83ced88dbea01dd5148882db91c93be3bfabf79f387d87800e0711b3c"
+      "bytes": 8541,
+      "sha256": "e089b9638a890c87f700afb997f059937ea840431991d82459f04b77b8920c5b"
     },
     {
       "path": "tests/test_phase2_case_binding.py",
@@ -1468,8 +1463,8 @@
     },
     {
       "path": "tests/test_phase2_case_isolation.py",
-      "bytes": 7598,
-      "sha256": "26f6a36153acc1d6305d7965f698c9c9df65cf9853c55decc5a86d7e7dd5c9ec"
+      "bytes": 7650,
+      "sha256": "018f520ea871b1d95b2ac4fe632d83b416a28979aaf27067a82532d9b3dbfc25"
     },
     {
       "path": "tests/test_phase2_deferred_tools.py",
@@ -1548,8 +1543,8 @@
     },
     {
       "path": "tests/fixture_plugins/fixture_plugins/case_probe.py",
-      "bytes": 921,
-      "sha256": "70e8cbe4652b2e29af7c64e14d684ebdca7f8ed6859d40dae58358db2d13c7db"
+      "bytes": 934,
+      "sha256": "3d6c7800fbd04de24ba7ef729454ee8e66d7f96bcc2c1913c5fd041f66e96092"
     },
     {
       "path": "tests/fixture_plugins/fixture_plugins/conflict.py",
@@ -1558,8 +1553,8 @@
     },
     {
       "path": "tests/fixture_plugins/fixture_plugins/deps_probe.py",
-      "bytes": 910,
-      "sha256": "74b16a48de79acb0f098f13a43d791b92332bf981618fcb98eace4a336e82103"
+      "bytes": 924,
+      "sha256": "67585a1fc0fb5eacbffb05f61021928b3cb15761ed8f0ebd7fa1961b332bbfa7"
     },
     {
       "path": "tests/fixture_plugins/fixture_plugins/hardware.py",
@@ -1608,8 +1603,13 @@
     },
     {
       "path": "plugins/zuaef-case/zuaef_case/__init__.py",
-      "bytes": 1248,
-      "sha256": "44a670697d2a46ced1c70bc13eab441c74af577a7de98e21c771e93625335d1f"
+      "bytes": 1340,
+      "sha256": "ba80cba2448231f805b4bed1a5499d1fb64932bb785a1ff819846f948c8bc6ed"
+    },
+    {
+      "path": "plugins/zuaef-case/zuaef_case/context.py",
+      "bytes": 6557,
+      "sha256": "b4e200243d094ee3b7fb0a3727ddad27bc0dadf241b83d6c6f9ca44da51ad5a8"
     },
     {
       "path": "plugins/zuaef-case/zuaef_case/models.py",
@@ -1623,8 +1623,8 @@
     },
     {
       "path": "plugins/zuaef-case/zuaef_case/toolset.py",
-      "bytes": 12939,
-      "sha256": "c0423a64d122c2e6c63e9462b97d025889b8935198b189762506fa248abeaffc"
+      "bytes": 13959,
+      "sha256": "af20901ea478a4bcbb6130a39960d83e7aef1873322923ca5ebd77d230722a93"
     },
     {
       "path": "plugins/zuaef-client-service/zuaef_client_service/__init__.py",
@@ -1818,8 +1818,8 @@
     },
     {
       "path": "profiles/stillevo-fde.toml",
-      "bytes": 2231,
-      "sha256": "96b4a641c8bfc1c90821d447a17f4b66704cb3013ee3308300843957136c1dd8"
+      "bytes": 2411,
+      "sha256": "b3f52eb4d82fbf1ff979ab18e1892c1e6d9f54887f2adfc71ee7de588bdf2d0a"
     },
     {
       "path": "profiles/wordpress-operator.toml",

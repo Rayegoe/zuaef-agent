@@ -14,6 +14,7 @@ from typing import Any
 
 from zuaef_agent.plugin_api import CompositionError, PluginBundle, PluginEnv
 
+from .context import CaseContextCapability
 from .store import CaseStore
 from .toolset import build_case_state_toolset, build_customer_delivery_toolset
 
@@ -30,5 +31,6 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
         toolsets=[
             build_case_state_toolset(store),
             build_customer_delivery_toolset(store),
-        ]
+        ],
+        capabilities=[CaseContextCapability()],
     )

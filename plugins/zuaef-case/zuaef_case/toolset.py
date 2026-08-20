@@ -65,13 +65,36 @@ def _resolve_case_id(case_id: str | None, deps: CoreDeps) -> str:
     """The bound Case is the identity anchor: when the caller omits
     ``case_id`` (or passes an explicit one), the tool operates on the bound
     Case. Unbound runs require an explicit case_id (legacy CLI behavior)."""
-    resolved = case_id or deps.case_id
+    resolved = case_id or deps.bindings.get("case")
     if resolved is None:
         raise CaseError(
             "no case_id given and this run is not bound to a Case — pass "
             "case_id explicitly for unbound runs"
         )
     return resolved
+
+
+def _validate_delivery_case(
+    ctx: RunContext[CoreDeps],
+    case_id: str | None = None,
+    draft_ref: str = "",
+) -> None:
+    """Pre-approval authorization boundary (v1.2 T006): an approval-gated
+    delivery tool never executes its body before the pause, so the cross-case
+    check must reject the call BEFORE an approval card is created. This
+    validator runs during tool-argument validation (schema + args_validator),
+    which PydanticAI performs before deferral/approval routing. Unbound runs
+    keep the legacy behavior (any case the caller names)."""
+    bound = ctx.deps.bindings.get("case")
+    if bound is None:
+        return
+    resolved = case_id or bound
+    if resolved != bound:
+        raise ValueError(
+            f"send_to_customer targets case {resolved!r} but this run is "
+            f"bound to case {bound!r} — Case operations are isolated to the "
+            "bound Case"
+        )
 
 
 def _deep_merge(base: dict[str, Any], delta: dict[str, Any]) -> dict[str, Any]:
@@ -96,9 +119,10 @@ class _CaseTools:
         guidance: when the run is bound to a Case, every Case operation must
         target exactly that Case. Unbound CLI/test runs keep the legacy
         behavior (any case the caller names)."""
-        if deps.case_id is not None and case_id != deps.case_id:
+        bound = deps.bindings.get("case")
+        if bound is not None and case_id != bound:
             raise CaseError(
-                f"case {case_id!r} is not the bound case {deps.case_id!r} "
+                f"case {case_id!r} is not the bound case {bound!r} "
                 "for this run — Case operations are isolated to the bound Case"
             )
 
@@ -285,7 +309,10 @@ def build_customer_delivery_toolset(store: CaseStore) -> AbstractToolset[CoreDep
         tools._guard_bound(resolved, ctx.deps)
         return tools.save_draft(resolved, text)
 
-    @toolset.tool(requires_approval=requires_approval(EffectClass.EXTERNAL_WRITE))
+    @toolset.tool(
+        requires_approval=requires_approval(EffectClass.EXTERNAL_WRITE),
+        args_validator=_validate_delivery_case,
+    )
     def send_to_customer(
         ctx: RunContext[CoreDeps],
         case_id: str | None = None,

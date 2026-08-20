@@ -35,12 +35,15 @@ repo_context = false
 # Business progressive disclosure (SPEC v1.0 §4): every business domain —
 # including zuaef-case — is deferred (defer_tools = true). Tool schemas stay
 # hidden until tool search discovers the domain a task actually needs. A
-# bound Case still contributes its durable background through the host
-# projection (context_projection), so Case context arrives without loading
-# Case mutation/delivery tools.
+# bound Case still contributes its durable background through the Case
+# plugin's own capability (dynamic instructions, v1.2 T005), so Case context
+# arrives without loading Case mutation/delivery tools.
 [[plugins]]
 id = "case"
 defer_tools = true
+# The case plugin exposes a PydanticAI Capability (CaseContextCapability);
+# capability composition must be explicitly allowed.
+allow_capabilities = true
 
 [[plugins]]
 id = "client-service"

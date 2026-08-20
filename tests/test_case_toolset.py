@@ -217,7 +217,7 @@ def test_send_to_customer_pauses_for_approval(tmp_path: Path):
     config_root = tmp_path / "config"
     (config_root / "profiles").mkdir(parents=True)
     (config_root / "profiles" / "fde-test.toml").write_text(
-        'schema = 1\nname = "fde-test"\n\n[[plugins]]\nid = "case"\n',
+        'schema = 1\nname = "fde-test"\n\n[[plugins]]\nid = "case"\nallow_capabilities = true\n',
         encoding="utf-8",
     )
 

@@ -123,7 +123,3 @@ class CoreDeps:
     # domain-specific keys. Examples: {"case": "stillevo-beauty"},
     # {"project": "wp-redesign"}, {"tenant": "stillevo", "case": "beauty-001"}.
     bindings: Mapping[str, str] = field(default_factory=dict)
-    # Transitional alias: removed once the case plugin reads bindings (T006).
-    # Kept so the pending-approval isolation check and existing plugin code
-    # keep working during the migration.
-    case_id: str | None = None

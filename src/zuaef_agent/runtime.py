@@ -89,36 +89,6 @@ def _call_snapshot(call: Any) -> dict[str, Any]:
     }
 
 
-def _assert_pending_case_isolation(
-    requests: DeferredToolRequests,
-    deps: CoreDeps,
-) -> None:
-    """Business authorization boundary at the pause frontier (SPEC v1.0 §5.6).
-
-    Approval-gated tools (e.g. ``send_to_customer``) never execute their
-    function body — the framework pauses the run BEFORE the tool's own guard
-    could run. The host therefore re-checks every pending approval against the
-    run's bound Case here: a pending call naming a different ``case_id`` fails
-    the run loudly instead of pausing, so a bound run can never reach an
-    operator queue for the wrong Case. Unbound runs are untouched.
-
-    NOTE: transitional — this check moves into the Case plugin's tool
-    validation (v1.2 T006) and is removed from the kernel.
-    """
-    if deps.case_id is None:
-        return
-    for call in requests.approvals:
-        snapshot = _call_snapshot(call)
-        args = snapshot["args"]
-        requested = args.get("case_id") if isinstance(args, dict) else None
-        if requested is not None and requested != deps.case_id:
-            raise ValueError(
-                f"pending approval {snapshot['tool_name']!r} targets case "
-                f"{requested!r} but this run is bound to case {deps.case_id!r} "
-                "— Case operations are isolated to the bound Case"
-            )
-
-
 @dataclass(kw_only=True)
 class TerminalRun:
     """A run that reached a business terminal state with an operational receipt.
@@ -461,11 +431,6 @@ def execute_run(
     started_at = datetime.now(UTC)
 
     bindings = dict(deps.bindings)
-    # Transitional (v1.2 T006 removes case_id once the case plugin reads
-    # bindings): a legacy caller that sets only ``case_id`` still produces the
-    # same receipt binding.
-    if not bindings and deps.case_id:
-        bindings = {"case": deps.case_id}
 
     # Run acceptance: bounded pre-run artifact snapshot (ownership never uses mtime).
     snapshot = snapshot_artifacts(settings.workspace_root.resolve())
@@ -540,18 +505,6 @@ def execute_run(
     usage = _usage_payload(result)
     output = result.output
     if isinstance(output, DeferredToolRequests):
-        # Transitional host authorization check (v1.2 T006 moves this into the
-        # Case plugin): a bound run must not pause for an approval that
-        # targets a different Case — that is a failed run, not an operator
-        # queue entry.
-        try:
-            _assert_pending_case_isolation(output, deps)
-        except ValueError as exc:
-            return _settle(
-                "failed",
-                str(exc),
-                error=str(exc),
-            )
         return _build_paused(
             output,
             result=result,

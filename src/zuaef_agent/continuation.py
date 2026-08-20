@@ -128,11 +128,6 @@ def resume_paused_run(
         # The pause receipt freezes the run's bindings: a continuation resumes
         # the SAME bound identities, never different ones (SPEC v1.0 §5.6/§7.3).
         bindings=dict(getattr(receipt, "bindings", {}) or {}),
-        # Transitional alias (v1.2 T006 removes it once the case plugin reads
-        # bindings): the case binding is threaded as the legacy case_id for
-        # the isolation check and plugin tools.
-        case_id=(getattr(receipt, "bindings", {}) or {}).get("case")
-        or getattr(receipt, "case_id", None),
     )
     return execute_run(
         agent,

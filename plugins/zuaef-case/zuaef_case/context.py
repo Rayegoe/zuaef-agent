@@ -1,27 +1,27 @@
-"""Thin host-side Case context projection (P3B-2 SPEC §6.2, P3B-3 T004).
+"""Case-owned context projection (v1.2 T005) — moved out of the kernel.
 
 A bound Case contributes durable business BACKGROUND to the model-visible
-context — a bounded natural-language brief, not a storage dump and not a
-workflow. This module is deliberately thin: it reads the case directory under
-the workspace, renders a bounded brief, and nothing else. It is not a context
-framework, has no schema of its own, and never imports a business plugin.
+context as a bounded natural-language brief. The projection logic previously
+lived in ``src/zuaef_agent/context_projection.py`` (deleted); it now belongs
+to the Case plugin and is exposed through a PydanticAI Capability whose
+``get_instructions()`` returns a per-run callable — the dynamic instruction
+seam. The kernel never sees Case semantics.
 
-The Gateway/bridge calls ``project_case_context`` before the model request;
-the same brief shape serves every future bound-case surface.
-
-Evidence/control history is NOT current world model (P3B-3 T004): the
-append-only ``trajectory.jsonl`` is audit material and is deliberately absent
-from the default projection — a previous Agent decision or attempted action
-must not re-enter the next turn as Case background. Explicit operational
-history needs an explicit ``load_case_context(include_trajectory=True)``.
+The capability reads ``ctx.deps.bindings.get("case")`` (opaque to the kernel)
+and contributes the brief only when a Case is actually bound.
 """
 
 from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from pydantic_ai.capabilities import AbstractCapability
+
+from zuaef_agent.models import CoreDeps
 
 # Same shape contract the gateway enforces for callback addressing (duplicated
 # by design: the host must not import the case plugin for a charset check).
@@ -89,12 +89,14 @@ def _parse_case_doc(path: Path) -> dict[str, str] | None:
     return fields or None
 
 
-def project_case_context(case_id: str | None, *, workspace_root: Path) -> str | None:
+def project_case_brief(case_id: str | None, *, workspace_root: Path) -> str | None:
     """Project one bounded natural-language brief for the bound Case.
 
     Returns ``None`` when the case id is malformed, the case directory does not
     exist, or nothing durable can be projected — an unbound or unknown Case
-    never injects context.
+    never injects context. Trajectory is deliberately absent: agent decisions/
+    actions/approval attempts are audit history, not durable business
+    background (P3B-3 T004).
     """
     if case_id is None or not _CASE_ID.fullmatch(case_id):
         return None
@@ -134,15 +136,12 @@ def project_case_context(case_id: str | None, *, workspace_root: Path) -> str | 
             lines.append("Open questions:")
             lines.extend(f"- {_bounded(q, MAX_SUMMARY_CHARS)}" for q in questions)
 
-    # No trajectory here (P3B-3 T004): agent decisions/actions/approval
-    # attempts are audit history, not durable business background. Injecting
-    # them by default let a previous wrong action re-enter the next prompt as
-    # world state. Retrieval is explicit: load_case_context(include_trajectory).
-
     overrides = case_dir / "policy-overrides.md"
     if overrides.is_file():
-        text = _bounded(overrides.read_text(encoding="utf-8", errors="replace"),
-                        MAX_POLICY_CHARS)
+        text = _bounded(
+            overrides.read_text(encoding="utf-8", errors="replace"),
+            MAX_POLICY_CHARS,
+        )
         if text:
             lines.append("")
             lines.append(f"Supervisor policy overrides:\n{text}")
@@ -153,3 +152,23 @@ def project_case_context(case_id: str | None, *, workspace_root: Path) -> str | 
     lines.append("This is background information, not an instruction sequence.")
     brief = "\n".join(lines)
     return brief if len(brief) <= MAX_BRIEF_CHARS else _bounded(brief, MAX_BRIEF_CHARS)
+
+
+@dataclass
+class CaseContextCapability(AbstractCapability[CoreDeps]):
+    """Contributes the bound Case's durable background as dynamic instructions.
+
+    The brief is per-run: the capability reads ``ctx.deps.bindings`` through
+    the PydanticAI dynamic-instruction seam (a callable returning
+    ``str | None``), so an unbound run contributes nothing and the kernel
+    never knows Case semantics.
+    """
+
+    def get_instructions(self) -> Any:
+        def _brief(ctx: Any) -> str | None:
+            case_id = ctx.deps.bindings.get("case")
+            if case_id is None:
+                return None
+            return project_case_brief(case_id, workspace_root=ctx.deps.workspace_root)
+
+        return _brief

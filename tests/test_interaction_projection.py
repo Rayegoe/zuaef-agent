@@ -132,15 +132,17 @@ def _make_case(root: Path) -> None:
     )
 
 
-def test_bridge_assembles_interaction_then_case_then_literal_request(
-    tmp_path: Path, monkeypatch
-):
+def test_bridge_assembles_interaction_then_literal_request(tmp_path: Path, monkeypatch):
+    """v1.2 T005: the bridge assembles host-grounded interaction + the
+    byte-literal raw request. A bound Case's background is NOT projected here —
+    the composed Case plugin capability owns it (no bridge-side Case branch)."""
     settings = _settings(tmp_path)
     _make_case(settings.workspace_root)
     captured: dict[str, object] = {}
 
     def fake_execute_run(agent, deps, *, prompt, **kwargs):
         captured["prompt"] = prompt
+        captured["bindings"] = dict(deps.bindings)
         from zuaef_agent.runtime import TerminalRun
 
         return TerminalRun(presentation="ok", receipt=None)  # type: ignore[arg-type]
@@ -157,16 +159,16 @@ def test_bridge_assembles_interaction_then_case_then_literal_request(
         actor_role="supervisor",
     )
     prompt = str(captured["prompt"])
-    # Deterministic ordering: host-grounded interaction → Case background →
-    # the byte-literal raw user request at the tail.
+    # Deterministic ordering: host-grounded interaction → the byte-literal raw
+    # user request at the tail. No Case brief in the bridge prompt.
     assert prompt.startswith("Current interaction (host-grounded):")
     interaction_end = prompt.index("\n\n---\n\n")
     interaction, rest = prompt[:interaction_end], prompt[interaction_end + len("\n\n---\n\n"):]
     assert "current actor role: supervisor" in interaction
-    assert rest.startswith("Customer context (bound case: stillevo-beauty):")
-    case_end = rest.index("\n\n---\n\n")
-    assert "云朵美妆" in rest[:case_end]
-    assert rest[case_end + len("\n\n---\n\n"):] == raw
+    assert "Customer context (bound case" not in rest
+    assert rest == raw
+    # The binding still threads into the run's deps.
+    assert captured["bindings"] == {"case": "stillevo-beauty"}
 
 
 def test_bridge_raw_request_survives_unmodified_without_case(tmp_path, monkeypatch):
@@ -210,7 +212,28 @@ def test_gateway_service_threads_surface_and_actor_role_into_the_run(
     class Surface:
         surface_name = "telegram"
 
-        def send_text(self, channel_id, text): ...
+        def poll_once(self, *, timeout_seconds):
+            return []
+
+        def pending_cursor(self):
+            return None
+
+        def send_text(self, channel_id, text):
+            ...
+
+        def send_document(self, channel_id, path, *, caption=None):
+            ...
+
+        def send_approval(
+            self, channel_id, *, text, approve_token, approve_label="Approve", deny_label="Deny"
+        ):
+            ...
+
+        def send_keyboard(self, channel_id, *, text, buttons):
+            ...
+
+        def answer_callback(self, callback_id, text):
+            ...
 
     def fake_start(**kwargs):
         captured.update(kwargs)

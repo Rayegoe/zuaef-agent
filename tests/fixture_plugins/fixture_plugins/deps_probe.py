@@ -1,4 +1,4 @@
-"""Fixture plugin exposing a tool that echoes the run's CoreDeps.case_id.
+"""Fixture plugin exposing a tool that echoes the run's CoreDeps bindings.
 
 Used by the Gateway Case-binding tests to prove the bound Case identity
 reaches execution deps (SPEC v1.0 §5.6) — the server threads it, the model
@@ -23,6 +23,6 @@ def create_plugin(env: PluginEnv, config: dict) -> PluginBundle:
         label: str = "run",
     ) -> str:
         """Echo which Case this run is bound to (server-owned)."""
-        return f"{label}:{ctx.deps.run_id}:case={ctx.deps.case_id}"
+        return f"{label}:{ctx.deps.run_id}:case={ctx.deps.bindings.get('case')}"
 
     return PluginBundle(toolsets=[toolset])

@@ -25,7 +25,6 @@ from ..composition import (
     version_for,
 )
 from ..config import AgentSettings
-from ..context_projection import project_case_context
 from ..continuation import resume_paused_run
 from ..interaction_projection import ActorRole, project_interaction_context
 from ..models import CoreDeps
@@ -35,9 +34,6 @@ from .models import InboundEnvelope
 
 ATTACHMENT_BLOCK = "Attached files available in the workspace:"
 CONTEXT_SEPARATOR = "\n\n---\n\n"
-# Backwards-compatible alias: the Case brief separator became the general
-# context-block separator once interaction context joined the assembly.
-CASE_CONTEXT_SEPARATOR = CONTEXT_SEPARATOR
 
 
 def project_prompt(envelope: InboundEnvelope) -> str:
@@ -133,8 +129,9 @@ def start_profile_run(
     ``surface``/``actor_role`` are host-grounded interaction facts (P3B-3
     T001/T002): the model-visible request assembles in a deterministic order —
     host-grounded current interaction (who is talking now, where a normal
-    reply goes), then the bound Case's durable background, then the literal
-    raw user request, untouched.
+    reply goes), then the literal raw user request, untouched. A bound Case's
+    durable background is contributed by the composed Case plugin capability
+    (v1.2 T005) — the bridge has no Case-specific context branch.
     """
     run_id = run_id or uuid4().hex
     agent, snapshot = build_profile_agent(
@@ -150,20 +147,15 @@ def start_profile_run(
         # bound identities into the run; the kernel preserves them across
         # pause/resume but never inspects their meaning.
         bindings={"case": case_id} if case_id else {},
-        # Transitional alias (v1.2 T006 removes it once the case plugin reads
-        # bindings).
-        case_id=case_id,
     )
-    # Context assembly (P3B-2 §6 / P3B-3 T003): host-grounded blocks precede
-    # the raw user request, which stays byte-literal at the tail.
+    # Context assembly (P3B-2 §6 / P3B-3 T003): host-grounded interaction
+    # facts precede the raw user request, which stays byte-literal at the
+    # tail. Case background is NOT projected here — the composed Case plugin
+    # capability contributes it as dynamic instructions (v1.2 T005).
     blocks: list[str] = []
     interaction = project_interaction_context(surface, actor_role, case_id=case_id)
     if interaction:
         blocks.append(interaction)
-    if case_id is not None:
-        brief = project_case_context(case_id, workspace_root=settings.workspace_root)
-        if brief:
-            blocks.append(brief)
     blocks.append(prompt)
     return execute_run(
         agent,

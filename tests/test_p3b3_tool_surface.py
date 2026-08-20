@@ -32,9 +32,10 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-case"),
 ]
 
+from zuaef_case.context import project_case_brief as project_case_context
+
 from zuaef_agent.composition import build_profile_agent
 from zuaef_agent.config import AgentSettings
-from zuaef_agent.context_projection import project_case_context
 from zuaef_agent.models import CoreDeps
 
 PROFILE = """\
@@ -47,6 +48,7 @@ tool_search = true
 [[plugins]]
 id = "case"
 defer_tools = true
+allow_capabilities = true
 
 [[plugins]]
 id = "fixture-ace-writing"
@@ -147,7 +149,7 @@ def _surface_steps(agent, sequence, settings, case_id=None) -> list[list[str]]:
     deps = CoreDeps(
         workspace_root=settings.workspace_root.resolve(),
         run_id="r-p3b3-surface",
-        case_id=case_id,
+        bindings={"case": case_id} if case_id else {},
     )
     with agent.override(model=FunctionModel(handler)):
         asyncio.run(agent.run("写一篇公众号文章", deps=deps))

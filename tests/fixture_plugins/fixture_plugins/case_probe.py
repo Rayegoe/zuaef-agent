@@ -23,6 +23,6 @@ def create_plugin(env: PluginEnv, config: dict) -> PluginBundle:
         limit: int = 20,
     ) -> str:
         """Fixture: echo the requested case and the run's bound case."""
-        return f"case={case_id} bound={ctx.deps.case_id}"
+        return f"case={case_id} bound={ctx.deps.bindings.get('case')}"
 
     return PluginBundle(toolsets=[toolset])
