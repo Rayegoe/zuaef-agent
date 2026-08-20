@@ -37,10 +37,36 @@ def _first_env_bool(*names: str) -> bool | None:
     return None
 
 
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw.strip())
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer, got {raw!r}") from exc
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw.strip())
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a number, got {raw!r}") from exc
+
+
 # The generalist platform surface (SPEC v2.1 §4 / v1.0 §3). Availability is
 # broad, authorization is per-deployment: AgentSettings holds the host ceiling,
 # a profile's ``[generalist]`` section holds the deployment request, and the
 # composition layer freezes ``host ∩ request`` as the effective policy.
+#
+# CLOSED (v1.2 SPEC §9): this tuple is a compatibility surface. Do NOT add new
+# entries. A newly adopted Harness capability must first be evaluated as (1) a
+# direct capability in an existing platform pack/profile, (2) a capability
+# returned by a plugin, or (3) explicit local composition. A new global ZUAEF
+# flag requires a written architecture decision and an explicit spec change.
 GENERALIST_FLAGS = (
     "enable_web_search",
     "enable_web_fetch",
@@ -165,15 +191,18 @@ class AgentSettings:
     @classmethod
     def from_env(cls) -> AgentSettings:
         load_dotenv(PROJECT_ROOT / ".env", override=False)
-        raw_max_snapshots = os.getenv("ZUAEF_MAX_SNAPSHOTS_PER_RUN")
-        max_snapshots = cls.max_snapshots_per_run if raw_max_snapshots is None else int(raw_max_snapshots)
+        max_snapshots = _env_int("ZUAEF_MAX_SNAPSHOTS_PER_RUN", cls.max_snapshots_per_run)
         return cls(
             model=os.getenv("ZUAEF_MODEL", cls.model),
             workspace_root=Path(os.getenv("ZUAEF_WORKSPACE", str(cls.workspace_root))),
             runtime_state_root=Path(os.environ["ZUAEF_STATE_ROOT"]) if os.getenv("ZUAEF_STATE_ROOT") else None,
-            request_limit=int(os.getenv("ZUAEF_REQUEST_LIMIT", str(cls.request_limit))),
-            tool_calls_limit=int(os.getenv("ZUAEF_TOOL_CALLS_LIMIT", str(cls.tool_calls_limit))),
-            total_tokens_limit=int(os.environ["ZUAEF_TOTAL_TOKENS_LIMIT"]) if os.getenv("ZUAEF_TOTAL_TOKENS_LIMIT") else None,
+            request_limit=_env_int("ZUAEF_REQUEST_LIMIT", cls.request_limit),
+            tool_calls_limit=_env_int("ZUAEF_TOOL_CALLS_LIMIT", cls.tool_calls_limit),
+            total_tokens_limit=(
+                _env_int("ZUAEF_TOTAL_TOKENS_LIMIT", 0)
+                if os.getenv("ZUAEF_TOTAL_TOKENS_LIMIT")
+                else None
+            ),
             enable_planning=_env_bool("ZUAEF_ENABLE_PLANNING", cls.enable_planning),
             enable_skills=_env_bool("ZUAEF_ENABLE_SKILLS", cls.enable_skills),
             enable_filesystem=_env_bool("ZUAEF_ENABLE_FILESYSTEM", cls.enable_filesystem),
@@ -212,14 +241,10 @@ class AgentSettings:
             openai_api_mode=(
                 _first_env("ZUAEF_OPENAI_API_MODE", "LLM_API_MODE") or cls.openai_api_mode
             ).lower(),
-            openai_timeout_seconds=float(
-                _first_env("ZUAEF_OPENAI_TIMEOUT_SECONDS", "LLM_TIMEOUT_SECONDS")
-                or cls.openai_timeout_seconds
+            openai_timeout_seconds=_env_float(
+                "ZUAEF_OPENAI_TIMEOUT_SECONDS", cls.openai_timeout_seconds
             ),
-            openai_max_retries=int(
-                _first_env("ZUAEF_OPENAI_MAX_RETRIES", "LLM_MAX_RETRIES")
-                or cls.openai_max_retries
-            ),
+            openai_max_retries=_env_int("ZUAEF_OPENAI_MAX_RETRIES", cls.openai_max_retries),
             openai_enable_thinking=_first_env_bool(
                 "ZUAEF_OPENAI_ENABLE_THINKING", "LLM_ENABLE_THINKING"
             ),

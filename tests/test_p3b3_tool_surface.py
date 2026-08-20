@@ -64,7 +64,9 @@ def _ep(name: str, value: str) -> EntryPoint:
 
 DISCOVER = {
     "case": _ep("case", "zuaef_case:create_plugin"),
-    "fixture-ace-writing": _ep("fixture-ace-writing", "fixture_plugins.writing:create_plugin"),
+    "fixture-ace-writing": _ep(
+        "fixture-ace-writing", "fixture_plugins.writing:create_plugin"
+    ),
 }
 VERSIONS = {"case": "0.1.0", "fixture-ace-writing": "0.2.1"}
 

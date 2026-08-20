@@ -67,11 +67,15 @@ def test_atomic_write_and_rebuildable_index(tmp_path: Path):
         body="body a",
         run_id="r1",
     )
-    (tmp_path / "knowledge" / "index.md").write_text("corrupt garbage", encoding="utf-8")
+    (tmp_path / "knowledge" / "index.md").write_text(
+        "corrupt garbage", encoding="utf-8"
+    )
     store.rebuild_index()
     index = (tmp_path / "knowledge" / "index.md").read_text(encoding="utf-8")
     assert "concepts/a" in index
-    assert not list(tmp_path.glob("knowledge/**/*.tmp")), "temp files must not linger after atomic replace"
+    assert not list(tmp_path.glob("knowledge/**/*.tmp")), (
+        "temp files must not linger after atomic replace"
+    )
 
 
 def test_filesystem_protects_knowledge_area():

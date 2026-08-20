@@ -1128,8 +1128,8 @@
     },
     {
       "path": "src/zuaef_agent/config.py",
-      "bytes": 9930,
-      "sha256": "96c63bbca8c36f9458746e22c67e561e7f274e5c1107878a4211b1e80ee30e46"
+      "bytes": 10688,
+      "sha256": "999725919c923ce88042af05a3367ce84fdd0e22c85d0aa60c5779bcc4ee77a8"
     },
     {
       "path": "src/zuaef_agent/continuation.py",
@@ -1158,13 +1158,13 @@
     },
     {
       "path": "src/zuaef_agent/knowledge_capability.py",
-      "bytes": 3634,
-      "sha256": "25ba0fca0d12493c0d6a440e1877e50828a1fbbe142d8b2d0ecbcf4c01c3a231"
+      "bytes": 3635,
+      "sha256": "370dc911b4d1a4cb696bceaa95a2da6d15c1410e42fb1a86ec93e8b64430930a"
     },
     {
       "path": "src/zuaef_agent/knowledge_store.py",
-      "bytes": 6659,
-      "sha256": "62924bf575ca2fa58aa14e7555fe445b725f69acca1b2e42d9e87d3ab6ba80c8"
+      "bytes": 6660,
+      "sha256": "9f8d00991d02534a9aefc6ecff128447273d11a5737ea0b71dec115285b3c8ee"
     },
     {
       "path": "src/zuaef_agent/models.py",
@@ -1247,6 +1247,11 @@
       "sha256": "34c5d36c2d50d2eb1caf7527a0d326bf8d6118a7912a4b057f066857876cfae5"
     },
     {
+      "path": "tests/test_architecture_guards.py",
+      "bytes": 5387,
+      "sha256": "02a2e53b88bc4fdddbb172911d5a5b59431994e86fe17d261c0f2066cd13e492"
+    },
+    {
       "path": "tests/test_budget_slice.py",
       "bytes": 19767,
       "sha256": "75fbc3b7029e7c98d8d2e9a152cd568bcf556e183bafc243eb44d9e42af6e412"
@@ -1318,8 +1323,8 @@
     },
     {
       "path": "tests/test_context_projection.py",
-      "bytes": 11551,
-      "sha256": "1f8ca24ef5b3cfd029374d25290b32e3992666e93d33f3085261efddc782629f"
+      "bytes": 11538,
+      "sha256": "66910d7a30517dc67d6880cad4d98b48b97c8f7e53bb4559a853155292b5345a"
     },
     {
       "path": "tests/test_continuation.py",
@@ -1423,18 +1428,18 @@
     },
     {
       "path": "tests/test_interaction_projection.py",
-      "bytes": 9359,
-      "sha256": "5d22e3d1568a9166fec8c1cfaa1a30e9226715b86667ad0b6d7130417caed29c"
+      "bytes": 9398,
+      "sha256": "2e6752d614a48ffd0d8398020ad476434ec3415a66318c430df81e353ed57451"
     },
     {
       "path": "tests/test_knowledge_invariants.py",
-      "bytes": 2799,
-      "sha256": "884ee2a43c83932390936f8b3bc0ec625b7dfbe206b8e2666280c8a580b1bf7e"
+      "bytes": 2830,
+      "sha256": "5e659c5963803e62629fbbc7e0833c268ec95d14262b18af213534d03dbcdee7"
     },
     {
       "path": "tests/test_knowledge_store.py",
-      "bytes": 1957,
-      "sha256": "3031bc36c4e471e6006d769bec616eec14b3c48d2837b36bc425839564366f8b"
+      "bytes": 1958,
+      "sha256": "41923539ec114ccdbc391769af0e8c03b003a1368623203002a6ca1f122c581a"
     },
     {
       "path": "tests/test_learning_pack_compiler.py",
@@ -1453,8 +1458,8 @@
     },
     {
       "path": "tests/test_p3b3_tool_surface.py",
-      "bytes": 8541,
-      "sha256": "e089b9638a890c87f700afb997f059937ea840431991d82459f04b77b8920c5b"
+      "bytes": 8555,
+      "sha256": "a265066a8d17fedf5ba754d842f5f0d65e29858551b8fcc396c52f11e942ba73"
     },
     {
       "path": "tests/test_phase2_case_binding.py",

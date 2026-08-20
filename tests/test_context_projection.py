@@ -70,9 +70,9 @@ def test_bound_case_projects_bounded_brief(tmp_path: Path):
     assert "Open questions:" in brief
     assert "not an instruction sequence" in brief
     # unknown leaves carry no background and stay out of the projection
-    assert "unknown" not in brief.split("Open questions")[0].split("Current situation")[
-        1
-    ]
+    assert (
+        "unknown" not in brief.split("Open questions")[0].split("Current situation")[1]
+    )
     assert len(brief) <= MAX_BRIEF_CHARS
 
 
@@ -230,7 +230,6 @@ def test_deferred_case_plugin_absent_from_initial_surface(tmp_path: Path):
     )
     assert snapshot is not None and snapshot.plugins[0].defer_tools is True
 
-
     envelope = InboundEnvelope(
         surface="telegram",
         user_id="42",
@@ -244,9 +243,7 @@ def test_deferred_case_plugin_absent_from_initial_surface(tmp_path: Path):
         visible.extend(t.name for t in (info.function_tools or []))
         return ModelResponse(parts=[TextPart(content="done")])
 
-    deps = CoreDeps(
-        workspace_root=settings.workspace_root.resolve(), run_id=run_id
-    )
+    deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
     with agent.override(model=FunctionModel(handler)):
         asyncio.run(agent.run(project_prompt(envelope), deps=deps))
 

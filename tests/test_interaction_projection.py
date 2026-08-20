@@ -163,7 +163,10 @@ def test_bridge_assembles_interaction_then_literal_request(tmp_path: Path, monke
     # user request at the tail. No Case brief in the bridge prompt.
     assert prompt.startswith("Current interaction (host-grounded):")
     interaction_end = prompt.index("\n\n---\n\n")
-    interaction, rest = prompt[:interaction_end], prompt[interaction_end + len("\n\n---\n\n"):]
+    interaction, rest = (
+        prompt[:interaction_end],
+        prompt[interaction_end + len("\n\n---\n\n") :],
+    )
     assert "current actor role: supervisor" in interaction
     assert "Customer context (bound case" not in rest
     assert rest == raw
@@ -218,22 +221,23 @@ def test_gateway_service_threads_surface_and_actor_role_into_the_run(
         def pending_cursor(self):
             return None
 
-        def send_text(self, channel_id, text):
-            ...
+        def send_text(self, channel_id, text): ...
 
-        def send_document(self, channel_id, path, *, caption=None):
-            ...
+        def send_document(self, channel_id, path, *, caption=None): ...
 
         def send_approval(
-            self, channel_id, *, text, approve_token, approve_label="Approve", deny_label="Deny"
-        ):
-            ...
+            self,
+            channel_id,
+            *,
+            text,
+            approve_token,
+            approve_label="Approve",
+            deny_label="Deny",
+        ): ...
 
-        def send_keyboard(self, channel_id, *, text, buttons):
-            ...
+        def send_keyboard(self, channel_id, *, text, buttons): ...
 
-        def answer_callback(self, callback_id, text):
-            ...
+        def answer_callback(self, callback_id, text): ...
 
     def fake_start(**kwargs):
         captured.update(kwargs)
