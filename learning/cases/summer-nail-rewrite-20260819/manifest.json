@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "case_id": "summer-nail-rewrite-20260819",
+  "kind": "writing-revision-loop",
+  "created": "2026-08-19",
+  "output": "output.md",
+  "revised": "revised.md",
+  "request": "request.md",
+  "context": "context.md",
+  "sources": "sources.md",
+  "llm_review": "llm-review.md",
+  "human_review": "human-review.md",
+  "provenance": {
+    "bound_case": "stillevo-beauty",
+    "trajectory": "workspace/cases/stillevo-beauty/trajectory.jsonl",
+    "drafts": [
+      "workspace/cases/stillevo-beauty/drafts/msg-004.md",
+      "workspace/cases/stillevo-beauty/drafts/msg-005.md",
+      "workspace/cases/stillevo-beauty/drafts/msg-006.md"
+    ]
+  }
+}

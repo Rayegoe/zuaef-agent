@@ -8,8 +8,8 @@
   "files": [
     {
       "path": ".agents/skills/beauty-wechat-writing/SKILL.md",
-      "bytes": 2618,
-      "sha256": "6954a66b4fca7c6ec10656875d7af330178b05744d4d90b38d076684003ccc6d"
+      "bytes": 4151,
+      "sha256": "bb251cd8fab2c3ee4f7b9b65d46698e344d7dc2d6677ebc3731eb37cea8b8534"
     },
     {
       "path": ".agents/skills/bmad-advanced-elicitation/SKILL.md",
@@ -1442,6 +1442,11 @@
       "sha256": "41923539ec114ccdbc391769af0e8c03b003a1368623203002a6ca1f122c581a"
     },
     {
+      "path": "tests/test_learning_cases.py",
+      "bytes": 6733,
+      "sha256": "3d5beb512332b2006e437d0b0c1c55393c88a7605ec7fdd1515f58fbeedf0fd0"
+    },
+    {
       "path": "tests/test_learning_pack_compiler.py",
       "bytes": 27735,
       "sha256": "3cd7079de750b32d17a0ecf6d5b36ef731766dbb621bb1478dd61c0fed53b736"
@@ -1867,6 +1872,11 @@
       "sha256": "eb71f3b12f46ece0b3a7edeaa29280fe8ae3268c56ea1e6b4b220a9c3d706ebe"
     },
     {
+      "path": "tools/llm_reviewer.py",
+      "bytes": 5022,
+      "sha256": "108a25657b8786b0b05857825c489d045f846959949d0df2b4f68716c3522fb2"
+    },
+    {
       "path": "tools/p3b3_field_proof.py",
       "bytes": 28244,
       "sha256": "d292ed32ba6d8bee3fe1822c808b5dc83280190a9c4be900f1c8c69bd8243a06"
@@ -1875,6 +1885,11 @@
       "path": "tools/probe_upstream_baseline.py",
       "bytes": 3941,
       "sha256": "c493a77c1f6dec7e6d40d21919ddb916a227511e4c00e3863531c3e311485a02"
+    },
+    {
+      "path": "tools/promote_lesson.py",
+      "bytes": 4667,
+      "sha256": "8bc5e914f26edd52f0f4baf9bf37556c2977c53ea4656aae49ce316b5bf6bf1a"
     },
     {
       "path": "tools/regen_manifest.py",
