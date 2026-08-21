@@ -49,7 +49,7 @@ Agent complexity is measured at the model boundary, not only by Python structure
 
 Reuse an upstream PydanticAI/Harness primitive when it is needed; reuse does not imply default composition. Do not enable a capability because it exists, is reusable, appears in another harness, or might help later. A production capability must correspond to a demonstrated task failure or deployment requirement.
 
-A new model turn should correspond to new information that can change a semantic decision, a changed external state, a required semantic revision, or a human/external delta. Persistence, hashing, bookkeeping, batching, indexing, serialization and receipt settlement are not model decisions.
+A new model turn should correspond to new information that can change a semantic decision, a changed external state, a required semantic revision, or a human/external delta. Persistence, hashing, bookkeeping, batching, indexing, serialization and receipt settlement are not model decisions. Being deterministic does not make a mechanism necessary. Host-side implementation is not an exemption from the admission rules.
 
 Agent autonomy means ownership of semantic choices. It does not mean every mechanical operation must be initiated as a separate LLM tool call. The host may perform bounded deterministic transport without selecting business meaning.
 
@@ -69,6 +69,49 @@ For runtime refactors:
 6. delete obsolete authority.
 
 Do not redesign multiple layers in one iteration.
+
+## Mechanism admission
+
+Any new engineering mechanism must answer: which reproduced failure or external contract requires it? This applies to hashes, schemas, fields, gates, receipts, proofs, verification layers, caches, retries, fallbacks, agents and capabilities. If no concrete failure or contract can be named, do not add the mechanism.
+
+### Hash / integrity admission rule
+
+Hashing is not a default engineering practice.
+
+Do not introduce new SHA/checksum/content-hash/fingerprint/manifest machinery unless at least one of these is true:
+
+1. an external protocol or security boundary requires content integrity;
+2. content-addressed identity is part of the actual product/data contract;
+3. deduplication or cache correctness demonstrably depends on content identity;
+4. a reproduced corruption/stale-content failure cannot be reliably detected by simpler existing mechanisms.
+
+Existing hashes in one subsystem are local implementation details, not architectural precedent for other subsystems.
+
+Do not add hashes merely for:
+
+- auditability;
+- bookkeeping;
+- receipts;
+- handoffs;
+- local file-change detection;
+- test evidence;
+- “defense in depth”;
+- possible future corruption;
+- making deterministic operations look more rigorous.
+
+Prefer existing identifiers, paths, Git state, database constraints, timestamps, typed contracts and behavioral tests when they already establish the required fact.
+
+Before adding a new hash, identify the concrete failure it prevents. If no reproduced failure or external contract requires it, do not add it.
+
+Do not add manifests or verification layers around an existing hash unless they independently satisfy the same admission rule.
+
+## Scope authorization
+
+Completeness means fully satisfying the requested outcome, not implementing every improvement discovered while working.
+
+Unrequested robustness, integrity, abstraction, fallback, migration, observability or future-proofing is out of scope unless required for the requested behavior to work correctly.
+
+Finding a possible improvement does not authorize implementing it.
 
 ## Runtime re-foundation routing
 

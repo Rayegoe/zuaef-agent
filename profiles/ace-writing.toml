@@ -24,3 +24,8 @@ allow_capabilities = false
 # Optional file-native human-edit corpus. By default the plugin uses the
 # sibling ``learning/`` directory beside the configured workspace root.
 # learning_root = "./learning"
+
+# Optional WhereMyLife writing corpus. The compiled default is
+# ``<zuaef-agent>/data/writing-corpus/wheremylife``; the directory may be
+# absent, in which case the existing task-material path is unchanged.
+# corpus_root = "./data/writing-corpus/wheremylife"

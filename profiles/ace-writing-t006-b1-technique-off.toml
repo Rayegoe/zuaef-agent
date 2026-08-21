@@ -1,0 +1,16 @@
+# T006-B1 benchmark-only candidate profile.
+#
+# This keeps the ace-writing production toolset and all generic capabilities
+# unchanged. The only behavioral difference from profiles/ace-writing.toml is
+# that the host does not inject its selected technique shards into the desk
+# pack or into pull_context results. Do not use this profile as production
+# authority until T006-B1 has a human quality/evidence verdict.
+schema = 1
+name = "ace-writing-t006-b1-technique-off"
+
+[[plugins]]
+id = "ace-writing"
+allow_capabilities = false
+
+[plugins.config]
+include_technique_guidance = false

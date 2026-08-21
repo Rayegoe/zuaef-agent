@@ -22,7 +22,12 @@ from pydantic_ai_harness.code_mode import CodeMode
 
 from zuaef_agent.plugin_api import CompositionError, PluginBundle, PluginEnv
 
-from .writing_toolset import DEFAULT_ACE_ROOT, build_writing_toolset
+from .writing_toolset import (
+    DEFAULT_ACE_ROOT,
+    DEFAULT_CORPUS_ROOT,
+    TECHNIQUE_SELECTION_MODES,
+    build_writing_toolset,
+)
 
 
 def _resolve_ace_root(config: dict) -> Path:
@@ -42,6 +47,19 @@ def _resolve_ace_root(config: dict) -> Path:
     return ace_root
 
 
+def _resolve_corpus_root(config: dict) -> Path:
+    """Resolve the optional file-native corpus without requiring it to exist."""
+    raw = (
+        config.get("corpus_root")
+        or os.environ.get("WRITING_CORPUS_ROOT")
+        or DEFAULT_CORPUS_ROOT
+    )
+    corpus_root = Path(raw).expanduser().resolve()
+    if corpus_root.exists() and not corpus_root.is_dir():
+        raise CompositionError(f"corpus_root is not a directory: {corpus_root}")
+    return corpus_root
+
+
 def create_plugin(env: PluginEnv, config: dict) -> PluginBundle:
     """Assemble one small writing environment from deployment paths."""
     stale = sorted(k for k in config if k.startswith("editorial_"))
@@ -53,10 +71,33 @@ def create_plugin(env: PluginEnv, config: dict) -> PluginBundle:
             "benchmarks/editorial-learning/legacy/README.md."
         )
     ace_root = _resolve_ace_root(config)
+    corpus_root = _resolve_corpus_root(config)
     learning_root = Path(
         config.get("learning_root") or env.workspace_root.parent / "learning"
     ).expanduser().resolve()
-    toolset = build_writing_toolset(ace_root, learning_root=learning_root)
+    include_technique_guidance = config.get("include_technique_guidance", True)
+    if not isinstance(include_technique_guidance, bool):
+        raise CompositionError(
+            "include_technique_guidance must be a boolean when configured"
+        )
+    technique_selection_mode = config.get("technique_selection_mode", "host")
+    if technique_selection_mode not in TECHNIQUE_SELECTION_MODES:
+        raise CompositionError(
+            "technique_selection_mode must be one of "
+            f"{TECHNIQUE_SELECTION_MODES}, got {technique_selection_mode!r}"
+        )
+    if technique_selection_mode != "host" and not include_technique_guidance:
+        raise CompositionError(
+            "include_technique_guidance=false cannot be combined with "
+            f"technique_selection_mode={technique_selection_mode!r}"
+        )
+    toolset = build_writing_toolset(
+        ace_root,
+        learning_root=learning_root,
+        corpus_root=corpus_root,
+        include_technique_guidance=include_technique_guidance,
+        technique_selection_mode=technique_selection_mode,
+    )
     capabilities: list[CodeMode] = []
     if config.get("code_mode", False) is True:
         capabilities.append(

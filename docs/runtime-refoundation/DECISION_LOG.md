@@ -102,3 +102,151 @@ Reason:
 
 Status: accepted. T004/T005 complete. Stop here; T006 is the next separate
 experiment and is not started by this decision.
+
+## ADR-RF-007 — T006 semantic preselection diagnosis and technique-only A/B
+
+Decision:
+- correct the T006 diagnosis from the overbroad
+  `HOST_SEMANTIC_PRESELECTION_CAUSES_MEASURED_RISK` label to
+  `SEMANTIC_PRESELECTION_REPRODUCED / OUTCOME_IMPACT_UNMEASURED`;
+- record T006-A as diagnosis complete, not Phase 2 complete;
+- run only the T006-B1 technique preselection experiment: control keeps the
+  current host-selected technique projection, candidate disables it while
+  keeping raw materials, experience projection, model, thinking setting,
+  prompt, tools and save semantics fixed;
+- keep T007 deferred until blind human quality/evidence evaluation justifies
+  the selected observation design.
+
+Evidence:
+- WCASE-2 raw-material transport remains broad on the fixture: 9/9 bodies,
+  including irrelevant M005/M006/M009 and conflicting M002/M008, reached the
+  first request;
+- the host still exposed only 3 of 18 active technique records and selected
+  technique tags before the model's choice;
+- T006-B1 control: 8 requests, 7 tool calls, 93,387 input tokens,
+  198,575.356 ms, artifact sha256
+  `64f8625ebf79c89bd4400470a8664c5f4197062f0821a0a3387ba6c32dcf5e38`;
+- T006-B1 candidate: 4 requests, 3 tool calls, 29,591 input tokens,
+  119,244.722 ms, artifact sha256
+  `0233b5b293e0fbaa6c640fd8d5ecd73ecb6fa43627d5f4673411b1e14ffc84da`;
+- both executions completed, but both outcome and evidence evaluations are
+  `null`; runtime deltas cannot promote the candidate.
+
+Status: T006-A complete; T006-B1 human gate pending. Phase 2 remains open.
+
+## ADR-RF-008 — T006-B1 reverse pair does not establish runtime causality
+
+Decision:
+- complete one reverse-order T006-B1 pair (`Candidate/OFF → Control/ON`) to
+  test whether the first pair's `8/7` versus `4/3` trajectory difference
+  persists;
+- treat the first pair's runtime delta as unconfirmed provider/model
+  trajectory variance, not as a technique-off speedup;
+- keep the human blind quality/evidence gate as the only remaining B1
+  promotion gate; do not start T006-B2 or T007.
+
+Evidence:
+- reverse Candidate/OFF: 2 requests, 1 `save_article`, 8,156 input tokens,
+  1,584 reasoning tokens, 66,045.186 ms;
+- reverse Control/ON: 2 requests, 1 `save_article`, 10,896 input tokens,
+  2,951 reasoning tokens, 89,034.352 ms;
+- first-pair tool sequences were `pull_context → save_article × 6` for ON
+  and `pull_context → save_article × 2` for OFF; both reverse sequences were
+  only `save_article`;
+- reverse first-request identities preserved M001–M009 and the experience
+  projection on both sides. Prompt hashes were
+  `95d3e69945ca1a5f52153bb1c2c47f1191e520a29dc3fef83cfd50cec398436b` (OFF)
+  and `b63cc5ab4ef5f3021f31026efbd661a8a323fad2ad8ded84a70756c85e66664a`
+  (ON), with the expected technique projection present only on ON;
+- both reverse runs still have `outcome=null` and `evidence=null`.
+
+Interpretation:
+- the reverse pair does not reproduce a stable ON-long/OFF-short trajectory;
+- repeated `save_article` calls in the first ON run are an observed trace
+  difference, but their quality meaning is unknown;
+- no causal runtime claim or promotion follows from these runs.
+
+Status: T006-A complete; T006-B1 reverse variance check complete and human
+gate pending. Phase 2 remains open; T007 remains deferred.
+
+## ADR-RF-009 — T006-B1 human review rejects technique-off removal
+
+Decision:
+- record the blind result as **A clearly preferred over B**;
+- map A to the first Control/ON artifact and B to the first Candidate/OFF
+  artifact by artifact hash;
+- reject promotion of the technique-off candidate for the target editorial
+  outcome;
+- keep the current ON path as the comparison baseline only. Do not treat this
+  result as proof that the host keyword selector is the correct long-term
+  semantic authority;
+- keep Phase 2 open and T007 deferred while designing a model-owned technique
+  observation experiment.
+
+Evidence:
+- A / Control ON scored 8.2 overall; B / Candidate OFF scored 6.4;
+- A led on reading flow, human feel, scene, natural information embedding,
+  rhythm, restraint and human-business narrative potential; B led only on
+  commercial-information completeness (8.7 vs 8.2);
+- the reviewer identified B's recurring
+  `material → explanation → summary → brand meaning` closure as the main
+  quality failure, while A more often let concrete actions and objects stand
+  without an explanatory summary;
+- the reviewer found no material factual-quality regression and noted highly
+  overlapping facts, but did not separately mark the M002/M008 conflict or
+  M005/M006/M009 handling fields pass/fail. Those evidence subchecks remain
+  `unclear` rather than being fabricated as a full evidence pass;
+- the reverse paired runtime check already established that the first
+  `8/7` versus `4/3` request/tool delta was not a stable causal runtime
+  difference.
+
+Interpretation:
+- the OFF candidate demonstrates a quality regression when technique
+  projection is simply removed;
+- the experiment does not validate `_technique_tags()` or the host's 3/18
+  record choice as the final architecture;
+- the useful next question is how to preserve the needed writing behavior
+  while returning the timing/selection judgment to the model, rather than
+  adding more generic style prohibitions.
+
+Status: T006-A complete; T006-B1 quality verdict complete, evidence
+subchecks unclear. Phase 2 remains open; T007 remains deferred.
+
+## ADR-RF-010 — T006-B2 model-owned technique selection execution
+
+Decision:
+- keep the current production Control unchanged: it still projects the
+  Host-selected 3/18 technique shards;
+- run a benchmark-only Candidate that exposes an 18-row neutral ACE metadata
+  catalog and one batch `pull_techniques(ids)` action, with no Host ranking,
+  keyword tagging, fallback or semantic top-k selection;
+- record the Candidate's actual model selection as
+  `ex-scene-pause-001`, `ex-prose-object-001`, `ex-final-quote-001`, which is
+  different from the Control's Host-selected IDs;
+- do not infer quality, evidence correctness or promotion from the runtime
+  trace. The Candidate produced an artifact but reached the Harness usage
+  boundary after repeated `save_article` calls.
+
+Evidence:
+- Control: 2 requests, 1 `save_article`, 12,141 input tokens,
+  113,050.284 ms, artifact sha256
+  `0b590cac84ce8b4b1c91e1972eca4ba770a4e5bfcac64569d86ba17eb4d3f31a`;
+- Candidate: 12 requests, 12 tools (`pull_techniques` once plus 11
+  `save_article` calls), 175,569 input tokens, 399,771.416 ms, final
+  artifact sha256
+  `0f899f13e64734a4a41e56aa516d5b3ad9cb8433cb6e0624a2866f1b2fc47704`,
+  execution state `limit_reached`;
+- both first requests contained M001–M009 and the same experience section;
+  only the Candidate contained the neutral 18-row catalog;
+- first-request hashes are recorded in the B2 experiment record, together
+  with the fixture identity, composition IDs and source hashes.
+
+Interpretation:
+- the model-owned seam is mechanically real and returned different choices;
+- the run exposed a non-terminal repeated-save trajectory that must be
+  included in the runtime/outcome assessment, not hidden as a cost metric;
+- no decision yet answers whether model-owned selection preserves B1's
+  editorial quality or evidence correctness.
+
+Status: T006-B2 execution recorded; human blind quality/evidence verdict
+pending. Phase 2 remains open; T007 remains deferred.

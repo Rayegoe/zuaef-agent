@@ -93,32 +93,57 @@ Normative constraints:
   conversation_id}` is FORBIDDEN: it fuses deployment definition, composition
   authority and runtime routing into one artifact.
 
-## 4. Natural-language authoring is EXPERIMENTAL (D3)
+## 4. Natural-language authoring is a field-experimental product hypothesis (D3)
 
-Status: **EXPERIMENTAL** in the sense of
-`docs/runtime-refoundation/CAPABILITY_ADMISSION.md`. No reproduced failure
-yet shows that static profile authoring blocks a real customer delivery;
-until one does, this is a product hypothesis under field validation, not a
-platform feature.
+Two status namespaces, never mixed:
+
+```text
+product authoring status    FIELD_EXPERIMENTAL — a product hypothesis under
+                            field validation (ladder: FIELD_EXPERIMENTAL →
+                            FIELD_VALIDATED → PRODUCT_ADMITTED)
+runtime capability status   N/A — the authoring pass happens before any
+                            production run and modifies no agent's model
+                            cognitive environment
+```
+
+The authoring seam is not a runtime capability and MUST NOT be recorded in
+the runtime capability ledger. Two consequences:
+
+- Any model-visible capability a deployment proposes, or a derived profile
+  requests, remains individually subject to
+  `docs/runtime-refoundation/CAPABILITY_ADMISSION.md` on its own evidence.
+  Customer natural language MUST NOT become capability admission authority.
+- If the authoring pass itself ever becomes part of a production agent loop
+  (model-visible), only then does it acquire a runtime capability status,
+  admitted separately on its own evidence.
 
 Phase-1 flow (no production runtime change):
 
 ```text
 customer natural-language description
-        ↓  (LLM authoring pass, template-conformant)
+        ↓  (LLM authoring pass, template-conformant; vocabulary =
+           admitted authoring catalog, not the installed inventory)
 deployment.md draft
-        ↓  (human review, recorded edits)
+        ↓  (human business review, recorded edits)
 approved deployment.md
-        ↓  (manual or scripted derivation)
-profile.toml
+        ↓  (proposed composition)
+composition authorization review:  requested ∩ admitted
+        ↓  (requested-but-not-admitted recorded, never silently
+           enabled, never silently dropped)
+reviewed profile.toml
         ↓  (existing path)
 resolve_profile() → CompositionSnapshot
 ```
 
-- The authoring seam MUST NOT enter production composition before the field
-  evidence required by `FIELD-VALIDATION.md` in this pack.
-- The admission path is EXPERIMENTAL → (field evidence) → PROFILE-ONLY
-  candidacy. It MUST NOT be admitted directly as production authority.
+- **installed ≠ admitted.** The authoring model selects from an *admitted
+  authoring catalog* — the operator-defined subset of installed plugins and
+  capabilities that already carry admission evidence for this
+  deployment/task class. Capabilities without admission evidence surface as
+  requested-but-not-admitted and MUST NOT enter the profile.
+- The authoring seam MUST NOT enter production use before the field
+  evidence required by `FIELD-VALIDATION.md` in this pack; and field
+  validation of the document interface admits no runtime capability
+  (FIELD-VALIDATION §7).
 
 ## 5. Case remains a business-object plugin (D4)
 
@@ -146,9 +171,15 @@ operations include: relevance-filtering deliverables or boundaries;
 keyword-based filtering of any section; hiding or reordering sections by
 request context; ranking business rules and injecting only a subset.
 
-This inherits the T006 lesson directly: bounded mechanical projection is
-transport; semantic preselection steals the model's selection authority
-(`docs/runtime-refoundation/experiments/T006-B1-wcase2-technique-ownership-ab.md`).
+This is a deliberately stricter product-local rule, not a claim that T006
+proved all host preselection universally forbidden: the T006 diagnosis
+recorded host semantic preselection as measured risk in supplementary
+writing context
+(`docs/runtime-refoundation/experiments/T006-wcase2-observation-proof.md`).
+A small, customer-authored, high-value business contract has nothing to
+search and no relevance decision to delegate to the host — so for
+deployment context the stricter rule costs nothing and closes the risk
+class entirely.
 
 ## 7. Plugin-owned deliverables (D6)
 
@@ -194,10 +225,17 @@ verification gate       = BLOCKED — T015 not PASS (docs/t015-kernel-freeze.md)
 ```
 
   No document may mark the freeze as verified while the gate is blocked.
-- The T006-B1 human blind gate remains pending and untouched
-  (`docs/runtime-refoundation/experiments/T006-B1-human-judgment.md`).
-  Nothing in this pack pre-empts or blocks it; the two work streams share no
-  runtime files.
+- Runtime queue/gate status is authoritative in
+  `docs/runtime-refoundation/TASKS.md`. This pack MUST NOT mirror runtime
+  task state except as a dated observation; where the two disagree,
+  TASKS.md wins and this pack is stale.
+- Dated observation (2026-08-21): T006 is recorded complete at HEAD with
+  the diagnosis verdict `HOST_SEMANTIC_PRESELECTION_CAUSES_MEASURED_RISK`
+  — diagnosis only, no production-code change; the T006-B1 human
+  quality/evidence gates remain `UNJUDGED` (null), and an uncommitted
+  TASKS.md revision restates that pending gate as the next queue action.
+  Nothing in this pack pre-empts or blocks runtime queue work; the two
+  streams share no runtime files.
 
 ## 9. Authority migration sequencing
 
@@ -223,7 +261,8 @@ Allowed in phase 1:
 - this pack (SPEC.md, FIELD-VALIDATION.md);
 - `deployments/<name>/deployment.md` instances authored from real material;
 - an experimental authoring prompt/skill, benchmark-only, clearly labeled
-  non-production.
+  non-production, plus the operator-defined admitted authoring catalog it
+  selects from.
 
 Not allowed in phase 1:
 
@@ -242,7 +281,7 @@ context. "改投影语义，不改 schema" is the fallback, not the first move.
 |----|----------|--------|
 | D1 | product subject: outcome-defined deployments from business plugins; `stillevo-fde` = reference deployment | normative |
 | D2 | Deployment ≠ Composition ≠ Binding; deployment.md proposes composition, declares binding needs, owns neither | normative |
-| D3 | natural-language authoring = EXPERIMENTAL; production admission requires field evidence | normative |
+| D3 | authoring = FIELD_EXPERIMENTAL product hypothesis (runtime status N/A); derived capabilities admitted separately; installed ≠ admitted | normative |
 | D4 | Case stays a business-object plugin; no schema change; kernel sees opaque bindings | normative |
 | D5 | context projection is mechanical; bounded ≠ selected; architecture review gate | normative |
 | D6 | plugin owns deliverable semantics, core owns operational facts, human evaluation owns acceptance; zero new universal schema | normative |

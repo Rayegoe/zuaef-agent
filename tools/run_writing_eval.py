@@ -79,6 +79,8 @@ def run_case(
     request_limit: int | None = None,
     out_dir: Path | None = None,
     variant: str = "baseline",
+    include_technique_guidance: bool = True,
+    technique_selection_mode: str = "host",
 ) -> dict:
     """One case through the production profile; returns the bundle record.
 
@@ -112,6 +114,8 @@ def run_case(
         clean_workspace=True,
         request_limit=request_limit,
         profile=profile,
+        include_technique_guidance=include_technique_guidance,
+        technique_selection_mode=technique_selection_mode,
     )
     passes.append({"pass": "draft", **draft})
     (out_dir / "draft-record.json").write_text(
@@ -135,6 +139,8 @@ def run_case(
             clean_workspace=False,
             request_limit=request_limit,
             profile=profile,
+            include_technique_guidance=include_technique_guidance,
+            technique_selection_mode=technique_selection_mode,
         )
         passes.append({"pass": "revision", "feedback": rev_feedback, **revision})
         (out_dir / "revision-record.json").write_text(
@@ -148,6 +154,10 @@ def run_case(
         "article_id": article_id,
         "profile": profile,
         "variant": variant,
+        "observation_controls": {
+            "include_technique_guidance": include_technique_guidance,
+            "technique_selection_mode": technique_selection_mode,
+        },
         "manifest": {k: v for k, v in manifest.items() if k != "feedback"},
         "materials": [str(p) for p in case["materials"]],
         "rights": rights,
@@ -161,7 +171,9 @@ def run_case(
         f"# {case_id} — evaluation bundle",
         "",
         f"- profile: {profile}",
-        f"- variant: {variant} (T012: skills surface is the only difference)",
+        f"- variant: {variant} (metadata label only)",
+        f"- include technique guidance: {include_technique_guidance}",
+        f"- technique selection mode: {technique_selection_mode}",
         f"- assignment: {manifest['assignment']}",
         f"- audience: {manifest.get('audience')}",
         f"- constraints: {json.dumps(manifest.get('constraints') or [], ensure_ascii=False)}",
@@ -209,6 +221,19 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--variant", choices=("baseline", "learned"), default="baseline",
                     help="T012 label only: run 'baseline' BEFORE a promoted lesson "
                          "becomes a repo skill, 'learned' after")
+    ap.add_argument(
+        "--no-technique-guidance",
+        action="store_false",
+        dest="include_technique_guidance",
+        default=True,
+        help="T006-B1 candidate: omit host-selected technique shards",
+    )
+    ap.add_argument(
+        "--technique-selection-mode",
+        choices=("host", "none", "model"),
+        default="host",
+        help="T006-B2 experiment seam: host, none, or model-owned technique selection",
+    )
     ap.add_argument("--materials", action="append", default=None,
                     help="optional explicit material list (default: all files under raw/)")
     args = ap.parse_args(argv)
@@ -232,6 +257,8 @@ def main(argv: list[str] | None = None) -> None:
         request_limit=args.request_limit,
         out_dir=Path(args.out) if args.out else None,
         variant=args.variant,
+        include_technique_guidance=args.include_technique_guidance,
+        technique_selection_mode=args.technique_selection_mode,
     )
     print(json.dumps(bundle, ensure_ascii=False, indent=2))
 

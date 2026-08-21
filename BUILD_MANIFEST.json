@@ -948,8 +948,8 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 7347,
-      "sha256": "b23a11162acb631362996f6f181575b5a25e43928ee4f68f156252339d316dcd"
+      "bytes": 9552,
+      "sha256": "8ad822d17cde48b65e9462ddcdb3386123a9c468cf0056346a129e09fe2b355f"
     },
     {
       "path": "CHANGELOG.md",
@@ -1068,8 +1068,8 @@
     },
     {
       "path": "examples/production_writing.py",
-      "bytes": 20069,
-      "sha256": "d341604c6c00075ecf430d9ea074bb00d5036f2ab414620c5c46517563a24445"
+      "bytes": 20762,
+      "sha256": "d5998f496271734241c867a291f3bfbcf625fb1e496b8ba16d03396e61496498"
     },
     {
       "path": "examples/research_toolset.py",
@@ -1263,8 +1263,8 @@
     },
     {
       "path": "tests/test_ace_writing_plugin.py",
-      "bytes": 3087,
-      "sha256": "6875ec89033a3ddcb4795df29db66dcd8a32e53ce72fa4ddf09c9554eeb65a12"
+      "bytes": 10682,
+      "sha256": "fdcfe026a3e3c391e240797d6a6d95a02c1efe503a5cabf1afd38198fc570a74"
     },
     {
       "path": "tests/test_architecture_guards.py",
@@ -1370,6 +1370,11 @@
       "path": "tests/test_effects.py",
       "bytes": 375,
       "sha256": "fed17172ddb3de6c3af4e71d3848d9610d30223b339183aba87c904445eedd46"
+    },
+    {
+      "path": "tests/test_epub_corpus.py",
+      "bytes": 6940,
+      "sha256": "f97e908c07341b8331c2ac6ad948ede871c5773b02b8a42d681d08e0b3d0dacf"
     },
     {
       "path": "tests/test_execute_run_seam.py",
@@ -1627,14 +1632,19 @@
       "sha256": "d336f4b8c9d2b2bf3606ca074fd308911ce8371194cb45a92dcba2fa11e1ddb7"
     },
     {
+      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/epub_corpus.py",
+      "bytes": 9918,
+      "sha256": "6edaffe4d9ab38f83e61376d9d89ea7038d026e95ef6a0645a7a1860da35c8ab"
+    },
+    {
       "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/plugin.py",
-      "bytes": 2888,
-      "sha256": "11c401b3284b982acd3541aa110fafcdb7280b9a239ef4067c4fa743ef145da9"
+      "bytes": 4491,
+      "sha256": "0445a80a489300b359fd5be50cce35b6007b2e390ec388dd4cec09ab5bd2a7a2"
     },
     {
       "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/writing_toolset.py",
-      "bytes": 14148,
-      "sha256": "62dd2a00a8bfd0124da8586af9fd7ffad19acd4b028ce469086f68bc06525992"
+      "bytes": 22954,
+      "sha256": "ce7b55e00acf4faa4735057d9343bf303a97fac37267246710fae16d7cc00a1f"
     },
     {
       "path": "plugins/zuaef-case/zuaef_case/__init__.py",
@@ -1837,9 +1847,19 @@
       "sha256": "bae809402301ed2dbc941cd20e639052564eb558fba18c1981b9aaeb25d8e2b9"
     },
     {
+      "path": "profiles/ace-writing-t006-b1-technique-off.toml",
+      "bytes": 582,
+      "sha256": "32891b91ea10d072dc39d1cf17a5cb7a7f2fe701a57ba91e1f25ddcf23395a27"
+    },
+    {
+      "path": "profiles/ace-writing-t006-b2-model-owned-techniques.toml",
+      "bytes": 523,
+      "sha256": "82aed80849bf957de92ed115b165207af44c2b66b74e68cb10df3752915f9e89"
+    },
+    {
       "path": "profiles/ace-writing.toml",
-      "bytes": 1183,
-      "sha256": "05a1782dc835932a8931fc66182f26553088ddf729d6b69149a58539271a7d7f"
+      "bytes": 1443,
+      "sha256": "7c6a78bec613ea78422f9aaa5f4164ce626fbbe26cf8b92c6e83480fe3b15507"
     },
     {
       "path": "profiles/emtb-budget.toml",
@@ -1885,6 +1905,11 @@
       "path": "tests/fixtures/synthetic_client_service/state/customers/CASE-SYN-001.yaml",
       "bytes": 249,
       "sha256": "4aa4b8645b9ec9b1e4a46c6e249eb8124209ee5bbeb35138102b4dddcddc2a7f"
+    },
+    {
+      "path": "tools/epub_to_corpus.py",
+      "bytes": 14107,
+      "sha256": "eb11092b93a40b55c8f211c8d5ceb446140d8874daf8583fff32f1fbcd60f771"
     },
     {
       "path": "tools/fde_two_turn_proof.py",
@@ -1933,8 +1958,8 @@
     },
     {
       "path": "tools/run_writing_eval.py",
-      "bytes": 8775,
-      "sha256": "b1bba3b8c7e99d709c8d6d232e424b6f698ebde6409f8ed54fa06d4a0af6f7b9"
+      "bytes": 9991,
+      "sha256": "443205b2e9048cb2e4b3214d95efec4bfd45864c3edb0741675eb224b54dd7f4"
     },
     {
       "path": "workspace/knowledge/index.md",

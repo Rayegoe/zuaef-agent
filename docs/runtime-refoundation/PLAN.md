@@ -1,5 +1,17 @@
 # PLAN — Controlled Re-foundation
 
+Current state (2026-08-21): Phase 2 diagnosis, the technique-only A/B, one
+reverse-order variance check and the B1 blind quality verdict are complete.
+Control/ON clearly beat Candidate/OFF on editorial quality, while the first
+runtime delta was not reproduced in reverse order and is not a causal speed
+claim. T006-B2 has now exercised a model-owned neutral 18-row catalog: the
+model selected three IDs different from the Control, but the Candidate
+reached the Harness usage boundary after repeated `save_article` calls.
+The B2 quality/evidence gate is still pending. The M002/M008 and
+irrelevant-material evidence subchecks from B1 remain unclear, and the
+current host selector is not thereby validated as final semantic authority.
+Phase 2 is therefore **not complete**; T007 remains deferred.
+
 ## Phase 0 — Freeze and instrument
 
 Goal:
@@ -53,6 +65,13 @@ The model must retain semantic selection authority.
 
 Exit:
 - selected observation design justified by quality + runtime data.
+
+T006-B2 status:
+- execution recorded under
+  `experiments/T006-B2-wcase2-model-owned-technique-selection.md`;
+- anonymous drafts and the narrow evidence form are ready;
+- no quality/evidence or promotion verdict has been inferred from the
+  `limit_reached` runtime state.
 
 ## Phase 3 — Epistemic convergence
 
@@ -111,4 +130,3 @@ Only now promote genuinely cross-domain runtime mechanisms.
 - remove stale flags/docs/tests;
 - update AGENTS.md;
 - update architecture guide and README only after runtime proof.
-

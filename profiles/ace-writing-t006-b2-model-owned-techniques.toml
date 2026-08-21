@@ -1,0 +1,15 @@
+# T006-B2 benchmark-only candidate profile.
+#
+# The control remains profiles/ace-writing.toml. This profile keeps the same
+# model, materials, experience projection, tools and save semantics, but gives
+# the model a neutral ACE exemplar catalog plus an ID-addressed retrieval
+# affordance. It must not become production authority before B2 review.
+schema = 1
+name = "ace-writing-t006-b2-model-owned-techniques"
+
+[[plugins]]
+id = "ace-writing"
+allow_capabilities = false
+
+[plugins.config]
+technique_selection_mode = "model"

@@ -20,8 +20,11 @@ This protocol produces evidence only. It authorizes no runtime change
 
 ## 2. Pre-experiment state this protocol must not disturb
 
-- T006-B1 human blind gate is pending. T006-B2 / T007 work does not run
-  inside this protocol.
+- Runtime queue/gate status is live authority in
+  `docs/runtime-refoundation/TASKS.md`; this protocol neither mirrors nor
+  modifies it (dated observation 2026-08-21: the T006-B1 human
+  quality/evidence gates are UNJUDGED and are the pending queue action).
+  T006-B2 / T007 work does not run inside this protocol.
 - Kernel freeze verification gate is BLOCKED; no kernel file is touched.
 - `profiles/stillevo-fde.toml` remains production authority for the existing
   deployment regardless of anything authored here.
@@ -61,7 +64,8 @@ Template (fixed section order):
 <environment / system facts that bound the work>
 
 ## Proposed composition
-<plugin ids + non-secret config — a proposal, not composition authority>
+<plugin ids + non-secret config — a proposal drawn from the admitted
+authoring catalog, not composition authority>
 
 ## Binding needs
 <what must be bound at runtime — requirements, never values>
@@ -86,25 +90,39 @@ Per trial:
    source, date, and whether the source is a prospective or existing
    customer.
 2. **Authoring pass** — LLM + authoring prompt + template → `deployment.md`
-   draft. Record model and settings. The authoring model receives the
-   installed-plugin inventory as its composition vocabulary.
+   draft. Record model and settings. The authoring model selects from the
+   **admitted authoring catalog** — the operator-defined subset of installed
+   plugins/capabilities that carry admission evidence for this
+   deployment/task class. installed ≠ admitted (SPEC D3).
 3. **Human review** — reviewer edits the draft; record a per-section verdict:
    `unchanged / light-edit / rewritten / added / removed`, with the reason.
-4. **Mechanical derivation** — human or script derives `profile.toml` from
-   the approved deployment.md; diff against the profile the operator would
-   have written by hand.
-5. **Composition check** — derived profile passes `load_profile` /
+4. **Composition authorization review** — derive the *proposed* composition
+   from the approved deployment.md and intersect with admitted capability:
+   `requested ∩ admitted = authorized`. Capabilities the input asked for
+   that lack admission evidence are recorded **requested-but-not-admitted**
+   — reported back to the operator/customer, never silently dropped and
+   never silently enabled.
+5. **Profile derivation** — human or script writes `profile.toml` from the
+   authorized composition; diff against the profile the operator would have
+   written by hand.
+6. **Composition check** — derived profile passes `load_profile` /
    `resolve_profile` (dry run; no model request happens there by design).
-6. **Record** — append the trial to `EXPERIMENT-LOG.md` (create at first
-   trial), including the reviewed draft, the edits, the derived profile and
-   the diff.
+7. **Record** — append the trial to `EXPERIMENT-LOG.md` (create at first
+   trial), including the reviewed draft, the edits, the
+   requested-but-not-admitted list, the derived profile and the diff.
 
 ## 6. Observed failure taxonomy
 
 - **F1 wrong plugin selection** — missing, extra, or misconfigured plugin in
   the proposed composition.
-- **F2 boundary loss** — a boundary stated in the input is absent from the
-  deployment.md or the derived profile (esp. approval-gated actions).
+- **F2 boundary loss** — a boundary stated in the input is not preserved in
+  the **effective deployment**. Check the authority layer where it belongs:
+  deployment.md text, tool effect semantics / PydanticAI native approval
+  (e.g. approval-gated external writes), host ceiling, Gateway
+  authorization, or profile capability exclusion. A boundary enforced by
+  tool/approval semantics is `BOUNDARY_PRESERVED` even when the profile
+  says nothing about it; forcing every boundary into profile text (an
+  approval DSL) is itself a failure mode, not a fix.
 - **F3 deliverable definition loss** — the input's notion of "what we get"
   does not survive into Deliverables.
 - **F4 binding need vague or missing** — the deployment does not state what
@@ -120,12 +138,19 @@ Per trial:
 
 - Per trial: `AUTHORING_SUFFICIENT` / `AUTHORING_INSUFFICIENT_F<n>` /
   `INPUT_INSUFFICIENT` (F6).
-- Pack-level admission: requires at least 3 trials on distinct real
+- Pack-level validation: requires at least 3 trials on distinct real
   descriptions with no unresolved F1–F5, edit distance bounded to
   `unchanged/light-edit` on all sections that matter, and a recorded human
-  admission decision citing the trial log. Admission moves the authoring
-  seam to PROFILE-ONLY candidacy (SPEC D3) and unblocks README narrative
-  migration (SPEC §9). It unlocks nothing else.
+  decision citing the trial log. Validation moves the product status
+  FIELD_EXPERIMENTAL → FIELD_VALIDATED (SPEC D3) and unblocks README
+  narrative migration (SPEC §9).
+- What validation proves — and must not be read to prove: it validates that
+  `deployment.md` is a usable, reviewable human-machine business definition
+  interface. It admits **no runtime capability**. Memory, SubAgents,
+  ToolSearch or any plugin capability a deployment requested stays governed
+  by `docs/runtime-refoundation/CAPABILITY_ADMISSION.md` on its own
+  failure/A-B evidence; three good authoring trials never constitute
+  capability authority.
 
 ## 8. Non-goals
 

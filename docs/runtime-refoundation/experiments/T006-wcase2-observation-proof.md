@@ -1,8 +1,24 @@
-# T006 — WCASE-2 Observation / Semantic-Ownership Proof
+# T006-A — WCASE-2 Observation / Semantic-Ownership Diagnosis
 
-Status: complete — observation proof; no production-code change.
+Status: complete — diagnosis only; T006-B1 A/B and its blind quality result
+are recorded separately. Evidence subchecks remain partly unclear.
 
 Date: 2026-08-21
+
+## RUN IDENTITY
+
+- Commit: `945affc8453427b19fd2619cec6cddc6a90f37dc`
+- Case / run id: `WCASE-2` / `wcase-2-multi-material`
+- Profile: `ace-writing`
+- Model: `deepseek/deepseek-v4-flash`
+- Thinking: `openai_enable_thinking=null`; provider default
+- Composition id: `fe34cf072ed64dedd38d76aba5da8e24605c48fcffb6f43a0273c9b00b48088f`
+- Artifact sha256: `47ae700515516373d27992a439f8069bdfa2fc7ee8d83c81839f93139f50ffda`
+- Fixture sha256: `ca83f46b82ad3dc85cfdbad45b8cbfa2e3fa91fa47c6d2f7cd00c781f8e21392`
+
+The fixture hash is SHA-256 over the sorted `relative-path + space +
+file-sha256` lines for `case.json` and all nine raw materials, with a
+trailing newline. Per-material hashes remain in the saved draft record.
 
 ## CURRENT BASELINE
 
@@ -201,72 +217,56 @@ The current trace separates two results:
   exemplar records. The model could choose how to use those examples, but it
   could not inspect the omitted candidates before making its technique choice.
 
-## OBSERVED FAILURE
+## VERDICT — T006-A
 
-Selected exactly one:
+The first baseline proves the host-side mechanism is present, but not that it
+damaged this article. The precise verdict is:
 
 ```text
-2. HOST_SEMANTIC_PRESELECTION_CAUSES_MEASURED_RISK
+SEMANTIC_PRESELECTION_REPRODUCED / OUTCOME_IMPACT_UNMEASURED
 ```
 
-The measured evidence is the current first-request trace plus the current
-implementation: all raw source material was transported, while the Host made
-real semantic filtering decisions for experience and technique guidance.
-That is a semantic-ownership breach/risk even though this run provides no
-human quality gate showing a prose regression.
+The measured evidence is the current implementation and first-request trace:
+all raw source material was transported, while the Host made real semantic
+filtering decisions for experience and technique guidance. This reproduces a
+semantic-ownership risk. It does not establish `OUTCOME_DAMAGE_CAUSED=true`.
 
-This is not classified as `CURRENT_WCASE2_RUNTIME_FAILURE_REPRODUCED`: the run
-completed with 2 requests and 1 save call. The 43,704-token largest input and
-268-second first request are baseline cost observations, not a separately
-defined current-code failure with an accepted outcome improvement.
+The quality and evidence gates for this baseline are both `null`; therefore
+the baseline cannot justify either accepting or rejecting a runtime change.
+The 43,704-token largest input and 268-second first request remain cost
+observations, not an accepted outcome improvement or a separately defined
+current-code failure.
 
-## CANDIDATE
+## T006-A BOUNDARY
 
-No candidate A/B was run.
+Raw material transport is not the open question in this fixture: all nine
+bodies reached the first request in full, including irrelevant M005/M006/M009
+and the M002/M008 conflict. The open question is the host's supplementary
+technique projection (3 of 18 active records) and, more weakly, its automatic
+experience projection.
 
-Candidate A—bounded representation of all candidate source materials—is already
-the observed raw-material path: all nine WCASE-2 bodies reached the first
-request in full. Re-running it under another label would not test a different
-mechanism.
+T006-A therefore does not justify changing material transport, `pull_context`,
+`save_article`, thinking mode, model, prompt contract, evidence rules or
+CodeMode. It only justifies a single-cause technique A/B.
 
-Candidate B would require a genuinely neutral index/pull path and would need to
-isolate the supplementary experience/technique projection from transport. The
-current baseline has no dependent `pull_context` round-trip failure, and
-combining neutral retrieval with guidance changes would optimize multiple
-mechanisms at once. CodeMode has no measured dependent-tool failure to address.
+## HANDOFF TO T006-B1
 
-Therefore no production candidate was justified in this observation turn.
+T006-B1 tests technique preselection only:
 
-## COMPARISON
+```text
+control:   same production behavior, technique guidance ON
+candidate: same production behavior, technique guidance OFF
+fixed:     9/9 materials, experience projection, model, thinking setting,
+           task, constraints, tools, save semantics and evidence rules
+```
 
-Not applicable: only the fresh current baseline was run. There is no candidate
-quality, evidence, request, token, latency, coverage or ownership result to
-compare, and the null human gates prohibit treating the baseline artifact as
-an accepted outcome.
+The A/B execution, reverse-order variance check and blind quality result are
+recorded in `T006-B1-wcase2-technique-ownership-ab.md`. The blind review
+preferred Control/ON and rejected the simple technique-off removal for the
+target editorial outcome; it did not separately adjudicate every evidence
+subcheck, and the runtime difference was not reproduced in reverse order.
 
-## CODE CHANGE JUSTIFIED? NO
-
-No production code was changed. The current trace proves that source-material
-transport is already broad enough for WCASE-2, while exposing a separate
-semantic-preselection risk in supplementary context. There is not yet a
-single-mechanism candidate result that pays for changing the production path
-under G1/G2/G3/G12.
-
-## DECISION
-
-Close T006 as an observation/ownership proof and keep T003 frozen.
-
-The current Host can reduce raw-material transport/tool round-trips to a
-2-request / 1-tool execution without taking raw material selection or conflict
-resolution away from the model in this case. It has not proved that the same
-reduction is semantically neutral for technique and experience guidance: those
-choices are partly preselected in `build_writer_context()`.
-
-Do not remove `pull_context`, do not add a planner/router/capability, and do
-not optimize the current production path from this null-gate observation.
-
-## NEXT EXPERIMENT
-
-T007 — Fresh WCASE-3 Unknown Proof. The WCASE-2 neutral-context A/B question,
-if still needed, must be isolated as its own experiment rather than folded
-into T006 or combined with a transport optimization.
+Phase 2 remains open: the current Host selector is not thereby validated as
+final semantic authority, the evidence subchecks are not fully closed, and a
+model-owned technique observation design has not yet been selected on quality
+and runtime evidence. T007 must not start from this diagnosis alone.

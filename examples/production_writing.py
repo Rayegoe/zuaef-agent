@@ -30,6 +30,7 @@ sys.path[:0] = [
 
 from zuaef_ace_writing.writing_toolset import (
     DEFAULT_ACE_ROOT,
+    DEFAULT_CORPUS_ROOT,
     ace_prepare,
     build_writer_context,
     list_materials_impl,
@@ -216,9 +217,11 @@ def render_agent_prompt(
     if revision and not previous_article:
         raise ValueError("revision requires the previous article")
     lines = [
-        "Revise the current article." if revision else "Write the article.",
+        "Revise the article." if revision else "Write the article.",
         "",
         "# Task",
+        "",
+        f"Article ID: {task.article_id}",
         "",
         task.assignment,
     ]
@@ -336,6 +339,7 @@ def run_production_task(
     title: str = "",
     rights: str = "user-provided",
     ace_root: str | Path | None = None,
+    corpus_root: str | Path | None = None,
     run_id: str | None = None,
     feedback: str | None = None,
     previous_article: str | None = None,
@@ -344,6 +348,8 @@ def run_production_task(
     prompt: str | None = None,
     config_root: Path = REPO,
     profile: str = PRODUCTION_PROFILE,
+    include_technique_guidance: bool = True,
+    technique_selection_mode: str = "host",
 ) -> dict:
     """One production article: mechanical prep -> profile agent -> execute_run.
 
@@ -390,12 +396,20 @@ def run_production_task(
         )
         if part
     )
+    corpus_root_path = (
+        Path(corpus_root).expanduser().resolve()
+        if corpus_root is not None
+        else DEFAULT_CORPUS_ROOT
+    )
     writer_context = build_writer_context(
         prep.run_id,
         context_query,
         run_id=run_id,
         ace_root=ace_root_path,
         learning_root=REPO / "learning",
+        corpus_root=corpus_root_path,
+        include_technique_guidance=include_technique_guidance,
+        technique_selection_mode=technique_selection_mode,
     )
     agent, snapshot = build_profile_agent(
         run_settings,
@@ -415,7 +429,10 @@ def run_production_task(
         CoreDeps(
             workspace_root=run_settings.workspace_root.resolve(),
             run_id=run_id,
-            bindings={"writing_article_id": prep.run_id},
+            bindings={
+                "writing_article_id": prep.run_id,
+                "writing_corpus_root": str(corpus_root_path),
+            },
         ),
         prompt=prompt,
         settings=run_settings,
@@ -572,6 +589,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--request-limit", type=int, default=None)
     ap.add_argument("--feedback", default=None, help="natural-language editorial feedback (revision pass)")
     ap.add_argument("--ace-root", default=None)
+    ap.add_argument("--corpus-root", default=None)
     ap.add_argument(
         "--keep-workspace",
         action="store_true",
@@ -599,6 +617,7 @@ def main(argv: list[str] | None = None) -> None:
         title=args.title,
         rights=args.rights,
         ace_root=args.ace_root,
+        corpus_root=args.corpus_root,
         run_id=args.run_id,
         feedback=args.feedback,
         clean_workspace=not args.keep_workspace,
