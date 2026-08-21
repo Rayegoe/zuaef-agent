@@ -15,7 +15,7 @@ first-class results:
 
 Never fabricate an outcome/evidence verdict to unblock a task.
 
-## Queue state (after T006-A / T006-B2 execution)
+## Queue state (after T006-B2 human judgment)
 
 - T000–T005 complete.
 - T004/T004G final verdict: `CURRENT_PATH_ALREADY_MINIMAL` — the current
@@ -36,16 +36,22 @@ Never fabricate an outcome/evidence verdict to unblock a task.
   delta was not reproduced in reverse order and is not a causal speed claim.
   The M002/M008 conflict and irrelevant-material evidence subchecks were not
   separately marked pass/fail and remain `unclear`.
-- T006-B2 execution is recorded: the model-owned Candidate saw a neutral
-  18-row ACE catalog and selected three IDs different from the Control's
-  Host-selected three. It produced an artifact but reached the Harness usage
-  boundary after repeated `save_article` calls; quality and narrow evidence
-  review are pending. This is a runtime observation, not a promotion verdict.
+- T006-B2 human judgment is complete. Anonymous A was the model-owned
+  Candidate and was preferred over anonymous B, the Host-selected Control.
+  M002 handling, M008 priority and M005/M006/M009 exclusion passed. The
+  no-outside-facts check failed for both drafts: Control added several
+  unsupported concrete scene facts and Candidate added lighter unsupported
+  scene detail. Candidate also reached the Harness usage boundary after
+  repeated `save_article` calls. Verdict: `REFINE`; no promotion.
 - Phase 2 is not complete. T007 is deferred until the observation design is
   justified by quality and runtime data.
-- Next: record the T006-B2 blind quality/evidence judgment. Do not start an
-  experience-selection experiment, thinking A/B or T007 before that gate is
-  adjudicated.
+- Next: run the smallest current-`main` real-corpus comparison using one fixed
+  task/model/EPUB corpus across Host-selected, technique-off and model-owned
+  input modes. Measure the actual section distribution and tail truncation;
+  do not modify EPUB ingestion/retrieval, pre-fix Candidate evidence or add
+  Host technique/scene/schema judgment before this converges. B2 alone does
+  not prove model ownership causes more unsupported completion because the
+  Host-selected draft contained the more severe invented details.
 
 ## T000 — Coach installation
 Status: complete (ADR-RF-004).
@@ -115,7 +121,7 @@ the exposure itself costs a decision or degrades output.
 ## T006 — WCASE-2 semantic-selection boundary
 Status: T006-A diagnosis complete; T006-B1 A/B execution, reverse variance
 check and blind quality verdict complete, with evidence subchecks unclear;
-T006-B2 execution recorded with blind quality/evidence verdict pending. See
+T006-B2 execution and blind judgment complete with verdict `REFINE`. See
 `experiments/T006-wcase2-observation-proof.md`,
 `experiments/T006-B1-wcase2-technique-ownership-ab.md` and
 `experiments/T006-B2-wcase2-model-owned-technique-selection.md`.
@@ -151,14 +157,17 @@ Current T006-B2 boundary:
   mechanical ID-addressed batch retrieval action;
 - the model selected `ex-scene-pause-001`, `ex-prose-object-001` and
   `ex-final-quote-001` in the recorded run;
+- Candidate/A was preferred to Control/B, but both failed the
+  no-outside-facts gate;
 - Candidate reached `limit_reached` after producing an artifact, so the
-  terminal/runtime behavior must remain part of the human review record;
-- no promotion, experience follow-up or T007 follows until the narrow gate
-  is complete.
+  terminal/runtime failure remains part of the verdict;
+- neither the Host selector nor the current model-owned seam has earned final
+  production authority.
 
 ## T007 — WCASE-3 convergence (premise check first)
-Status: deferred — Phase 2 has not exited; do not run until T006-B2 has a
-quality/evidence verdict and the selected observation design is justified.
+Status: deferred — Phase 2 has not exited; do not run until the current-main
+real-corpus input comparison has converged and the selected observation
+design is justified.
 
 - the historical repeated `check_claim` loop is not exposed by the current
   writing surface (`pull_context`, `save_article` only);

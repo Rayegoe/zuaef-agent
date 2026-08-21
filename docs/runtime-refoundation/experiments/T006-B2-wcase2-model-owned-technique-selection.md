@@ -1,8 +1,9 @@
 # T006-B2 — WCASE-2 Model-Owned Technique Selection
 
-Status: execution recorded; candidate reached the usage boundary after
-producing an artifact; blind quality and narrow evidence review are pending.
-Phase 2 remains open. This run does not promote the candidate or start T007.
+Status: blind quality and evidence judgment recorded. The model-owned
+Candidate was preferred over the Host-selected Control, but both drafts added
+unsupported scene details and the Candidate reached the usage boundary after
+producing an artifact. Verdict: `REFINE`; no promotion. Phase 2 remains open.
 
 Date: 2026-08-21
 
@@ -136,8 +137,8 @@ These are runtime facts, not quality or evidence judgments.
 | metric | Control | Candidate |
 |---|---:|---:|
 | execution state | `completed` | `limit_reached` |
-| outcome evaluation | `null` / unjudged | `null` / unjudged |
-| evidence evaluation | `null` / unjudged | `null` / unjudged |
+| outcome evaluation | comparative loss; not accepted | comparative preference; not accepted end-to-end |
+| evidence evaluation | fail | fail |
 | model requests | 2 | 12 |
 | tool calls | 1 | 12 |
 | tool sequence | `save_article` | `pull_techniques → save_article × 11` |
@@ -163,46 +164,77 @@ Use only the anonymous copies for review:
 - `workspace/artifacts/writing-v0.2/eval/WCASE-2/t006-b2-blind/A.md`
 - `workspace/artifacts/writing-v0.2/eval/WCASE-2/t006-b2-blind/B.md`
 
-The reviewer must not use profile names, tool counts, selected IDs or runtime
-facts as a quality proxy. Record the result in
-`T006-B2-human-judgment.md`:
+The review was recorded before revealing the anonymous mapping. The mapping
+was then mechanically resolved as:
 
 ```text
-Overall: A / B / Tie
-Evidence:
-- M002 obsolete figures were not treated as current facts: pass / fail / unclear
-- M008 formal spec was prioritized: pass / fail / unclear
-- M005/M006/M009 were not wrongly mixed into product facts: pass / fail / unclear
-- no facts outside the supplied materials: pass / fail / unclear
-Why:
+A = model-owned Candidate
+B = Host-selected Control
 ```
 
-No promotion decision is valid until both the overall blind result and the
-narrow evidence fields are recorded. Runtime completion is also part of the
-Candidate's observed outcome and must not be silently omitted.
+The reviewer preferred **A**. It kept the core person, formal v3
+specification, Siguniang Mountain test and commercial information
+substantially faithful to the materials. It correctly used 380 g, 30 hours,
+800 lumens and RMB 699 rather than the obsolete M002 figures. It did not
+wrongly mix M005/M006/M009 into product facts.
+
+The no-outside-facts check failed. Control/B invented several concrete scene
+facts: light landing on a teammate's face followed by mumbling and turning
+over, needing to bring the watch close to the eyes after dimming it, and
+sub-zero wind outside the tent. Candidate/A was steadier but still lightly
+expanded the scene with a cold tent and white light that could not warm it.
+The supplied interview established 4 a.m., a dark tent, searching for a
+flashlight and the "hot / bright" motivation, but not those added details.
+
+The narrow gate is therefore:
+
+| check | result |
+|---|---|
+| M002 obsolete figures not treated as current | pass |
+| M008 formal v3 specification prioritized | pass |
+| M005/M006/M009 not mixed into product facts | pass |
+| no facts outside supplied materials | fail |
+
+The Candidate wins the comparative editorial judgment and is less severe in
+its unsupported expansion, but this is not an accepted evidence outcome.
+Runtime completion also remains part of the result: Candidate ended
+`limit_reached` after 12 requests / 12 tool calls and repeated
+`save_article` submissions.
 
 ## Decision status
 
 ```text
 T006-A   COMPLETE
 T006-B1  COMPLETE (quality verdict recorded; evidence subchecks unclear)
-T006-B2  EXECUTION RECORDED / HUMAN VERDICT PENDING
+T006-B2  COMPLETE (CANDIDATE PREFERRED / EVIDENCE FAIL / LIMIT_REACHED)
 Phase 2  OPEN
 T007     DEFERRED
 ```
 
-The only admissible next step is the human blind/evidence review of this
-artifact pair. Depending on that result, the next architecture decision is:
+Decision: `REFINE`.
 
-- model-owned quality/evidence equal or better: remove Host semantic
-  preselection and retain the neutral catalog/retrieval seam;
-- model-owned quality clearly worse: keep the current path as a provisional
-  baseline and investigate which prior or selection affordance is missing;
-- evidence failure: fix observation correctness before interpreting prose
-  quality;
-- runtime worse with quality better: do not reject solely on the extra
-  semantic turn;
-- runtime better with quality worse: reject the trade.
+The result rejects both simple conclusions. It does not support removing
+technique knowledge entirely: T006-B1's technique-off draft regressed. It
+also does not admit this model-owned implementation: its preferred prose
+still failed the evidence gate and its run did not terminate normally. The
+Host keyword selector remains an unvalidated provisional baseline rather
+than final semantic authority.
 
-No experience-selection experiment, thinking A/B or T007 is started by this
-record.
+This single pair does not show that model ownership increases unsupported
+scene completion relative to the Host selector: Control/B added more severe
+unsupported details than Candidate/A. The narrower reproduced fact is that
+the preferred model-owned artifact still failed the evidence boundary. A
+model-ownership-specific factual-boundary failure remains a hypothesis for
+the real-corpus comparison, not a settled causal claim.
+
+The next writing experiment should use current `main`, one fixed real task
+and the same real EPUB corpus across Host-selected, technique-off and
+model-owned inputs. Record actual per-section characters and whether the
+final desk-pack tail truncation removed any section. Do not change EPUB
+ingestion, corpus schema or retrieval. Do not pre-fix Candidate evidence or
+add Host technique/scene/schema judgment before the comparison; either would
+change the causal question. If the model-owned variant again wins on prose
+while failing factual boundaries, that second independent observation may
+justify a separate experiment in model-owned composition plus deterministic
+factual boundary control. Do not start T007 before this current-path evidence
+converges.

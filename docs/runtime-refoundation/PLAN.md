@@ -1,16 +1,23 @@
 # PLAN — Controlled Re-foundation
 
 Current state (2026-08-21): Phase 2 diagnosis, the technique-only A/B, one
-reverse-order variance check and the B1 blind quality verdict are complete.
-Control/ON clearly beat Candidate/OFF on editorial quality, while the first
-runtime delta was not reproduced in reverse order and is not a causal speed
-claim. T006-B2 has now exercised a model-owned neutral 18-row catalog: the
-model selected three IDs different from the Control, but the Candidate
-reached the Harness usage boundary after repeated `save_article` calls.
-The B2 quality/evidence gate is still pending. The M002/M008 and
-irrelevant-material evidence subchecks from B1 remain unclear, and the
-current host selector is not thereby validated as final semantic authority.
-Phase 2 is therefore **not complete**; T007 remains deferred.
+reverse-order variance check and both B1/B2 blind judgments are complete.
+Control/ON clearly beat Candidate/OFF in B1, while the first runtime delta
+was not reproduced in reverse order and is not a causal speed claim. In B2,
+the model-owned Candidate selected three IDs from a neutral 18-row catalog
+and was preferred to the Host-selected Control. Both B2 drafts nevertheless
+failed the no-outside-facts evidence gate, and the Candidate reached the
+Harness usage boundary after repeated `save_article` calls. The M002/M008
+and irrelevant-material checks passed in B2 but remain separately unclear in
+the older B1 review. Neither technique path has earned final production
+authority. Phase 2 is therefore **not complete**; the next evidence is a
+current-main real-corpus input comparison, and T007 remains deferred. B2 does
+not establish that model ownership causes more unsupported completion than
+Host selection because the Host-selected draft contained the more severe
+invented details. Do not pre-fix Candidate evidence or add Host
+technique/scene/schema judgment before the comparison. A repeated
+model-owned quality win plus factual-boundary failure would justify a later,
+separate factual-boundary experiment.
 
 ## Phase 0 — Freeze and instrument
 
@@ -67,11 +74,12 @@ Exit:
 - selected observation design justified by quality + runtime data.
 
 T006-B2 status:
-- execution recorded under
+- execution and human judgment recorded under
   `experiments/T006-B2-wcase2-model-owned-technique-selection.md`;
-- anonymous drafts and the narrow evidence form are ready;
-- no quality/evidence or promotion verdict has been inferred from the
-  `limit_reached` runtime state.
+- model-owned Candidate preferred over Host-selected Control;
+- no-outside-facts gate failed for both drafts;
+- Candidate ended `limit_reached`;
+- verdict `REFINE`; no promotion.
 
 ## Phase 3 — Epistemic convergence
 
