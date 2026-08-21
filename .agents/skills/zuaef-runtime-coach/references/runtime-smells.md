@@ -12,6 +12,15 @@ The agent searches prior transcript/tool outputs for current state that could be
 ## Capability gravity
 A capability is enabled because it is already available.
 
+## Host semantic preselection
+Deterministic host code ranks or filters source material by lexical
+heuristics, taking relevance/priority selection away from the model
+(SPEC RUNTIME-5).
+
+## Stale queue execution
+Work is executed against a failure premise that no longer reproduces on
+current code, honoring an expired diagnosis instead of re-measuring.
+
 ## Retry without information
 The agent repeats an observation despite unchanged evidence state.
 

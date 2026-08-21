@@ -52,7 +52,25 @@ Evaluation order:
 3. evidence integrity;
 4. runtime complexity.
 
-## 4. Initial benchmark ladder
+A run whose outcome evaluation is `null` cannot support an optimization
+decision. Record a human verdict or apply the domain rubric to baseline and
+candidate first. `execution_state=completed` is an execution fact, not an
+outcome verdict, and the coding agent must not self-adjudicate article
+quality to unblock itself.
+
+## 4. Diagnosis expiry
+
+A historical diagnosis is evidence about the code that produced it. Before
+driving change from a recorded failure, re-run the case fresh on current
+code.
+
+Example: the pre-re-foundation WCASE-1 diagnosis (plan/status cycles,
+repeated claim checks, ~16 requests / ~27 tools) no longer reproduces — the
+current writing profile runs 2 requests / 1 tool call with generic
+capabilities disabled. Honoring an expired diagnosis manufactures the
+over-engineering this pack exists to prevent.
+
+## 5. Initial benchmark ladder
 
 ### B0 — Bare loop smoke test
 
@@ -79,7 +97,12 @@ Stop rule:
 
 ### B2 — WCASE-2 Observation Test
 
-Compare at least:
+Step 0 — audit the current host preselection (`build_writer_context()`:
+lexical relevance ranking, excerpt bounding, technique tags, experience
+selection). Enumerate what the host decides and what it drops, and measure
+whether dropped content was materially relevant to the accepted article.
+
+Then compare at least:
 
 A. item-by-item regular tool calls;  
 B. bounded batch observation;  
@@ -115,6 +138,11 @@ Reject:
 
 Revision input should be bounded.
 
+Current code already revises through a fresh run with bounded inputs
+(current article + human feedback + bounded writer context, no
+message-history replay). Prove or disprove boundedness on a fresh revision
+trace before designing new machinery.
+
 Measure separately:
 - draft;
 - revision.
@@ -135,7 +163,7 @@ Before promoting a Writing-discovered mechanism to Core, reproduce its value in 
 - WordPress draft revision;
 - supplier research with conflicting facts.
 
-## 5. Complexity score
+## 6. Complexity score
 
 Do **not** optimize a single magic scalar in production.
 
@@ -152,7 +180,7 @@ score =
 
 Use the components to understand the change. A lower synthetic score never overrides outcome gates.
 
-## 6. Repeated semantic observation
+## 7. Repeated semantic observation
 
 Potential duplicate signature examples:
 
@@ -166,7 +194,7 @@ read_plan(no plan mutation since previous read)
 
 These are diagnostic flags, not universal forbidden operations.
 
-## 7. Experiment record
+## 8. Experiment record
 
 Each optimization iteration creates one experiment record from:
 

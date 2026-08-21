@@ -44,3 +44,61 @@ Evidence:
 
 Status: accepted; T000 complete. Next: T001 metrics normalization.
 
+## ADR-RF-005 — Recalibrate task queue and taxonomy after T003/T004 evidence
+
+Decision:
+- T003 shows the current WCASE-1 path at 2 requests / 1 tool call with
+  generic capabilities OFF; the pre-re-foundation ~16-request diagnosis is
+  expired evidence and must not drive new work;
+- T004 closes as `OUTCOME_UNVERIFIED_BLOCKS_OPTIMIZATION`: the current path
+  is a credible minimal candidate, and no runtime change is justified while
+  the article outcome/evidence verdict is unrecorded;
+- TASKS.md reframed accordingly: proof-first tasks with zero-code verdicts
+  (`CURRENT_PATH_ALREADY_MINIMAL`, `NO_REMOVAL_JUSTIFIED`,
+  `PROBLEM_NOT_REPRODUCED`, `OUTCOME_UNVERIFIED_BLOCKS_OPTIMIZATION`), a
+  human-owned T004G verdict gate, premise checks before T007/T008
+  implementation, and availability-vs-admission scrutiny of global
+  `AgentSettings` defaults in T009;
+- T006 (WCASE-2) promoted to the primary architectural question: whether
+  `build_writer_context()` lexical heuristics (relevance ranking, excerpt
+  bounding, technique tags, experience selection) moved semantic selection
+  from the model to the host; BENCHMARKS B2 gains a step-0 preselection
+  audit, REVIEW_GATES gains G13/G14;
+- taxonomy erratum: `save_article` is `ARTIFACT_SUBMISSION` (local
+  deliverable persistence), not `EXTERNAL_ACTION`; SKILL.md taxonomy
+  corrected and the T003 record annotated, history not rewritten.
+
+Reason:
+- executing stale task assumptions would manufacture the over-engineering
+  the coach pack exists to prevent; the queue must follow measured evidence,
+  not the reverse.
+
+Status: accepted by coach pack recalibration. Next: T004G human verdict
+gate, then fresh WCASE-2/3/4 baselines.
+
+## ADR-RF-006 — Close WCASE-1 outcome gate and surface admission review
+
+Decision:
+- the human outcome gate accepts `final(3).md` as the reference-quality
+  candidate and rejects `final-revised.md` as a prose-quality regression;
+- the accepted candidate preserves concrete human presence, scene-level
+  material, imperfect trial evidence (including 2 with no obvious change and
+  4 withdrawals), narrative paragraph movement and a restrained ending;
+- normalized WCASE-1 values are now explicit: `outcome_pass=true` and
+  `evidence_pass=true`;
+- T004 closes `CURRENT_PATH_ALREADY_MINIMAL`: 2 requests / 1
+  `save_article` call is retained, and no one-request terminal mechanism is
+  added solely for metric improvement;
+- T005 closes `NO_REMOVAL_JUSTIFIED`: the remaining model-visible surfaces
+  (`pull_context`, `save_article`, and the writing toolset instructions/code
+  mode metadata) have no demonstrated WCASE-1 failure caused by their
+  presence. Generic capabilities remain OFF in the writing profile.
+
+Reason:
+- current outcome quality is now human-adjudicated; optimizing request count
+  without an outcome gain would risk changing the artifact-submission
+  contract, while removing an unused semantic observation tool would remove
+  optional model authority without evidence of harm.
+
+Status: accepted. T004/T005 complete. Stop here; T006 is the next separate
+experiment and is not started by this decision.

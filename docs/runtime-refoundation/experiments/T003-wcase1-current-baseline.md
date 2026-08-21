@@ -184,3 +184,12 @@ freezes the current trajectory for T004 comparison.
 ## Next task
 
 T004 — Minimal WCASE-1 path.
+
+## Erratum (taxonomy, appended after ADR-RF-005)
+
+`save_article` is classified above as `EXTERNAL_ACTION` under the taxonomy
+as it stood at T003. The taxonomy now distinguishes `ARTIFACT_SUBMISSION`
+(persisting the model's own local deliverable) from `EXTERNAL_ACTION`
+(effects on external systems, production data, or people). Under the
+corrected taxonomy this call is `ARTIFACT_SUBMISSION`. Metrics, anatomy and
+decisions above are unchanged.

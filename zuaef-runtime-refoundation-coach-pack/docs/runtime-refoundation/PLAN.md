@@ -30,13 +30,19 @@ Compare to current production path.
 
 Exit:
 - accepted WCASE-1 outcome;
-- materially smaller or clearly explained trajectory;
+- materially smaller trajectory, or a recorded zero-change proof
+  (`CURRENT_PATH_ALREADY_MINIMAL` /
+  `OUTCOME_UNVERIFIED_BLOCKS_OPTIMIZATION`);
 - no new framework.
 
 ## Phase 2 — Observation design
 
 Target:
 - WCASE-2.
+
+First audit the current host preselection in `build_writer_context()`
+(lexical relevance ranking, excerpt bounding, technique tags, experience
+selection) before choosing among transport designs.
 
 Experiment with:
 - regular item-by-item calls;
@@ -66,6 +72,10 @@ Exit:
 
 Target:
 - WCASE-4.
+
+Prove current revision boundedness on a fresh trace first: the current path
+already revises through a fresh run with bounded inputs and no
+message-history replay.
 
 Define bounded revision state.
 

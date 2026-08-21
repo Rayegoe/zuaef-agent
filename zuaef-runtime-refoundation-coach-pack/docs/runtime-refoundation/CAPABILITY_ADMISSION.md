@@ -6,6 +6,14 @@ A capability is a modification of the model's cognitive environment.
 
 It is not admitted merely because it is implemented upstream.
 
+## Availability is not default admission
+
+Capability flags in `AgentSettings` express platform availability. A `True`
+default is a claim of default production admission and must be backed by
+admission evidence or changed. A profile disabling a capability (the
+writing profile) does not settle its generic default; the capability ledger
+answers each default separately.
+
 ## Admission questions
 
 Every proposed production capability must answer:

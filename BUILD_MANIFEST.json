@@ -923,8 +923,8 @@
     },
     {
       "path": ".agents/skills/zuaef-runtime-coach/SKILL.md",
-      "bytes": 3594,
-      "sha256": "25313ea15e87b6f4502b3ba1d664741eb199eef8f00969fb550e8cd4909e9917"
+      "bytes": 5022,
+      "sha256": "5af0534b74efefe3b16d70ff5da757710e711c898fe8a56d93eef668077016d7"
     },
     {
       "path": ".agents/skills/zuaef-runtime-coach/references/iteration-protocol.md",
@@ -933,8 +933,8 @@
     },
     {
       "path": ".agents/skills/zuaef-runtime-coach/references/runtime-smells.md",
-      "bytes": 986,
-      "sha256": "14d472f51b712ef3cbddfb0d5c18cdc7247154675f6e94f9e30b852d82235f3d"
+      "bytes": 1338,
+      "sha256": "f5159dce9a0544eccddeb533a9b86b0dbfc1c7992cc08a692254ce7eb9a7b14e"
     },
     {
       "path": ".env.example",
@@ -1068,8 +1068,8 @@
     },
     {
       "path": "examples/production_writing.py",
-      "bytes": 18126,
-      "sha256": "91c558d41e3e9844055e1a7bed64df630153256f2c6e90b39e85f908d869b1de"
+      "bytes": 20069,
+      "sha256": "d341604c6c00075ecf430d9ea074bb00d5036f2ab414620c5c46517563a24445"
     },
     {
       "path": "examples/research_toolset.py",
@@ -1168,8 +1168,8 @@
     },
     {
       "path": "src/zuaef_agent/integrity.py",
-      "bytes": 5530,
-      "sha256": "c3c26a61247725abf10820e477ccece2a6c0f345ce83ea265184b28c636ad280"
+      "bytes": 9259,
+      "sha256": "ff29a61d46ce568743e250e7a30db8420bf0199b2c8aa085a6520a6dbac99bb4"
     },
     {
       "path": "src/zuaef_agent/knowledge_capability.py",
@@ -1208,8 +1208,8 @@
     },
     {
       "path": "src/zuaef_agent/runtime.py",
-      "bytes": 19412,
-      "sha256": "224ea4fd8612cb95de618ca40f255bd247c5a1fc557800546b4a79eed1c42a9a"
+      "bytes": 20544,
+      "sha256": "eb71289b82c3bd15494ccff2a9d4e5f2ea3b3017b6668bfa77d89604f75f7672"
     },
     {
       "path": "src/zuaef_agent/gateway/__init__.py",
@@ -1373,8 +1373,8 @@
     },
     {
       "path": "tests/test_execute_run_seam.py",
-      "bytes": 16988,
-      "sha256": "fe6e18e1bf482e504821353d769279419a0aac1e8520514f6a5db0151defa893"
+      "bytes": 18471,
+      "sha256": "ad8beea50e3cea401a8b0f97a6e8d011c72f02178c73b35757fd7978afea2e62"
     },
     {
       "path": "tests/test_fde_loop.py",
@@ -1443,8 +1443,8 @@
     },
     {
       "path": "tests/test_integrity.py",
-      "bytes": 3979,
-      "sha256": "c19276141d81300034dbfcd918c27732ab99bbeb5fbcf5707926943b7582dbe3"
+      "bytes": 5615,
+      "sha256": "d8813546d8034a4507a3161ed58f028f97c3e99b4d8f7a3ec945e6e584136a03"
     },
     {
       "path": "tests/test_interaction_projection.py",
@@ -1480,6 +1480,11 @@
       "path": "tests/test_memory_recall_baseline.py",
       "bytes": 6958,
       "sha256": "376132abb460ee64089d4a2156364150ec0a2fe5cd97b9780805cc8b7e432d85"
+    },
+    {
+      "path": "tests/test_normalize_wcase_metrics.py",
+      "bytes": 5874,
+      "sha256": "3169eed43821d2531bade76fce409667db0325c0e5101e5063942157dd7aa330"
     },
     {
       "path": "tests/test_p3b3_tool_surface.py",
@@ -1890,6 +1895,11 @@
       "path": "tools/llm_reviewer.py",
       "bytes": 5068,
       "sha256": "e6cebf6772442aac4cad36f514406da37c8af4a23de12d5678233eae6286f8e0"
+    },
+    {
+      "path": "tools/normalize_wcase_metrics.py",
+      "bytes": 8937,
+      "sha256": "41f440cd30d3f67a557e90420b76ee0d66fcdaf2495e7aa597ccf6f7e41868d3"
     },
     {
       "path": "tools/p3b3_field_proof.py",

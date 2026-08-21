@@ -1,19 +1,19 @@
 {
   ".agents/skills/zuaef-runtime-coach/SKILL.md": {
-    "bytes": 3594,
-    "sha256": "25313ea15e87b6f4502b3ba1d664741eb199eef8f00969fb550e8cd4909e9917"
+    "bytes": 5022,
+    "sha256": "5af0534b74efefe3b16d70ff5da757710e711c898fe8a56d93eef668077016d7"
   },
   ".agents/skills/zuaef-runtime-coach/references/iteration-protocol.md": {
     "bytes": 558,
     "sha256": "055e3b5dce6ff0883b19d996676e2059ec5814b6a937c916ddc1df5afad9d44a"
   },
   ".agents/skills/zuaef-runtime-coach/references/runtime-smells.md": {
-    "bytes": 986,
-    "sha256": "14d472f51b712ef3cbddfb0d5c18cdc7247154675f6e94f9e30b852d82235f3d"
+    "bytes": 1338,
+    "sha256": "f5159dce9a0544eccddeb533a9b86b0dbfc1c7992cc08a692254ce7eb9a7b14e"
   },
   ".agents/skills/zuaef-runtime-coach/scripts/__pycache__/compare_metrics.cpython-313.pyc": {
-    "bytes": 4961,
-    "sha256": "d80b8a342eda78d9917431844dbb2c2699e6f79a6a6f58e906b02e4c05aa946a"
+    "bytes": 4937,
+    "sha256": "56bbe9e0f94e8616c60ef04463d0ad553a44afb5d6d3128719ed4834a2608f7c"
   },
   ".agents/skills/zuaef-runtime-coach/scripts/compare_metrics.py": {
     "bytes": 3359,
@@ -36,8 +36,8 @@
     "sha256": "04fcdfdcfd05d52c455ed8b59b0e661f527bcd1c361c8dff4770dfcb004f36db"
   },
   "README.md": {
-    "bytes": 4385,
-    "sha256": "e8526d568946598573f70d5d2ee71b9e33f35b75dbd7e945948af217825dee66"
+    "bytes": 20101,
+    "sha256": "d9a7bc4f1c16ad9da62b1caa5a02f8fc4962c61d4fa99c22876d1834cace342e"
   },
   "TREE.txt": {
     "bytes": 891,
@@ -48,24 +48,24 @@
     "sha256": "2e57227a85aca8547c8af0363089724c86ec45618844b8ff76ef3a7ace820859"
   },
   "docs/runtime-refoundation/BENCHMARKS.md": {
-    "bytes": 4363,
-    "sha256": "67bb8296f855fc6f6b89e3cdfdb391315e6e14bc38e11972899f4edf0f43310a"
+    "bytes": 5741,
+    "sha256": "78f150d20b7e39761372769f17ecf5162fdd2626d342005f1213002183b62219"
   },
   "docs/runtime-refoundation/CAPABILITY_ADMISSION.md": {
-    "bytes": 3030,
-    "sha256": "783e1d6fb2cb59d243dbe50b0de74764b4ff3947c7ed5ca6b323e0b7fbec2208"
+    "bytes": 3400,
+    "sha256": "4fc9827b92a690949704991f009bb2447e220917dc70de5568cb542fad122530"
   },
   "docs/runtime-refoundation/DECISION_LOG.md": {
-    "bytes": 826,
-    "sha256": "0599cb867adecd8a5a6916af232d5404a1e28e5c83bc2d5fd3201a36b9f637c1"
+    "bytes": 3221,
+    "sha256": "7e2f35ae47be6267f57c5e60ef76e18dbc52fe52a19690d0129194e86f89ef8c"
   },
   "docs/runtime-refoundation/DELETION.md": {
     "bytes": 1950,
     "sha256": "876edee217657b91949382acb64034e8f2224406173678e3210c809996a48115"
   },
   "docs/runtime-refoundation/PLAN.md": {
-    "bytes": 2238,
-    "sha256": "242c175f65f81dab58e8cd79b29ee50d72c048b73bb2a2b53fe20f6647aa7dcf"
+    "bytes": 2690,
+    "sha256": "6a65cc0d249d7da7671606e18459f8504ab4865b6420bdcd37cd1320b8f4aa39"
   },
   "docs/runtime-refoundation/PRD.md": {
     "bytes": 5141,
@@ -76,16 +76,16 @@
     "sha256": "616fe90528d6149b05cb586bb6783bcd2df46e79b54b238984429386422f74aa"
   },
   "docs/runtime-refoundation/REVIEW_GATES.md": {
-    "bytes": 1437,
-    "sha256": "550e3912c240ca7fafe1b152236481e3b25e904f848d5402033f91dfb0fa028f"
+    "bytes": 1896,
+    "sha256": "a14e44b307e4db3e535243b8ce66a519e415c3d8fb43fcfbe4d8adb334e094f9"
   },
   "docs/runtime-refoundation/SPEC.md": {
     "bytes": 7177,
     "sha256": "d38ed6e411f8178259d8eb85270224ef3a48a0954ca0430d09357ed0a884c64a"
   },
   "docs/runtime-refoundation/TASKS.md": {
-    "bytes": 2886,
-    "sha256": "d1fbac679b906da3a880f64ad372b654309f2e2af73a0c862d539f0726f49108"
+    "bytes": 7047,
+    "sha256": "2cfa2c03b6a75c30e7f40aa3d93240ecbf7f95eba5d0beb9901111ea41a3ee53"
   },
   "prompts/runtime-refoundation/CODE_AGENT_MASTER_PROMPT.md": {
     "bytes": 2315,

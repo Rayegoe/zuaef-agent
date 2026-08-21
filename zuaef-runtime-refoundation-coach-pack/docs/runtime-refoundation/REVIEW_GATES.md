@@ -5,6 +5,8 @@ A reviewer should reject a runtime change when any gate fails.
 ## G1 — Outcome
 Does the business artifact/decision still satisfy its accepted evaluation?
 
+A `null` outcome evaluation cannot justify accepting a runtime change.
+
 ## G2 — Evidence
 Are factual/effect claims still grounded and integrity rules preserved?
 
@@ -48,4 +50,14 @@ Ambiguous dual authority is a failure.
 
 ## G12 — Complexity regression
 If requests/tokens/latency increased, what outcome improvement pays for it?
+
+## G13 — Premise validity
+Is the change driven by a failure reproduced on current code, rather than an
+expired diagnosis or a stale queue entry?
+
+## G14 — Semantic preselection
+Did a host-side ranking/filtering heuristic take over material, excerpt,
+technique or experience selection that belongs to the model?
+
+If yes, reject unless an audit proved the dropped content immaterial.
 

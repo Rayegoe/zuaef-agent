@@ -50,12 +50,20 @@ WCASE-1 performs write_plan/read_plan/status updates before saving,
 without those turns introducing new business evidence.
 ```
 
+A queued task is a hypothesis about a failure, not a contract. Re-derive the
+failure from current code and a fresh trace before executing the task; a
+queue can lag behind evidence. A historical diagnosis that no longer
+reproduces is closed with a recorded verdict
+(`CURRENT_PATH_ALREADY_MINIMAL` / `NO_REMOVAL_JUSTIFIED` /
+`PROBLEM_NOT_REPRODUCED`), never honored with new architecture.
+
 ### 2. Classify the cost
 
 Classify each suspicious action:
 
 - `SEMANTIC_OBSERVATION`
 - `SEMANTIC_DECISION`
+- `ARTIFACT_SUBMISSION`
 - `EXTERNAL_ACTION`
 - `VALIDATION`
 - `MECHANICAL_TRANSPORT`
@@ -63,7 +71,14 @@ Classify each suspicious action:
 - `DURABILITY`
 - `PRESENTATION`
 
-Model turns should cluster around the first four when semantic interpretation is needed.
+`ARTIFACT_SUBMISSION` persists the model's own local deliverable (for
+example `save_article`). `EXTERNAL_ACTION` changes external systems,
+production data, or people. Local artifact persistence is not an external
+side effect; confusing the two pollutes cross-domain effect accounting.
+
+Model turns should cluster around semantic observation, semantic decision,
+artifact submission, external action and validation when semantic
+interpretation is needed.
 
 ### 3. Form one causal hypothesis
 
@@ -89,7 +104,8 @@ When testing a capability:
 ### 5. Evaluate
 
 Always compare:
-- accepted outcome;
+- accepted outcome — a recorded verdict; `execution_state=completed` or a
+  `null` outcome evaluation blocks optimization acceptance;
 - evidence/effect integrity;
 - requests;
 - tool calls;
@@ -108,6 +124,9 @@ One of:
 - `PROMOTE_TO_CORE_CANDIDATE`
 - `QUARANTINE_OLD_PATH`
 - `DELETE_OLD_PATH`
+
+A task may equally close with zero code change when its failure premise does
+not reproduce or its outcome gate is unverified.
 
 ### 7. Record
 
@@ -142,7 +161,14 @@ Keep model-owned:
 - strategy;
 - writing judgment;
 - negotiation choice;
-- decision under ambiguity.
+- decision under ambiguity;
+- which material, excerpt, technique guidance or past review counts as
+  relevant.
+
+Host-side lexical ranking, keyword tagging or heuristic filtering that
+pre-decides any of the above is semantic preselection, not transport, and
+requires an audit that proves it does not steal the model's selection
+authority.
 
 ### Revision
 
@@ -168,7 +194,8 @@ Do not repeatedly query an unchanged evidence surface to manufacture certainty.
 
 Stop and report rather than expanding architecture when:
 
-- failure cannot be reproduced;
+- failure cannot be reproduced (including an expired task premise or
+  historical diagnosis that current code no longer exhibits);
 - metrics are missing;
 - proposed change depends on hypothetical future use;
 - outcome quality falls;
