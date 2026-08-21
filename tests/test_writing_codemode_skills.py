@@ -1,12 +1,11 @@
-"""Writing v0.2 — CodeMode selection & deferred skills contract tests.
+"""Legacy CodeMode selection and deferred skill-library tests.
 
 Zero model calls. These tests belong with the CodeMode experiment and the
 writing skills (not with the production driver contract), so they can be
 reverted independently of the agent-owned production path (SPEC §30 / v0.2
 commit discipline).
 
-  - CodeMode wraps the tagged observation tools; save_artifact stays native
-  - the writing toolset tags observe tools with code_mode=True metadata
+  - the benchmark-only CodeMode profile wraps pull_context; save_article stays native
   - the ace-writing plugin returns CodeMode only when configured
   - the ace-writing-codemode profile composes with CodeMode present
   - the four writing skills exist as deferred capabilities (catalog = id +
@@ -33,7 +32,7 @@ sys.path[:0] = [
 ]
 
 from zuaef_ace_writing.writing_toolset import (
-    BudgetedWritingToolset,
+    WritingEnvironmentToolset,
     build_writing_toolset,
 )
 
@@ -79,44 +78,23 @@ async def _selected(selector, defs, deps: CoreDeps) -> set[str]:
     return selected
 
 
-def test_codemode_selector_tags_observations_and_excludes_save():
-    """SPEC §10: CodeMode wraps observation/retrieval tools; save_artifact
-    stays a normal explicit tool call."""
+def test_codemode_selector_wraps_context_and_excludes_save():
     deps = CoreDeps(workspace_root=Path("."), run_id="cm")
     definitions = [
-        _tool_def("list_materials", code_mode=True),
-        _tool_def("read_material", code_mode=True),
-        _tool_def("retrieve_exemplars", code_mode=True),
-        _tool_def("retrieve_knowledge", code_mode=True),
-        _tool_def("check_claim", code_mode=True),
-        _tool_def("save_artifact", code_mode=False),
+        _tool_def("pull_context", code_mode=True),
+        _tool_def("save_article", code_mode=False),
     ]
     selected = asyncio.run(_selected({"code_mode": True}, definitions, deps))
-    assert selected == {
-        "list_materials",
-        "read_material",
-        "retrieve_exemplars",
-        "retrieve_knowledge",
-        "check_claim",
-    }
-    assert "save_artifact" not in selected
+    assert selected == {"pull_context"}
+    assert "save_article" not in selected
 
 
-def test_budgeted_toolset_tools_carry_code_mode_metadata_for_observations():
-    """The writing toolset itself must tag the observation tools so a later
-    CodeMode(tools={"code_mode": True}) can split the surface (SPEC §10)."""
+def test_environment_toolset_tags_only_context_for_legacy_codemode():
     toolset = build_writing_toolset(ace_root=REPO / "missing-ace")
-    assert isinstance(toolset, BudgetedWritingToolset)
-    for name in (
-        "list_materials",
-        "read_material",
-        "retrieve_exemplars",
-        "retrieve_knowledge",
-        "check_claim",
-    ):
-        assert toolset.tools[name].metadata.get("code_mode") is True, name
-    assert toolset.tools["save_artifact"].metadata is None or (
-        toolset.tools["save_artifact"].metadata.get("code_mode") is not True
+    assert isinstance(toolset, WritingEnvironmentToolset)
+    assert toolset.tools["pull_context"].metadata.get("code_mode") is True
+    assert toolset.tools["save_article"].metadata is None or (
+        toolset.tools["save_article"].metadata.get("code_mode") is not True
     )
 
 
@@ -160,7 +138,7 @@ def test_codemode_profile_composes(tmp_path):
     assert snapshot.profile == "ace-writing-codemode"
     caps = agent.root_capability.capabilities
     assert any(isinstance(c, CodeMode) for c in caps)
-    assert any(isinstance(t, BudgetedWritingToolset) for t in agent.toolsets)
+    assert any(isinstance(t, WritingEnvironmentToolset) for t in agent.toolsets)
 
 
 def test_writing_skills_exist_as_deferred_capabilities():

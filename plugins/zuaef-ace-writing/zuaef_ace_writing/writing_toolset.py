@@ -1,33 +1,9 @@
-# Provenance: byte-identical copy of examples/writing_toolset.py (proof evidence,
-# per SPEC §33 the original stays untouched). Keep both in sync; do not fork
-# domain logic here — the Context Engine (ACE) remains the owner.
-"""Thin ZUAEF adapter over article-context-engine (ACE) context capabilities.
+"""Small production writing environment over the ACE material store.
 
-The ACE engine owns materials, knowledge/evidence assets, corpus retrieval,
-claim validation, and artifact saving. This module only calls
-``tools/ctx.py`` and returns its receipts/text; no corpus selection, evidence
-logic, or canonical workspace writing is duplicated here.
-
-Agent-facing capabilities:
-
-  list_materials      observe
-  read_material       observe
-  retrieve_exemplars  observe
-  retrieve_knowledge  observe
-  check_claim         observe
-  save_artifact       local_write (snapshot under ZUAEF workspace only)
-
-Exemplars are language/technique references. They are never factual evidence
-for the current HW-951-style material set.
-
-Run isolation: every ACE call is stamped with the current run_id (from
-RunContext.deps), so receipts are attributable to the run that caused them.
-
-Budget authority: per-run delivery caps are seeded from THIS run's ACE
-receipts (durable truth, survives resume) plus this process's delivery
-counter (fast path). Exhausted tools are withdrawn from the next model step's
-action space via ``get_tools``; a refusal is a normal terminal return, so it
-settles as a completed effect in the step ledger.
+The model sees two actions only: ``pull_context(query)`` searches the bound
+world and returns a bounded Markdown desk pack; ``save_article(markdown)``
+persists the finished article. Persistence, receipts and source bookkeeping
+remain host concerns.
 """
 
 from __future__ import annotations
@@ -35,9 +11,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
-from typing import Any
 
 from pydantic_ai import FunctionToolset, RunContext
 
@@ -49,28 +25,20 @@ DEFAULT_ACE_ROOT = Path(
         Path.home() / "projects/article-context-engine/article-context-engine",
     )
 )
+MAX_CONTEXT_CHARS = 18_000
+MAX_TECHNIQUE_SHARDS = 3
 
-MAX_EXEMPLAR_PULLS = 6
-MAX_KNOWLEDGE_PULLS = 4
-MAX_CLAIM_CHECKS = 8
-
-WRITING_RULES = (
-    "ACE context capabilities are pull-based. Choose which material to read, which "
-    "exemplar technique to retrieve, which knowledge/evidence asset to consult, and "
-    "which claim to check; the Context Engine does not prescribe a workflow. "
-    "Exemplars are language/technique references only, never factual sources. "
-    "There is no quality/style scoring tool; the human editor owns taste. "
-    "Budgets are per-run, seeded from this run's ACE receipts (resume-safe) and "
-    "counted in-process; an exhausted tool is withdrawn from the next step's "
-    "action space. "
-    "Grounded ACE articles (material with a real article identity) must keep "
-    "their evidence chain: read through these tools and, when a durable "
-    "artifact is wanted, save it with save_artifact (host-verified). A pasted "
-    "text with no legitimate ACE article/material identity can simply be "
-    "rewritten and returned — no ingest, no artifact, no workflow required. "
-    "Writing is presented, not delivered: the user you serve reads your reply; "
-    "sending anything to the customer is a separate, explicitly requested step."
-)
+WRITER_INSTRUCTIONS = """\
+You are the writer. The host gives you a bounded desk pack and keeps all
+operational state out of your context. You own meaning, selection, viewpoint,
+narrative, factual restraint and language. Do not turn those judgments into a
+workflow. Call pull_context only when the desk pack leaves a concrete question
+unanswered. Technique examples are possibilities, never rules or factual
+sources, and their wording must not be copied. Before finishing, reread the
+article for premature conclusions, repetitive paragraph shapes, missing human
+presence, forced brand insertion and claims that exceed the supplied material.
+Submit the complete article with save_article(markdown).
+"""
 
 
 def _ace(
@@ -97,9 +65,9 @@ def ace_prepare(
     materials: list[str] | None = None,
     ace_root: Path = DEFAULT_ACE_ROOT,
 ) -> dict:
-    """Host-side prep: create the ACE workspace and ingest raw materials."""
+    """Create an ACE workspace and ingest the host-bound source files."""
     if not (ace_root / "workspaces" / article_id).exists():
-        r = _ace(
+        result = _ace(
             ace_root,
             "new",
             article_id,
@@ -107,53 +75,25 @@ def ace_prepare(
             title,
             *(["--account", account] if account else []),
         )
-        if r.returncode != 0:
-            raise RuntimeError(f"ctx.py new failed: {r.stderr or r.stdout}")
+        if result.returncode != 0:
+            raise RuntimeError(f"ctx.py new failed: {result.stderr or result.stdout}")
     if materials:
-        r = _ace(ace_root, "ingest", article_id, *materials)
-        if r.returncode != 0:
-            raise RuntimeError(f"ctx.py ingest failed: {r.stderr or r.stdout}")
+        result = _ace(ace_root, "ingest", article_id, *materials)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"ctx.py ingest failed: {result.stderr or result.stdout}"
+            )
     return {"article_id": article_id, "materials": materials or []}
-
-
-def check_gate_impl(article_id: str, ace_root: Path = DEFAULT_ACE_ROOT) -> str:
-    r = _ace(ace_root, "gate", article_id)
-    return f"exit={r.returncode}\n{r.stdout}"
-
-
-def machine_ready_or_complete(
-    article_id: str, ace_root: Path = DEFAULT_ACE_ROOT
-) -> tuple[bool, str]:
-    """Gate predicate: machine gate fully green, or only human_final_reviewed pending.
-
-    Both are success states for the Harness Integration Test: (a) the gate passed
-    completely (human review already done), or (b) the machine gate has exactly one
-    remaining blocker, human_final_reviewed — human review is an optional post-test
-    observation, not a blocking condition."""
-    output = check_gate_impl(article_id, ace_root)
-    lines = output.strip().splitlines()
-    try:
-        exit_code = int(lines[0].removeprefix("exit="))
-    except (ValueError, IndexError):
-        return False, f"unparseable gate output: {output!r}"
-    errors = [
-        line.removeprefix("- ").strip() for line in lines[1:] if line.startswith("- ")
-    ]
-    if exit_code == 0:
-        return True, "gate fully passed"
-    only_human = len(errors) == 1 and "human_final_reviewed" in errors[0]
-    if only_human:
-        return True, errors[0]
-    detail = "; ".join(errors) or output.strip()
-    return False, detail
 
 
 def list_materials_impl(
     article_id: str, run_id: str = "", ace_root: Path = DEFAULT_ACE_ROOT
 ) -> str:
-    r = _ace(ace_root, "materials", article_id, "--run-id", run_id)
+    result = _ace(ace_root, "materials", article_id, "--run-id", run_id)
     return (
-        r.stdout if r.returncode == 0 else f"MATERIALS FAILED: {r.stderr or r.stdout}"
+        result.stdout
+        if result.returncode == 0
+        else f"MATERIALS FAILED: {result.stderr or result.stdout}"
     )
 
 
@@ -163,504 +103,327 @@ def read_material_impl(
     run_id: str = "",
     ace_root: Path = DEFAULT_ACE_ROOT,
 ) -> str:
-    r = _ace(ace_root, "material", article_id, material_id, "--run-id", run_id)
+    result = _ace(
+        ace_root, "material", article_id, material_id, "--run-id", run_id
+    )
     return (
-        r.stdout
-        if r.returncode == 0
-        else f"MATERIAL READ FAILED: {r.stderr or r.stdout}"
+        result.stdout
+        if result.returncode == 0
+        else f"MATERIAL READ FAILED: {result.stderr or result.stdout}"
     )
 
 
-def _terms(value: str | list[str] | None) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, str):
-        return [t for t in value.replace("，", ",").replace(",", " ").split() if t]
-    return [str(t) for t in value if str(t).strip()]
+def _query_terms(value: str | list[str]) -> list[str]:
+    raw = " ".join(str(item) for item in value) if isinstance(value, list) else value
+    return re.findall(r"[a-zA-Z0-9_-]+|[\u4e00-\u9fff]{2,8}", raw.lower())[:16]
 
 
 def retrieve_exemplars_impl(
     article_id: str,
     query: str | list[str],
-    functions: str | list[str] | None = None,
-    tags: str | list[str] | None = None,
-    budget: int = 3,
-    execution_id: str = "pull-exemplars",
+    *,
+    tags: list[str] | None = None,
+    budget: int = MAX_TECHNIQUE_SHARDS,
     run_id: str = "",
     ace_root: Path = DEFAULT_ACE_ROOT,
 ) -> str:
-    query_terms = _terms(query)
     args = [
         "exemplars",
         article_id,
         "--query",
-        *query_terms,
+        *_query_terms(query),
         "--budget",
         str(budget),
         "--execution-id",
-        execution_id,
+        "writer-context",
         "--run-id",
         run_id,
     ]
-    if functions:
-        args += ["--functions", *_terms(functions)]
     if tags:
-        args += ["--tags", *_terms(tags)]
-    r = _ace(ace_root, *args)
+        args.extend(["--tags", *tags])
+    result = _ace(ace_root, *args)
     return (
-        r.stdout if r.returncode == 0 else f"EXEMPLARS FAILED: {r.stderr or r.stdout}"
+        result.stdout
+        if result.returncode == 0
+        else f"EXEMPLARS FAILED: {result.stderr or result.stdout}"
     )
 
 
-def retrieve_knowledge_impl(
-    article_id: str,
-    query: str | list[str],
-    budget: int = 3,
-    run_id: str = "",
-    ace_root: Path = DEFAULT_ACE_ROOT,
-) -> str:
-    r = _ace(
-        ace_root,
-        "knowledge",
-        article_id,
-        "--query",
-        *_terms(query),
-        "--budget",
-        str(budget),
-        "--run-id",
-        run_id,
+def _lexical_units(value: str) -> set[str]:
+    units = set(re.findall(r"[a-zA-Z0-9_-]+", value.lower()))
+    for run in re.findall(r"[\u4e00-\u9fff]+", value):
+        units.update(run[i : i + 2] for i in range(max(0, len(run) - 1)))
+    return units
+
+
+def _relevance(text: str, query: str) -> int:
+    return len(_lexical_units(text) & _lexical_units(query))
+
+
+def _bounded_excerpt(text: str, query: str, limit: int) -> str:
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", text) if part.strip()]
+    ranked = sorted(
+        enumerate(paragraphs),
+        key=lambda item: (-_relevance(item[1], query), item[0]),
     )
-    return (
-        r.stdout if r.returncode == 0 else f"KNOWLEDGE FAILED: {r.stderr or r.stdout}"
-    )
+    chosen: list[tuple[int, str]] = []
+    used = 0
+    for index, paragraph in ranked:
+        if used >= limit:
+            break
+        room = limit - used
+        chosen.append((index, paragraph[:room]))
+        used += min(len(paragraph), room) + 2
+    chosen.sort()
+    return "\n\n".join(paragraph for _, paragraph in chosen).strip()
 
 
-def check_claim_impl(
-    article_id: str,
-    claim: dict,
-    run_id: str = "",
-    purpose: str = "validation",
-    ace_root: Path = DEFAULT_ACE_ROOT,
-) -> str:
-    """Ask ACE to validate one claim; a serialization problem is a returned
-    failure string, never a raised exception (tool errors must not block a
-    run through the retry loop)."""
-    try:
-        payload = json.dumps(claim, ensure_ascii=False, default=str)
-    except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
-        return json.dumps(
-            {
-                "ok": False,
-                "error": f"claim is not JSON-serializable: {type(exc).__name__}",
-                "hint": "pass plain JSON values in the claim object.",
-            },
-            ensure_ascii=False,
-        )
-    r = _ace(
-        ace_root,
-        "claim-check",
-        article_id,
-        "--run-id",
-        run_id,
-        "--purpose",
-        purpose,
-        input_text=payload,
-    )
-    return (
-        r.stdout if r.returncode == 0 else f"CLAIM CHECK FAILED: {r.stderr or r.stdout}"
-    )
+def _material_rows(output: str) -> list[dict]:
+    rows: list[dict] = []
+    for line in output.splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict) and value.get("id"):
+            rows.append(value)
+    return rows
 
 
-def save_artifact_impl(
-    article_id: str,
-    final_markdown: str,
-    claims: list[dict],
-    sources: list[dict],
-    snapshot_dir: Path | None = None,
-    run_id: str = "",
-    ace_root: Path = DEFAULT_ACE_ROOT,
-) -> tuple[dict, Path | None]:
-    """Ask ACE to validate and write the canonical artifact, then snapshot it.
-
-    ``transport_ok`` records that the CLI executed and returned parseable JSON.
-    The semantic verdict is ACE's own (``ok`` / ``fact_check_passed``) and is
-    never overwritten here.
-    """
-    payload = json.dumps(
-        {
-            "final_markdown": final_markdown,
-            "claims": claims,
-            "sources": sources,
-        },
-        ensure_ascii=False,
-    )
-    r = _ace(ace_root, "save", article_id, "--run-id", run_id, input_text=payload)
-    if r.returncode != 0:
-        result = {
-            "article_id": article_id,
-            "ok": False,
-            "transport_ok": False,
-            "error": (r.stderr or r.stdout).strip()[:2000],
-        }
-        return result, None
-    try:
-        result = json.loads(r.stdout.strip().splitlines()[-1])
-    except (json.JSONDecodeError, IndexError):
-        result = {
-            "article_id": article_id,
-            "ok": False,
-            "transport_ok": False,
-            "error": r.stdout.strip()[:2000],
-        }
-        return result, None
-    # Transport succeeded. Trust ACE's semantic verdict: only default ok=True
-    # when ACE itself did not declare one.
-    result["transport_ok"] = True
-    result.setdefault("ok", True)
-
-    snapshot_path: Path | None = None
-    if snapshot_dir is not None:
-        snapshot_path = snapshot_dir / "final.md"
-        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-        snapshot_path.write_text(final_markdown, encoding="utf-8")
-        result["snapshot_rel_path"] = None
-        result["snapshot_sha256"] = hashlib.sha256(
-            final_markdown.encode("utf-8")
-        ).hexdigest()
-    return result, snapshot_path
+def _material_body(output: str) -> str:
+    lines = output.splitlines()
+    if lines and lines[0].startswith("MATERIAL "):
+        lines = lines[2:]
+    if lines and lines[-1].startswith("RECEIPT "):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
 
 
-class BudgetedWritingToolset(FunctionToolset[CoreDeps]):
-    """Run-scoped, resume-safe delivery budgets + action-space withdrawal.
+def _technique_tags(query: str) -> list[str]:
+    tags = {"ordinary_prose", "low_rhetorical_density"}
+    if any(word in query for word in ("人", "采访", "用户", "场景", "现场")):
+        tags.update(("human_presence", "scene_preserving"))
+    if any(word in query.lower() for word in ("ai", "模板", "开头", "改稿", "反馈")):
+        tags.add("human_presence")
+    if any(word in query for word in ("品牌", "产品", "知识", "解释")):
+        tags.add("knowledge_braid")
+    return sorted(tags)
 
-    Budget authority is the ACE receipt ledger filtered by ``run_id`` (durable
-    truth) plus this process's delivery counter (fast path). A tool whose
-    budget is exhausted is refused at call time (a normal terminal return that
-    settles as a completed effect) AND withdrawn from the next model step's
-    action space by ``get_tools``, so the model stops being offered it.
-    """
 
-    _BUDGETED: tuple[tuple[str, str, int], ...] = (
-        ("retrieve_exemplars", "pull-exemplars", MAX_EXEMPLAR_PULLS),
-        ("retrieve_knowledge", "retrieve-knowledge", MAX_KNOWLEDGE_PULLS),
-        ("check_claim", "check-claim", MAX_CLAIM_CHECKS),
-    )
+def _parse_technique_records(output: str) -> list[dict]:
+    records: list[dict] = []
+    for line in output.splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict) and value.get("text_ref"):
+            records.append(value)
+    return records
 
-    def __init__(self, *, ace_root: Path, instructions: str = WRITING_RULES) -> None:
-        super().__init__(instructions=instructions)
-        self._ace_root = ace_root
-        # Durable counts per (article_id, run_id, execution_id), read once per
-        # process from ACE receipts; survives resume because receipts persist.
-        self._durable: dict[tuple[str, str, str], int] = {}
-        # This-process deliveries per (article_id, run_id, tool).
-        self._local: dict[tuple[str, str, str], int] = {}
-        # First article_id seen per run (one run == one article in this proof).
-        self._run_article: dict[str, str] = {}
 
-    # -- durable counting ----------------------------------------------------
-
-    def _note_article(self, run_id: str, article_id: str) -> None:
-        self._run_article.setdefault(run_id, article_id)
-
-    def _receipt_count(self, article_id: str, run_id: str, execution_id: str) -> int:
-        key = (article_id, run_id, execution_id)
-        if key in self._durable:
-            return self._durable[key]
-        if execution_id == "check-claim":
-            path = (
-                self._ace_root
-                / "workspaces"
-                / article_id
-                / "_state"
-                / "claim-checks.jsonl"
-            )
-        else:
-            path = (
-                self._ace_root
-                / "workspaces"
-                / article_id
-                / "_state"
-                / "retrieval-receipts.jsonl"
-            )
-        count = 0
-        if path.is_file():
-            for line in path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    record = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if (
-                    record.get("execution_id") == execution_id
-                    and str(record.get("run_id")) == run_id
-                ):
-                    count += 1
-        self._durable[key] = count
-        return count
-
-    def _remaining(
-        self, article_id: str, run_id: str, tool: str, execution_id: str, cap: int
-    ) -> int:
-        delivered = self._receipt_count(
-            article_id, run_id, execution_id
-        ) + self._local.get((article_id, run_id, tool), 0)
-        return cap - delivered
-
-    def _mark_delivered(self, article_id: str, run_id: str, tool: str) -> None:
-        key = (article_id, run_id, tool)
-        self._local[key] = self._local.get(key, 0) + 1
-
-    def _final_delivery_note(
-        self, article_id: str, run_id: str, tool: str, execution_id: str, cap: int
-    ) -> str:
-        """Warn the model when this was the last allowed delivery, so the
-        upcoming withdrawal is not a surprise."""
-        if self._remaining(article_id, run_id, tool, execution_id, cap) <= 0:
-            return (
-                "\n[NOTE] This was the final delivery of this tool for the run "
-                f"(per-run cap {cap}). It will no longer be available from the next "
-                "step — do not call it again. Draft and save with what you have."
-            )
+def _read_relative(root: Path, relative: str) -> str:
+    target = (root / relative).resolve()
+    if not target.is_relative_to(root.resolve()) or not target.is_file():
         return ""
+    return target.read_text(encoding="utf-8", errors="replace").strip()
 
-    # -- action-space withdrawal ---------------------------------------------
 
-    async def get_tools(self, ctx: RunContext[CoreDeps]) -> dict[str, Any]:
-        """Per-step action space: budget-exhausted tools are not offered."""
-        tools = await super().get_tools(ctx)
-        run_id = ctx.deps.run_id
-        article_id = self._run_article.get(run_id)
-        if article_id is None:
-            return tools  # nothing delivered yet, nothing exhausted
-        for tool_name, execution_id, cap in self._BUDGETED:
-            if tool_name not in tools:
-                continue
-            if self._remaining(article_id, run_id, tool_name, execution_id, cap) <= 0:
-                del tools[tool_name]
-        return tools
+def _technique_section(
+    article_id: str, query: str, run_id: str, ace_root: Path
+) -> str:
+    raw = retrieve_exemplars_impl(
+        article_id,
+        [],
+        tags=_technique_tags(query),
+        run_id=run_id,
+        ace_root=ace_root,
+    )
+    records = _parse_technique_records(raw)
+    if not records:
+        raw = retrieve_exemplars_impl(
+            article_id, [], run_id=run_id, ace_root=ace_root
+        )
+        records = _parse_technique_records(raw)
+    rendered: list[str] = []
+    for record in records[:MAX_TECHNIQUE_SHARDS]:
+        body = _read_relative(ace_root, str(record["text_ref"]))
+        if not body:
+            continue
+        rendered.append(
+            "\n".join(
+                [
+                    f"### {record.get('exemplar_id', '技巧片段')}",
+                    "",
+                    _bounded_excerpt(body, query, 1_600),
+                    "",
+                    "不要复制原句。这个片段只用于理解一种可能的叙事运动。",
+                    "",
+                    f"来源：{record.get('source_ref', record['text_ref'])}",
+                ]
+            )
+        )
+    return "\n\n".join(rendered)
+
+
+def _experience_section(query: str, learning_root: Path | None) -> str:
+    if learning_root is None or not learning_root.is_dir():
+        return ""
+    candidates: list[tuple[int, Path]] = []
+    for review in learning_root.glob("cases/*/human-review.md"):
+        revised = review.with_name("revised.md")
+        combined = review.read_text(encoding="utf-8", errors="replace")
+        if revised.is_file():
+            combined += "\n" + revised.read_text(encoding="utf-8", errors="replace")
+        score = _relevance(combined, query)
+        if score:
+            candidates.append((score, review))
+    if not candidates:
+        return ""
+    _, review = max(candidates, key=lambda item: (item[0], item[1].as_posix()))
+    revised = review.with_name("revised.md")
+    parts = [
+        "### 过去编辑真正改过的地方",
+        "",
+        _bounded_excerpt(
+            review.read_text(encoding="utf-8", errors="replace"), query, 1_800
+        ),
+    ]
+    if revised.is_file():
+        parts.extend(
+            [
+                "",
+                "### 人工采纳后的稿件",
+                "",
+                _bounded_excerpt(
+                    revised.read_text(encoding="utf-8", errors="replace"),
+                    query,
+                    1_500,
+                ),
+            ]
+        )
+    return "\n".join(parts)
+
+
+def build_writer_context(
+    article_id: str,
+    query: str,
+    *,
+    run_id: str = "",
+    ace_root: Path = DEFAULT_ACE_ROOT,
+    learning_root: Path | None = None,
+    max_chars: int = MAX_CONTEXT_CHARS,
+) -> str:
+    """Search the bound world and render one bounded Markdown desk pack."""
+    rows = _material_rows(list_materials_impl(article_id, run_id, ace_root))
+    material_budget = 11_000
+    per_material = max(1_200, material_budget // max(1, len(rows)))
+    material_parts: list[str] = []
+    direct_matches = 0
+    for row in rows:
+        material_id = str(row["id"])
+        body = _material_body(
+            read_material_impl(article_id, material_id, run_id, ace_root)
+        )
+        direct_matches += int(_relevance(body, query) > 0)
+        material_parts.append(
+            "\n".join(
+                [
+                    f"### [{material_id}] {row.get('filename', '')}".rstrip(),
+                    "",
+                    _bounded_excerpt(body, query, per_material),
+                ]
+            )
+        )
+
+    experience = _experience_section(query, learning_root)
+    techniques = _technique_section(article_id, query, run_id, ace_root)
+    sections = [
+        "# 当前可用材料",
+        "",
+        "## 与当前问题最相关的原始材料",
+        "",
+        "\n\n".join(material_parts) if material_parts else "没有绑定材料。",
+        "",
+        "## 事实边界",
+        "",
+        f"已搜索全部 {len(rows)} 份绑定材料。",
+    ]
+    if rows and direct_matches == 0:
+        sections.append(
+            "没有找到与本次查询直接匹配的原文；不要把查询中的具体说法写成事实。"
+        )
+    else:
+        sections.append(
+            "只有材料中明确出现的内容才能写成事实；推断应保留分寸和限定。"
+        )
+    if experience:
+        sections.extend(["", "## 相关的真实人工修改", "", experience])
+    if techniques:
+        sections.extend(["", "## 可参考的写作片段 / 技巧", "", techniques])
+    context = "\n".join(sections).strip()
+    if len(context) > max_chars:
+        context = context[: max_chars - 80].rstrip() + "\n\n[案头材料已按上下文预算截断]"
+    return context
+
+
+def save_article_impl(markdown: str, workspace_root: Path, run_id: str) -> str:
+    """Persist one article; no model-authored ledger or semantic gate."""
+    article = markdown.strip()
+    if not article:
+        return "文章为空，未保存。"
+    artifact_root = (workspace_root / "artifacts").resolve()
+    target = (artifact_root / run_id / "final.md").resolve()
+    if not target.is_relative_to(artifact_root):
+        raise ValueError(f"unsafe run id for artifact path: {run_id!r}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(article + "\n", encoding="utf-8")
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    relative = target.relative_to(workspace_root.resolve()).as_posix()
+    return f"文章已保存：{relative}（{len(article)} 字符，sha256={digest}）"
+
+
+class WritingEnvironmentToolset(FunctionToolset[CoreDeps]):
+    """The production writer's complete model-visible action surface."""
+
+    def __init__(
+        self,
+        *,
+        ace_root: Path,
+        learning_root: Path | None = None,
+    ) -> None:
+        super().__init__(instructions=WRITER_INSTRUCTIONS)
+        self.ace_root = ace_root
+        self.learning_root = learning_root
 
 
 def build_writing_toolset(
     ace_root: Path = DEFAULT_ACE_ROOT,
-) -> BudgetedWritingToolset:
-    toolset = BudgetedWritingToolset(ace_root=ace_root)
+    *,
+    learning_root: Path | None = None,
+) -> WritingEnvironmentToolset:
+    toolset = WritingEnvironmentToolset(
+        ace_root=ace_root, learning_root=learning_root
+    )
 
     @toolset.tool(metadata={"code_mode": True})
-    def list_materials(ctx: RunContext[CoreDeps], article_id: str) -> str:
-        """List ACE ingested material index rows (ids, hashes, stored paths)."""
-        return list_materials_impl(article_id, ctx.deps.run_id, ace_root)
-
-    @toolset.tool(metadata={"code_mode": True})
-    def read_material(
-        ctx: RunContext[CoreDeps], article_id: str, material_id: str
-    ) -> str:
-        """Read one ingested raw material by id (e.g. M001). Use this instead of
-        a pre-built context pack; each read is receipted by ACE."""
-        return read_material_impl(article_id, material_id, ctx.deps.run_id, ace_root)
-
-    @toolset.tool(retries=3, metadata={"code_mode": True})
-    def retrieve_exemplars(
-        ctx: RunContext[CoreDeps],
-        article_id: str,
-        query: str,
-        functions: str | None = None,
-        tags: str | None = None,
-        budget: int = 3,
-    ) -> str:
-        """Pull writing-technique exemplars for the current drafting need.
-
-        `query` is one string of lexical terms (space/comma separated) over
-        exemplar text/metadata; `functions` e.g. "QUOTE TRANSITION"; `tags`
-        e.g. "low_author_intrusion scene_preserving". Returned fragments are
-        language references only, never factual sources. Per-run cap: 6 pulls;
-        once exhausted the tool is withdrawn from your action space."""
-        toolset._note_article(ctx.deps.run_id, article_id)
-        if (
-            toolset._remaining(
-                article_id,
-                ctx.deps.run_id,
-                "retrieve_exemplars",
-                "pull-exemplars",
-                MAX_EXEMPLAR_PULLS,
-            )
-            <= 0
-        ):
-            return (
-                f"EXEMPLAR BUDGET EXHAUSTED (per-run cap {MAX_EXEMPLAR_PULLS}). "
-                "Draft with the technique references already pulled; this tool "
-                "is no longer available this run."
-            )
-        out = retrieve_exemplars_impl(
+    def pull_context(ctx: RunContext[CoreDeps], query: str) -> str:
+        """Search all bound sources for one semantic need and return Markdown."""
+        article_id = ctx.deps.bindings.get("writing_article_id", ctx.deps.run_id)
+        return build_writer_context(
             article_id,
             query,
-            functions,
-            tags,
-            budget,
             run_id=ctx.deps.run_id,
             ace_root=ace_root,
+            learning_root=learning_root,
         )
-        toolset._mark_delivered(article_id, ctx.deps.run_id, "retrieve_exemplars")
-        note = toolset._final_delivery_note(
-            article_id,
-            ctx.deps.run_id,
-            "retrieve_exemplars",
-            "pull-exemplars",
-            MAX_EXEMPLAR_PULLS,
-        )
-        return note + out
-
-    @toolset.tool(retries=3, metadata={"code_mode": True})
-    def retrieve_knowledge(
-        ctx: RunContext[CoreDeps],
-        article_id: str,
-        query: str,
-        budget: int = 3,
-    ) -> str:
-        """Retrieve ACE knowledge/evidence policy assets relevant to `query`.
-
-        Use this for claim taxonomy, evidence policy, or knowledge-braid rules
-        while drafting. Each retrieval is receipted with selected refs and hashes.
-        Per-run cap: 4 pulls; once exhausted the tool is withdrawn."""
-        toolset._note_article(ctx.deps.run_id, article_id)
-        if (
-            toolset._remaining(
-                article_id,
-                ctx.deps.run_id,
-                "retrieve_knowledge",
-                "retrieve-knowledge",
-                MAX_KNOWLEDGE_PULLS,
-            )
-            <= 0
-        ):
-            return (
-                f"KNOWLEDGE BUDGET EXHAUSTED (per-run cap {MAX_KNOWLEDGE_PULLS}). "
-                "Continue drafting with the policy assets already retrieved; this "
-                "tool is no longer available this run."
-            )
-        out = retrieve_knowledge_impl(
-            article_id, query, budget, run_id=ctx.deps.run_id, ace_root=ace_root
-        )
-        toolset._mark_delivered(article_id, ctx.deps.run_id, "retrieve_knowledge")
-        note = toolset._final_delivery_note(
-            article_id,
-            ctx.deps.run_id,
-            "retrieve_knowledge",
-            "retrieve-knowledge",
-            MAX_KNOWLEDGE_PULLS,
-        )
-        return note + out
-
-    @toolset.tool(retries=3, metadata={"code_mode": True})
-    def check_claim(
-        ctx: RunContext[CoreDeps],
-        article_id: str,
-        claim: Any = None,
-        purpose: str = "validation",
-    ) -> str:
-        """Validate one claim JSON against ACE source ledger rules.
-
-        claim shape: {id,text,type,status,source_ids,qualifier?}. FACT and
-        SUPPORTED_INTERPRETATION need existing source_ids. `purpose` labels why
-        the check runs: "validation" for claims flagged by save_artifact, or
-        "integration_probe" for the explicit end-of-run capability canary
-        (non-authoritative for the saved artifact: its output must not trigger
-        another save). The check is logged by ACE; fix failures before
-        save_artifact. Per-run cap: 8 checks; once exhausted the tool is withdrawn.
-
-        A malformed claim returns a normal error string, never a raised
-        exception: a bad argument must not exhaust tool retries and block the
-        run (Writing v0.2 field hardening)."""
-        toolset._note_article(ctx.deps.run_id, article_id)
-        if (
-            toolset._remaining(
-                article_id,
-                ctx.deps.run_id,
-                "check_claim",
-                "check-claim",
-                MAX_CLAIM_CHECKS,
-            )
-            <= 0
-        ):
-            return json.dumps(
-                {
-                    "ok": True,
-                    "skipped": True,
-                    "budget_exhausted": True,
-                    "hint": "check_claim budget exhausted; batch validation is in "
-                    "save_artifact. Call save_artifact if this article needs a "
-                    "durable artifact, otherwise finish your answer.",
-                },
-                ensure_ascii=False,
-            )
-        if isinstance(claim, str):
-            try:
-                claim = json.loads(claim)
-            except json.JSONDecodeError:
-                return json.dumps(
-                    {
-                        "ok": False,
-                        "error": f"claim is not valid JSON: {claim[:200]!r}",
-                        "hint": "pass the claim as a JSON object, e.g. "
-                        '{"id":"C1","text":"...","type":"FACT","source_ids":["S1"],"status":"resolved"}',
-                    },
-                    ensure_ascii=False,
-                )
-        if not isinstance(claim, dict):
-            return json.dumps(
-                {
-                    "ok": False,
-                    "error": f"claim must be a JSON object, got {type(claim).__name__}",
-                    "hint": "pass the claim as a JSON object with id/text/type/source_ids/status.",
-                },
-                ensure_ascii=False,
-            )
-        out = check_claim_impl(
-            article_id,
-            claim,
-            run_id=ctx.deps.run_id,
-            purpose=purpose,
-            ace_root=ace_root,
-        )
-        toolset._mark_delivered(article_id, ctx.deps.run_id, "check_claim")
-        note = toolset._final_delivery_note(
-            article_id,
-            ctx.deps.run_id,
-            "check_claim",
-            "check-claim",
-            MAX_CLAIM_CHECKS,
-        )
-        return note + out
 
     @toolset.tool
-    def save_artifact(
-        ctx: RunContext[CoreDeps],
-        article_id: str,
-        final_markdown: str,
-        claims: list[dict],
-        sources: list[dict],
-    ) -> dict:
-        """Submit the complete article and evidence ledgers to ACE.
-
-        sources entries: {"id":"S1","kind":"material","label":"...","material_ids":["M001"]}.
-        claims entries: {"id":"C1","text":"...","type":"FACT","source_ids":["S1"],"status":"resolved"}.
-        source_ids reference S ids; material_ids reference M ids. ACE validates
-        links, writes canonical final.md/release.json, runs the gate, and returns
-        hashes. A run snapshot is also written under the ZUAEF workspace and is
-        verified by the runtime. Never use M00x placeholders."""
-        result, snapshot_path = save_artifact_impl(
-            article_id,
-            final_markdown,
-            claims,
-            sources,
-            snapshot_dir=ctx.deps.workspace_root / "artifacts" / ctx.deps.run_id,
-            run_id=ctx.deps.run_id,
-            ace_root=ace_root,
-        )
-        if snapshot_path is not None:
-            result["snapshot_rel_path"] = snapshot_path.relative_to(
-                ctx.deps.workspace_root
-            ).as_posix()
-        return result
+    def save_article(ctx: RunContext[CoreDeps], markdown: str) -> str:
+        """Save the complete article. Pass Markdown only."""
+        return save_article_impl(markdown, ctx.deps.workspace_root, ctx.deps.run_id)
 
     return toolset

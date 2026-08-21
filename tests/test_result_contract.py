@@ -1,6 +1,6 @@
 """T014A — Capability-owned Result Contract proof (v1.2 SPEC §14), real plugins.
 
-Three REAL business plugins — ace-writing (BudgetedWritingToolset),
+Three REAL business plugins — ace-writing (WritingEnvironmentToolset),
 zuaef-emtb-budget, zuaef-client-service — each shape a materially different
 deliverable through their own toolset instructions + domain tools, and all
 three settle through the SAME generic Kernel terminal contract:
@@ -99,7 +99,7 @@ def _fake_ace_root(tmp_path: Path) -> Path:
 
 
 def _writing_toolset(tmp_path: Path):
-    """The REAL BudgetedWritingToolset over a stub ACE checkout."""
+    """The real two-tool writing environment over a stub ACE checkout."""
     return build_writing_toolset(_fake_ace_root(tmp_path))
 
 

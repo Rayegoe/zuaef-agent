@@ -149,7 +149,7 @@ async def run_task_real(task_id: str, mode: str) -> tuple[dict, str]:
         EditorialEvidenceStore,
         EditorialSettings,
     )
-    from zuaef_ace_writing.writing_toolset import (
+    from examples.writing_toolset import (
         DEFAULT_ACE_ROOT,
         ace_prepare,
         build_writing_toolset,

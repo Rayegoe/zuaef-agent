@@ -1,9 +1,7 @@
-"""``ace-writing`` plugin factory.
+"""``ace-writing`` production plugin factory.
 
-Config wiring only: the writing domain adapter is the byte-identical copy in
-``.writing_toolset`` (provenance in its docstring); ACE stays the external
-Context Engine. All host-side prep (ingest, gate) and settlement stay in the
-proof drivers, not in the plugin.
+ACE remains the material store. The plugin compresses that world into bounded
+writer context and exposes only ``pull_context`` and ``save_article``.
 
 Editorial control (SPEC ``zuaef-editorial-control-v0.1``) was REMOVED from the
 production surface in v1.2 T014B: it showed no stable advantage in the Phase 9
@@ -45,17 +43,7 @@ def _resolve_ace_root(config: dict) -> Path:
 
 
 def create_plugin(env: PluginEnv, config: dict) -> PluginBundle:
-    """Assemble the ACE writing plugin from config (SPEC §34 + Writing v0.2
-    CodeMode).
-
-    Returns exactly one toolset, plus capabilities that config opt-ins:
-    - ``code_mode = true`` -> Harness CodeMode wrapping the observe tools
-      tagged ``code_mode=True`` (list/read/retrieve/check), leaving
-      ``save_artifact`` as a normal explicit tool call (Writing SPEC §10).
-
-    No skills are shipped by the plugin; writing skills live in the repo's
-    skill library (``.agents/skills``).
-    """
+    """Assemble one small writing environment from deployment paths."""
     stale = sorted(k for k in config if k.startswith("editorial_"))
     if stale:
         raise CompositionError(
@@ -65,7 +53,10 @@ def create_plugin(env: PluginEnv, config: dict) -> PluginBundle:
             "benchmarks/editorial-learning/legacy/README.md."
         )
     ace_root = _resolve_ace_root(config)
-    toolset = build_writing_toolset(ace_root)
+    learning_root = Path(
+        config.get("learning_root") or env.workspace_root.parent / "learning"
+    ).expanduser().resolve()
+    toolset = build_writing_toolset(ace_root, learning_root=learning_root)
     capabilities: list[CodeMode] = []
     if config.get("code_mode", False) is True:
         capabilities.append(

@@ -1,0 +1,23 @@
+{
+  "experiment_id": "",
+  "case": "",
+  "variant": "",
+  "commit": "",
+  "outcome_pass": null,
+  "evidence_pass": null,
+  "requests": null,
+  "tool_calls": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "reasoning_tokens": null,
+  "cache_read_tokens": null,
+  "cache_miss_tokens": null,
+  "wall_clock_ms": null,
+  "largest_input_tokens": null,
+  "model_visible_tools": [],
+  "tool_counts": {},
+  "request_latencies_ms": [],
+  "tool_latencies_ms": {},
+  "repeated_signatures": [],
+  "notes": []
+}

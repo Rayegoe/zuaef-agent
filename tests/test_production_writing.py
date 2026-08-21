@@ -11,9 +11,7 @@ projection retired) and §31 (anti-cheating):
   3. mechanical_prepare: bytes -> sha256 -> rights -> ACE ingest -> real
      M-id binding (skipUnless ACE checkout present)
   4. production composition goes through build_profile_agent("ace-writing")
-     -> the BudgetedWritingToolset surface + Harness capabilities
-  5. CodeMode selection: observation tools tagged code_mode=True, and
-     save_artifact is NOT inside the sandboxed set
+     -> the two-tool WritingEnvironmentToolset + host-only persistence
   6. metric/artifact helpers and re-runnable reset
   7. CLI args map onto WritingTask
 
@@ -42,7 +40,7 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-ace-writing"),
 ]
 
-from zuaef_ace_writing.writing_toolset import BudgetedWritingToolset
+from zuaef_ace_writing.writing_toolset import WritingEnvironmentToolset
 
 from examples.production_writing import (
     PreparedFile,
@@ -152,17 +150,20 @@ def test_prompt_has_no_host_plan(tmp_path):
             )
         ],
     )
-    prompt = render_agent_prompt(prep)
+    desk_pack = "# 当前可用材料\n\n[M001]\n真实素材正文。"
+    prompt = render_agent_prompt(prep, desk_pack)
     assert task.article_id in prompt
     assert task.assignment in prompt
     assert "普通读者" in prompt
     assert "- 不虚构" in prompt
     assert "- 只用素材里的内容" in prompt
-    assert "list_materials" in prompt
-    # Capability guidance carries the literal save path INCLUDING the
-    # artifacts/ prefix (an earlier revision dropped the prefix and failed
-    # the host's artifact path-containment boundary).
-    assert "artifacts/" in prompt and "final.md" in prompt
+    assert desk_pack in prompt
+    assert "pull_context" in prompt
+    assert "save_article" in prompt
+    assert "list_materials" not in prompt
+    assert "save_artifact" not in prompt
+    assert "RunSummary" not in prompt
+    assert "receipt fields" in prompt
     for banned in (
         "writing plan",
         "### angle",
@@ -193,8 +194,15 @@ def test_prompt_carries_natural_language_feedback(tmp_path):
         files=[],
     )
     feedback = "判断句太多，人物没有出来，开头太像背景说明。"
-    prompt = render_agent_prompt(prep, feedback=feedback)
+    previous = "# 上一稿\n\n这是上一稿正文。"
+    prompt = render_agent_prompt(
+        prep,
+        "# 当前可用材料\n\n原始片段。",
+        feedback=feedback,
+        previous_article=previous,
+    )
     assert feedback in prompt
+    assert previous in prompt
     assert "Revise the article" in prompt
 
 
@@ -250,9 +258,11 @@ def test_resolve_ace_root_errors_on_missing_ctx(tmp_path):
 def test_production_composition_through_ace_writing_profile(tmp_path):
     """WRITE-1: build_profile_agent("ace-writing") composes the writing surface.
 
-    The generic Harness capabilities stay ON (SPEC §4): planning, skills,
-    filesystem, knowledge, tool output limits, step persistence."""
-    settings = _settings(tmp_path)
+    Only StepPersistence remains, and it is host execution evidence rather
+    than model-visible working memory."""
+    from examples.production_writing import composition_settings
+
+    settings = composition_settings(_settings(tmp_path))
     from zuaef_agent.composition import build_profile_agent
 
     agent, snapshot = build_profile_agent(
@@ -268,14 +278,12 @@ def test_production_composition_through_ace_writing_profile(tmp_path):
     caps = agent.root_capability.capabilities
     cap_names = {type(c).__name__ for c in caps}
     assert "StepPersistence" in cap_names
-    assert "ToolOutputLimits" in cap_names
-    assert "Planning" in cap_names
-    assert "FileSystem" in cap_names
-    assert "Knowledge" in cap_names
-    assert "Skills" in cap_names
+    assert cap_names.isdisjoint(
+        {"ToolOutputLimits", "Planning", "FileSystem", "Knowledge", "Skills"}
+    )
 
     toolsets = list(agent.toolsets)
-    assert any(isinstance(t, BudgetedWritingToolset) for t in toolsets)
+    assert any(isinstance(t, WritingEnvironmentToolset) for t in toolsets)
 
 
 @NEEDS_PLUGIN
@@ -289,18 +297,13 @@ def test_profile_toolset_exposes_exact_ace_surface(tmp_path):
         profile="ace-writing",
         config_root=REPO,
     )
-    toolset = next(t for t in agent.toolsets if isinstance(t, BudgetedWritingToolset))
+    toolset = next(
+        t for t in agent.toolsets if isinstance(t, WritingEnvironmentToolset)
+    )
     deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id="wc-probe2")
     ctx = RunContext(deps=deps, usage=RunUsage(), prompt="", model=None)
     names = set(__import__("asyncio").run(toolset.get_tools(ctx)))
-    assert names == {
-        "list_materials",
-        "read_material",
-        "retrieve_exemplars",
-        "retrieve_knowledge",
-        "check_claim",
-        "save_artifact",
-    }
+    assert names == {"pull_context", "save_article"}
 
 
 def test_profile_composition_with_injected_discovery(tmp_path):
@@ -325,7 +328,7 @@ def test_profile_composition_with_injected_discovery(tmp_path):
         version_for=lambda ep: "0.2.0",
     )
     assert [p.id for p in snapshot.plugins] == ["ace-writing"]
-    assert any(isinstance(t, BudgetedWritingToolset) for t in agent.toolsets)
+    assert any(isinstance(t, WritingEnvironmentToolset) for t in agent.toolsets)
 
 
 # --- 6. mechanical helpers -------------------------------------------------------
@@ -339,18 +342,18 @@ def test_metrics_counts_model_responses_and_tool_calls():
         ModelResponse(
             parts=[
                 TextPart(content="plan"),
-                ToolCallPart(tool_name="list_materials", args="{}"),
+                ToolCallPart(tool_name="pull_context", args="{}"),
             ]
         ),
         ModelRequest(parts=[]),
-        ModelResponse(parts=[ToolCallPart(tool_name="save_artifact", args="{}")]),
+        ModelResponse(parts=[ToolCallPart(tool_name="save_article", args="{}")]),
         ModelRequest(parts=[]),
         ModelResponse(parts=[TextPart(content="done")]),
     ]
     m = metrics_from_messages(messages)
     assert m["model_requests"] == 3
     assert m["tool_calls"] == 2
-    assert m["tool_names"] == ["list_materials", "save_artifact"]
+    assert m["tool_names"] == ["pull_context", "save_article"]
 
 
 def test_final_artifact_text_reads_snapshot_not_summary(tmp_path):
@@ -379,22 +382,23 @@ def test_reset_run_state_is_rerunnable(tmp_path):
     reset_run_state(settings, "run-x", ace_root=ACE_ROOT, clean_ace=False)
 
 
-def test_composition_settings_disable_filesystem_for_writing(tmp_path):
-    """Measured v0.2 decision: the writing profile composes WITHOUT the generic
-    FileSystem and Knowledge capabilities (the ACE toolset covers file and
-    knowledge access; FS/KN-on runs wandered or bypassed save_artifact).
-    Other generic capabilities stay ON.
-    """
+def test_composition_settings_leave_only_host_persistence_for_writing(tmp_path):
     from examples.production_writing import composition_settings
 
     s = _settings(tmp_path)
     composed = composition_settings(s, request_limit=21)
     assert composed.enable_filesystem is False
     assert composed.enable_knowledge is False
-    assert composed.enable_planning is True
-    assert composed.enable_skills is True
-    assert composed.enable_tool_output_limits is True
+    assert composed.enable_planning is False
+    assert composed.enable_skills is False
+    assert composed.enable_tool_output_limits is False
     assert composed.enable_step_persistence is True
+    assert composed.enable_shell is False
+    assert composed.enable_repo_context is False
+    assert composed.enable_tool_search is False
+    assert composed.enable_memory is False
+    assert composed.enable_conversation_search is False
+    assert composed.enable_subagents is False
     assert composed.request_limit == 21
 
 

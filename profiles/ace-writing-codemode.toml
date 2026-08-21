@@ -1,8 +1,6 @@
-# Experimental profile: ace-writing with Harness CodeMode ON (Writing SPEC v0.2
-# §9-§10, Phase 5). Same plugin and task contract as ace-writing; the observe
-# tools (list_materials/read_material/retrieve_exemplars/retrieve_knowledge/
-# check_claim) are sandboxed behind a single run_code call; save_artifact stays
-# a normal explicit tool. Use ONLY for the ON side of the A/B comparison.
+# Legacy benchmark profile. Production uses ``ace-writing.toml`` and never
+# enables CodeMode. This profile wraps only ``pull_context``; ``save_article``
+# stays explicit.
 schema = 1
 name = "ace-writing-codemode"
 

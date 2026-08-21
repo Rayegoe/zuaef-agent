@@ -77,12 +77,8 @@ GROUNDED_DRAFT = """\
 返工到第三天，供应商的王经理来了一趟车间。他看了小刘的记录本，翻到画圈的那页，拍了拍老陈的肩膀：「模具是我们的事，这批的费用我们来担。」老陈没说话，把烟掐了，回身去搬下一箱车架。那天晚上发货单打印出来的时候，离交期还有六天。"""
 
 WRITING_TOOLS = {
-    "list_materials",
-    "read_material",
-    "retrieve_exemplars",
-    "retrieve_knowledge",
-    "check_claim",
-    "save_artifact",
+    "pull_context",
+    "save_article",
 }
 
 
@@ -164,7 +160,7 @@ class TestGateANoRegression:
         taste. The capability survives only as benchmark/legacy code."""
         with pytest.raises(CompositionError, match="v1.2 T014B"):
             _bundle(tmp_path, {"editorial_control": True})
-        # the plain toolset surface is unchanged by the demotion
+        # production remains the small writing environment
         bundle = _bundle(tmp_path)
         ctx = _ctx(tmp_path)
         names = set(asyncio.run(bundle.toolsets[0].get_tools(ctx)))

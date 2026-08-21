@@ -1,0 +1,43 @@
+.agents/
+  skills/
+    zuaef-runtime-coach/
+      SKILL.md
+      references/
+        iteration-protocol.md
+        runtime-smells.md
+      scripts/
+        __pycache__/
+          compare_metrics.cpython-313.pyc
+        compare_metrics.py
+        score_run.py
+        tests/
+          __pycache__/
+            test_compare_metrics.cpython-313-pytest-9.0.2.pyc
+          test_compare_metrics.py
+INSTALL.md
+MANIFEST.json
+README.md
+docs/
+  runtime-refoundation/
+    AGENTS_AMENDMENT.md
+    BENCHMARKS.md
+    CAPABILITY_ADMISSION.md
+    DECISION_LOG.md
+    DELETION.md
+    PLAN.md
+    PRD.md
+    REFERENCES.md
+    REVIEW_GATES.md
+    SPEC.md
+    TASKS.md
+prompts/
+  runtime-refoundation/
+    CODE_AGENT_MASTER_PROMPT.md
+    RESEARCH_PROMPT.md
+    REVIEWER_PROMPT.md
+templates/
+  runtime-refoundation/
+    capability-admission.md
+    decision-record.md
+    experiment.md
+    iteration-record.json

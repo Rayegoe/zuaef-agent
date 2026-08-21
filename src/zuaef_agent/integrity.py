@@ -8,6 +8,8 @@ This module owns byte/integrity and ledger facts ONLY:
   facts (a changed hash proves change, never correctness);
 - ``read_tool_effects`` / ``latest_tool_effects`` — StepStore tool-call ledger
   projection (execution facts).
+- ``read_run_timings`` / ``run_timings_from_events`` — StepStore timestamp
+  projections for model requests and tool calls (runtime facts).
 
 It does NOT parse model-claimed evidence references, validate knowledge
 semantics, or downgrade a run because a source field is absent.
@@ -17,7 +19,9 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from collections import deque
 from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -31,6 +35,19 @@ ARTIFACT_DIR = "artifacts"
 # lifecycle; the runtime reads them through the public StepStore API.
 _TOOL_EVENT_KINDS = frozenset(
     {"tool_call_started", "tool_call_completed", "tool_call_failed"}
+)
+_MODEL_EVENT_KINDS = frozenset(
+    {
+        "model_request_started",
+        "model_request_completed",
+        "model_request_failed",
+    }
+)
+_MODEL_TERMINAL_EVENT_KINDS = frozenset(
+    {"model_request_completed", "model_request_failed"}
+)
+_TOOL_TERMINAL_EVENT_KINDS = frozenset(
+    {"tool_call_completed", "tool_call_failed"}
 )
 
 _STATUS_BY_KIND = {
@@ -136,6 +153,86 @@ def read_tool_effects(step_store_dir: Path, run_id: str) -> list[dict[str, Any]]
     store = FileStepStore(step_store_dir)
     events = asyncio.run(store.list_events(run_id=run_id))
     return latest_tool_effects(_records_from_events(events))
+
+
+def _elapsed_ms(started_at: Any, finished_at: Any) -> float | None:
+    """Convert two event timestamps to a finite non-negative duration."""
+    if not isinstance(started_at, datetime) or not isinstance(finished_at, datetime):
+        return None
+    try:
+        duration = (finished_at - started_at).total_seconds() * 1000
+    except (OverflowError, TypeError, ValueError):
+        return None
+    if duration < 0:
+        return None
+    return round(duration, 3)
+
+
+def run_timings_from_events(events: Sequence[Any]) -> dict[str, Any]:
+    """Project existing Harness event timestamps onto WCASE timing metrics.
+
+    Model-request events do not carry a request id, so their lifecycle is
+    paired in event order. Tool events are paired by ``tool_call_id`` and
+    retained under the tool name, preserving one list entry per call. An
+    unfinished lifecycle remains ``None`` rather than being estimated.
+    """
+    request_latencies: list[float | None] = []
+    open_requests: deque[tuple[int, Any]] = deque()
+    saw_model_event = False
+
+    tool_latencies: dict[str, list[float | None]] = {}
+    open_tools: dict[str, tuple[str, int, Any]] = {}
+    saw_tool_event = False
+
+    for event in events:
+        kind = getattr(event, "kind", None)
+        timestamp = getattr(event, "timestamp", None)
+
+        if kind in _MODEL_EVENT_KINDS:
+            saw_model_event = True
+        if kind == "model_request_started":
+            index = len(request_latencies)
+            request_latencies.append(None)
+            open_requests.append((index, timestamp))
+        elif kind in _MODEL_TERMINAL_EVENT_KINDS and open_requests:
+            index, started_at = open_requests.popleft()
+            request_latencies[index] = _elapsed_ms(started_at, timestamp)
+
+        if kind in _TOOL_EVENT_KINDS:
+            saw_tool_event = True
+        call_id = getattr(event, "tool_call_id", None)
+        tool_name = getattr(event, "tool_name", None)
+        if kind == "tool_call_started" and call_id and isinstance(tool_name, str):
+            values = tool_latencies.setdefault(tool_name, [])
+            index = len(values)
+            values.append(None)
+            open_tools[call_id] = (tool_name, index, timestamp)
+        elif kind in _TOOL_TERMINAL_EVENT_KINDS and call_id:
+            started = open_tools.pop(call_id, None)
+            if started is not None:
+                started_name, index, started_at = started
+                tool_latencies[started_name][index] = _elapsed_ms(
+                    started_at, timestamp
+                )
+
+    if not events:
+        return {
+            "request_latencies_ms": None,
+            "tool_latencies_ms": None,
+        }
+    return {
+        "request_latencies_ms": request_latencies if saw_model_event else [],
+        "tool_latencies_ms": (
+            dict(sorted(tool_latencies.items())) if saw_tool_event else {}
+        ),
+    }
+
+
+def read_run_timings(step_store_dir: Path, run_id: str) -> dict[str, Any]:
+    """Read WCASE timing metrics through the public Harness StepStore API."""
+    store = FileStepStore(step_store_dir)
+    events = asyncio.run(store.list_events(run_id=run_id))
+    return run_timings_from_events(events)
 
 
 def latest_tool_effects(records: list[dict[str, Any]]) -> list[dict[str, Any]]:

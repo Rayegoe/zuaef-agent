@@ -1,0 +1,6 @@
+# WCASE-1 — task contract
+
+assignment: 根据客户提供的素材写一篇面向普通消费者的公众号文章。
+audience: 普通消费者
+constraints: ["约900-1200字", "不虚构采访现场", "产品事实必须来自原始材料", "不编造用户评价"]
+materials: 1 files (same set for both versions; host did not select)

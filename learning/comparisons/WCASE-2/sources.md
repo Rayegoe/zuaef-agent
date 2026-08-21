@@ -1,0 +1,4 @@
+# Source pointers
+
+Writing/style cases: material is private/raw under /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/brand-history.md; /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/conflicting-spec-draft.md; /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/field-test-notes.md; /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/interview-founder.md; /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/office-lunch-menu.md; /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/old-product-line.md; /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/pricing-channels.md; /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/product-spec.md; /home/barry/zuaef-agent/benchmarks/writing-cases/WCASE-2/raw/staff-travel-log.md
+rights: study-only

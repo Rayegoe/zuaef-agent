@@ -1,27 +1,8 @@
-"""Production writing driver — Agent-owned writing, thin mechanical host.
+"""Production writing driver — a small environment around one writer model.
 
-Writing SPEC v0.2 (§1, §5, §6, §21, §22):
-
-- The host performs ONLY the mechanical half of a writing run:
-  accept assignment -> read raw file bytes -> compute sha256 -> validate
-  rights -> create the ACE workspace -> ingest raw materials -> bind M ids
-  -> freeze the thin task contract.
-- Everything editorial belongs to the ONE writing agent: what to read, what
-  to ignore, angle, questions, outline, techniques, exemplars, knowledge,
-  drafting and revision.
-- The ONLY production composition path is the ace-writing profile:
-
-      build_profile_agent("ace-writing") -> execute_run
-
-  There is no hand-built writing agent (no build_agent + extra_toolsets),
-  no host writing_plan, no selected techniques / editorial memory / examples
-  projection, and no one-pass-only contract.
-
-The pre-v0.2 host-projected machinery (prepare_writing_context,
-render_writing_context, run_production_article, build_production_agent,
-ProductionWritingToolset) is retired from the production authority and lives
-in ``benchmarks/editorial-learning/scripts/host_projection_legacy.py`` for
-the sequential/compare experiments only (SPEC §22 "删除/废弃").
+The host ingests sources, builds one bounded Markdown desk pack, persists the
+article and records runtime facts. The model owns meaning, selection,
+viewpoint, narrative, factual restraint and language.
 """
 
 from __future__ import annotations
@@ -50,11 +31,13 @@ sys.path[:0] = [
 from zuaef_ace_writing.writing_toolset import (
     DEFAULT_ACE_ROOT,
     ace_prepare,
+    build_writer_context,
     list_materials_impl,
 )
 
 from zuaef_agent.composition import build_profile_agent
 from zuaef_agent.config import AgentSettings
+from zuaef_agent.integrity import read_run_timings
 from zuaef_agent.models import CoreDeps
 from zuaef_agent.runtime import PausedRun, execute_run
 
@@ -220,76 +203,56 @@ def mechanical_prepare(
 # --- thin prompt: task + mechanical facts only (SPEC §5.2, WRITE-2) --------------
 
 
-def render_agent_prompt(prep: PrepResult, *, feedback: str | None = None) -> str:
-    """The first model request.
-
-    Carries the user's declared task and the mechanical facts the model needs
-    to act (workspace id, materials available). It does NOT carry any host
-    decision: no angle, no questions, no outline, no selected techniques, no
-    selected memory, no selected examples, no material text.
-    """
+def render_agent_prompt(
+    prep: PrepResult,
+    writer_context: str,
+    *,
+    feedback: str | None = None,
+    previous_article: str | None = None,
+) -> str:
+    """Render the normal or deliberately narrow revision entry."""
     task = prep.task
+    revision = feedback is not None
+    if revision and not previous_article:
+        raise ValueError("revision requires the previous article")
     lines = [
-        (
-            "Write the article for the task below. You own the entire writing "
-            "trajectory: the host ingested the raw materials and nothing else "
-            "was decided for you. Decide what to read, what to retrieve, what "
-            "to check, how to structure and how to write."
-        ),
+        "Revise the current article." if revision else "Write the article.",
         "",
-        f"article_id (ACE article workspace id): {task.article_id}",
-        f"assignment: {task.assignment}",
+        "# Task",
+        "",
+        task.assignment,
     ]
     if task.audience:
-        lines.append(f"audience: {task.audience}")
+        lines.extend(["", f"Audience: {task.audience}"])
     if task.constraints:
-        lines.append("constraints:")
+        lines.extend(["", "Constraints:"])
         for c in task.constraints:
             lines.append(f"- {c}")
-    lines.append(
-        "materials: already ingested into the ACE workspace above. Run "
-        "list_materials to see the index, then read the materials the article "
-        "actually needs (skip the rest)."
-    )
-    lines.append(
-        "Submission: the ONLY way to submit the article is save_artifact "
-        "(with the claim and source ledgers). Writing the article into a file "
-        "with generic file tools does NOT submit it — it only wastes the "
-        "request budget and artifacts/** is protected from generic writes "
-        "anyway. Do not write draft copies to the filesystem at all."
-    )
-    if feedback:
+    if revision:
         lines.extend(
             [
                 "",
-                "Editorial feedback from the human editor:",
-                "---",
-                feedback,
-                "---",
-                (
-                    "Revise the article in the same ACE workspace to respond "
-                    "to this feedback, then submit the revised article with "
-                    "save_artifact."
-                ),
+                "# Current article",
+                "",
+                previous_article or "",
+                "",
+                "# Human feedback",
+                "",
+                feedback or "",
             ]
         )
     lines.extend(
         [
             "",
+            writer_context,
+            "",
             (
-                "When the article is complete, submit it with save_artifact "
-                f"(article_id = `{task.article_id}`) together with the claim "
-                "and source ledgers, then return your RunSummary."
+                "Write or revise the complete article now. Use pull_context only if "
+                "a specific question remains unanswered. Save the result once with "
+                "save_article(markdown), then respond naturally. Do not create "
+                "plans, task state, claim rows, source ledgers or receipt fields."
             ),
         ]
-    )
-    lines.append(
-        "RunSummary format: artifacts=[\"artifacts/\" + your run_id + "
-        "\"/final.md\"] (the full workspace-relative path INCLUDING the "
-        "artifacts/ prefix, e.g. artifacts/wcase-1/final.md) and in evidence "
-        "use ONLY artifact:... refs — never tool-effect refs (the host settles "
-        "tool effects itself, and an invented or malformed ref downgrades "
-        "the run)."
     )
     return "\n".join(lines)
 
@@ -300,23 +263,69 @@ def render_agent_prompt(prep: PrepResult, *, feedback: str | None = None) -> str
 def composition_settings(
     settings: AgentSettings, *, request_limit: int | None = None
 ) -> AgentSettings:
-    """The effective settings used to compose the writing agent.
+    """Compose the writer with StepPersistence as host-only evidence.
 
-    Writing v0.2 (MEASURED, see report): the generic FileSystem and Knowledge
-    capabilities are OFF for the writing profile. Their functions are fully
-    covered by the ACE toolset (materials/exemplars/knowledge/claims), and
-    field runs with them ON wasted the request budget: FileSystem-on runs
-    wandered into workspace exploration (WCASE-2: 21 file calls, no artifact)
-    or wrote drafts directly instead of saving through ACE (WCASE-1 run 1);
-    Knowledge-on runs explored the workspace knowledge corpus before writing
-    (WCASE-4 revision: ~12 knowledge calls, budget exhausted before save).
-    Planning, Skills, ToolOutputLimits and StepPersistence stay ON (SPEC §4).
+    Persistence is not context; history is not working memory; the workspace
+    is not the prompt.
     """
     return settings.with_overrides(
         **({"request_limit": request_limit} if request_limit is not None else {}),
         enable_filesystem=False,
         enable_knowledge=False,
+        enable_planning=False,
+        enable_skills=False,
+        enable_tool_output_limits=False,
+        enable_shell=False,
+        enable_repo_context=False,
+        enable_web_search=False,
+        enable_web_fetch=False,
+        enable_tool_search=False,
+        enable_memory=False,
+        enable_conversation_search=False,
+        enable_subagents=False,
+        enable_context_controls=False,
     )
+
+
+def _elapsed_ms(started_at: Any, finished_at: Any) -> float | None:
+    """Return a persisted receipt duration without estimating missing facts."""
+    try:
+        duration = (finished_at - started_at).total_seconds() * 1000
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        return None
+    if duration < 0:
+        return None
+    return round(duration, 3)
+
+
+def _timing_fields(
+    settings: AgentSettings,
+    *,
+    run_id: str,
+    started_at: Any,
+    finished_at: Any,
+    usage: dict[str, Any],
+) -> dict[str, Any]:
+    """Project existing receipt/StepStore facts into a WCASE record."""
+    timings = (
+        read_run_timings(settings.step_store_dir, run_id)
+        if settings.enable_step_persistence
+        else {"request_latencies_ms": None, "tool_latencies_ms": None}
+    )
+    return {
+        "wall_clock_ms": _elapsed_ms(started_at, finished_at),
+        "request_latencies_ms": timings["request_latencies_ms"],
+        "tool_latencies_ms": timings["tool_latencies_ms"],
+        "largest_input_tokens": usage.get("largest_input_tokens"),
+        "runtime_timestamps": {
+            "started_at": started_at.isoformat()
+            if hasattr(started_at, "isoformat")
+            else None,
+            "finished_at": finished_at.isoformat()
+            if hasattr(finished_at, "isoformat")
+            else None,
+        },
+    }
 
 
 def run_production_task(
@@ -329,6 +338,7 @@ def run_production_task(
     ace_root: str | Path | None = None,
     run_id: str | None = None,
     feedback: str | None = None,
+    previous_article: str | None = None,
     clean_workspace: bool = True,
     request_limit: int | None = None,
     prompt: str | None = None,
@@ -340,20 +350,11 @@ def run_production_task(
     Composition is always ``build_profile_agent(profile)``; the driver never
     hand-builds a writing agent (WRITE-1). The snapshot is passed to
     ``execute_run`` so the receipt freezes the exact composed plugins for this
-    run. ``profile`` defaults to the production ace-writing profile; pass
-    "ace-writing-codemode" for the experimental CodeMode side of the A/B.
+    run. ``profile`` defaults to the production ace-writing profile.
     """
     run_id = run_id or task.article_id
     if not material_paths:
         raise ValueError("at least one material file is required")
-    # Writing v0.2 composition decision (MEASURED, recorded in the v0.2 report):
-    # the generic FileSystem and Knowledge capabilities are OFF for the writing
-    # profile. Their file/knowledge access is fully covered by the ACE toolset
-    # (list/read materials, retrieve exemplars/knowledge), and field runs with
-    # them ON wasted the budget (WCASE-2: 21 filesystem calls with no artifact;
-    # WCASE-4 revision: ~12 knowledge calls before save; WCASE-1 run 1 wrote
-    # the draft directly instead of saving through ACE). Planning, Skills,
-    # ToolOutputLimits and StepPersistence stay ON (SPEC §4).
     run_settings = composition_settings(settings, request_limit=request_limit)
     # Re-runnable: clear this run_id's receipts/steps/stale snapshots (and the
     # ACE workspace for a fresh run) BEFORE preparation so the execution starts
@@ -375,6 +376,27 @@ def run_production_task(
         run_id=run_id,
         clean_workspace=clean_workspace,
     )
+    if feedback and previous_article is None:
+        previous_article, _ = final_artifact_text(
+            settings.workspace_root, task.article_id
+        )
+    context_query = "\n".join(
+        part
+        for part in (
+            task.assignment,
+            task.audience or "",
+            "\n".join(task.constraints),
+            feedback or "",
+        )
+        if part
+    )
+    writer_context = build_writer_context(
+        prep.run_id,
+        context_query,
+        run_id=run_id,
+        ace_root=ace_root_path,
+        learning_root=REPO / "learning",
+    )
     agent, snapshot = build_profile_agent(
         run_settings,
         run_id=run_id,
@@ -382,35 +404,51 @@ def run_production_task(
         config_root=config_root,
     )
     if prompt is None:
-        prompt = render_agent_prompt(prep, feedback=feedback)
+        prompt = render_agent_prompt(
+            prep,
+            writer_context,
+            feedback=feedback,
+            previous_article=previous_article,
+        )
     outcome = execute_run(
         agent,
-        CoreDeps(workspace_root=run_settings.workspace_root.resolve(), run_id=run_id),
+        CoreDeps(
+            workspace_root=run_settings.workspace_root.resolve(),
+            run_id=run_id,
+            bindings={"writing_article_id": prep.run_id},
+        ),
         prompt=prompt,
         settings=run_settings,
         run_id=run_id,
-        retries={"tools": 5},
         composition=snapshot,
     )
     if isinstance(outcome, PausedRun):
+        pause_receipt = outcome.pause_receipt
         return {
             "run_id": run_id,
             "task_id": task.article_id,
             "status": "paused",
             "pending_approvals": [c.tool_name for c in outcome.requests.approvals],
+            **_timing_fields(
+                run_settings,
+                run_id=run_id,
+                started_at=pause_receipt.started_at,
+                finished_at=pause_receipt.finished_at,
+                usage=pause_receipt.usage,
+            ),
         }
     receipt = outcome.receipt
     text, path = final_artifact_text(settings.workspace_root, run_id)
     record: dict[str, Any] = {
         "run_id": run_id,
         "task_id": task.article_id,
-        "status": receipt.status,
-        "summary_outcome": receipt.summary.outcome,
+        "status": receipt.execution_state,
+        "outcome": receipt.outcome,
         "model_requests": receipt.usage.get("requests"),
         "usage": receipt.usage,
-        "verified_artifacts": [v.path for v in receipt.verified_artifacts],
-        "verified_tool_effects": [
-            (v.tool_name, v.status) for v in receipt.verified_tool_effects
+        "artifact_facts": [v.path for v in receipt.artifact_facts],
+        "tool_effect_facts": [
+            (v.tool_name, v.status) for v in receipt.tool_effect_facts
         ],
         "unresolved_effects": [
             (v.tool_name, v.status) for v in receipt.unresolved_effects
@@ -422,6 +460,13 @@ def run_production_task(
             hashlib.sha256(text.encode("utf-8")).hexdigest() if text else None
         ),
         "prep": prep.record(),
+        **_timing_fields(
+            run_settings,
+            run_id=run_id,
+            started_at=receipt.started_at,
+            finished_at=receipt.finished_at,
+            usage=receipt.usage,
+        ),
     }
     return plain_jsonable(record)
 
@@ -547,9 +592,6 @@ def main(argv: list[str] | None = None) -> None:
         workspace_root=REPO / "workspace",
         runtime_state_root=REPO / ".zuaef-state",
     )
-    # Generic Harness capabilities stay ON (planning/skills/filesystem/
-    # knowledge/tool output limits/step persistence) — writing v0.2 restores
-    # them instead of switching them off (SPEC §4).
     record = run_production_task(
         settings,
         task=task,

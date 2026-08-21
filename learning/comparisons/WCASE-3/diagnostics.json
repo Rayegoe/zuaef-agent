@@ -1,0 +1,13 @@
+{
+  "baseline": {
+    "status": "completed",
+    "model_requests": 36,
+    "artifact_chars": 1036
+  },
+  "learned": {
+    "status": "completed",
+    "model_requests": 9,
+    "artifact_chars": 904
+  },
+  "note": "machine diagnostics only — never a quality verdict"
+}

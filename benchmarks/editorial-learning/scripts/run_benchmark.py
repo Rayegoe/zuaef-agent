@@ -21,7 +21,7 @@ workspace/artifacts/<run_id>/final.md), never on the RunSummary text. Blind
 human judgment fields are left null — machines do not grade taste.
 
 The agent is composed through the same seams the Plugin Composition Layer
-uses (core.build_agent + BudgetedWritingToolset + EditorialControlCapability),
+used (core.build_agent + legacy writing toolset + EditorialControlCapability),
 without requiring installed entry points. ACE workspace prep per task
 (material ingested via ace_prepare) and the model come from the environment:
   ZUAEF_MODEL / provider env vars   — model (see zuaef_agent.providers)
@@ -53,7 +53,7 @@ from editorial_capability import (
     run_trajectory_sensors,
 )
 from task_inputs import resolve_task_inputs
-from zuaef_ace_writing.writing_toolset import (
+from examples.writing_toolset import (
     DEFAULT_ACE_ROOT,
     ace_prepare,
     build_writing_toolset,

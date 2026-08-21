@@ -89,6 +89,26 @@ def _call_snapshot(call: Any) -> dict[str, Any]:
     }
 
 
+def _largest_input_tokens(messages: Sequence[Any]) -> int | None:
+    """Return the largest provider-reported input size in a run's responses.
+
+    ``RequestUsage`` defaults to zero for synthetic/test responses. Treat that
+    default as unavailable instead of presenting it as a provider measurement.
+    """
+    largest: int | None = None
+    for message in messages:
+        usage = getattr(message, "usage", None)
+        value = getattr(usage, "input_tokens", None)
+        if (
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and value > 0
+            and (largest is None or value > largest)
+        ):
+            largest = value
+    return largest
+
+
 @dataclass(kw_only=True)
 class TerminalRun:
     """A run that reached a business terminal state with an operational receipt.
@@ -448,14 +468,18 @@ def execute_run(
         *,
         error: str | None = None,
         presentation: str | None = None,
+        largest_input_tokens: int | None = None,
     ) -> TerminalRun:
+        settled_usage = _usage_payload(usage_tracker)
+        if largest_input_tokens is not None:
+            settled_usage["largest_input_tokens"] = largest_input_tokens
         return finalize_terminal(
             settings=settings,
             run_id=run_id,
             conversation_id=conversation_id,
             model_label=model_label,
             started_at=started_at,
-            usage=_usage_payload(usage_tracker),
+            usage=settled_usage,
             snapshot=snapshot,
             execution_state=execution_state,
             outcome=outcome,
@@ -503,6 +527,9 @@ def execute_run(
         )
 
     usage = _usage_payload(result)
+    largest_input_tokens = _largest_input_tokens(result.all_messages())
+    if largest_input_tokens is not None:
+        usage["largest_input_tokens"] = largest_input_tokens
     output = result.output
     if isinstance(output, DeferredToolRequests):
         return _build_paused(
@@ -525,6 +552,7 @@ def execute_run(
         "completed",
         NATURAL_COMPLETION_OUTCOME,
         presentation=str(output),
+        largest_input_tokens=largest_input_tokens,
     )
 
 

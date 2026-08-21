@@ -74,7 +74,7 @@ from host_projection_legacy import (
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai_harness.step_persistence import FileStepStore, StepPersistence
 from task_inputs import resolve_task_inputs
-from zuaef_ace_writing.writing_toolset import (
+from examples.writing_toolset import (
     DEFAULT_ACE_ROOT,
     ace_prepare,
     build_writing_toolset,

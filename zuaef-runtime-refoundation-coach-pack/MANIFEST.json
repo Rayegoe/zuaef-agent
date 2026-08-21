@@ -1,0 +1,118 @@
+{
+  ".agents/skills/zuaef-runtime-coach/SKILL.md": {
+    "bytes": 3594,
+    "sha256": "25313ea15e87b6f4502b3ba1d664741eb199eef8f00969fb550e8cd4909e9917"
+  },
+  ".agents/skills/zuaef-runtime-coach/references/iteration-protocol.md": {
+    "bytes": 558,
+    "sha256": "055e3b5dce6ff0883b19d996676e2059ec5814b6a937c916ddc1df5afad9d44a"
+  },
+  ".agents/skills/zuaef-runtime-coach/references/runtime-smells.md": {
+    "bytes": 986,
+    "sha256": "14d472f51b712ef3cbddfb0d5c18cdc7247154675f6e94f9e30b852d82235f3d"
+  },
+  ".agents/skills/zuaef-runtime-coach/scripts/__pycache__/compare_metrics.cpython-313.pyc": {
+    "bytes": 4961,
+    "sha256": "d80b8a342eda78d9917431844dbb2c2699e6f79a6a6f58e906b02e4c05aa946a"
+  },
+  ".agents/skills/zuaef-runtime-coach/scripts/compare_metrics.py": {
+    "bytes": 3359,
+    "sha256": "174f0ac8ba8cf73b2d5a1f67f21aa66dd3a7404aaaa08906fddc525304839a57"
+  },
+  ".agents/skills/zuaef-runtime-coach/scripts/score_run.py": {
+    "bytes": 1378,
+    "sha256": "0a28f7fdf3a6381faf3f06b55357f437b5bafc1eaaae8550338b5dfbaeac3b9b"
+  },
+  ".agents/skills/zuaef-runtime-coach/scripts/tests/__pycache__/test_compare_metrics.cpython-313-pytest-9.0.2.pyc": {
+    "bytes": 3316,
+    "sha256": "b9d4f9127ada8f8bffc00e2377190d406e53e73a50e2a60f6a2e61bd3232c6b1"
+  },
+  ".agents/skills/zuaef-runtime-coach/scripts/tests/test_compare_metrics.py": {
+    "bytes": 1058,
+    "sha256": "a7a4fdf9e4ba6f13a14abe6d46e3561743bed629c7cbd697b6a491b349256a9d"
+  },
+  "INSTALL.md": {
+    "bytes": 803,
+    "sha256": "04fcdfdcfd05d52c455ed8b59b0e661f527bcd1c361c8dff4770dfcb004f36db"
+  },
+  "README.md": {
+    "bytes": 4385,
+    "sha256": "e8526d568946598573f70d5d2ee71b9e33f35b75dbd7e945948af217825dee66"
+  },
+  "TREE.txt": {
+    "bytes": 891,
+    "sha256": "75eb973c0df638625a3cac7aed1bd57af770e8faa4a514e1315351a693ad1e69"
+  },
+  "docs/runtime-refoundation/AGENTS_AMENDMENT.md": {
+    "bytes": 2324,
+    "sha256": "2e57227a85aca8547c8af0363089724c86ec45618844b8ff76ef3a7ace820859"
+  },
+  "docs/runtime-refoundation/BENCHMARKS.md": {
+    "bytes": 4363,
+    "sha256": "67bb8296f855fc6f6b89e3cdfdb391315e6e14bc38e11972899f4edf0f43310a"
+  },
+  "docs/runtime-refoundation/CAPABILITY_ADMISSION.md": {
+    "bytes": 3030,
+    "sha256": "783e1d6fb2cb59d243dbe50b0de74764b4ff3947c7ed5ca6b323e0b7fbec2208"
+  },
+  "docs/runtime-refoundation/DECISION_LOG.md": {
+    "bytes": 826,
+    "sha256": "0599cb867adecd8a5a6916af232d5404a1e28e5c83bc2d5fd3201a36b9f637c1"
+  },
+  "docs/runtime-refoundation/DELETION.md": {
+    "bytes": 1950,
+    "sha256": "876edee217657b91949382acb64034e8f2224406173678e3210c809996a48115"
+  },
+  "docs/runtime-refoundation/PLAN.md": {
+    "bytes": 2238,
+    "sha256": "242c175f65f81dab58e8cd79b29ee50d72c048b73bb2a2b53fe20f6647aa7dcf"
+  },
+  "docs/runtime-refoundation/PRD.md": {
+    "bytes": 5141,
+    "sha256": "fcc8179725f231fa3d2a134914493f192a544b90019d80d5baa4363a5898d2e4"
+  },
+  "docs/runtime-refoundation/REFERENCES.md": {
+    "bytes": 1033,
+    "sha256": "616fe90528d6149b05cb586bb6783bcd2df46e79b54b238984429386422f74aa"
+  },
+  "docs/runtime-refoundation/REVIEW_GATES.md": {
+    "bytes": 1437,
+    "sha256": "550e3912c240ca7fafe1b152236481e3b25e904f848d5402033f91dfb0fa028f"
+  },
+  "docs/runtime-refoundation/SPEC.md": {
+    "bytes": 7177,
+    "sha256": "d38ed6e411f8178259d8eb85270224ef3a48a0954ca0430d09357ed0a884c64a"
+  },
+  "docs/runtime-refoundation/TASKS.md": {
+    "bytes": 2886,
+    "sha256": "d1fbac679b906da3a880f64ad372b654309f2e2af73a0c862d539f0726f49108"
+  },
+  "prompts/runtime-refoundation/CODE_AGENT_MASTER_PROMPT.md": {
+    "bytes": 2315,
+    "sha256": "4f9588805588823bc5e7b0c9cb7f33dffc6a69e7c785d2536a4899ddd55a799c"
+  },
+  "prompts/runtime-refoundation/RESEARCH_PROMPT.md": {
+    "bytes": 532,
+    "sha256": "f4b068e666764e6b6e34ae6221f0fe8e6833af6ebfb55a5b027b023ef6ffa589"
+  },
+  "prompts/runtime-refoundation/REVIEWER_PROMPT.md": {
+    "bytes": 792,
+    "sha256": "79adaffe1377c7103fff736e4696ee97cb187bac1b2869551ffd6ba68817ba60"
+  },
+  "templates/runtime-refoundation/capability-admission.md": {
+    "bytes": 452,
+    "sha256": "a567a1c646da2578c1ae5087cfbbd12291409f58217edea55c68a8b3e454732f"
+  },
+  "templates/runtime-refoundation/decision-record.md": {
+    "bytes": 228,
+    "sha256": "a8f6330b293b8efa4d297571cd6b93e9a6dd50c53aa629f8e9382f83062c0459"
+  },
+  "templates/runtime-refoundation/experiment.md": {
+    "bytes": 612,
+    "sha256": "f7dee66dc5de8bc50912d208940c18b2d7f912f07d45be554b30a3ae5b03f988"
+  },
+  "templates/runtime-refoundation/iteration-record.json": {
+    "bytes": 507,
+    "sha256": "f0720a35e84bfbbaf7393765f3aa55b2c851c5c3ebcf43d28693cc6d79ef98e8"
+  }
+}

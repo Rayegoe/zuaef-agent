@@ -7,6 +7,7 @@ byte change, never content correctness.
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ from zuaef_agent.integrity import (
     IntegrityError,
     latest_tool_effects,
     read_tool_effects,
+    run_timings_from_events,
     sha256_file,
     snapshot_artifacts,
     verify_artifact,
@@ -107,3 +109,54 @@ def test_tool_effect_facts_via_public_stepstore(tmp_path: Path):
 
     # An empty run has no ledger entries at all.
     assert read_tool_effects(step_dir, "run-ghost") == []
+
+
+def test_run_timings_pair_existing_harness_event_timestamps():
+    start = datetime(2026, 8, 21, tzinfo=UTC)
+    events = [
+        StepEvent(run_id="run-a", kind="run_started", step_index=0, timestamp=start),
+        StepEvent(
+            run_id="run-a",
+            kind="model_request_started",
+            step_index=1,
+            timestamp=start + timedelta(milliseconds=1),
+        ),
+        StepEvent(
+            run_id="run-a",
+            kind="model_request_completed",
+            step_index=1,
+            timestamp=start + timedelta(milliseconds=11),
+        ),
+        StepEvent(
+            run_id="run-a",
+            kind="tool_call_started",
+            step_index=2,
+            timestamp=start + timedelta(milliseconds=12),
+            tool_call_id="call-1",
+            tool_name="read_material",
+        ),
+        StepEvent(
+            run_id="run-a",
+            kind="tool_call_completed",
+            step_index=2,
+            timestamp=start + timedelta(milliseconds=17),
+            tool_call_id="call-1",
+            tool_name="read_material",
+        ),
+        StepEvent(
+            run_id="run-a",
+            kind="tool_call_started",
+            step_index=3,
+            timestamp=start + timedelta(milliseconds=18),
+            tool_call_id="call-2",
+            tool_name="write_article",
+        ),
+    ]
+
+    assert run_timings_from_events(events) == {
+        "request_latencies_ms": [10.0],
+        "tool_latencies_ms": {
+            "read_material": [5.0],
+            "write_article": [None],
+        },
+    }

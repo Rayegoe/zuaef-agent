@@ -131,6 +131,7 @@ def run_case(
             rights=rights,
             run_id=rev_id,
             feedback=rev_feedback,
+            previous_article=draft_text,
             clean_workspace=False,
             request_limit=request_limit,
             profile=profile,

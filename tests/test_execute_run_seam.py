@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -17,7 +18,7 @@ from pydantic_ai import models
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
-from pydantic_ai.usage import RunUsage
+from pydantic_ai.usage import RequestUsage, RunUsage
 from pydantic_ai_harness.step_persistence import FileStepStore, StepEvent
 
 from zuaef_agent.config import AgentSettings
@@ -27,6 +28,7 @@ from zuaef_agent.models import CoreDeps
 from zuaef_agent.runtime import (
     PausedRun,
     TerminalRun,
+    _largest_input_tokens,
     _usage_payload,
     decide,
     execute_run,
@@ -139,6 +141,48 @@ def test_usage_payload_accepts_run_usage_tracker_directly():
 
     assert payload["requests"] == 1
     assert payload["input_tokens"] == 2
+
+
+def test_largest_input_tokens_uses_provider_reported_request_usage_only():
+    messages = [
+        ModelResponse(parts=[TextPart(content="small")], usage=RequestUsage(input_tokens=9)),
+        ModelResponse(parts=[TextPart(content="large")], usage=RequestUsage(input_tokens=17)),
+        ModelResponse(parts=[TextPart(content="synthetic")]),
+    ]
+
+    assert _largest_input_tokens(messages) == 17
+    assert _largest_input_tokens([ModelResponse(parts=[TextPart(content="synthetic")])]) is None
+
+
+def test_terminal_receipt_exposes_largest_provider_input_usage(tmp_path):
+    settings = _settings(tmp_path).with_overrides(enable_step_persistence=False)
+    run_id = uuid4().hex
+    deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
+    messages = [
+        ModelResponse(
+            parts=[TextPart(content="done")],
+            usage=RequestUsage(input_tokens=42),
+        )
+    ]
+
+    class FakeAgent:
+        async def run(self, *args, **kwargs):
+            return SimpleNamespace(
+                output="done",
+                usage=RunUsage(requests=1),
+                all_messages=lambda: messages,
+            )
+
+    outcome = execute_run(
+        FakeAgent(),
+        deps,
+        prompt="answer",
+        settings=settings,
+        run_id=run_id,
+    )
+
+    assert isinstance(outcome, TerminalRun)
+    assert outcome.receipt.usage["largest_input_tokens"] == 42
 
 
 def test_unchanged_preexisting_artifact_not_owned_by_run(tmp_path: Path):

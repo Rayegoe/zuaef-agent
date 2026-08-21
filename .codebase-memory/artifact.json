@@ -1,11 +1,11 @@
 {
     "schema_version": 2,
-    "commit": "12e54e08f635eefe821cfc3a3aab7d28eb380380",
-    "indexed_at": "2026-08-20T06:50:55Z",
-    "project": "zuaef-agent",
-    "nodes": 7217,
-    "edges": 17470,
-    "original_size": 14090240,
-    "compressed_size": 2816709,
+    "commit": "62fb9f7ee48e4a3b15ac1730243801c37d8351ad",
+    "indexed_at": "2026-08-21T05:19:18Z",
+    "project": "home-barry-zuaef-agent",
+    "nodes": 9704,
+    "edges": 26946,
+    "original_size": 22544384,
+    "compressed_size": 4209474,
     "compression_level": 3
 }
