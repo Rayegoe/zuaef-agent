@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sys
 from importlib.metadata import EntryPoint
 from pathlib import Path
@@ -40,7 +41,10 @@ sys.path[:0] = [
     str(REPO / "plugins" / "zuaef-ace-writing"),
 ]
 
-from zuaef_ace_writing.writing_toolset import WritingEnvironmentToolset
+from zuaef_ace_writing.writing_toolset import (
+    DEFAULT_ACE_ROOT,
+    WritingEnvironmentToolset,
+)
 
 from examples.production_writing import (
     PreparedFile,
@@ -54,7 +58,8 @@ from examples.production_writing import (
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.models import CoreDeps
 
-ACE_ROOT = resolve_ace_root() if (resolve_ace_root() / "tools" / "ctx.py").is_file() else None
+_ACE_ROOT = Path(os.environ.get("ACE_ROOT", str(DEFAULT_ACE_ROOT))).expanduser().resolve()
+ACE_ROOT = _ACE_ROOT if (_ACE_ROOT / "tools" / "ctx.py").is_file() else None
 # The real entry point is only present when the plugin distribution is
 # installed; the checked-out module is importable via sys.path above.
 PLUGIN_INSTALLED = "ace-writing" in {

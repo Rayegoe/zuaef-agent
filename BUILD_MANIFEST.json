@@ -1098,8 +1098,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 2019,
-      "sha256": "ba539184bc0cb5355235a83d61090ef3e60026fa7bf90778be5df26e79d7ce2b"
+      "bytes": 2072,
+      "sha256": "04cf2bdd68f7c41431a0352d740b82dc76a4ec949a6899ad2dd21b5f8c96a33c"
     },
     {
       "path": "uv.lock",
@@ -1558,8 +1558,8 @@
     },
     {
       "path": "tests/test_production_writing.py",
-      "bytes": 15567,
-      "sha256": "a25d4bb84d293b9bf715e2108f0a13b2163d0daf915756b01bce4d4c6a342abe"
+      "bytes": 15681,
+      "sha256": "e304997e8c617c37baf92d6df9c837a381eb75583b9b198fdcf0e99289794124"
     },
     {
       "path": "tests/test_receipt_store.py",
