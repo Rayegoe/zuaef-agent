@@ -1273,8 +1273,8 @@
     },
     {
       "path": "src/zuaef_agent/web/api.py",
-      "bytes": 4759,
-      "sha256": "0d1e987730f4c2aab2c4ae1157239e1d248d2b63bbd74948117f796adc6ed6a2"
+      "bytes": 6011,
+      "sha256": "43583b8a78b8c6abd172a7312a1ed8798e7800ddb1792a4335396c9c87fac75b"
     },
     {
       "path": "src/zuaef_agent/web/projector.py",
@@ -1283,8 +1283,8 @@
     },
     {
       "path": "src/zuaef_agent/web/readers.py",
-      "bytes": 8509,
-      "sha256": "209088eac5d79164a3af20913ae94adb7b6b3cd97d0c079df002f1402195243c"
+      "bytes": 9425,
+      "sha256": "88fe1a3deb2c577f44201705d856cf24a3f8f5ee5b8c688d2b73e2bdb4e3333a"
     },
     {
       "path": "src/zuaef_agent/web/server.py",
@@ -1583,8 +1583,8 @@
     },
     {
       "path": "tests/test_web_console.py",
-      "bytes": 15597,
-      "sha256": "7abe200f2161898f947e9441a06c87dbbd4ee705e10b85f8ecb56653bfe926a2"
+      "bytes": 19667,
+      "sha256": "796aa66c5ee18d5f9eabbd0a10107bf165bff6b3f8b42bcc1c79ed8935d95698"
     },
     {
       "path": "tests/test_wordpress_plugin.py",
@@ -2210,6 +2210,11 @@
       "path": "benchmarks/editorial-learning/provenance/sources.jsonl",
       "bytes": 1942,
       "sha256": "da607c7e68ba20979dce5a261dc3d3d792866fe18ba14f5711fc5ff69b3a5595"
+    },
+    {
+      "path": "src/zuaef_agent/web/sse.py",
+      "bytes": 2275,
+      "sha256": "d45cf5569eb4f7063fc413ad8855163d1d7c1a02a3719c1060d61115ffc58f0a"
     }
   ]
 }

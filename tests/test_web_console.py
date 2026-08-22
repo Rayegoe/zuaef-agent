@@ -24,6 +24,7 @@ from pydantic_ai_harness.step_persistence import (
 from starlette.testclient import TestClient
 
 from zuaef_agent.config import AgentSettings
+from zuaef_agent.web import readers, sse
 from zuaef_agent.web.api import api_routes
 from zuaef_agent.web.projector import RunFacts, project_run
 from zuaef_agent.web.readers import load_run_facts
@@ -432,3 +433,111 @@ def test_api_list_detail_consistency(tmp_path: Path) -> None:
         detail = client.get("/api/runs/r-consistent").json()
     for key in ("status", "request_count", "tool_call_count", "started_at"):
         assert summary[key] == detail["run"][key], key
+
+
+# --- T008C: SSE run_changed invalidation --------------------------------------
+
+
+async def _pull(gen, count: int, timeout: float = 2.0) -> list[str]:
+    """Pull ``count`` frames inside the caller's loop (per-frame timeout)."""
+    frames: list[str] = []
+    for _ in range(count):
+        frames.append(await asyncio.wait_for(gen.__anext__(), timeout))
+    return frames
+
+
+def test_run_revision_tracks_events_and_receipt(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    assert asyncio.run(readers.run_revision(settings, "r-rev")) is None
+
+    _seed_sync(tmp_path, settings, "r-rev", [("run_started", 0, None, None)])
+    with_events = asyncio.run(readers.run_revision(settings, "r-rev"))
+    assert with_events is not None and with_events.startswith("events=1;")
+
+    _write_receipt(settings, "r-rev", {"schema_version": "2.0"})
+    with_receipt = asyncio.run(readers.run_revision(settings, "r-rev"))
+    assert with_receipt != with_events
+
+
+def test_sse_stream_emits_on_subscribe_and_change(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-live", [("run_started", 0, None, None)])
+
+    async def scenario() -> tuple[str, str]:
+        gen = sse.run_changed_stream(settings, "r-live", poll_interval=0.02)
+        try:
+            first = (await _pull(gen, 1))[0]
+            store = FileStepStore(settings.step_store_dir)
+            await store.append_event(
+                StepEvent(
+                    run_id="r-live",
+                    kind="run_completed",
+                    step_index=1,
+                    timestamp=T0 + timedelta(seconds=5),
+                )
+            )
+            second = (await _pull(gen, 1))[0]
+            return first, second
+        finally:
+            await gen.aclose()
+
+    first, second = asyncio.run(scenario())
+    assert first.startswith("event: run_changed\n")
+    assert '"run_id": "r-live"' in first
+    assert second.startswith("event: run_changed\n")
+    assert second != first
+
+
+def test_sse_stream_heartbeat_when_quiet(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-quiet", [("run_started", 0, None, None)])
+
+    async def scenario() -> list[str]:
+        gen = sse.run_changed_stream(
+            settings, "r-quiet", poll_interval=0.02, heartbeat_seconds=0.05
+        )
+        try:
+            return await _pull(gen, 2)
+        finally:
+            await gen.aclose()
+
+    frames = asyncio.run(scenario())
+    assert frames[0].startswith("event: run_changed\n")
+    assert frames[1] == ": ping\n\n"
+
+
+def test_sse_stream_ends_when_facts_vanish(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _write_receipt(settings, "r-gone", {"schema_version": "2.0"})
+
+    async def scenario() -> tuple[str, str, bool]:
+        gen = sse.run_changed_stream(settings, "r-gone", poll_interval=0.02)
+        try:
+            first = (await _pull(gen, 1))[0]
+            (settings.state_root / "receipts" / "r-gone.json").unlink()
+            final = (await _pull(gen, 1))[0]
+            stopped = False
+            try:
+                await asyncio.wait_for(gen.__anext__(), 1.0)
+            except StopAsyncIteration:
+                stopped = True
+            return first, final, stopped
+        finally:
+            await gen.aclose()
+
+    first, final, stopped = asyncio.run(scenario())
+    assert first.startswith("event: run_changed\n")
+    assert '"revision": null' in final
+    assert stopped, "stream must end after the run's facts disappear"
+
+
+def test_api_events_route_rejects_unknown_and_invalid(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    with _client(settings) as client:
+        missing = client.get("/api/runs/does-not-exist/events")
+        assert missing.status_code == 404
+        assert missing.json()["error"]["code"] == "RUN_NOT_FOUND"
+
+        invalid = client.get("/api/runs/bad%20id/events")
+        assert invalid.status_code == 400
+        assert invalid.json()["error"]["code"] == "INVALID_RUN_ID"

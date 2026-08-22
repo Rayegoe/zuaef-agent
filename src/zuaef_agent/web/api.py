@@ -1,21 +1,24 @@
 """HTTP API for the ZUAEF Agent Console — thin JSON adapters over readers/actions.
 
 Route surface (API-CONTRACT §2–§7): two read endpoints, two action
-endpoints, one health check. No fragmenting one run into many endpoints;
+endpoints, one health check, one SSE invalidation stream (T008C — thin
+``run_changed`` notices only; the HTTP projection stays the UI's single
+truth). No fragmenting one run into many endpoints;
 no new business domain; errors use one small stable code set.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
 from importlib.metadata import PackageNotFoundError, version
 
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from ..config import AgentSettings
-from . import actions, readers
+from . import actions, readers, sse
 from .projector import project_run, run_view
 
 
@@ -102,6 +105,34 @@ async def _parse_body(request: Request) -> dict:
     return data
 
 
+async def run_events(request: Request) -> Response:
+    """SSE invalidation for one run (T008C): ``run_changed`` frames only."""
+    settings = _settings(request)
+    run_id = request.path_params["run_id"]
+    try:
+        facts = await readers.load_run_facts(settings, run_id)
+    except ValueError:
+        return _error_response("INVALID_RUN_ID", f"invalid run id: {run_id!r}", 400)
+    if facts is None:
+        return _error_response("RUN_NOT_FOUND", f"Run {run_id} not found", 404)
+    poll_interval = float(getattr(request.app.state, "sse_poll_seconds", 1.0))
+
+    async def stream() -> AsyncIterator[str]:
+        async for chunk in sse.run_changed_stream(
+            settings,
+            run_id,
+            poll_interval=poll_interval,
+            is_disconnected=request.is_disconnected,
+        ):
+            yield chunk
+
+    return StreamingResponse(
+        stream(),
+        media_type=sse.SSE_MEDIA_TYPE,
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 async def approve(request: Request) -> JSONResponse:
     return await _act(request, "approve")
 
@@ -142,6 +173,7 @@ def api_routes() -> list[Route]:
         Route("/api/health", health, methods=["GET"]),
         Route("/api/runs", list_runs, methods=["GET"]),
         Route("/api/runs/{run_id}", get_run, methods=["GET"]),
+        Route("/api/runs/{run_id}/events", run_events, methods=["GET"]),
         Route("/api/runs/{run_id}/approve", approve, methods=["POST"]),
         Route("/api/runs/{run_id}/deny", deny, methods=["POST"]),
     ]

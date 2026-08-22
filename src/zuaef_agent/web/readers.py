@@ -235,5 +235,31 @@ def read_receipt(settings: AgentSettings, run_id: str) -> AnyReceipt | None:
     return _load_receipt(_receipt_path(settings, run_id))[0]
 
 
+async def run_revision(settings: AgentSettings, run_id: str) -> str | None:
+    """Cheap change signal for SSE invalidation (T008C).
+
+    Event count via the store's public API plus a stat of ZUAEF's own
+    receipt file — never the harness's private on-disk layout, so a layout
+    change cannot silently kill live updates. ``None`` means neither source
+    holds anything for the run (0 events AND no receipt file).
+    """
+    store = open_step_store(settings)
+    try:
+        count = len(await store.list_events(run_id=run_id))
+    except (OSError, ValueError):
+        count = 0
+    receipt_stamp = "-"
+    path = _receipt_path(settings, run_id)
+    try:
+        stat = path.stat()
+    except OSError:
+        pass
+    else:
+        receipt_stamp = f"{stat.st_mtime_ns:x}{stat.st_size:x}"
+    if count == 0 and receipt_stamp == "-":
+        return None
+    return f"events={count};receipt={receipt_stamp}"
+
+
 def open_receipt_store(settings: AgentSettings) -> ReceiptStore:
     return ReceiptStore(settings.state_root)
