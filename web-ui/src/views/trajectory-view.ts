@@ -10,6 +10,7 @@ import {
   type LedgerEntry,
 } from "../state";
 import "../components/event-row";
+import "../components/overview-strip";
 import "../components/status-badge";
 
 /** Center pane: the trajectory ledger for the selected run.
@@ -24,6 +25,26 @@ export class ZuaefTrajectoryView extends LitElement {
 
   @state() private expandedGroups: string[] = [];
   private lastRunId: string | null = null;
+
+  protected updated(changed: Map<string, unknown>) {
+    super.updated(changed);
+    if (changed.has("selectedEventId") || changed.has("projection")) {
+      this.scrollToSelected();
+    }
+  }
+
+  /** Minimap → ledger linkage (T008B): an external selection scrolls the
+   *  row into view. block:"nearest" makes same-pane clicks a no-op. */
+  private scrollToSelected() {
+    const id = this.selectedEventId;
+    if (!id) return;
+    for (const el of this.renderRoot.querySelectorAll("zuaef-event-row")) {
+      if ((el as { row?: TimelineRow }).row?.id === id) {
+        el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        return;
+      }
+    }
+  }
 
   static styles = css`
     :host {
@@ -207,6 +228,20 @@ export class ZuaefTrajectoryView extends LitElement {
         ? this.projection.diagnostics.map(
             (line) => html`<div class="diag">${line}</div>`,
           )
+        : ""}
+      ${this.projection && !this.error
+        ? html`<zuaef-overview-strip
+            .timeline=${this.projection.timeline}
+            .selectedEventId=${this.selectedEventId}
+            @event-selected=${(e: CustomEvent<{ rowId: string }>) =>
+              this.dispatchEvent(
+                new CustomEvent("event-selected", {
+                  detail: e.detail,
+                  bubbles: true,
+                  composed: true,
+                }),
+              )}
+          ></zuaef-overview-strip>`
         : ""}
       <div class="scroll">
         ${this.error

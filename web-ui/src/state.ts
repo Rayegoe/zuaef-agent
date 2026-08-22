@@ -180,3 +180,116 @@ export function groupContains(
   if (!rowId) return false;
   return group.rows.some((row) => row.id === rowId);
 }
+
+// ---- live request overview strip (transient presentation only) ----
+
+export type OverviewMetric = "latency" | "input" | "output";
+
+export const OVERVIEW_MAX_BARS = 60;
+export const OVERVIEW_MAX_TICKS = 200;
+
+export interface OverviewBar {
+  row: TimelineRow;
+  /** horizontal position as a fraction of the window span (0..1) */
+  x: number;
+  /** plotted height as a fraction of the window maximum (0..1) */
+  h: number;
+  /** the value actually plotted; 0 when nothing was persisted */
+  value: number;
+  /** request still running — its latency is elapsed time, not final duration */
+  active: boolean;
+}
+
+export interface OverviewTick {
+  row: TimelineRow;
+  x: number;
+}
+
+export interface OverviewModel {
+  bars: OverviewBar[];
+  ticks: OverviewTick[];
+  /** window bounds as epoch ms; span <= 0 means "not plottable" */
+  t0: number;
+  t1: number;
+  span: number;
+}
+
+function startMs(row: TimelineRow): number | null {
+  if (!row.started_at) return null;
+  const ms = Date.parse(row.started_at);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+function endMs(row: TimelineRow): number | null {
+  const start = startMs(row);
+  if (start === null) return null;
+  if (row.duration_ms !== null) return start + row.duration_ms;
+  const finish = row.finished_at ? Date.parse(row.finished_at) : NaN;
+  return Number.isNaN(finish) ? start : finish;
+}
+
+function metricValue(
+  row: TimelineRow,
+  metric: OverviewMetric,
+  now: number,
+): number {
+  if (metric === "input") return row.usage?.input_tokens ?? 0;
+  if (metric === "output") return row.usage?.output_tokens ?? 0;
+  if (row.duration_ms !== null) return row.duration_ms;
+  // Running request: plot live elapsed time — clearly labelled as such,
+  // never presented as a final duration.
+  const start = startMs(row);
+  if (start === null || row.status !== "started") return 0;
+  return Math.max(now - start, 0);
+}
+
+/** Time-proportional minimap of one run's model requests. Bars are placed
+ *  by started_at over the most recent OVERVIEW_MAX_BARS requests; tool
+ *  calls become baseline ticks. Pure and transient: input rows are the
+ *  already-projected timeline; nothing here touches the API, DTOs or any
+ *  persisted shape. */
+export function buildOverview(
+  rows: TimelineRow[],
+  metric: OverviewMetric,
+  now: number,
+): OverviewModel {
+  const requests = rows
+    .filter((row) => row.kind === "model_request" && startMs(row) !== null)
+    .sort((a, b) => (startMs(a) ?? 0) - (startMs(b) ?? 0));
+  const windowed = requests.slice(-OVERVIEW_MAX_BARS);
+  if (windowed.length === 0) {
+    return { bars: [], ticks: [], t0: 0, t1: 0, span: 0 };
+  }
+  let t0 = startMs(windowed[0]) ?? 0;
+  let t1 = Math.max(...windowed.map((row) => endMs(row) ?? startMs(row) ?? 0));
+
+  const inWindow = (row: TimelineRow): boolean => {
+    const start = startMs(row);
+    return (
+      row.kind === "tool_call" &&
+      start !== null &&
+      start >= t0 &&
+      start <= t1
+    );
+  };
+  const ticks: OverviewTick[] = rows
+    .filter(inWindow)
+    .slice(0, OVERVIEW_MAX_TICKS)
+    .map((row) => ({ row, x: 0 }));
+
+  const span = Math.max(t1 - t0, 1);
+  const frac = (ms: number): number =>
+    Math.min(Math.max((ms - t0) / span, 0), 1);
+
+  const values = windowed.map((row) => metricValue(row, metric, now));
+  const max = Math.max(...values, 1);
+  const bars: OverviewBar[] = windowed.map((row, index) => ({
+    row,
+    x: frac(startMs(row) ?? t0),
+    h: Math.max(Math.min(values[index] / max, 1), 0.04),
+    value: values[index],
+    active: row.status === "started",
+  }));
+  for (const tick of ticks) tick.x = frac(startMs(tick.row) ?? t0);
+  return { bars, ticks, t0, t1, span };
+}
