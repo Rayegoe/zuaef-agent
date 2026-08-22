@@ -9,7 +9,11 @@ import "./trajectory-view";
 
 /** Console coordinator: owns the tiny UiState and all API calls.
  *  Components receive data via properties and emit UI intent via events
- *  (UI-SPEC §10); the server projection stays authoritative (§11). */
+ *  (UI-SPEC §10); the server projection stays authoritative (§11).
+ *  Tail-follow (T008C): while LIVE, a thin SSE run_changed stream triggers
+ *  a debounced refetch of the same HTTP projection — the stream never
+ *  carries timeline data. Selecting any event pauses live so inspection
+ *  is never yanked around; the topbar control resumes (= jump to now). */
 @customElement("zuaef-console")
 export class ZuaefConsole extends LitElement {
   @property({ attribute: false }) private ui: UiState = initialUiState;
@@ -21,6 +25,14 @@ export class ZuaefConsole extends LitElement {
   @state() private projection: RunProjection | null = null;
   @state() private projectionLoading = false;
   @state() private projectionError = "";
+
+  @state() private live = true;
+  /** SSE endpoint unreachable/errored — degrade to manual Refresh once. */
+  @state() private liveAvailable = true;
+
+  private es: EventSource | null = null;
+  private esRunId: string | undefined = undefined;
+  private invalidateTimer: ReturnType<typeof setTimeout> | null = null;
 
   static styles = css`
     :host {
@@ -59,6 +71,23 @@ export class ZuaefConsole extends LitElement {
       background: transparent;
     }
     .refresh:hover { color: var(--z-text); background: var(--z-surface-hover); }
+    .live {
+      border: 1px solid var(--z-border);
+      border-radius: var(--z-radius);
+      padding: 2px var(--z-space-2);
+      font-size: 12px;
+      font-family: var(--z-font-mono);
+      background: transparent;
+      cursor: pointer;
+    }
+    .live[aria-pressed="true"] { color: var(--z-accent); }
+    .live[aria-pressed="false"] { color: var(--z-text-muted); }
+    .live:hover:not(:disabled) { color: var(--z-text); background: var(--z-surface-hover); }
+    .live:disabled { opacity: 0.5; cursor: default; }
+    .live:focus-visible {
+      outline: 1px dashed var(--z-accent);
+      outline-offset: 1px;
+    }
     .panes {
       display: grid;
       grid-template-columns: 264px minmax(0, 1fr) 380px;
@@ -72,6 +101,67 @@ export class ZuaefConsole extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     void this.reloadRuns();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.closeStream();
+    if (this.invalidateTimer !== null) clearTimeout(this.invalidateTimer);
+  }
+
+  protected willUpdate(changed: Map<string, unknown>) {
+    super.willUpdate(changed);
+    if (changed.has("ui") || changed.has("live") || changed.has("liveAvailable")) {
+      const prevUi = changed.get("ui") as UiState | undefined;
+      const runChanged =
+        !prevUi || prevUi.selectedRunId !== this.ui.selectedRunId;
+      if (runChanged && this.ui.selectedRunId) this.live = true;
+      this.syncStream();
+    }
+  }
+
+  // ---- tail-follow (T008C) ----
+
+  private closeStream() {
+    this.es?.close();
+    this.es = null;
+    this.esRunId = undefined;
+  }
+
+  private syncStream() {
+    const runId = this.live && this.liveAvailable ? this.ui.selectedRunId : undefined;
+    if (this.es && this.esRunId === runId) return;
+    this.closeStream();
+    if (!runId) return;
+    this.es = new EventSource(api.runEventsUrl(runId));
+    this.esRunId = runId;
+    this.es.addEventListener("run_changed", () => this.scheduleInvalidate());
+    this.es.onerror = () => {
+      // Native reconnect would spam while the server is down; degrade to
+      // manual Refresh instead and let the next selection retry.
+      this.liveAvailable = false;
+      this.closeStream();
+    };
+  }
+
+  private scheduleInvalidate() {
+    if (this.invalidateTimer !== null) clearTimeout(this.invalidateTimer);
+    this.invalidateTimer = setTimeout(() => {
+      this.invalidateTimer = null;
+      if (!this.live || !this.ui.selectedRunId) return;
+      void this.reloadProjection(this.ui.selectedRunId);
+      void this.reloadRuns();
+    }, 150);
+  }
+
+  private setLive(on: boolean) {
+    if (on && !this.liveAvailable) return;
+    this.live = on;
+    if (on && this.ui.selectedRunId) {
+      // Resume === jump to now: refresh immediately, then keep following.
+      void this.reloadProjection(this.ui.selectedRunId);
+      void this.reloadRuns();
+    }
   }
 
   private async reloadRuns(): Promise<void> {
@@ -140,6 +230,23 @@ export class ZuaefConsole extends LitElement {
         <span class="brand">ZUAEF</span>
         <span class="meta">${meta}</span>
         <span class="spacer"></span>
+        <button
+          class="live"
+          aria-pressed=${this.live ? "true" : "false"}
+          ?disabled=${!this.liveAvailable}
+          title=${this.liveAvailable
+            ? this.live
+              ? "Live: refetches on server invalidation. Click to pause."
+              : "Paused so you can inspect history. Click to resume (jump to now)."
+            : "Live updates unavailable — use Refresh."}
+          @click=${() => this.setLive(!this.live)}
+        >
+          ${this.live
+            ? "● LIVE"
+            : this.liveAvailable
+              ? "○ paused · jump to now"
+              : "○ live off"}
+        </button>
         <button class="refresh" @click=${() => void this.refresh()}>
           Refresh
         </button>
@@ -165,8 +272,12 @@ export class ZuaefConsole extends LitElement {
           .loading=${this.projectionLoading}
           .selectedEventId=${this.ui.selectedEventId ?? ""}
           .error=${this.projectionError}
-          @event-selected=${(e: CustomEvent<{ rowId: string }>) =>
-            this.patchUi({ selectedEventId: e.detail.rowId })}
+          @event-selected=${(e: CustomEvent<{ rowId: string }>) => {
+            this.patchUi({ selectedEventId: e.detail.rowId });
+            // Inspecting history pauses tail-follow (the view must not
+            // jump while the operator reads); resume is explicit.
+            this.setLive(false);
+          }}
         ></zuaef-trajectory-view>
 
         <zuaef-inspector

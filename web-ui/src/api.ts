@@ -127,4 +127,8 @@ export const api = {
 
   getRun: (runId: string) =>
     get<RunProjection>(`/api/runs/${encodeURIComponent(runId)}`),
+
+  /** SSE invalidation stream (T008C): thin run_changed frames only. */
+  runEventsUrl: (runId: string) =>
+    `/api/runs/${encodeURIComponent(runId)}/events`,
 };

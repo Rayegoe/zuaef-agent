@@ -220,6 +220,13 @@ function startMs(row: TimelineRow): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
+/** Unsettled request: the runtime writes 'started' while streaming and
+ *  leaves 'incomplete' on requests that never got a completion event —
+ *  both mean the duration is not final yet. */
+export function isActiveRequest(row: TimelineRow): boolean {
+  return row.status === "started" || row.status === "incomplete";
+}
+
 function endMs(row: TimelineRow): number | null {
   const start = startMs(row);
   if (start === null) return null;
@@ -239,7 +246,7 @@ function metricValue(
   // Running request: plot live elapsed time — clearly labelled as such,
   // never presented as a final duration.
   const start = startMs(row);
-  if (start === null || row.status !== "started") return 0;
+  if (start === null || !isActiveRequest(row)) return 0;
   return Math.max(now - start, 0);
 }
 
@@ -288,7 +295,7 @@ export function buildOverview(
     x: frac(startMs(row) ?? t0),
     h: Math.max(Math.min(values[index] / max, 1), 0.04),
     value: values[index],
-    active: row.status === "started",
+    active: isActiveRequest(row),
   }));
   for (const tick of ticks) tick.x = frac(startMs(tick.row) ?? t0);
   return { bars, ticks, t0, t1, span };

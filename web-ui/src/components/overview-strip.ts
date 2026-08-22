@@ -6,6 +6,7 @@ import {
   formatDuration,
   formatTime,
   formatTokens,
+  isActiveRequest,
   statusGlyph,
   type OverviewBar,
   type OverviewMetric,
@@ -163,7 +164,7 @@ export class ZuaefOverviewStrip extends LitElement {
 
   updated(changed: Map<string, unknown>) {
     super.updated(changed);
-    const hasActive = this.timeline.some((row) => row.status === "started");
+    const hasActive = this.timeline.some((row) => isActiveRequest(row));
     if (hasActive && this.ticker === null) {
       this.ticker = setInterval(() => {
         this.now = Date.now();
@@ -196,7 +197,7 @@ export class ZuaefOverviewStrip extends LitElement {
       html`<div>${row.title}</div>`,
       html`<div class="muted">${formatTime(row.started_at)}</div>`,
     ];
-    if (row.status === "started") {
+    if (bar.active) {
       lines.push(
         html`<div class="muted">
           elapsed ${formatDuration(this.now - (Date.parse(row.started_at ?? "") || 0))}
