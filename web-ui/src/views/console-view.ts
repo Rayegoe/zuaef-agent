@@ -56,6 +56,7 @@ export class ZuaefConsole extends LitElement {
       padding: 2px var(--z-space-2);
       color: var(--z-text-muted);
       font-size: 12px;
+      background: transparent;
     }
     .refresh:hover { color: var(--z-text); background: var(--z-surface-hover); }
     .panes {

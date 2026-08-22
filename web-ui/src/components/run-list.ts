@@ -54,6 +54,7 @@ export class ZuaefRunList extends LitElement {
       padding: var(--z-space-2) var(--z-space-3);
       border: none;
       border-top: 1px solid var(--z-border);
+      background: transparent;
       color: var(--z-text-muted);
       font-size: 12px;
       text-align: left;

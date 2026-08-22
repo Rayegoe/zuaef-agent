@@ -39,8 +39,16 @@ export class ZuaefInspector extends LitElement {
       padding: var(--z-space-2) var(--z-space-3);
       font-size: 12px;
       color: var(--z-text-muted);
+      background: transparent;
+      border: none;
       border-bottom: 1px solid transparent;
       margin-bottom: -1px;
+      cursor: pointer;
+    }
+    .tabs button:hover { color: var(--z-text); }
+    .tabs button:focus-visible {
+      outline: 1px dashed var(--z-accent);
+      outline-offset: -1px;
     }
     .tabs button[aria-selected="true"] {
       color: var(--z-text);
