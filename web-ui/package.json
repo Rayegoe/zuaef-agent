@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "smoke": "npm run build && node smoke/browser-smoke.mjs"
   },
   "dependencies": {
     "lit": "^3.3.0"

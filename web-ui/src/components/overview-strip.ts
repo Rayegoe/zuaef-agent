@@ -76,6 +76,7 @@ export class ZuaefOverviewStrip extends LitElement {
       font-size: 11px;
       color: var(--z-accent);
     }
+    .unknown { border-style: dashed; opacity: 0.75; }
     .plot {
       position: relative;
       height: 64px;
@@ -191,6 +192,11 @@ export class ZuaefOverviewStrip extends LitElement {
     );
   }
 
+  private elapsedMs(row: TimelineRow): number | null {
+    const start = Date.parse(row.started_at ?? "");
+    return Number.isNaN(start) ? null : Math.max(this.now - start, 0);
+  }
+
   private tipLines(bar: OverviewBar): TemplateResult[] {
     const row = bar.row;
     const lines = [
@@ -198,22 +204,35 @@ export class ZuaefOverviewStrip extends LitElement {
       html`<div class="muted">${formatTime(row.started_at)}</div>`,
     ];
     if (bar.active) {
+      const elapsed = this.elapsedMs(row);
       lines.push(
         html`<div class="muted">
-          elapsed ${formatDuration(this.now - (Date.parse(row.started_at ?? "") || 0))}
+          elapsed ${elapsed === null ? "Unknown" : formatDuration(elapsed)}
         </div>`,
       );
-    } else if (row.duration_ms !== null) {
+    } else {
       lines.push(
-        html`<div class="muted">latency ${formatDuration(row.duration_ms)}</div>`,
+        html`<div class="muted">
+          latency ${
+            row.duration_ms === null
+              ? "Unknown"
+              : formatDuration(row.duration_ms)
+          }
+        </div>`,
       );
     }
-    if (row.usage?.input_tokens !== undefined) {
-      lines.push(html`<div class="muted">in ${formatTokens(row.usage.input_tokens)}</div>`);
-    }
-    if (row.usage?.output_tokens !== undefined) {
-      lines.push(html`<div class="muted">out ${formatTokens(row.usage.output_tokens)}</div>`);
-    }
+    lines.push(
+      html`<div class="muted">
+        in ${row.usage?.input_tokens === undefined
+          ? "Unknown"
+          : formatTokens(row.usage.input_tokens)}
+      </div>`,
+      html`<div class="muted">
+        out ${row.usage?.output_tokens === undefined
+          ? "Unknown"
+          : formatTokens(row.usage.output_tokens)}
+      </div>`,
+    );
     if (row.status && row.status !== "completed") {
       lines.push(
         html`<div class="muted">${statusGlyph(row.status)} ${row.status}</div>`,
@@ -244,9 +263,10 @@ export class ZuaefOverviewStrip extends LitElement {
         ${active
           ? html`<span class="active-note">
               ${active.row.title} running ·
-              ${formatDuration(
-                this.now - (Date.parse(active.row.started_at ?? "") || 0),
-              )}
+              ${(() => {
+                const elapsed = this.elapsedMs(active.row);
+                return elapsed === null ? "Unknown" : formatDuration(elapsed);
+              })()}
               elapsed
             </span>`
           : ""}
@@ -265,16 +285,25 @@ export class ZuaefOverviewStrip extends LitElement {
         )}
         ${model.bars.map((bar) => {
           const selected = bar.row.id === this.selectedEventId;
+          const valueLabel =
+            bar.value === null
+              ? "Unknown"
+              : bar.active && this.metric === "latency"
+                ? `elapsed ${formatDuration(bar.value)}`
+                : String(bar.value);
           const classes = [
             "bar",
             bar.active ? "active" : "",
+            bar.value === null ? "unknown" : "",
             bar.row.status && !bar.active ? `state-${bar.row.status}` : "",
           ].join(" ");
           return html`<button
             class=${classes}
             role="option"
             aria-selected=${selected ? "true" : "false"}
-            aria-label=${`${bar.row.title} at ${formatTime(bar.row.started_at)}`}
+            aria-label=${`${bar.row.title} at ${formatTime(bar.row.started_at)}; ${
+              this.metric
+            } ${valueLabel}`}
             style=${`left: ${(bar.x * 100).toFixed(3)}%; height: ${(
               bar.h * 100
             ).toFixed(1)}%`}

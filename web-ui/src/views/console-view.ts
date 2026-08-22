@@ -33,6 +33,8 @@ export class ZuaefConsole extends LitElement {
   private es: EventSource | null = null;
   private esRunId: string | undefined = undefined;
   private invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+  private listRequestGeneration = 0;
+  private projectionRequestGeneration = 0;
 
   static styles = css`
     :host {
@@ -114,7 +116,8 @@ export class ZuaefConsole extends LitElement {
     if (changed.has("ui") || changed.has("live") || changed.has("liveAvailable")) {
       const prevUi = changed.get("ui") as UiState | undefined;
       const runChanged =
-        !prevUi || prevUi.selectedRunId !== this.ui.selectedRunId;
+        changed.has("ui") &&
+        (!prevUi || prevUi.selectedRunId !== this.ui.selectedRunId);
       if (runChanged && this.ui.selectedRunId) this.live = true;
       this.syncStream();
     }
@@ -126,6 +129,8 @@ export class ZuaefConsole extends LitElement {
     this.es?.close();
     this.es = null;
     this.esRunId = undefined;
+    if (this.invalidateTimer !== null) clearTimeout(this.invalidateTimer);
+    this.invalidateTimer = null;
   }
 
   private syncStream() {
@@ -133,23 +138,36 @@ export class ZuaefConsole extends LitElement {
     if (this.es && this.esRunId === runId) return;
     this.closeStream();
     if (!runId) return;
-    this.es = new EventSource(api.runEventsUrl(runId));
+    const stream = new EventSource(api.runEventsUrl(runId));
+    this.es = stream;
     this.esRunId = runId;
-    this.es.addEventListener("run_changed", () => this.scheduleInvalidate());
-    this.es.onerror = () => {
+    stream.addEventListener("run_changed", () => this.scheduleInvalidate(runId));
+    stream.onerror = () => {
+      // A closed old stream may report its error after a new selection has
+      // already installed another stream; it must not disable that stream.
+      if (this.es !== stream || this.esRunId !== runId) return;
       // Native reconnect would spam while the server is down; degrade to
       // manual Refresh instead and let the next selection retry.
       this.liveAvailable = false;
+      this.live = false;
       this.closeStream();
     };
   }
 
-  private scheduleInvalidate() {
+  private scheduleInvalidate(runId: string | undefined = this.esRunId) {
+    if (!runId) return;
     if (this.invalidateTimer !== null) clearTimeout(this.invalidateTimer);
     this.invalidateTimer = setTimeout(() => {
       this.invalidateTimer = null;
-      if (!this.live || !this.ui.selectedRunId) return;
-      void this.reloadProjection(this.ui.selectedRunId);
+      if (
+        !this.live ||
+        !this.liveAvailable ||
+        this.ui.selectedRunId !== runId ||
+        this.esRunId !== runId
+      ) {
+        return;
+      }
+      void this.reloadProjection(runId);
       void this.reloadRuns();
     }, 150);
   }
@@ -165,48 +183,62 @@ export class ZuaefConsole extends LitElement {
   }
 
   private async reloadRuns(): Promise<void> {
+    const requestGeneration = ++this.listRequestGeneration;
+    this.loadingMore = false;
     try {
       const page: RunListPage = await api.listRuns();
+      if (requestGeneration !== this.listRequestGeneration) return;
       this.runs = page.runs;
       this.nextCursor = page.next_cursor;
       // Default selection: newest run once, on first load.
       if (!this.ui.selectedRunId && this.runs.length > 0) {
         this.selectRun(this.runs[0].run_id);
-      } else if (this.ui.selectedRunId) {
-        void this.reloadProjection(this.ui.selectedRunId);
       }
     } catch (error) {
+      if (requestGeneration !== this.listRequestGeneration) return;
       this.projectionError = `Failed to load runs: ${messageOf(error)}`;
     }
   }
 
   private async loadMore(cursor: string): Promise<void> {
+    const requestGeneration = ++this.listRequestGeneration;
     this.loadingMore = true;
     try {
       const page = await api.listRuns(cursor);
+      if (requestGeneration !== this.listRequestGeneration) return;
       const seen = new Set(this.runs.map((run) => run.run_id));
       this.runs = [...this.runs, ...page.runs.filter((run) => !seen.has(run.run_id))];
       this.nextCursor = page.next_cursor;
     } catch (error) {
+      if (requestGeneration !== this.listRequestGeneration) return;
       this.projectionError = `Failed to load more runs: ${messageOf(error)}`;
     } finally {
-      this.loadingMore = false;
+      if (requestGeneration === this.listRequestGeneration) {
+        this.loadingMore = false;
+      }
     }
   }
 
   private async reloadProjection(runId: string): Promise<void> {
+    const requestGeneration = ++this.projectionRequestGeneration;
+    const isCurrent = () =>
+      requestGeneration === this.projectionRequestGeneration &&
+      this.ui.selectedRunId === runId;
     this.projectionLoading = !this.projection ||
       this.projection.run.run_id !== runId;
     if (this.projectionLoading) this.projectionError = "";
     try {
-      this.projection = await api.getRun(runId);
+      const projection = await api.getRun(runId);
+      if (!isCurrent()) return;
+      this.projection = projection;
       this.projectionError = "";
       document.title =
         `${this.projection.run.display_label} — ZUAEF Console`;
     } catch (error) {
+      if (!isCurrent()) return;
       this.projectionError = `Failed to load run: ${messageOf(error)}`;
     } finally {
-      this.projectionLoading = false;
+      if (isCurrent()) this.projectionLoading = false;
     }
   }
 
@@ -215,8 +247,16 @@ export class ZuaefConsole extends LitElement {
   }
 
   private selectRun(runId: string) {
-    if (runId === this.ui.selectedRunId) return;
+    // A deliberate selection is also an explicit retry after an SSE error.
+    this.liveAvailable = true;
+    this.live = true;
+    if (runId === this.ui.selectedRunId) {
+      this.syncStream();
+      void this.reloadProjection(runId);
+      return;
+    }
     this.patchUi({ selectedRunId: runId, selectedEventId: undefined });
+    this.syncStream();
     void this.reloadProjection(runId);
   }
 
@@ -296,7 +336,15 @@ export class ZuaefConsole extends LitElement {
   }
 
   private async refresh(): Promise<void> {
+    // Refresh is the explicit recovery action after a failed live stream.
+    this.liveAvailable = true;
+    this.live = true;
+    this.syncStream();
+    const selectedRunId = this.ui.selectedRunId;
     await this.reloadRuns();
+    if (selectedRunId && this.ui.selectedRunId === selectedRunId) {
+      await this.reloadProjection(selectedRunId);
+    }
   }
 }
 
