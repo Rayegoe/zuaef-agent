@@ -1,0 +1,24 @@
+/* Console frame: topbar / three panes / artifact bar (UI-SPEC §3).
+   Panes are plain grid areas; components own their internal styling. */
+zuaef-console {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+}
+
+zuaef-console > .panes {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr) 380px;
+  min-height: 0;
+}
+
+zuaef-console > .panes > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  zuaef-console > .panes {
+    grid-template-columns: 220px minmax(0, 1fr) 320px;
+  }
+}

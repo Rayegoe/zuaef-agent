@@ -1,0 +1,26 @@
+/* ZUAEF Console tokens — intentionally small surface (UI-SPEC §5). */
+:root {
+  --z-bg: #101317;
+  --z-surface: #161a20;
+  --z-surface-hover: #1d232b;
+  --z-border: #2a313b;
+
+  --z-text: #d6dde6;
+  --z-text-muted: #8a94a2;
+  --z-text-subtle: #5c6672;
+
+  --z-accent: #4d9fdb;
+  --z-success: #4fae7c;
+  --z-warning: #d3a04f;
+  --z-danger: #d4685f;
+
+  --z-font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --z-font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --z-space-1: 4px;
+  --z-space-2: 8px;
+  --z-space-3: 12px;
+  --z-space-4: 16px;
+
+  --z-radius: 3px;
+}
