@@ -17,12 +17,18 @@ export class ZuaefRunRow extends LitElement {
       width: 100%;
       padding: 5px var(--z-space-3);
       text-align: left;
-      border-left: 2px solid transparent;
+      background: transparent;
+      border: none;
+      color: inherit;
     }
-    button:hover { background: var(--z-surface-hover); }
+    button:hover { background: var(--z-hover-tint); }
+    button:focus-visible {
+      outline: 1px dashed var(--z-accent);
+      outline-offset: -1px;
+    }
     button[aria-selected="true"] {
-      background: var(--z-surface-hover);
-      border-left-color: var(--z-accent);
+      background: var(--z-selected-surface);
+      box-shadow: inset 2px 0 0 var(--z-accent);
     }
     .glyph {
       grid-row: 1 / 3;
@@ -30,10 +36,10 @@ export class ZuaefRunRow extends LitElement {
       font-family: var(--z-font-mono);
       font-size: 11px;
     }
-    .glyph.completed { color: var(--z-success); }
     .glyph.failed { color: var(--z-danger); }
     .glyph.paused, .glyph.limit_reached { color: var(--z-warning); }
     .glyph.incomplete, .glyph.started { color: var(--z-accent); }
+    .glyph.completed { color: var(--z-text-subtle); }
     .label {
       overflow: hidden;
       text-overflow: ellipsis;

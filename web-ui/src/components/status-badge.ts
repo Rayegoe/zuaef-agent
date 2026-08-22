@@ -18,11 +18,11 @@ export class ZuaefStatusBadge extends LitElement {
       text-transform: uppercase;
       white-space: nowrap;
     }
-    .completed { color: var(--z-success); }
     .failed { color: var(--z-danger); }
-    .paused { color: var(--z-warning); }
-    .limit_reached { color: var(--z-warning); }
+    .paused, .limit_reached { color: var(--z-warning); }
     .incomplete, .started { color: var(--z-accent); }
+    /* Completed is the normal case — quiet; anomalies carry the color. */
+    .completed { color: var(--z-text-subtle); }
     .unknown, .unresolved { color: var(--z-text-muted); }
   `;
 

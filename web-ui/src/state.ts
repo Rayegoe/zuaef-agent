@@ -122,3 +122,61 @@ export function findRow(
   if (!rowId) return undefined;
   return timeline.find((row) => row.id === rowId);
 }
+
+// ---- contiguous tool-row grouping (transient presentation only) ----
+
+export interface ToolRowGroup {
+  groupId: string;
+  toolName: string;
+  rows: TimelineRow[];
+}
+
+export type LedgerEntry = TimelineRow | ToolRowGroup;
+
+export function isToolRowGroup(entry: LedgerEntry): entry is ToolRowGroup {
+  return "groupId" in entry;
+}
+
+/** Collapse runs of contiguous tool rows that share one tool_name into a
+ *  single group entry (e.g. check_claim ×7). Pure and transient: input rows
+ *  are the already-projected timeline; nothing here touches the API, DTOs
+ *  or any persisted shape. A single tool row is never wrapped. */
+export function groupContiguousToolRows(rows: TimelineRow[]): LedgerEntry[] {
+  const entries: LedgerEntry[] = [];
+  let index = 0;
+  while (index < rows.length) {
+    const row = rows[index];
+    if (row.kind !== "tool_call") {
+      entries.push(row);
+      index += 1;
+      continue;
+    }
+    let end = index + 1;
+    while (
+      end < rows.length &&
+      rows[end].kind === "tool_call" &&
+      rows[end].title === row.title
+    ) {
+      end += 1;
+    }
+    if (end - index >= 2) {
+      entries.push({
+        groupId: `tool-group-${row.id}`,
+        toolName: row.title,
+        rows: rows.slice(index, end),
+      });
+    } else {
+      entries.push(row);
+    }
+    index = end;
+  }
+  return entries;
+}
+
+export function groupContains(
+  group: Pick<ToolRowGroup, "rows">,
+  rowId: string | undefined,
+): boolean {
+  if (!rowId) return false;
+  return group.rows.some((row) => row.id === rowId);
+}

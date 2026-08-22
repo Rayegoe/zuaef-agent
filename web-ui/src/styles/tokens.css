@@ -5,6 +5,13 @@
   --z-surface-hover: #1d232b;
   --z-border: #2a313b;
 
+  /* Visual-hierarchy pass: quiet rows, loud anomalies. */
+  --z-hover-tint: rgba(214, 221, 230, 0.035);
+  --z-selected-surface: #1b2129;
+  --z-divider: rgba(214, 221, 230, 0.05);
+  --z-danger-tint: rgba(212, 104, 95, 0.08);
+  --z-warning-tint: rgba(211, 160, 79, 0.09);
+
   --z-text: #d6dde6;
   --z-text-muted: #8a94a2;
   --z-text-subtle: #5c6672;

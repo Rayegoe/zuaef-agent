@@ -66,14 +66,20 @@ export class ZuaefInspector extends LitElement {
     dl {
       display: grid;
       grid-template-columns: 110px minmax(0, 1fr);
-      gap: 3px var(--z-space-2);
+      gap: 4px var(--z-space-2);
       margin: 0;
     }
-    dt { color: var(--z-text-muted); font-size: 12px; }
+    dt {
+      color: var(--z-text-subtle);
+      font-size: 11px;
+      letter-spacing: 0.02em;
+      padding-top: 1px;
+    }
     dd {
       margin: 0;
       font-family: var(--z-font-mono);
       font-size: 12px;
+      color: var(--z-text);
       overflow-wrap: anywhere;
     }
     dd.none { color: var(--z-text-subtle); }
