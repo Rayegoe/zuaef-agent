@@ -36,6 +36,7 @@ def test_manifest_covers_all_delivery_source_files():
     for pattern in (
         "src/zuaef_agent/*.py",
         "src/zuaef_agent/gateway/*.py",
+        "src/zuaef_agent/web/*.py",
         "tests/*.py",
         "tests/fixture_plugins/**/*.py",
         "tests/fixture_plugins/**/*.md",

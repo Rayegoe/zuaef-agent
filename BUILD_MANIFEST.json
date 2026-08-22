@@ -1098,13 +1098,13 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 1756,
-      "sha256": "6e32301034dc1ed130becbc5cb421ab2a2ac5d0151d59fb239ca35aa602a0ad0"
+      "bytes": 2019,
+      "sha256": "ba539184bc0cb5355235a83d61090ef3e60026fa7bf90778be5df26e79d7ce2b"
     },
     {
       "path": "uv.lock",
-      "bytes": 431677,
-      "sha256": "815e5db8aff9b507e2254f3be85c8a491c03702b46b481464aab7de2b1a08dac"
+      "bytes": 431829,
+      "sha256": "92d4c4081553eb2672074369995ab51f2a62f0768b32088e206d45ca211483cc"
     },
     {
       "path": "spec/SPEC.md",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "src/zuaef_agent/cli.py",
-      "bytes": 11957,
-      "sha256": "15a8c2dfebd0916c8f266c49a1daef3078bee239815a53fa879e0a88f0e52937"
+      "bytes": 12935,
+      "sha256": "2d206df45b32cdea77941092d0fb9818e5b6f2a14bc519f9d1f80040257a59c2"
     },
     {
       "path": "src/zuaef_agent/composition.py",
@@ -1260,6 +1260,36 @@
       "path": "src/zuaef_agent/gateway/telegram.py",
       "bytes": 13759,
       "sha256": "045e9ce685914225794f98c88d8860a01dda049d4c36e5fedda064d4834f5bf7"
+    },
+    {
+      "path": "src/zuaef_agent/web/__init__.py",
+      "bytes": 578,
+      "sha256": "7c612975f6054ff1e77c7b1195e045765fb61dab6f8c8a5ee400512d206fc8c2"
+    },
+    {
+      "path": "src/zuaef_agent/web/actions.py",
+      "bytes": 5140,
+      "sha256": "80d4bd08c0320d005f59f8bf09091088ff66295387362d7f794799a1cee6e68e"
+    },
+    {
+      "path": "src/zuaef_agent/web/api.py",
+      "bytes": 4759,
+      "sha256": "0d1e987730f4c2aab2c4ae1157239e1d248d2b63bbd74948117f796adc6ed6a2"
+    },
+    {
+      "path": "src/zuaef_agent/web/projector.py",
+      "bytes": 21227,
+      "sha256": "d3c028030f66b7ce336e2552b8e6e0f3fb01bbe17856fcfda9923cedfe782499"
+    },
+    {
+      "path": "src/zuaef_agent/web/readers.py",
+      "bytes": 8505,
+      "sha256": "5a0ba1fb326ecbdfe04f3a17a91cd0a1086d58463179282847463d907117c847"
+    },
+    {
+      "path": "src/zuaef_agent/web/server.py",
+      "bytes": 2431,
+      "sha256": "2a5790306b2ced5a37bc9b1cb56e54c05a962ca45e488c4faa07866703fc5d3e"
     },
     {
       "path": "tests/test_ace_writing_plugin.py",
@@ -1478,8 +1508,8 @@
     },
     {
       "path": "tests/test_manifest_integrity.py",
-      "bytes": 2402,
-      "sha256": "8576cc5222153a86f49d85c2780b7f4cc9b2e033a785e14040f7b7e531372645"
+      "bytes": 2438,
+      "sha256": "1920ffc159ddce8cb066b81322f381c975983088bd0405dbd11f8e6e54943843"
     },
     {
       "path": "tests/test_memory_recall_baseline.py",
@@ -1550,6 +1580,11 @@
       "path": "tests/test_task_inputs.py",
       "bytes": 4763,
       "sha256": "be17ae192f9660a1e21b5d084d7fcb4e20bab0bd616480451895e279ae91b53a"
+    },
+    {
+      "path": "tests/test_web_console.py",
+      "bytes": 14716,
+      "sha256": "aa3932db433e239fc58e15c5179f6512982f0e27a4b626a13034891671b0175d"
     },
     {
       "path": "tests/test_wordpress_plugin.py",
@@ -1948,8 +1983,8 @@
     },
     {
       "path": "tools/regen_manifest.py",
-      "bytes": 3369,
-      "sha256": "17ad514b8f32e2b413b75068b66d7048d63db487dd428b2554a1f9dde6b64d19"
+      "bytes": 3401,
+      "sha256": "c574a177ef64211e32aabbea48439f96717b181f92d43a05f7af470fe56bad7d"
     },
     {
       "path": "tools/result_contract_proof.py",

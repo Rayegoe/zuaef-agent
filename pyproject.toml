@@ -15,6 +15,11 @@ dependencies = [
   "pyyaml>=6.0",
   "pydantic-ai>=2.27,<3",
   "pydantic-ai-harness[skills,code-mode]>=0.1",
+  # Agent Console (src/zuaef_agent/web): already in the closure via pydantic-ai's
+  # mcp extra; declared because the console imports them directly (precedent:
+  # pydantic-ai-slim's `web` extra = httpx/starlette/uvicorn).
+  "starlette>=0.41",
+  "uvicorn>=0.30",
 ]
 
 [project.scripts]

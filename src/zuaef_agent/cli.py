@@ -112,6 +112,17 @@ def _parser() -> argparse.ArgumentParser:
     gateway_bind.add_argument("--unbind", action="store_true", help="remove the binding")
     gateway_bind.add_argument("--workspace", type=Path)
     gateway_bind.add_argument("--state-root", type=Path)
+
+    web = sub.add_parser(
+        "web", help="run the local ZUAEF Agent Console (loopback only)"
+    )
+    web.add_argument("--host", default="127.0.0.1", help="loopback address only")
+    web.add_argument("--port", type=int, default=8765)
+    web.add_argument(
+        "--no-open", action="store_true", help="do not open a browser tab"
+    )
+    web.add_argument("--workspace", type=Path)
+    web.add_argument("--state-root", type=Path)
     return p
 
 
@@ -244,6 +255,18 @@ def _gateway(args: argparse.Namespace) -> int:
     return runner.run_gateway(config=config, settings=settings)
 
 
+def _web(args: argparse.Namespace) -> int:
+    from .web import serve
+
+    settings = _settings_from_args(args)
+    if args.state_root:
+        settings = settings.with_overrides(runtime_state_root=args.state_root)
+    # Blocking by design, like `gateway start`: the console is a foreground
+    # process. Ctrl-C shuts it down; runtime semantics are untouched.
+    serve(settings, host=args.host, port=args.port, open_browser=not args.no_open)
+    return EXIT_COMPLETED
+
+
 def _gateway_bind_case(args: argparse.Namespace) -> int:
     """Supervisor-only deterministic binding (SPEC v1.0 §5.4).
 
@@ -319,6 +342,8 @@ def main() -> None:
                 code = _gateway_bind_case(args)
             else:
                 code = _gateway(args)
+        elif args.command == "web":
+            code = _web(args)
         else:
             code = _profile(args)
     except (ValueError, FileNotFoundError, LookupError, UserError, httpx.HTTPError) as exc:

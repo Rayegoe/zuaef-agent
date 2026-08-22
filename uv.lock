@@ -2497,6 +2497,8 @@ dependencies = [
     { name = "pydantic-ai-harness", extra = ["code-mode", "skills"] },
     { name = "python-dotenv" },
     { name = "pyyaml" },
+    { name = "starlette" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -2514,6 +2516,8 @@ requires-dist = [
     { name = "pydantic-ai-harness", extras = ["skills", "code-mode"], specifier = ">=0.1" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "starlette", specifier = ">=0.41" },
+    { name = "uvicorn", specifier = ">=0.30" },
 ]
 
 [package.metadata.requires-dev]
