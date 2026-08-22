@@ -1283,8 +1283,8 @@
     },
     {
       "path": "src/zuaef_agent/web/readers.py",
-      "bytes": 8505,
-      "sha256": "5a0ba1fb326ecbdfe04f3a17a91cd0a1086d58463179282847463d907117c847"
+      "bytes": 8509,
+      "sha256": "209088eac5d79164a3af20913ae94adb7b6b3cd97d0c079df002f1402195243c"
     },
     {
       "path": "src/zuaef_agent/web/server.py",
@@ -1583,8 +1583,8 @@
     },
     {
       "path": "tests/test_web_console.py",
-      "bytes": 14716,
-      "sha256": "aa3932db433e239fc58e15c5179f6512982f0e27a4b626a13034891671b0175d"
+      "bytes": 15597,
+      "sha256": "7abe200f2161898f947e9441a06c87dbbd4ee705e10b85f8ecb56653bfe926a2"
     },
     {
       "path": "tests/test_wordpress_plugin.py",
@@ -2054,7 +2054,7 @@
     {
       "path": "benchmarks/editorial-learning/scripts/compare_paths.py",
       "bytes": 20419,
-      "sha256": "8c324f129491e9c01835e815c5174e2f22ce4933fa983a5eff6c008d779c9416"
+      "sha256": "ee9f2f4d001d77da43d8ca5b35eca3fcfa8e4e1e7810c4333afce50123c78507"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/compile_learning_pack.py",
@@ -2084,7 +2084,7 @@
     {
       "path": "benchmarks/editorial-learning/scripts/run_benchmark.py",
       "bytes": 11660,
-      "sha256": "422b83f07556b7fa5c9311a05aabcd6aed16e47092dac5eba823b8c3545ded7f"
+      "sha256": "6f6c82e233a72ded55ca6d3349bfa01157093376049e3720ac8a89ae7d1f51cc"
     },
     {
       "path": "benchmarks/editorial-learning/scripts/task_inputs.py",

@@ -400,6 +400,30 @@ def test_api_list_newest_first_with_cursor(tmp_path: Path) -> None:
         assert invalid.json()["error"]["code"] == "INVALID_RUN_ID"
 
 
+def test_api_list_unknown_start_sorts_last(tmp_path: Path) -> None:
+    """Regression (real-UI finding): a receipt-only run whose receipt cannot
+    be parsed has no start stamp — it must not displace the newest known run
+    from the top of the default console selection."""
+    settings = _settings(tmp_path)
+    _seed_sync(
+        tmp_path,
+        settings,
+        "known-run",
+        [("run_started", 0, None, None)],
+        start=T0,
+    )
+    _write_receipt(
+        settings,
+        "legacy-run",
+        {"schema_version": "1.1", "state": "terminal", "run_id": "legacy-run"},
+    )
+    with _client(settings) as client:
+        body = client.get("/api/runs").json()
+        assert [run["run_id"] for run in body["runs"]] == ["known-run", "legacy-run"]
+        assert body["runs"][0]["status"] == "incomplete"
+        assert body["runs"][1]["status"] == "unknown"
+
+
 def test_api_list_detail_consistency(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     _seed_sync(tmp_path, settings, "r-consistent", COMPLETED_RUN)

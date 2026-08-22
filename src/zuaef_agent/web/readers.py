@@ -188,7 +188,7 @@ async def list_run_facts(
     ordered = sorted(
         run_ids,
         key=lambda r: (
-            _started_at(r) is None,
+            _started_at(r) is not None,
             timestamp_sort_key(_started_at(r)),
         ),
         reverse=True,
