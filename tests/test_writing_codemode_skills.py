@@ -61,6 +61,13 @@ def _settings(tmp_path: Path) -> AgentSettings:
     )
 
 
+def _fake_ace_root(tmp_path: Path) -> Path:
+    ace = tmp_path / "ace"
+    (ace / "tools").mkdir(parents=True)
+    (ace / "tools" / "ctx.py").write_text("", encoding="utf-8")
+    return ace
+
+
 def _tool_def(name: str, *, code_mode: bool) -> ToolDefinition:
     return ToolDefinition(
         name=name,
@@ -99,14 +106,16 @@ def test_environment_toolset_tags_only_context_for_legacy_codemode():
 
 
 @NEEDS_PLUGIN
-def test_plugin_returns_codemode_capability_when_configured(tmp_path):
+def test_plugin_returns_codemode_capability_when_configured(tmp_path, monkeypatch):
     """code_mode=true adds the Harness CodeMode capability to the bundle;
-    off by default (SPEC Phase 5: initially disabled)."""
+    off by default (SPEC Phase 5: initially disabled). Composition mechanics
+    only — a bounded ACE root satisfies the plugin's pre-run checkout check."""
     from pydantic_ai_harness.code_mode import CodeMode
     from zuaef_ace_writing import create_plugin
 
     from zuaef_agent.plugin_api import PluginEnv
 
+    monkeypatch.setenv("ACE_ROOT", str(_fake_ace_root(tmp_path)))
     env = PluginEnv(
         plugin_id="ace-writing",
         plugin_version="0.2.0",
@@ -120,7 +129,7 @@ def test_plugin_returns_codemode_capability_when_configured(tmp_path):
 
 
 @NEEDS_PLUGIN
-def test_codemode_profile_composes(tmp_path):
+def test_codemode_profile_composes(tmp_path, monkeypatch):
     """The experimental ace-writing-codemode profile composes with CodeMode in
     the capability list and the writing toolset intact (WRITE-1 for the A/B
     side)."""
@@ -128,6 +137,7 @@ def test_codemode_profile_composes(tmp_path):
 
     from zuaef_agent.composition import build_profile_agent
 
+    monkeypatch.setenv("ACE_ROOT", str(_fake_ace_root(tmp_path)))
     settings = _settings(tmp_path)
     agent, snapshot = build_profile_agent(
         settings,

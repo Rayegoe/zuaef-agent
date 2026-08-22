@@ -551,7 +551,10 @@ class TestComposition:
         snapshot = _snapshot(
             "0.2.0",
             capabilities_allowed=False,
-            config={"code_mode": True},
+            config={
+                "ace_root": str(_fake_ace_root(tmp_path)),
+                "code_mode": True,
+            },
         )
         with pytest.raises(CompositionError, match="allow_capabilities"):
             build_agent_from_snapshot(
@@ -565,7 +568,10 @@ class TestComposition:
         snapshot = _snapshot(
             "0.2.0",
             capabilities_allowed=True,
-            config={"code_mode": True},
+            config={
+                "ace_root": str(_fake_ace_root(tmp_path)),
+                "code_mode": True,
+            },
         )
         agent = build_agent_from_snapshot(
             _agent_settings(tmp_path),

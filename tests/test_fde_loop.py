@@ -31,6 +31,9 @@ import examples.fde_loop as loop
 
 ACE = Path(str(DEFAULT_ACE_ROOT))
 ACE_AVAILABLE = (ACE / "tools" / "ctx.py").is_file()
+pytestmark = pytest.mark.skipif(
+    not ACE_AVAILABLE, reason=f"ACE repo not found at {ACE}"
+)
 
 
 @pytest.fixture
@@ -111,7 +114,6 @@ def test_material_map_refs_are_case_relative(cases_root: Path):
         assert not Path(meta["source_ref"]).is_absolute()
 
 
-@pytest.mark.skipif(not ACE_AVAILABLE, reason=f"ACE repo not found at {ACE}")
 def test_setup_ingests_materials_with_real_m_ids(cases_root: Path):
     """Setup binds each material to a REAL ACE M id via the workspace index."""
     store = CaseStore(cases_root)

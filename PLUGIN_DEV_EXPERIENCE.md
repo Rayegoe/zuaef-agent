@@ -41,9 +41,12 @@ execute_run(..., composition=snapshot) → receipt.composition 可见
 2. **写工厂**：`create_plugin(env, config) -> PluginBundle`，只返回 toolset
    （默认）；需要 capability 才在 profile 开 `allow_capabilities`。config 无
    可配项就直接忽略（域不该有 secret/endpoint 设置）。
-3. **装进 venv**：`uv pip install -e plugins/<domain>`。**`plugin list` 只认
-   真实安装的 entry point**，测试里的 hermetic discover 不能替代安装。
-   `uv run --frozen` 不会卸载 pip 装的插件（实测）。
+3. **装进 venv**：仓库内插件走 uv workspace——`plugins/<domain>/` 建好后把
+   包名加进根 `pyproject.toml`（`[project.dependencies]` + `[tool.uv.sources]`
+   的 `workspace = true`），`uv lock` 后 `uv sync --frozen` 即真实安装（干净
+   checkout 同样成立，CI 不再需要手工 `uv pip install`）。外部/实验性插件仍可
+   `uv pip install -e plugins/<domain>`。**`plugin list` 只认真实安装的
+   entry point**，测试里的 hermetic discover 不能替代安装。
 4. **写 profile**：`profiles/<name>.toml`，`schema = 1`，`name` 必须等于文件
    名，插件 config 键**绝不能长得像 secret**（api_key/password/token…）——
    profile 会序列化进 receipt。

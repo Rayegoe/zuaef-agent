@@ -87,6 +87,13 @@ def _settings(tmp_path: Path) -> AgentSettings:
     )
 
 
+def _fake_ace_root(tmp_path: Path) -> Path:
+    ace = tmp_path / "ace"
+    (ace / "tools").mkdir(parents=True)
+    (ace / "tools" / "ctx.py").write_text("", encoding="utf-8")
+    return ace
+
+
 # --- 1. input contract ----------------------------------------------------------
 
 
@@ -260,13 +267,16 @@ def test_resolve_ace_root_errors_on_missing_ctx(tmp_path):
 
 
 @NEEDS_PLUGIN
-def test_production_composition_through_ace_writing_profile(tmp_path):
+def test_production_composition_through_ace_writing_profile(tmp_path, monkeypatch):
     """WRITE-1: build_profile_agent("ace-writing") composes the writing surface.
 
-    Only StepPersistence remains, and it is host execution evidence rather
-    than model-visible working memory."""
+    Composition mechanics only: a bounded ACE root satisfies the plugin's
+    pre-run checkout check; no ACE subprocess runs. Only StepPersistence
+    remains, and it is host execution evidence rather than model-visible
+    working memory."""
     from examples.production_writing import composition_settings
 
+    monkeypatch.setenv("ACE_ROOT", str(_fake_ace_root(tmp_path)))
     settings = composition_settings(_settings(tmp_path))
     from zuaef_agent.composition import build_profile_agent
 
@@ -292,7 +302,8 @@ def test_production_composition_through_ace_writing_profile(tmp_path):
 
 
 @NEEDS_PLUGIN
-def test_profile_toolset_exposes_exact_ace_surface(tmp_path):
+def test_profile_toolset_exposes_exact_ace_surface(tmp_path, monkeypatch):
+    monkeypatch.setenv("ACE_ROOT", str(_fake_ace_root(tmp_path)))
     settings = _settings(tmp_path)
     from zuaef_agent.composition import build_profile_agent
 
@@ -311,13 +322,13 @@ def test_profile_toolset_exposes_exact_ace_surface(tmp_path):
     assert names == {"pull_context", "save_article"}
 
 
-def test_profile_composition_with_injected_discovery(tmp_path):
-    """Hermetic variant for environments where the plugin dist is not installed.
-
-    The checked-out module is on sys.path; we synthesize the entry point the
-    way the composition layer would see it after ``pip install``."""
+def test_profile_composition_with_injected_discovery(tmp_path, monkeypatch):
+    """Composition through the discover injection seam: the caller supplies
+    the entry point exactly as the composition layer would see it installed,
+    without depending on which dists the environment happens to carry."""
     from zuaef_agent.composition import build_profile_agent
 
+    monkeypatch.setenv("ACE_ROOT", str(_fake_ace_root(tmp_path)))
     ep = EntryPoint(
         name="ace-writing",
         value="zuaef_ace_writing:create_plugin",

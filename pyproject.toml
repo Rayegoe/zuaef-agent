@@ -20,6 +20,16 @@ dependencies = [
   # pydantic-ai-slim's `web` extra = httpx/starlette/uvicorn).
   "starlette>=0.41",
   "uvicorn>=0.30",
+  # Repository-local production plugins (uv workspace members, see
+  # [tool.uv.workspace] below): `uv sync` installs them with their real
+  # `zuaef.plugins` entry points so importlib.metadata discovery works on a
+  # clean checkout. They are peers, not importers, of zuaef_agent.
+  "zuaef-ace-writing",
+  "zuaef-case",
+  "zuaef-client-service",
+  "zuaef-emtb-budget",
+  "zuaef-wordpress",
+  "zuaef-writing-pack",
 ]
 
 [project.scripts]
@@ -28,17 +38,24 @@ zuaef-agent = "zuaef_agent.cli:main"
 [dependency-groups]
 dev = ["pytest>=8.3", "ruff>=0.8"]
 
+[tool.uv.workspace]
+# All production plugins live in-repo as workspace members; `uv sync --frozen`
+# is the single install contract for them (real distributions + entry points).
+members = ["plugins/*"]
+
+[tool.uv.sources]
+zuaef-ace-writing = { workspace = true }
+zuaef-case = { workspace = true }
+zuaef-client-service = { workspace = true }
+zuaef-emtb-budget = { workspace = true }
+zuaef-wordpress = { workspace = true }
+zuaef-writing-pack = { workspace = true }
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [
   "src",
   "tests/fixture_plugins",
-  "plugins/zuaef-ace-writing",
-  "plugins/zuaef-case",
-  "plugins/zuaef-emtb-budget",
-  "plugins/zuaef-client-service",
-  "plugins/zuaef-wordpress",
-  "plugins/zuaef-writing-pack",
   # benchmark/legacy editorial-control capability (v1.2 T014B demotion):
   # imported only by editorial benchmark tests, never by production code
   "benchmarks/editorial-learning/legacy",

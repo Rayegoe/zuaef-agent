@@ -968,8 +968,8 @@
     },
     {
       "path": "PLUGIN_DEV_EXPERIENCE.md",
-      "bytes": 7269,
-      "sha256": "6298c9a314f03d99c9e9ff9c3b73ac036eb0ffff0b95746b72c98f6f4b1c7681"
+      "bytes": 7549,
+      "sha256": "6cfd046929bbc359d411b6bdf2b7773094c6ff60087e31bdb23adccb87e221f7"
     },
     {
       "path": "README.md",
@@ -1098,13 +1098,13 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 2072,
-      "sha256": "04cf2bdd68f7c41431a0352d740b82dc76a4ec949a6899ad2dd21b5f8c96a33c"
+      "bytes": 2769,
+      "sha256": "e5bf8841c9ca23e4fafe1de31c21e7c7499c028371ff28f2f8b8343513820c90"
     },
     {
       "path": "uv.lock",
-      "bytes": 431829,
-      "sha256": "92d4c4081553eb2672074369995ab51f2a62f0768b32088e206d45ca211483cc"
+      "bytes": 434681,
+      "sha256": "b8ee8ccd3a6f58795fa19f17d21f526306f0fcf7f126e58a8b62a20ed9e714c3"
     },
     {
       "path": "spec/SPEC.md",
@@ -1393,8 +1393,8 @@
     },
     {
       "path": "tests/test_editorial_control.py",
-      "bytes": 30468,
-      "sha256": "162fe1cf80b14ae8f5d678580f6ea6488445152d507957ade50fb0cf845cb19d"
+      "bytes": 30648,
+      "sha256": "183e1097a47b75d175feb61c58677d64397501c7d24fe5537f92b55b4a2adf6b"
     },
     {
       "path": "tests/test_effects.py",
@@ -1413,8 +1413,8 @@
     },
     {
       "path": "tests/test_fde_loop.py",
-      "bytes": 4961,
-      "sha256": "f5c7d9cc06bc0bee5af44bb509ee0c52a12cfc83613cf05a3fff202893360e4c"
+      "bytes": 4979,
+      "sha256": "33858cb52069e0e74db812a9cb1eaadac27dc377c04a2ce6ae45800905174b4e"
     },
     {
       "path": "tests/test_gateway_architecture.py",
@@ -1558,8 +1558,8 @@
     },
     {
       "path": "tests/test_production_writing.py",
-      "bytes": 15681,
-      "sha256": "e304997e8c617c37baf92d6df9c837a381eb75583b9b198fdcf0e99289794124"
+      "bytes": 16235,
+      "sha256": "96b562835fc1f46208adfa2958821896f59e4030116ebf6bec9678c0ca8017ba"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -1593,8 +1593,8 @@
     },
     {
       "path": "tests/test_writing_codemode_skills.py",
-      "bytes": 5807,
-      "sha256": "4bdbb60899f03371b25397e6048d3b49cd72eea0414382256c676e7c4c1231d5"
+      "bytes": 6258,
+      "sha256": "82efadb02357d9e736b969f7f0abd39ba4ca3568d2e88533c8dd362b88b7bdd9"
     },
     {
       "path": "tests/test_writing_pack_plugin.py",
