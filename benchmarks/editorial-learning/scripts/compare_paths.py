@@ -74,17 +74,17 @@ from host_projection_legacy import (
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai_harness.step_persistence import FileStepStore, StepPersistence
 from task_inputs import resolve_task_inputs
-from examples.writing_toolset import (
-    DEFAULT_ACE_ROOT,
-    ace_prepare,
-    build_writing_toolset,
-)
 
 from examples.production_writing import (
     final_artifact_text,
     reset_run_state,
 )
 from examples.writing_case import WRITING_AGENT_INSTRUCTIONS, build_prompt
+from examples.writing_toolset import (
+    DEFAULT_ACE_ROOT,
+    ace_prepare,
+    build_writing_toolset,
+)
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.models import CoreDeps
 from zuaef_agent.providers import resolve_model
