@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-competitive-intelligence"
+version = "0.1.0"
+description = "Provider-independent competitive-intelligence plugin for ZUAEF: Brave/fixture source search, safe public HTML/PDF reading, protected work-product artifacts and deterministic report rendering."
+requires-python = ">=3.11"
+dependencies = [
+  # zuaef-agent itself is not on PyPI; install into the same environment that
+  # provides the zuaef_agent distribution (peer dependency).
+  "pydantic-ai>=2.27,<3",
+  "httpx>=0.28",
+  # httpx SOCKS-proxy support: the operator environment routes ALL_PROXY
+  # through socks://127.0.0.1:<port> (local TUN). Without socksio, httpx
+  # refuses to construct a client in that environment.
+  "socksio>=1.0",
+  "beautifulsoup4>=4.12",
+  "pypdf>=5",
+  "mistune>=3",
+  "python-docx>=1.1",
+  "reportlab>=4.2",
+  "pillow>=10",
+  "pymupdf>=1.24",
+]
+
+[project.entry-points."zuaef.plugins"]
+competitive-intelligence = "zuaef_competitive_intelligence.plugin:build_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["zuaef_competitive_intelligence"]

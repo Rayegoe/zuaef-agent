@@ -1,0 +1,49 @@
+{
+  "id": "REAL-AGENT-TRUST-1",
+  "article_id": "real-agent-trust-1",
+  "title": "AI Agent 越来越容易造，为什么企业还是不敢把工作交给它？",
+  "assignment": "根据提供的原始素材，为普通职场人与企业管理者写一篇公众号文章，回答这个问题：《AI Agent 越来越容易造，为什么企业还是不敢把工作交给它？》",
+  "audience": "关注 AI、职场与企业管理的普通公众号读者",
+  "constraints": [
+    "约1600-2200字",
+    "只使用所给材料中的事实，不使用外部知识补全",
+    "不虚构人物、现场、动作、对话或企业采用情况",
+    "材料中的统计、判断和案例须保留其来源口径与限定，不把相关性写成因果",
+    "自行完成材料判断、文章结构和叙事，不逐份摘要素材"
+  ],
+  "rights": "study-only",
+  "source_corpus": "data/writing-corpus/wheremylife/2026-08-20",
+  "source_epub": "WhereMyLife__2026_08_20.epub",
+  "source_windows": [
+    {
+      "material": "WML-20260820-21-003-L013-L065.md",
+      "article_id": "WML-20260820-21-003",
+      "lines": "13-65",
+      "url": "https://www.woshipm.com/ai/6447872.html"
+    },
+    {
+      "material": "WML-20260820-21-009-L067-L117.md",
+      "article_id": "WML-20260820-21-009",
+      "lines": "67-117",
+      "url": "https://www.woshipm.com/ai/6448074.html"
+    },
+    {
+      "material": "WML-20260820-21-041-L055-L083.md",
+      "article_id": "WML-20260820-21-041",
+      "lines": "55-83",
+      "url": "https://www.woshipm.com/ai/6449277.html"
+    },
+    {
+      "material": "WML-20260820-21-056-L011-L027.md",
+      "article_id": "WML-20260820-21-056",
+      "lines": "11-27",
+      "url": "https://www.woshipm.com/ai/6450168.html"
+    },
+    {
+      "material": "WML-20260820-21-056-L381-L429.md",
+      "article_id": "WML-20260820-21-056",
+      "lines": "381-429",
+      "url": "https://www.woshipm.com/ai/6450168.html"
+    }
+  ]
+}

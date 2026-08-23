@@ -30,6 +30,7 @@ dependencies = [
   "zuaef-emtb-budget",
   "zuaef-wordpress",
   "zuaef-writing-pack",
+  "zuaef-competitive-intelligence",
 ]
 
 [project.scripts]
@@ -50,6 +51,7 @@ zuaef-client-service = { workspace = true }
 zuaef-emtb-budget = { workspace = true }
 zuaef-wordpress = { workspace = true }
 zuaef-writing-pack = { workspace = true }
+zuaef-competitive-intelligence = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

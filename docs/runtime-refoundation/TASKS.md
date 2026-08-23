@@ -15,7 +15,7 @@ first-class results:
 
 Never fabricate an outcome/evidence verdict to unblock a task.
 
-## Queue state (after T006-B2 human judgment)
+## Queue state (after T006-B4 human judgment)
 
 - T000–T005 complete.
 - T004/T004G final verdict: `CURRENT_PATH_ALREADY_MINIMAL` — the current
@@ -45,13 +45,54 @@ Never fabricate an outcome/evidence verdict to unblock a task.
   repeated `save_article` calls. Verdict: `REFINE`; no promotion.
 - Phase 2 is not complete. T007 is deferred until the observation design is
   justified by quality and runtime data.
-- Next: run the smallest current-`main` real-corpus comparison using one fixed
+- The B2-locked next step was the smallest current-`main` real-corpus
+  comparison using one fixed
   task/model/EPUB corpus across Host-selected, technique-off and model-owned
   input modes. Measure the actual section distribution and tail truncation;
   do not modify EPUB ingestion/retrieval, pre-fix Candidate evidence or add
   Host technique/scene/schema judgment before this converges. B2 alone does
   not prove model ownership causes more unsupported completion because the
   Host-selected draft contained the more severe invented details.
+- T006-B3 execution is complete on current `main` with the real
+  `REAL-AGENT-TRUST-1` fixture. All three modes completed. First-request
+  task-material / human-learning / EPUB characters were identical; Host added
+  995 technique-body characters, OFF added 0, and model-owned added 3,187
+  catalog characters. Only the model-owned catalog tail was truncated. The
+  model selected zero technique IDs; OFF made one additional `pull_context`
+  observation. See
+  `experiments/T006-B3-real-corpus-technique-ownership-abc.md`.
+- T006-B3 blind judgment is complete: `Z > X > Y`, mechanically revealed as
+  technique OFF > model-owned eager catalog > Host-selected. The reviewer
+  judged OFF best at rebuilding a material relationship rather than repeating
+  `understand -> summarize -> framework -> conclude`. Evidence remained
+  `unclear` because the full desk pack was not available in the blind packet.
+  Verdict: `REFINE`; no production promotion. See
+  `experiments/T006-B3-human-judgment.md`.
+- B1, B2 and B3 have different comparative winners. Do not turn the latest
+  human preference into a global OFF rule. The next smallest experiment is a
+  benchmark-only lazy model-owned catalog: initial context identical to OFF;
+  the model may choose to observe the neutral catalog and then retrieve exact
+  technique IDs. This tests the reproduced eager-catalog context cost without
+  adding Host semantic judgment. T007 remains deferred.
+- T006-B4 human judgment is complete. The mapping was P = model-lazy and Q =
+  frozen technique OFF; the reviewer chose `Q > P`. Both drafts failed the
+  evidence gate. P confused the PI execution framework with evaluation
+  authorship and strengthened system importance into an exclusive cause; Q
+  generalized one benchmark, strengthened jointly influencing layers into
+  individually necessary conditions, and blurred traceable execution with
+  organizational responsibility. The lazy mode exposed two optional technique
+  actions, called neither, lost quality and did not improve evidence. Verdict:
+  `REVERT`; its benchmark code/profile/tests were deleted. Production remains
+  unchanged and OFF is only the frozen real-case reference, not a global rule.
+  See `experiments/T006-B4-human-judgment.md`.
+- The next T006 causal boundary is shared evidence interpretation, not another
+  technique mode: preserve attribution roles, source/benchmark scope, logical
+  strength and the responsibility subject. Do not add a claim checker, Host
+  semantic gate or reward model. The agent may record the benchmark verdict
+  but must not write an authoritative `learning/cases/*/human-review.md`; any
+  durable lesson promotion must cross the existing human-authored gate. T007
+  remains deferred until this evidence-boundary experiment is specified and
+  reviewed one causal change at a time.
 
 ## T000 — Coach installation
 Status: complete (ADR-RF-004).

@@ -1,0 +1,30 @@
+# Competitive-intelligence deployment profile.
+# Public research is provided by the competitive-intelligence plugin so the
+# Golden Case does not depend on model-provider native WebSearch/WebFetch.
+
+schema = 1
+name = "stillevo-ebike-intel"
+
+[generalist]
+web_search = false
+web_fetch = false
+tool_search = true
+memory = false
+conversation_search = false
+context_controls = true
+subagents = false
+shell = false
+repo_context = false
+
+[[plugins]]
+id = "competitive-intelligence"
+defer_tools = true
+allow_capabilities = false
+
+[plugins.config]
+domain = "ebike"
+search_backend = "brave"
+output_language = "zh-CN"
+max_search_results = 10
+max_fetch_bytes = 10000000
+max_preview_chars = 14000

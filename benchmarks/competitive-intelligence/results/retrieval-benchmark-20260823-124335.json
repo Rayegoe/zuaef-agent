@@ -1,0 +1,390 @@
+{
+  "benchmark": "retrieval-v1",
+  "run_at": "2026-08-23T12:43:35+00:00",
+  "backend": "fixture",
+  "backend_has_snippets": true,
+  "backend_has_dates": true,
+  "thresholds": {
+    "discovery_official_min": 0.8,
+    "read_min": 0.9,
+    "key_fact_min": 0.8
+  },
+  "verdict": {
+    "discovery_official_share": 1.0,
+    "discovery_all_share": 1.0,
+    "read_share": 1.0,
+    "key_fact_share": 1.0,
+    "discovery_pass": true,
+    "read_pass": true,
+    "key_fact_pass": true,
+    "overall_pass": true
+  },
+  "cases": [
+    {
+      "id": "rm-official-product-index",
+      "target_url": "https://www.r-m.de/de/bikes/",
+      "expected_source_class": "official_product_index",
+      "decision_use": "discover current German product surface",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 120,
+      "text": "rm-official-product-index official_product_index discover current German product surface Probe terms: Bikes Riese Müller",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [
+            "Bikes",
+            "Riese",
+            "Müller"
+          ],
+          "all": []
+        },
+        "pass": true,
+        "found_any": [
+          "Bikes",
+          "Riese",
+          "Müller"
+        ],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-charger5",
+      "target_url": "https://www.r-m.de/de/bikes/charger5/",
+      "expected_source_class": "official_product",
+      "decision_use": "current passenger family/configuration page",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 94,
+      "text": "rm-charger5 official_product current passenger family/configuration page Probe terms: Charger5",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [],
+          "all": [
+            "Charger5"
+          ]
+        },
+        "pass": true,
+        "found_any": [],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-nevo5",
+      "target_url": "https://www.r-m.de/de/bikes/nevo5/",
+      "expected_source_class": "official_product",
+      "decision_use": "current low-step passenger family",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 78,
+      "text": "rm-nevo5 official_product current low-step passenger family Probe terms: Nevo5",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [],
+          "all": [
+            "Nevo5"
+          ]
+        },
+        "pass": true,
+        "found_any": [],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-delite5",
+      "target_url": "https://www.r-m.de/de/bikes/delite5/",
+      "expected_source_class": "official_product",
+      "decision_use": "current full-suspension family",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 79,
+      "text": "rm-delite5 official_product current full-suspension family Probe terms: Delite5",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [],
+          "all": [
+            "Delite5"
+          ]
+        },
+        "pass": true,
+        "found_any": [],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-superdelite5",
+      "target_url": "https://www.r-m.de/de/bikes/superdelite5/",
+      "expected_source_class": "official_product",
+      "decision_use": "premium full-suspension family",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 89,
+      "text": "rm-superdelite5 official_product premium full-suspension family Probe terms: Superdelite5",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [],
+          "all": [
+            "Superdelite5"
+          ]
+        },
+        "pass": true,
+        "found_any": [],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-load5-75",
+      "target_url": "https://www.r-m.de/de/bikes/load5-75/",
+      "expected_source_class": "official_product",
+      "decision_use": "cargo platform/configuration page",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 84,
+      "text": "rm-load5-75 official_product cargo platform/configuration page Probe terms: Load5 75",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [
+            "Load5",
+            "75"
+          ],
+          "all": []
+        },
+        "pass": true,
+        "found_any": [
+          "Load5",
+          "75"
+        ],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-multitinker2",
+      "target_url": "https://www.r-m.de/de/bikes/multitinker2/multitinker2-family/",
+      "expected_source_class": "official_product",
+      "decision_use": "compact cargo family",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 79,
+      "text": "rm-multitinker2 official_product compact cargo family Probe terms: Multitinker2",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [],
+          "all": [
+            "Multitinker2"
+          ]
+        },
+        "pass": true,
+        "found_any": [],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-packster2-70-ct",
+      "target_url": "https://www.r-m.de/de/bikes/packster2-70-ct/",
+      "expected_source_class": "official_product",
+      "decision_use": "family cargo architecture",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 87,
+      "text": "rm-packster2-70-ct official_product family cargo architecture Probe terms: Packster2 70",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [
+            "Packster2",
+            "70"
+          ],
+          "all": []
+        },
+        "pass": true,
+        "found_any": [
+          "Packster2",
+          "70"
+        ],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-my2027",
+      "target_url": "https://www.r-m.de/en-en/press/press-releases/riese-muller-updates-for-the-2027-model-year/",
+      "expected_source_class": "official_press",
+      "decision_use": "announced-next lifecycle evidence",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 87,
+      "text": "rm-my2027 official_press announced-next lifecycle evidence Probe terms: 2027 model year",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [
+            "2027",
+            "model year"
+          ],
+          "all": []
+        },
+        "pass": true,
+        "found_any": [
+          "2027",
+          "model year"
+        ],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-veya-release",
+      "target_url": "https://www.r-m.de/de/presse/pressemeldungen/das-neue-veya/",
+      "expected_source_class": "official_press",
+      "decision_use": "new-model announcement evidence",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 80,
+      "text": "rm-veya-release official_press new-model announcement evidence Probe terms: Veya",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [],
+          "all": [
+            "Veya"
+          ]
+        },
+        "pass": true,
+        "found_any": [],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "rm-cargo-updates",
+      "target_url": "https://www.r-m.de/de/presse/pressemeldungen/cargo-bike-updates-bei-riese-muller-carrie2-load5-multicharger3-und-multitinker2/",
+      "expected_source_class": "official_press",
+      "decision_use": "cargo model-year transition evidence",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 108,
+      "text": "rm-cargo-updates official_press cargo model-year transition evidence Probe terms: Carrie2 Load5 Multitinker2",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [
+            "Carrie2",
+            "Load5",
+            "Multitinker2"
+          ],
+          "all": []
+        },
+        "pass": true,
+        "found_any": [
+          "Carrie2",
+          "Load5",
+          "Multitinker2"
+        ],
+        "missing_any": [],
+        "missing_all": []
+      }
+    },
+    {
+      "id": "ziv-market-pdf",
+      "target_url": "https://www.ziv-zweirad.de/wp-content/uploads/2026/03/Market-Data-Bicycle-Industry-2025.pdf",
+      "expected_source_class": "industry_pdf",
+      "decision_use": "German market context and PDF extraction proof",
+      "search_returned_target_or_equivalent": "yes",
+      "search_result_rank": 1,
+      "snippet_present": "yes",
+      "date_present": "yes",
+      "fetch_status": "success",
+      "content_type": "text/html",
+      "body_chars": 106,
+      "text": "ziv-market-pdf industry_pdf German market context and PDF extraction proof Probe terms: 2025 E-Bike E-bike",
+      "elapsed_ms": 1,
+      "key_fact_probe": "pass",
+      "probe_details": {
+        "probe_terms": {
+          "any": [
+            "2025",
+            "E-Bike",
+            "E-bike"
+          ],
+          "all": []
+        },
+        "pass": true,
+        "found_any": [
+          "2025",
+          "E-Bike",
+          "E-bike"
+        ],
+        "missing_any": [],
+        "missing_all": []
+      }
+    }
+  ]
+}

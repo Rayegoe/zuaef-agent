@@ -1,7 +1,7 @@
 """HTTP API for the ZUAEF Agent Console — thin JSON adapters over readers/actions.
 
-Route surface (API-CONTRACT §2–§7): two read endpoints, two action
-endpoints, one health check, one SSE invalidation stream (T008C — thin
+Route surface (API-CONTRACT §2–§7): read endpoints, two action endpoints,
+one health check, one SSE invalidation stream (T008C — thin
 ``run_changed`` notices only; the HTTP projection stays the UI's single
 truth). No fragmenting one run into many endpoints;
 no new business domain; errors use one small stable code set.
@@ -18,7 +18,8 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from ..config import AgentSettings
-from . import actions, readers, sse
+from . import actions, analysis, readers, sse
+from .inspection import render_run_json
 from .projector import project_run, run_view
 
 
@@ -89,6 +90,94 @@ async def get_run(request: Request) -> JSONResponse:
         return _error_response("RUN_NOT_FOUND", f"Run {run_id} not found", 404)
     return JSONResponse(
         project_run(facts, action_in_flight=actions.is_in_flight(run_id))
+    )
+
+
+async def get_run_inspection(request: Request) -> JSONResponse:
+    """Return bounded deterministic inspection derived from one run projection."""
+    settings = _settings(request)
+    run_id = request.path_params["run_id"]
+    try:
+        facts = await readers.load_run_facts(settings, run_id)
+    except ValueError:
+        return _error_response("INVALID_RUN_ID", f"invalid run id: {run_id!r}", 400)
+    if facts is None:
+        return _error_response("RUN_NOT_FOUND", f"Run {run_id} not found", 404)
+    projection = project_run(facts, action_in_flight=actions.is_in_flight(run_id))
+    return JSONResponse(render_run_json(projection))
+
+
+async def get_run_analysis(request: Request) -> JSONResponse:
+    """Return the transient analysis action state and bounded Markdown output."""
+    settings = _settings(request)
+    run_id = request.path_params["run_id"]
+    try:
+        facts = await readers.load_run_facts(settings, run_id)
+    except ValueError:
+        return _error_response("INVALID_RUN_ID", f"invalid run id: {run_id!r}", 400)
+    if facts is None:
+        return _error_response("RUN_NOT_FOUND", f"Run {run_id} not found", 404)
+    try:
+        return JSONResponse(analysis.analysis_state(settings, run_id))
+    except analysis.AnalysisError as exc:
+        return _error_response(exc.code, exc.message, 400)
+
+
+async def create_run_analysis(request: Request) -> JSONResponse:
+    """Start one read-only analysis Agent for a subject run."""
+    settings = _settings(request)
+    run_id = request.path_params["run_id"]
+    try:
+        facts = await readers.load_run_facts(settings, run_id)
+    except ValueError:
+        return _error_response("INVALID_RUN_ID", f"invalid run id: {run_id!r}", 400)
+    if facts is None:
+        return _error_response("RUN_NOT_FOUND", f"Run {run_id} not found", 404)
+    try:
+        body = await _parse_body(request)
+    except ApiError as exc:
+        return _error_response(exc.code, exc.message, exc.status)
+
+    scope = body.get("scope", "full")
+    if not isinstance(scope, str):
+        return _error_response("INVALID_ACTION", "scope must be a string", 400)
+    intent = body.get("intent")
+    if intent is not None and not isinstance(intent, str):
+        return _error_response("INVALID_ACTION", "intent must be a string", 400)
+    selected_row_id = body.get("selected_row_id")
+    if selected_row_id is not None and not isinstance(selected_row_id, str):
+        return _error_response(
+            "INVALID_ACTION", "selected_row_id must be a string or null", 400
+        )
+    if body.get("agent", True) is not True:
+        return _error_response(
+            "INVALID_ACTION",
+            "Run Analysis currently requires agent=true",
+            400,
+        )
+    try:
+        analysis_run_id = analysis.start_analysis(
+            settings,
+            run_id,
+            intent=intent,
+            scope=scope,
+            selected_row_id=selected_row_id,
+        )
+    except analysis.AnalysisError as exc:
+        status = {
+            "ANALYSIS_EXISTS": 409,
+            "ANALYSIS_IN_FLIGHT": 409,
+            "RUN_NOT_FOUND": 404,
+        }.get(exc.code, 400)
+        return _error_response(exc.code, exc.message, status)
+    return JSONResponse(
+        {
+            "accepted": True,
+            "subject_run_id": run_id,
+            "analysis_run_id": analysis_run_id,
+            "artifact_path": analysis.artifact_path_text(settings, run_id),
+        },
+        status_code=202,
     )
 
 
@@ -173,6 +262,9 @@ def api_routes() -> list[Route]:
         Route("/api/health", health, methods=["GET"]),
         Route("/api/runs", list_runs, methods=["GET"]),
         Route("/api/runs/{run_id}", get_run, methods=["GET"]),
+        Route("/api/runs/{run_id}/inspection", get_run_inspection, methods=["GET"]),
+        Route("/api/runs/{run_id}/analysis", get_run_analysis, methods=["GET"]),
+        Route("/api/runs/{run_id}/analysis", create_run_analysis, methods=["POST"]),
         Route("/api/runs/{run_id}/events", run_events, methods=["GET"]),
         Route("/api/runs/{run_id}/approve", approve, methods=["POST"]),
         Route("/api/runs/{run_id}/deny", deny, methods=["POST"]),

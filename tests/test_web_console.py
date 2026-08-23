@@ -12,7 +12,9 @@ import asyncio
 import json
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
 from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
 from pydantic_ai.usage import RunUsage
 from pydantic_ai_harness.step_persistence import (
@@ -24,8 +26,15 @@ from pydantic_ai_harness.step_persistence import (
 from starlette.testclient import TestClient
 
 from zuaef_agent.config import AgentSettings
-from zuaef_agent.web import readers, sse
+from zuaef_agent.web import analysis, analysis_store, readers, sse
 from zuaef_agent.web.api import api_routes
+from zuaef_agent.web.inspection import (
+    inspect_run,
+    inspect_run_segment,
+    render_run_json,
+    render_run_markdown,
+    render_run_segment_markdown,
+)
 from zuaef_agent.web.projector import RunFacts, project_run
 from zuaef_agent.web.readers import load_run_facts
 
@@ -126,6 +135,25 @@ def _snapshot(run_id: str, responses: int, requests: int) -> ContinuableSnapshot
                     timestamp=_stamp(30 + index),
                 )
             )
+    return ContinuableSnapshot(run_id=run_id, step_index=0, messages=messages)
+
+
+def _snapshot_with_usage(
+    run_id: str, usage: list[tuple[int, int]]
+) -> ContinuableSnapshot:
+    messages: list[ModelRequest | ModelResponse] = []
+    for index, (input_tokens, output_tokens) in enumerate(usage):
+        messages.append(ModelRequest(parts=[UserPromptPart(content=f"q{index}")]))
+        messages.append(
+            ModelResponse(
+                parts=[TextPart(f"a{index}")],
+                usage=RunUsage(
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                ),
+                timestamp=_stamp(30 + index),
+            )
+        )
     return ContinuableSnapshot(run_id=run_id, step_index=0, messages=messages)
 
 
@@ -358,6 +386,305 @@ def test_aggregate_usage_never_distributed_to_requests(tmp_path: Path) -> None:
     assert projection["usage"]["requests"] == 2
 
 
+# --- deterministic run inspection ------------------------------------------
+
+
+def test_inspection_completed_summary_and_artifact_facts(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-inspection", COMPLETED_RUN)
+    _write_receipt(
+        settings,
+        "r-inspection",
+        _terminal_receipt(
+            "r-inspection",
+            artifact_facts=[
+                {
+                    "path": "artifacts/final.md",
+                    "size": 42,
+                    "sha256": "a" * 64,
+                    "change": "created",
+                }
+            ],
+        ),
+    )
+    markdown = render_run_markdown("r-inspection", settings=settings)
+    data = render_run_json("r-inspection", settings=settings)
+
+    assert "# Run r-inspection" in markdown
+    assert "Status: completed" in markdown
+    assert "Requests: 1" in markdown
+    assert "Tool calls: 1" in markdown
+    assert "Input tokens: 500" in markdown
+    assert data["summary"]["wall_clock_ms"] == 60_000
+    assert data["artifacts"][0]["path"] == "artifacts/final.md"
+    assert data["artifacts"][0]["size"] == 42
+
+
+def test_inspection_rankings_and_contiguous_tools_are_mechanical(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    specs = [
+        ("run_started", 0, None, None),
+        ("model_request_started", 1, None, None),
+        ("tool_call_started", 2, "read-1", "read_material"),
+        ("tool_call_completed", 2, "read-1", "read_material"),
+        ("tool_call_started", 3, "read-2", "read_material"),
+        ("tool_call_completed", 3, "read-2", "read_material"),
+        ("model_request_completed", 1, None, None),
+        ("model_request_started", 4, None, None),
+        ("tool_call_started", 5, "claim-1", "check_claim"),
+        ("tool_call_completed", 5, "claim-1", "check_claim"),
+        ("model_request_completed", 4, None, None),
+        ("model_request_started", 6, None, None),
+        ("model_request_completed", 6, None, None),
+        ("run_completed", 7, None, None),
+    ]
+    _seed_sync(tmp_path, settings, "r-ranking", specs)
+    asyncio.run(
+        _save_snapshot(
+            settings,
+            _snapshot_with_usage(
+                "r-ranking", [(100, 10), (200, 30), (300, 20)]
+            ),
+        )
+    )
+    _write_receipt(settings, "r-ranking", _terminal_receipt("r-ranking"))
+
+    data = render_run_json("r-ranking", settings=settings)
+    rankings = data["rankings"]
+    assert [row["request"] for row in rankings["slowest_requests"][:3]] == [
+        "model-request-0",
+        "model-request-1",
+        "model-request-2",
+    ]
+    assert [row["request"] for row in rankings["largest_input_requests"][:3]] == [
+        "model-request-2",
+        "model-request-1",
+        "model-request-0",
+    ]
+    assert [row["request"] for row in rankings["largest_output_requests"][:3]] == [
+        "model-request-1",
+        "model-request-2",
+        "model-request-0",
+    ]
+    tools = {item["tool"]: item for item in data["tool_activity"]}
+    assert tools["read_material"] == {
+        "tool": "read_material",
+        "total": 2,
+        "contiguous_groups": [2],
+    }
+    assert tools["check_claim"]["total"] == 1
+
+
+def test_inspection_unknown_usage_is_not_distributed(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(
+        tmp_path,
+        settings,
+        "r-partial-inspection",
+        [
+            ("run_started", 0, None, None),
+            ("model_request_started", 1, None, None),
+            ("model_request_completed", 1, None, None),
+            ("model_request_started", 2, None, None),
+            ("model_request_completed", 2, None, None),
+            ("run_completed", 3, None, None),
+        ],
+    )
+    asyncio.run(
+        _save_snapshot(
+            settings,
+            _snapshot("r-partial-inspection", responses=1, requests=2),
+        )
+    )
+    _write_receipt(
+        settings,
+        "r-partial-inspection",
+        _terminal_receipt(
+            "r-partial-inspection", usage={"input_tokens": 900, "output_tokens": 90}
+        ),
+    )
+    data = render_run_json("r-partial-inspection", settings=settings)
+    assert data["summary"]["input_tokens"] == 900
+    assert data["summary"]["output_tokens"] == 90
+    assert data["summary"]["usage_source"] == "receipt_aggregate"
+    assert data["rankings"]["largest_input_requests"] == []
+    assert data["rankings"]["largest_output_requests"] == []
+    assert "per-request input tokens" in data["unknown_facts"]["unavailable_usage"]
+    assert "per-request output tokens" in data["unknown_facts"]["unavailable_usage"]
+    markdown = render_run_markdown("r-partial-inspection", settings=settings)
+    assert markdown.count("Unavailable: no authoritative per-request input usage.") == 1
+    assert markdown.count("Unavailable: no authoritative per-request output usage.") == 1
+    assert "| model-request-0 | 1.000s | Unknown | Unknown | completed |" in markdown
+
+
+def test_inspection_incomplete_request_is_not_running(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(
+        tmp_path,
+        settings,
+        "r-incomplete-inspection",
+        [
+            ("run_started", 0, None, None),
+            ("model_request_started", 1, None, None),
+        ],
+    )
+    data = render_run_json("r-incomplete-inspection", settings=settings)
+    assert data["summary"]["status"] == "incomplete"
+    assert data["unknown_facts"]["incomplete_requests"] == [
+        {"request": "model-request-0", "step": 1}
+    ]
+    assert "running" not in render_run_markdown(
+        "r-incomplete-inspection", settings=settings
+    ).lower()
+
+
+def test_inspection_unresolved_tool_is_preserved(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(
+        tmp_path,
+        settings,
+        "r-unresolved-inspection",
+        [
+            ("run_started", 0, None, None),
+            ("tool_call_started", 1, "tc-x", "external_write"),
+        ],
+    )
+    _write_receipt(
+        settings,
+        "r-unresolved-inspection",
+        {
+            "schema_version": "2.0",
+            "state": "paused",
+            "run_id": "r-unresolved-inspection",
+            "conversation_id": "c1",
+            "model": "test-model",
+            "started_at": T0.isoformat(),
+            "finished_at": (T0 + timedelta(seconds=5)).isoformat(),
+            "pending_approvals": [],
+            "pending_calls": [],
+        },
+    )
+    data = render_run_json("r-unresolved-inspection", settings=settings)
+    assert data["summary"]["status"] == "paused"
+    assert data["unknown_facts"]["unresolved_tool_calls"] == [
+        {
+            "tool_call": "tool-call-0",
+            "tool": "external_write",
+            "step": 1,
+        }
+    ]
+
+
+def test_inspection_large_run_has_bounded_chronology_and_markdown(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    specs: list[tuple[str, int, str | None, str | None]] = [("run_started", 0, None, None)]
+    for index in range(100):
+        step = index + 1
+        specs.extend(
+            [
+                ("model_request_started", step, None, None),
+                ("model_request_completed", step, None, None),
+            ]
+        )
+    specs.append(("run_completed", 101, None, None))
+    _seed_sync(tmp_path, settings, "r-large-inspection", specs)
+    _write_receipt(settings, "r-large-inspection", _terminal_receipt("r-large-inspection"))
+
+    data = render_run_json(
+        "r-large-inspection", settings=settings, chronology_limit=5
+    )
+    markdown = render_run_markdown(
+        "r-large-inspection", settings=settings, chronology_limit=5
+    )
+    assert len(data["timeline"]) == 5
+    assert data["bounds"]["chronology_omitted"] > 0
+    assert len(markdown) <= 12_000
+    assert "chronology rows omitted" in markdown
+
+
+def test_inspection_json_and_markdown_share_projection_facts_without_content(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-interoperable", COMPLETED_RUN)
+    asyncio.run(
+        _save_snapshot(
+            settings,
+            _snapshot("r-interoperable", responses=1, requests=1),
+        )
+    )
+    _write_receipt(settings, "r-interoperable", _terminal_receipt("r-interoperable"))
+    projection = project_run(_load(settings, "r-interoperable"))
+    direct = inspect_run(projection)
+    json_data = render_run_json("r-interoperable", settings=settings)
+    markdown = render_run_markdown("r-interoperable", settings=settings)
+
+    assert json_data == direct
+    assert f"Requests: {json_data['summary']['requests']}" in markdown
+    assert f"Tool calls: {json_data['summary']['tool_calls']}" in markdown
+    assert [
+        row["request"] for row in json_data["rankings"]["slowest_requests"]
+    ] == [row["request"] for row in direct["rankings"]["slowest_requests"]]
+    serialized = json.dumps(json_data)
+    assert "q0" not in serialized
+    assert "a0" not in serialized
+    assert "q0" not in markdown
+    assert "a0" not in markdown
+
+
+def test_inspection_segment_is_step_bounded_and_content_free(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-segment", COMPLETED_RUN)
+    projection = project_run(_load(settings, "r-segment"))
+    segment = inspect_run_segment(projection, 1, 2)
+
+    assert segment["scope"] == {"start_step": 1, "end_step": 2}
+    assert segment["timeline"]
+    assert all(
+        row["step"] is not None and 1 <= row["step"] <= 2
+        for row in segment["timeline"]
+    )
+    assert all("payload" not in row for row in segment["timeline"])
+
+
+def test_inspection_segment_markdown_keeps_scope_and_content_gap(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-segment-md", COMPLETED_RUN)
+    markdown = render_run_segment_markdown(
+        "r-segment-md", 1, 2, settings=settings
+    )
+    assert "## Scope" in markdown
+    assert "Steps: 1–2" in markdown
+    assert "Content: unavailable" in markdown
+    assert "q0" not in markdown
+
+
+def test_inspection_legacy_receipt_keeps_events_and_diagnostics(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-legacy-inspection", COMPLETED_RUN)
+    _write_receipt(
+        settings,
+        "r-legacy-inspection",
+        {"schema_version": "1.1", "state": "terminal", "run_id": "r-legacy-inspection"},
+    )
+    data = render_run_json("r-legacy-inspection", settings=settings)
+    markdown = render_run_markdown("r-legacy-inspection", settings=settings)
+    assert data["summary"]["status"] == "completed"
+    assert data["summary"]["requests"] == 1
+    assert data["summary"]["tool_calls"] == 1
+    assert any(
+        "receipt_unavailable" in diagnostic
+        for diagnostic in data["unknown_facts"]["diagnostics"]
+    )
+    assert "receipt_unavailable" in markdown
+
+
 # --- API surface (read-only) --------------------------------------------------
 
 
@@ -433,6 +760,617 @@ def test_api_list_detail_consistency(tmp_path: Path) -> None:
         detail = client.get("/api/runs/r-consistent").json()
     for key in ("status", "request_count", "tool_call_count", "started_at"):
         assert summary[key] == detail["run"][key], key
+
+
+def test_api_inspection_is_derived_and_content_free(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-api-inspection", COMPLETED_RUN)
+    asyncio.run(
+        _save_snapshot(
+            settings,
+            _snapshot("r-api-inspection", responses=1, requests=1),
+        )
+    )
+    _write_receipt(settings, "r-api-inspection", _terminal_receipt("r-api-inspection"))
+
+    with _client(settings) as client:
+        response = client.get("/api/runs/r-api-inspection/inspection")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["status"] == "completed"
+    assert body["summary"]["requests"] == 1
+    assert body["summary"]["tool_calls"] == 1
+    assert body["timeline"]
+    serialized = json.dumps(body)
+    assert "q0" not in serialized
+    assert "a0" not in serialized
+
+
+def test_api_inspection_reuses_run_errors(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    with _client(settings) as client:
+        missing = client.get("/api/runs/does-not-exist/inspection")
+        invalid = client.get("/api/runs/bad%20id/inspection")
+
+    assert missing.status_code == 404
+    assert missing.json()["error"]["code"] == "RUN_NOT_FOUND"
+    assert invalid.status_code == 400
+    assert invalid.json()["error"]["code"] == "INVALID_RUN_ID"
+
+
+def test_api_analysis_is_explicit_async_action_and_readback(
+    tmp_path: Path, monkeypatch
+) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-api-analysis", COMPLETED_RUN)
+    monkeypatch.setattr(
+        analysis,
+        "start_analysis",
+        lambda settings, run_id, **kwargs: "analysis-test",
+    )
+    monkeypatch.setattr(
+        analysis,
+        "analysis_state",
+        lambda settings, run_id: {
+            "state": "running",
+            "subject_run_id": run_id,
+            "analysis_run_id": "analysis-test",
+            "artifact_path": "analysis/r-api-analysis/analysis.md",
+        },
+    )
+    with _client(settings) as client:
+        started = client.post(
+            "/api/runs/r-api-analysis/analysis",
+            json={"scope": "full", "agent": True},
+        )
+        state = client.get("/api/runs/r-api-analysis/analysis")
+
+    assert started.status_code == 202
+    assert started.json() == {
+        "accepted": True,
+        "subject_run_id": "r-api-analysis",
+        "analysis_run_id": "analysis-test",
+        "artifact_path": "analysis/r-api-analysis/analysis.md",
+    }
+    assert state.status_code == 200
+    assert state.json()["state"] == "running"
+
+
+def _complete_analysis_presentation(*, observed_facts: str = "") -> str:
+    section_2 = (
+        f"\n\n## 2. Observed Facts\n{observed_facts}" if observed_facts else ""
+    )
+    return (
+        "## 1. Outcome\nBusiness quality is unknown."
+        f"{section_2}\n\n"
+        "## 3. Interpretation\nThe observed completion may not establish quality.\n\n"
+        "## 4. Causal Hypothesis\nThe primary hypothesis remains unproved.\n\n"
+        "## 5. Smallest Next Experiment\nKeep the baseline and vary one input "
+        "to distinguish the primary hypothesis from a competing explanation."
+    )
+
+
+def test_analysis_host_facts_replace_model_section_2(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(
+        tmp_path,
+        settings,
+        "abc123",
+        [
+            ("run_started", 0, None, None),
+            ("model_request_started", 1, None, None),
+            ("tool_call_started", 2, "inspect-1", "inspect_run_segment"),
+            ("tool_call_completed", 2, "inspect-1", "inspect_run_segment"),
+            ("model_request_completed", 1, None, None),
+            ("run_completed", 3, None, None),
+        ],
+    )
+    _write_receipt(
+        settings,
+        "abc123",
+        _terminal_receipt(
+            "abc123",
+            usage={"input_tokens": 900, "output_tokens": 1436},
+            artifact_facts=[
+                {
+                    "path": "artifacts/exact-report.md",
+                    "size": 81,
+                    "sha256": "b" * 64,
+                    "change": "created",
+                }
+            ],
+        ),
+    )
+
+    rendered = analysis._format_analysis_artifact(
+        "abc123",
+        "analysis-A",
+        _complete_analysis_presentation(
+            observed_facts=(
+                "Run abc132 used read_run_projection with a ~1500 token limit."
+            )
+        ),
+        _load(settings, "abc123"),
+    )
+
+    assert rendered.count("## 2. Observed Facts") == 1
+    assert "- Run ID: `abc123`" in rendered
+    assert "- Execution state: completed" in rendered
+    assert "- Model: test-model" in rendered
+    assert "  - output_tokens: 1436" in rendered
+    assert "- Tools (1 total, 1 shown, 0 omitted):" in rendered
+    assert "`inspect_run_segment`" in rendered
+    assert "- Artifacts (1 total, 1 shown, 0 omitted):" in rendered
+    assert "`artifacts/exact-report.md`" in rendered
+    assert "Configured output limit: unknown" in rendered
+    assert "abc132" not in rendered
+    assert "read_run_projection" not in rendered
+    assert "~1500 token limit" not in rendered
+    expected_bodies = {
+        "## 1. Outcome": "Business quality is unknown.",
+        "## 3. Interpretation": "The observed completion may not establish quality.",
+        "## 4. Causal Hypothesis": "The primary hypothesis remains unproved.",
+        "## 5. Smallest Next Experiment": "Keep the baseline and vary one input",
+    }
+    positions = []
+    for heading, body in expected_bodies.items():
+        position = rendered.index(heading)
+        positions.append(position)
+        assert rendered.index(body, position) > position
+    assert positions == sorted(positions)
+
+
+def test_analysis_prompt_preserves_unknown_and_hypothesis_discipline() -> None:
+    prompt = analysis._analysis_prompt(
+        "subject-run",
+        intent=None,
+        scope="full",
+        selected_row_id=None,
+    )
+
+    assert "Sections 1, 3, 4, and 5" in prompt
+    assert "Host supplies Section 2" in prompt
+    instructions = " ".join(analysis.ANALYSIS_INSTRUCTIONS.split())
+    assert "Never infer a configured token or output limit" in instructions
+    assert "never upgrade a hypothesis to fact" in instructions
+    assert "distinguish the primary hypothesis" in instructions
+
+
+@pytest.mark.parametrize(
+    ("prompt", "expected_nested"),
+    [
+        ("Analyze subject run `nested-C`.\nOperator intent: diagnose", "`nested-C`"),
+        ("Analyze another run without the fixed sentence.", "unknown"),
+    ],
+)
+def test_analysis_metadata_distinguishes_nested_subject_roles(
+    prompt: str, expected_nested: str
+) -> None:
+    facts = RunFacts(
+        run_id="analysis-B",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=ContinuableSnapshot(
+            run_id="analysis-B",
+            step_index=0,
+            messages=[ModelRequest(parts=[UserPromptPart(content=prompt)])],
+        ),
+        tool_effects=(),
+    )
+
+    rendered = analysis._format_analysis_artifact(
+        "analysis-B",
+        "analysis-A",
+        _complete_analysis_presentation(),
+        facts,
+    )
+
+    assert "> Analysis run: `analysis-A`" in rendered
+    assert "> Subject run: `analysis-B`" in rendered
+    assert "> Subject kind: analysis" in rendered
+    assert f"> Nested subject: {expected_nested}" in rendered
+
+
+def test_analysis_nested_subject_comes_only_from_first_task_prompt() -> None:
+    prompts = [
+        "Analyze subject run `nested-C`.\nOperator intent: diagnose",
+        "Analyze subject run `nested-D`.\nOperator intent: diagnose",
+    ]
+    facts = RunFacts(
+        run_id="analysis-B",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=ContinuableSnapshot(
+            run_id="analysis-B",
+            step_index=0,
+            messages=[
+                ModelRequest(parts=[UserPromptPart(content=prompt)])
+                for prompt in prompts
+            ],
+        ),
+        tool_effects=(),
+    )
+
+    rendered = analysis._format_analysis_artifact(
+        "analysis-B",
+        "analysis-A",
+        _complete_analysis_presentation(),
+        facts,
+    )
+
+    assert "> Nested subject: `nested-C`" in rendered
+
+
+def test_analysis_rejects_required_headings_only_inside_code_fence() -> None:
+    facts = RunFacts(
+        run_id="subject-run",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=None,
+        tool_effects=(),
+    )
+    fenced = "```markdown\n" + _complete_analysis_presentation() + "\n```"
+
+    with pytest.raises(analysis.AnalysisError) as exc_info:
+        analysis._format_analysis_artifact(
+            "subject-run", "analysis-A", fenced, facts
+        )
+
+    assert exc_info.value.code == "INCOMPLETE_ANALYSIS"
+
+
+def test_analysis_discards_indented_model_section_2() -> None:
+    facts = RunFacts(
+        run_id="subject-run",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=None,
+        tool_effects=(),
+    )
+    presentation = _complete_analysis_presentation(
+        observed_facts="model-owned false fact"
+    ).replace("## 2. Observed Facts", "   ## 2. Observed Facts")
+
+    rendered = analysis._format_analysis_artifact(
+        "subject-run", "analysis-A", presentation, facts
+    )
+
+    assert rendered.count("## 2. Observed Facts") == 1
+    assert "model-owned false fact" not in rendered
+
+
+def test_analysis_long_fence_is_not_closed_by_shorter_fence() -> None:
+    facts = RunFacts(
+        run_id="subject-run",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=None,
+        tool_effects=(),
+    )
+    fenced = (
+        "````markdown\n"
+        "quoted output\n"
+        "```\n"
+        + _complete_analysis_presentation()
+        + "\n````"
+    )
+
+    with pytest.raises(analysis.AnalysisError) as exc_info:
+        analysis._format_analysis_artifact(
+            "subject-run", "analysis-A", fenced, facts
+        )
+
+    assert exc_info.value.code == "INCOMPLETE_ANALYSIS"
+
+
+def test_analysis_observed_facts_render_known_empty_collections() -> None:
+    facts = RunFacts(
+        run_id="subject-empty",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=None,
+        tool_effects=(),
+    )
+
+    rendered = analysis_store.render_observed_facts(facts)
+
+    assert "- Execution state: unknown" in rendered
+    assert "- Model: unknown" in rendered
+    assert "- Tools (0 total, 0 shown, 0 omitted):\n  - none" in rendered
+    assert "- Artifacts (0 total, 0 shown, 0 omitted):\n  - none" in rendered
+    assert analysis_store._observed_value("") == "unknown"
+
+
+def test_analysis_observed_facts_bound_details_and_report_omissions(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    tool_specs = [("run_started", 0, None, None)]
+    for index in range(125):
+        call_id = f"call-{index}"
+        tool_name = f"canonical-tool-{index}"
+        tool_specs.extend(
+            [
+                ("tool_call_started", index + 1, call_id, tool_name),
+                ("tool_call_completed", index + 1, call_id, tool_name),
+            ]
+        )
+    tool_specs.append(("run_completed", 126, None, None))
+    _seed_sync(tmp_path, settings, "subject-large", tool_specs)
+    _write_receipt(
+        settings,
+        "subject-large",
+        _terminal_receipt(
+            "subject-large",
+            artifact_facts=[
+                {
+                    "path": f"artifacts/item-{index}.md",
+                    "size": index,
+                    "sha256": f"{index:064x}",
+                    "change": "created",
+                }
+                for index in range(45)
+            ],
+        ),
+    )
+
+    rendered = analysis_store.render_observed_facts(
+        _load(settings, "subject-large")
+    )
+
+    assert "- Tool calls: 125" in rendered
+    assert "- Tools (125 total, 120 shown, 5 omitted):" in rendered
+    assert "`canonical-tool-0`" in rendered
+    assert "`canonical-tool-124`" not in rendered
+    assert "- Artifacts (45 total, 40 shown, 5 omitted):" in rendered
+    assert "`artifacts/item-39.md`" in rendered
+    assert "`artifacts/item-40.md`" not in rendered
+
+
+def test_analysis_observed_facts_render_paused_execution_state(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "subject-paused", [("run_started", 0, None, None)])
+    _write_receipt(
+        settings,
+        "subject-paused",
+        {
+            "schema_version": "2.0",
+            "state": "paused",
+            "run_id": "subject-paused",
+            "conversation_id": "conversation-1",
+            "model": "paused-model",
+            "started_at": T0.isoformat(),
+            "finished_at": (T0 + timedelta(seconds=5)).isoformat(),
+            "pending_approvals": [],
+            "pending_calls": [],
+        },
+    )
+
+    rendered = analysis_store.render_observed_facts(
+        _load(settings, "subject-paused")
+    )
+
+    assert "- Status: paused" in rendered
+    assert "- Execution state: paused" in rendered
+
+
+@pytest.mark.parametrize("heading", analysis._MODEL_SECTION_HEADINGS)
+@pytest.mark.parametrize("mode", ["missing", "empty"])
+def test_analysis_rejects_each_missing_or_empty_model_section(
+    heading: str, mode: str
+) -> None:
+    presentation = _complete_analysis_presentation()
+    body_by_heading = {
+        "## 1. Outcome": "Business quality is unknown.",
+        "## 3. Interpretation": "The observed completion may not establish quality.",
+        "## 4. Causal Hypothesis": "The primary hypothesis remains unproved.",
+        "## 5. Smallest Next Experiment": (
+            "Keep the baseline and vary one input to distinguish the primary "
+            "hypothesis from a competing explanation."
+        ),
+    }
+    if mode == "missing":
+        presentation = presentation.replace(f"{heading}\n{body_by_heading[heading]}", "")
+    else:
+        presentation = presentation.replace(body_by_heading[heading], "")
+    facts = RunFacts(
+        run_id="subject-run",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=None,
+        tool_effects=(),
+    )
+
+    with pytest.raises(analysis.AnalysisError) as exc_info:
+        analysis._format_analysis_artifact(
+            "subject-run", "analysis-A", presentation, facts
+        )
+
+    assert exc_info.value.code == "INCOMPLETE_ANALYSIS"
+
+
+def test_incomplete_analysis_settles_worker_state_as_failed(
+    tmp_path: Path, monkeypatch
+) -> None:
+    settings = _settings(tmp_path)
+    subject_run_id = "subject-incomplete"
+    analysis_run_id = "analysis-incomplete"
+    facts = RunFacts(
+        run_id=subject_run_id,
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=None,
+        tool_effects=(),
+    )
+
+    async def fake_load_run_facts(settings, run_id):
+        return facts
+
+    monkeypatch.setattr(analysis.readers, "load_run_facts", fake_load_run_facts)
+    monkeypatch.setattr(analysis, "export_projection", lambda settings, facts: {})
+    monkeypatch.setattr(analysis, "build_agent", lambda *args, **kwargs: object())
+    monkeypatch.setattr(
+        analysis,
+        "execute_run",
+        lambda *args, **kwargs: SimpleNamespace(
+            receipt=SimpleNamespace(execution_state="completed", error=None),
+            presentation=(
+                "## 1. Outcome\nunknown\n\n"
+                "## 3. Interpretation\nunknown\n\n"
+                "## 4. Causal Hypothesis\nunproved"
+            ),
+        ),
+    )
+    with analysis._lock:
+        analysis._in_flight[subject_run_id] = analysis_run_id
+        analysis._results.pop(subject_run_id, None)
+
+    analysis._run_analysis(
+        settings,
+        subject_run_id,
+        analysis_run_id,
+        None,
+        "full",
+        None,
+    )
+    state = analysis.analysis_state(settings, subject_run_id)
+
+    assert state["state"] == "failed"
+    assert "Smallest Next Experiment" in state["error"]
+    assert not analysis.analysis_path(settings, subject_run_id).exists()
+    with analysis._lock:
+        analysis._results.pop(subject_run_id, None)
+
+
+def test_complete_analysis_settles_worker_and_reads_back_artifact(
+    tmp_path: Path, monkeypatch
+) -> None:
+    settings = _settings(tmp_path)
+    subject_run_id = "subject-complete"
+    analysis_run_id = "analysis-complete"
+    _seed_sync(tmp_path, settings, subject_run_id, COMPLETED_RUN)
+    _write_receipt(settings, subject_run_id, _terminal_receipt(subject_run_id))
+    monkeypatch.setattr(analysis, "build_agent", lambda *args, **kwargs: object())
+    monkeypatch.setattr(
+        analysis,
+        "execute_run",
+        lambda *args, **kwargs: SimpleNamespace(
+            receipt=SimpleNamespace(execution_state="completed", error=None),
+            presentation=_complete_analysis_presentation(),
+        ),
+    )
+    with analysis._lock:
+        analysis._in_flight[subject_run_id] = analysis_run_id
+        analysis._results.pop(subject_run_id, None)
+
+    analysis._run_analysis(
+        settings,
+        subject_run_id,
+        analysis_run_id,
+        None,
+        "full",
+        None,
+    )
+    state = analysis.analysis_state(settings, subject_run_id)
+    artifact = analysis.analysis_path(settings, subject_run_id)
+
+    assert state["state"] == "completed"
+    assert state["analysis_run_id"] == analysis_run_id
+    assert state["content"] == artifact.read_text(encoding="utf-8")
+    assert "# Run Analysis — subject-complete" in state["content"]
+    assert "## 5. Smallest Next Experiment" in state["content"]
+    with analysis._lock:
+        analysis._results.pop(subject_run_id, None)
+
+
+def test_analysis_artifact_never_overwrites_existing_file(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    path = analysis.analysis_path(settings, "r-existing-analysis")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("human note", encoding="utf-8")
+
+    with pytest.raises(analysis.AnalysisError) as exc_info:
+        analysis.start_analysis(settings, "r-existing-analysis")
+
+    assert exc_info.value.code == "ANALYSIS_EXISTS"
+    assert path.read_text(encoding="utf-8") == "human note"
+
+
+def test_analysis_toolset_exposes_only_bound_read_tools(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    toolset = analysis.make_inspection_toolset(settings, "subject-run")
+    assert list(toolset.tools) == ["inspect_run", "read_run_projection"]
+
+
+def test_analysis_toolset_reuses_bound_facts_without_reloading(
+    tmp_path: Path, monkeypatch
+) -> None:
+    settings = _settings(tmp_path)
+    facts = RunFacts(
+        run_id="subject-bound",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=None,
+        tool_effects=(),
+    )
+
+    async def fail_reload(settings, run_id):
+        raise AssertionError("bound inspection unexpectedly reloaded facts")
+
+    monkeypatch.setattr(analysis.readers, "load_run_facts", fail_reload)
+    toolset = analysis.make_inspection_toolset(
+        settings,
+        "subject-bound",
+        bound_facts=facts,
+    )
+
+    summary = asyncio.run(toolset.tools["inspect_run"].function(None))
+    chunk = asyncio.run(
+        toolset.tools["read_run_projection"].function(
+            None,
+            section="run_id",
+        )
+    )
+
+    assert "# Run subject-bound" in summary
+    assert json.loads(chunk)["content"] == "subject-bound"
+
+
+def test_analysis_projection_export_preserves_human_owned_files(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    facts = RunFacts(
+        run_id="r-export",
+        record=None,
+        events=(),
+        receipt=None,
+        snapshot=None,
+        tool_effects=(),
+    )
+
+    paths = analysis_store.export_projection(settings, facts)
+    notes = paths["projection_md"].parent / "operator-notes.md"
+    analysis_md = paths["projection_md"].parent / "analysis.md"
+    notes.write_text("human decision", encoding="utf-8")
+    analysis_md.write_text("human analysis", encoding="utf-8")
+
+    analysis_store.export_projection(settings, facts)
+
+    assert paths["projection_md"].exists()
+    assert paths["projection_json"].exists()
+    assert notes.read_text(encoding="utf-8") == "human decision"
+    assert analysis_md.read_text(encoding="utf-8") == "human analysis"
 
 
 # --- T008C: SSE run_changed invalidation --------------------------------------

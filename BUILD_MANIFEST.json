@@ -1098,13 +1098,13 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 2769,
-      "sha256": "e5bf8841c9ca23e4fafe1de31c21e7c7499c028371ff28f2f8b8343513820c90"
+      "bytes": 2859,
+      "sha256": "838d29489e92a41a2b5f7012523b58f6bcc3498297cd45c4909b395612bdd3a1"
     },
     {
       "path": "uv.lock",
-      "bytes": 434681,
-      "sha256": "b8ee8ccd3a6f58795fa19f17d21f526306f0fcf7f126e58a8b62a20ed9e714c3"
+      "bytes": 509232,
+      "sha256": "306e70571592e62a296405abf8666cb2f7a115952f61075b6de0e3d57ea93292"
     },
     {
       "path": "spec/SPEC.md",
@@ -1272,9 +1272,29 @@
       "sha256": "80d4bd08c0320d005f59f8bf09091088ff66295387362d7f794799a1cee6e68e"
     },
     {
+      "path": "src/zuaef_agent/web/analysis.py",
+      "bytes": 23680,
+      "sha256": "fc98c12c2bfca42fd1db95aa91b0ab5f9b9670a2ccd1442e47613990e6ab9116"
+    },
+    {
+      "path": "src/zuaef_agent/web/analysis_projector.py",
+      "bytes": 10958,
+      "sha256": "188a6715240ba89b85a1e2c38071822a8d7b30a4d0db0052ca597cb5464ea979"
+    },
+    {
+      "path": "src/zuaef_agent/web/analysis_store.py",
+      "bytes": 5568,
+      "sha256": "ccc56c621a9e5bee15f175cbae6dd55441c31f97cedd231f29afc42945689c7c"
+    },
+    {
       "path": "src/zuaef_agent/web/api.py",
-      "bytes": 6011,
-      "sha256": "43583b8a78b8c6abd172a7312a1ed8798e7800ddb1792a4335396c9c87fac75b"
+      "bytes": 9776,
+      "sha256": "1ad3b40b404cc2ce04ac4bf20e5f304c10312aab1161bae5217b1e8eb0368218"
+    },
+    {
+      "path": "src/zuaef_agent/web/inspection.py",
+      "bytes": 28870,
+      "sha256": "f006af3935cc65c2d694091b51fd2d9cf8401c6a5ad6230be2128aa85991624b"
     },
     {
       "path": "src/zuaef_agent/web/projector.py",
@@ -1290,6 +1310,11 @@
       "path": "src/zuaef_agent/web/server.py",
       "bytes": 2431,
       "sha256": "2a5790306b2ced5a37bc9b1cb56e54c05a962ca45e488c4faa07866703fc5d3e"
+    },
+    {
+      "path": "src/zuaef_agent/web/sse.py",
+      "bytes": 2275,
+      "sha256": "d45cf5569eb4f7063fc413ad8855163d1d7c1a02a3719c1060d61115ffc58f0a"
     },
     {
       "path": "tests/test_ace_writing_plugin.py",
@@ -1360,6 +1385,11 @@
       "path": "tests/test_client_service_toolset.py",
       "bytes": 5720,
       "sha256": "69e74057563a9d0b03a7af3f34ed26c4a68c52d47b227b42e5e9ad57d3776ffa"
+    },
+    {
+      "path": "tests/test_competitive_intelligence.py",
+      "bytes": 31866,
+      "sha256": "5de27ce8c96efa18c11437fdcc824110bb08ef21832daa7086782bafeb1f0cc6"
     },
     {
       "path": "tests/test_config.py",
@@ -1583,8 +1613,8 @@
     },
     {
       "path": "tests/test_web_console.py",
-      "bytes": 19667,
-      "sha256": "796aa66c5ee18d5f9eabbd0a10107bf165bff6b3f8b42bcc1c79ed8935d95698"
+      "bytes": 51732,
+      "sha256": "dc33cbb37e0d7680aad7b870db6fe43d216737ed5d21021bfc29cddf0ecbae40"
     },
     {
       "path": "tests/test_wordpress_plugin.py",
@@ -1742,6 +1772,46 @@
       "sha256": "fa4f96f986574b424c871392df0cb1573e64763e6191aa6f66756f328244b86a"
     },
     {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/__init__.py",
+      "bytes": 132,
+      "sha256": "fa05f088f1227da59d1987a629fa7a549441db3cf35c6849f52f5db87771af3e"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/network.py",
+      "bytes": 14124,
+      "sha256": "c247183ab7a4ce76c070a2a0b295f3fc1073b96ed67ecabd7fde71d74d6a1e4d"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/plugin.py",
+      "bytes": 4402,
+      "sha256": "2168ab2a23a079ee5d030d31a12fa731c3f1c42cdf87d683f35215939921d887"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/report_renderer.py",
+      "bytes": 18957,
+      "sha256": "929a717ac128952886ad7dd37524d161df3f3d666e4266d66029f415750496f5"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/report_tools.py",
+      "bytes": 8175,
+      "sha256": "0877777c29dd457e7a34ea90018bf681890b92dfcecc0e55f7a6f23f7acb90f2"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/search_backend.py",
+      "bytes": 10205,
+      "sha256": "b519ffb9653273c2505eec913d5c11b145c1c39034d7f39baed6114e7be2b968"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/source_tools.py",
+      "bytes": 6158,
+      "sha256": "2a4af3f43829fb7e0076d96d2542c3252eda2221ae9a83f3ea25dde3b386d75d"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/work_product_tools.py",
+      "bytes": 7185,
+      "sha256": "d238cf5f1a26aeb3b4e0cd4d45ec392c8e85fe4d77d6f2729ecfc1e1bec561d3"
+    },
+    {
       "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/__init__.py",
       "bytes": 731,
       "sha256": "6f8d13337c18ab0a2e8890b4171ba7e004cbdba8b2533d47e73c4abc3c685695"
@@ -1867,6 +1937,16 @@
       "sha256": "98c18bda1e701e3ae9ad3fcb0eb78f1f72a0815f1efa069c2a63030a9bdd08af"
     },
     {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/skills/e-bike-product-intelligence/SKILL.md",
+      "bytes": 6142,
+      "sha256": "3742adfdf239b39644db79ed95c242436f4e158408fcd250a1bb0aa8bf9f3b03"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/skills/executive-competitor-report/SKILL.md",
+      "bytes": 3615,
+      "sha256": "ff840c835cbf605ec253700490885bb389319c7b3385ed4ff5072ba4fbca3a4e"
+    },
+    {
       "path": "plugins/zuaef-writing-pack/README.md",
       "bytes": 603,
       "sha256": "a6e92535b39fc2b0582c2e99a357c3421fcc4842ac12bd30e45593a0892c6d59"
@@ -1900,6 +1980,11 @@
       "path": "profiles/emtb-budget.toml",
       "bytes": 339,
       "sha256": "ccf603130855213707084b51a53bd356c0b66bacbc269665fe96c23aea300e1f"
+    },
+    {
+      "path": "profiles/stillevo-ebike-intel.toml",
+      "bytes": 684,
+      "sha256": "01b671a137ec98324db90ba0ded32673c133bdd67608198f0c2379e61adfd19a"
     },
     {
       "path": "profiles/stillevo-fde.toml",
@@ -2210,11 +2295,6 @@
       "path": "benchmarks/editorial-learning/provenance/sources.jsonl",
       "bytes": 1942,
       "sha256": "da607c7e68ba20979dce5a261dc3d3d792866fe18ba14f5711fc5ff69b3a5595"
-    },
-    {
-      "path": "src/zuaef_agent/web/sse.py",
-      "bytes": 2275,
-      "sha256": "d45cf5569eb4f7063fc413ad8855163d1d7c1a02a3719c1060d61115ffc58f0a"
     }
   ]
 }
