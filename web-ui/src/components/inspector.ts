@@ -1,12 +1,23 @@
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import type { MessagePart, RunProjection, TimelineRow } from "../api";
+import type {
+  InspectionRequestFact,
+  InspectionTimelineFact,
+  InspectionToolFact,
+  MessagePart,
+  RunAnalysis,
+  RunInspection,
+  RunProjection,
+  TimelineRow,
+} from "../api";
 import {
   formatBytes,
   formatDateTime,
   formatDuration,
+  formatTokens,
   findRow,
   type InspectorTab,
+  type InspectorView,
 } from "../state";
 import "./status-badge";
 
@@ -19,8 +30,15 @@ const RAW_CAP = 20_000;
 @customElement("zuaef-inspector")
 export class ZuaefInspector extends LitElement {
   @property({ attribute: false }) projection: RunProjection | null = null;
+  @property({ attribute: false }) inspection: RunInspection | null = null;
+  @property() inspectorView: InspectorView = "run";
+  @property({ attribute: false }) analysis: RunAnalysis | null = null;
   @property() selectedEventId = "";
   @property() inspectorTab: InspectorTab = "summary";
+  @property() inspectionLoading = false;
+  @property() inspectionError = "";
+  @property() analysisLoading = false;
+  @property() analysisError = "";
 
   static styles = css`
     :host {
@@ -34,6 +52,31 @@ export class ZuaefInspector extends LitElement {
       display: flex;
       border-bottom: 1px solid var(--z-border);
       flex-shrink: 0;
+    }
+    .view-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--z-border);
+      background: var(--z-bg);
+      flex-shrink: 0;
+    }
+    .view-tabs button {
+      padding: var(--z-space-2) var(--z-space-3);
+      font-size: 12px;
+      color: var(--z-text-muted);
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid transparent;
+      margin-bottom: -1px;
+      cursor: pointer;
+    }
+    .view-tabs button:hover { color: var(--z-text); }
+    .view-tabs button:focus-visible {
+      outline: 1px dashed var(--z-accent);
+      outline-offset: -1px;
+    }
+    .view-tabs button[aria-selected="true"] {
+      color: var(--z-text);
+      border-bottom-color: var(--z-accent);
     }
     .tabs button {
       padding: var(--z-space-2) var(--z-space-3);
@@ -125,6 +168,56 @@ export class ZuaefInspector extends LitElement {
       margin: 2px 0;
     }
     .error-line { color: var(--z-danger); overflow-wrap: anywhere; }
+    .inspection-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--z-font-mono);
+      font-size: 11px;
+    }
+    .inspection-table th,
+    .inspection-table td {
+      border-bottom: 1px solid var(--z-divider);
+      padding: 5px 4px;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+    .inspection-table th {
+      color: var(--z-text-subtle);
+      font-weight: 500;
+    }
+    .inspection-table td.number,
+    .inspection-table th.number { text-align: right; }
+    .inspection-table td.unknown { color: var(--z-text-subtle); }
+    .inspection-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--z-text-muted);
+      font-family: var(--z-font-mono);
+      font-size: 11px;
+    }
+    .inspection-note {
+      color: var(--z-text-muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .analysis-action {
+      border: 1px solid var(--z-border);
+      border-radius: var(--z-radius);
+      padding: var(--z-space-2) var(--z-space-3);
+      color: var(--z-text);
+      background: var(--z-bg);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .analysis-action:hover:not(:disabled) { background: var(--z-surface-hover); }
+    .analysis-action:disabled { opacity: 0.55; cursor: default; }
+    .analysis-output {
+      max-height: none;
+      white-space: pre-wrap;
+      font-family: var(--z-font-mono);
+      line-height: 1.45;
+    }
   `;
 
   private get row(): TimelineRow | undefined {
@@ -151,13 +244,42 @@ export class ZuaefInspector extends LitElement {
     );
   }
 
+  private setView(view: InspectorView) {
+    this.dispatchEvent(
+      new CustomEvent("view-selected", {
+        detail: { view },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   render() {
+    const viewTabs = html`<div class="view-tabs" role="tablist" aria-label="Inspector view">
+      ${(["run", "inspection", "analysis"] as InspectorView[]).map(
+        (view) => html`<button
+          role="tab"
+          aria-selected=${view === this.inspectorView ? "true" : "false"}
+          @click=${() => this.setView(view)}
+        >
+          ${view === "run" ? "Run" : view === "inspection" ? "Inspection" : "Analysis"}
+        </button>`,
+      )}
+    </div>`;
+
+    if (this.inspectorView === "inspection") {
+      return html`${viewTabs}${this.renderInspection()}`;
+    }
+    if (this.inspectorView === "analysis") {
+      return html`${viewTabs}${this.renderAnalysis()}`;
+    }
+
     const tabs = this.availableTabs;
     const active: InspectorTab = tabs.includes(this.inspectorTab)
       ? this.inspectorTab
       : "summary";
     const row = this.row;
-    return html`
+    return html`${viewTabs}
       ${tabs.length > 1
         ? html`<div class="tabs" role="tablist">
             ${tabs.map(
@@ -175,6 +297,224 @@ export class ZuaefInspector extends LitElement {
         ${row ? this.renderEvent(active, row) : this.renderRunOverview()}
       </div>
     `;
+  }
+
+  // ---- deterministic run inspection ------------------------------------
+
+  private renderInspection() {
+    if (this.inspectionLoading) {
+      return html`<div class="scroll"><p class="inspection-note">Loading inspection…</p></div>`;
+    }
+    if (this.inspectionError) {
+      return html`<div class="scroll"><p class="error-line">${this.inspectionError}</p></div>`;
+    }
+    const inspection = this.inspection;
+    if (!inspection) {
+      return html`<div class="scroll"><p class="inspection-note">Select a run.</p></div>`;
+    }
+
+    const summary = inspection.summary;
+    return html`
+      <div class="scroll">
+        <h3>Inspection</h3>
+        <p class="inspection-note">
+          Deterministic facts from the current run projection. Model input/output content is excluded.
+        </p>
+        <dl>
+          <dt>Status</dt>
+          <dd><zuaef-status-badge .status=${summary.status ?? ""}></zuaef-status-badge></dd>
+          <dt>Run ID</dt>
+          <dd>${summary.run_id ?? "Unknown"}</dd>
+          <dt>Model</dt>
+          <dd class=${summary.model ? "" : "none"}>${summary.model ?? "Unknown"}</dd>
+          <dt>Profile</dt>
+          <dd class=${summary.profile ? "" : "none"}>${summary.profile ?? "Unknown"}</dd>
+          <dt>Duration</dt>
+          <dd class=${summary.duration_ms === null ? "none" : ""}>
+            ${summary.duration_ms === null ? "Unknown" : formatDuration(summary.duration_ms)}
+          </dd>
+          <dt>Requests</dt><dd>${this.knownNumber(summary.requests)}</dd>
+          <dt>Tool calls</dt><dd>${this.knownNumber(summary.tool_calls)}</dd>
+          <dt>Input tokens</dt><dd>${formatTokens(summary.input_tokens ?? undefined) || "Unknown"}</dd>
+          <dt>Output tokens</dt><dd>${formatTokens(summary.output_tokens ?? undefined) || "Unknown"}</dd>
+          <dt>Usage basis</dt><dd>${summary.usage_source ?? "Unknown"}</dd>
+        </dl>
+
+        ${this.renderRequestRanking("Slowest requests", inspection.rankings.slowest_requests)}
+        ${this.renderRequestRanking("Largest input", inspection.rankings.largest_input_requests)}
+        ${this.renderRequestRanking("Largest output", inspection.rankings.largest_output_requests)}
+        ${this.renderToolActivity(inspection.tool_activity)}
+        ${this.renderInspectionTimeline(
+          inspection.timeline,
+          inspection.bounds.chronology_omitted ?? 0,
+        )}
+        ${this.renderInspectionArtifacts(inspection)}
+        ${this.renderUnknownFacts(inspection)}
+      </div>
+    `;
+  }
+
+  private createAnalysis() {
+    this.dispatchEvent(
+      new CustomEvent("analysis-create", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  private renderAnalysis() {
+    if (this.analysisLoading && !this.analysis) {
+      return html`<div class="scroll"><p class="inspection-note">Starting analysis…</p></div>`;
+    }
+    if (this.analysisError && !this.analysis) {
+      return html`<div class="scroll">
+        <p class="error-line">${this.analysisError}</p>
+        <button class="analysis-action" @click=${() => this.createAnalysis()}>Retry analysis</button>
+      </div>`;
+    }
+    const analysis = this.analysis;
+    if (!analysis || analysis.state === "not_started") {
+      return html`<div class="scroll">
+        <h3>Run Analysis</h3>
+        <p class="inspection-note">
+          The Agent receives only bounded deterministic inspection facts. It does not browse, use a shell, or modify the subject run.
+        </p>
+        <button class="analysis-action" ?disabled=${this.analysisLoading} @click=${() => this.createAnalysis()}>
+          ${this.analysisLoading ? "Starting…" : "Create analysis.md"}
+        </button>
+      </div>`;
+    }
+    if (analysis.state === "running") {
+      return html`<div class="scroll">
+        <h3>Run Analysis</h3>
+        <p class="inspection-note">Analysis Agent is inspecting the subject run…</p>
+        <dl>
+          <dt>Analysis run</dt><dd>${analysis.analysis_run_id ?? "Unknown"}</dd>
+          <dt>Artifact</dt><dd>${analysis.artifact_path ?? "Unknown"}</dd>
+        </dl>
+      </div>`;
+    }
+    if (analysis.state === "failed") {
+      return html`<div class="scroll">
+        <h3>Run Analysis</h3>
+        <p class="error-line">${analysis.error ?? "Analysis run failed."}</p>
+        <dl>
+          <dt>Analysis run</dt><dd>${analysis.analysis_run_id ?? "Unknown"}</dd>
+          <dt>Artifact</dt><dd>${analysis.artifact_path ?? "Unknown"}</dd>
+        </dl>
+        <button class="analysis-action" @click=${() => this.createAnalysis()}>Retry analysis</button>
+      </div>`;
+    }
+    return html`<div class="scroll">
+      <h3>Run Analysis</h3>
+      <p class="inspection-note">
+        Semantic diagnosis is stored as a human/Agent work artifact. Runtime facts remain in Inspection.
+      </p>
+      <dl>
+        <dt>Analysis run</dt><dd>${analysis.analysis_run_id ?? "Unknown"}</dd>
+        <dt>Artifact</dt><dd>${analysis.artifact_path ?? "Unknown"}</dd>
+      </dl>
+      ${analysis.content
+        ? html`<pre class="analysis-output">${analysis.content}</pre>`
+        : html`<p class="inspection-note">analysis.md has no readable content.</p>`}
+    </div>`;
+  }
+
+  private renderRequestRanking(title: string, rows: InspectionRequestFact[]) {
+    return html`
+      <h4>${title}</h4>
+      ${rows.length === 0
+        ? html`<p class="inspection-note">No authoritative values available.</p>`
+        : html`<table class="inspection-table">
+            <thead><tr><th>Request</th><th class="number">Latency</th><th class="number">Input</th><th class="number">Output</th><th>Status</th></tr></thead>
+            <tbody>${rows.map((row) => html`<tr>
+              <td>${row.request}</td>
+              <td class="number ${row.latency_ms === null ? "unknown" : ""}">${this.durationValue(row.latency_ms)}</td>
+              <td class="number ${row.input_tokens === null ? "unknown" : ""}">${this.tokenValue(row.input_tokens)}</td>
+              <td class="number ${row.output_tokens === null ? "unknown" : ""}">${this.tokenValue(row.output_tokens)}</td>
+              <td>${row.status ?? "Unknown"}</td>
+            </tr>`)}</tbody>
+          </table>`}
+    `;
+  }
+
+  private renderToolActivity(rows: InspectionToolFact[]) {
+    return html`
+      <h4>Tool activity</h4>
+      ${rows.length === 0
+        ? html`<p class="inspection-note">No tool calls recorded.</p>`
+        : html`<table class="inspection-table">
+            <thead><tr><th>Tool</th><th class="number">Total</th><th>Contiguous groups</th></tr></thead>
+            <tbody>${rows.map((row) => html`<tr>
+              <td>${row.tool}</td>
+              <td class="number">${row.total}</td>
+              <td>${row.contiguous_groups.join(", ") || "None"}</td>
+            </tr>`)}</tbody>
+          </table>`}
+    `;
+  }
+
+  private renderInspectionTimeline(rows: InspectionTimelineFact[], omitted: number) {
+    return html`
+      <h4>Observed sequence</h4>
+      ${rows.length === 0
+        ? html`<p class="inspection-note">No bounded timeline facts available.</p>`
+        : html`<table class="inspection-table">
+            <thead><tr><th>Step</th><th>Kind</th><th>Title</th><th>Duration</th><th>Status</th></tr></thead>
+            <tbody>${rows.map((row) => html`<tr>
+              <td>${row.step ?? "?"}</td>
+              <td>${row.kind ?? "Unknown"}</td>
+              <td>${row.title ?? "Unknown"}</td>
+              <td>${this.durationValue(row.duration_ms)}</td>
+              <td>${row.status ?? "Unknown"}</td>
+            </tr>`)}</tbody>
+          </table>`}
+      ${omitted > 0
+        ? html`<p class="inspection-note">${omitted.toLocaleString()} chronology row(s) omitted by the bounded view.</p>`
+        : nothing}
+    `;
+  }
+
+  private renderInspectionArtifacts(inspection: RunInspection) {
+    return html`
+      <h4>Artifacts</h4>
+      ${inspection.artifacts.length === 0
+        ? html`<p class="inspection-note">No artifact facts recorded.</p>`
+        : html`<ul class="inspection-list">${inspection.artifacts.map((artifact) => html`<li>
+            ${artifact.path}${artifact.size !== null ? ` — ${formatBytes(artifact.size)}` : ""}
+            ${artifact.change ? ` (${artifact.change})` : ""}
+          </li>`)}</ul>`}
+    `;
+  }
+
+  private renderUnknownFacts(inspection: RunInspection) {
+    const unknown = inspection.unknown_facts;
+    const unresolved = [...unknown.incomplete_requests, ...unknown.unresolved_tool_calls, ...unknown.started_tool_calls];
+    const hasUnknown = unresolved.length > 0 || unknown.unavailable_usage.length > 0 || unknown.diagnostics.length > 0;
+    if (!hasUnknown) return nothing;
+    return html`
+      <h4>Unknown facts</h4>
+      ${unknown.unavailable_usage.length > 0
+        ? html`<p class="inspection-note">Unavailable: ${unknown.unavailable_usage.join(", ")}</p>`
+        : nothing}
+      ${unresolved.length > 0
+        ? html`<pre>${JSON.stringify(unresolved, null, 2)}</pre>`
+        : nothing}
+      ${unknown.diagnostics.map((diagnostic) => html`<p class="diag">${diagnostic}</p>`)}
+    `;
+  }
+
+  private knownNumber(value: number | null): string {
+    return value === null ? "Unknown" : value.toLocaleString();
+  }
+
+  private durationValue(value: number | null): string {
+    return value === null ? "Unknown" : formatDuration(value);
+  }
+
+  private tokenValue(value: number | null): string {
+    return value === null ? "Unknown" : formatTokens(value);
   }
 
   // ---- event detail ----

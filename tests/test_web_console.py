@@ -26,6 +26,13 @@ from starlette.testclient import TestClient
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.web import readers, sse
 from zuaef_agent.web.api import api_routes
+from zuaef_agent.web.inspection import (
+    inspect_run,
+    inspect_run_segment,
+    render_run_json,
+    render_run_markdown,
+    render_run_segment_markdown,
+)
 from zuaef_agent.web.projector import RunFacts, project_run
 from zuaef_agent.web.readers import load_run_facts
 
@@ -126,6 +133,25 @@ def _snapshot(run_id: str, responses: int, requests: int) -> ContinuableSnapshot
                     timestamp=_stamp(30 + index),
                 )
             )
+    return ContinuableSnapshot(run_id=run_id, step_index=0, messages=messages)
+
+
+def _snapshot_with_usage(
+    run_id: str, usage: list[tuple[int, int]]
+) -> ContinuableSnapshot:
+    messages: list[ModelRequest | ModelResponse] = []
+    for index, (input_tokens, output_tokens) in enumerate(usage):
+        messages.append(ModelRequest(parts=[UserPromptPart(content=f"q{index}")]))
+        messages.append(
+            ModelResponse(
+                parts=[TextPart(f"a{index}")],
+                usage=RunUsage(
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                ),
+                timestamp=_stamp(30 + index),
+            )
+        )
     return ContinuableSnapshot(run_id=run_id, step_index=0, messages=messages)
 
 
@@ -356,6 +382,305 @@ def test_aggregate_usage_never_distributed_to_requests(tmp_path: Path) -> None:
     assert projection["usage"]["source"] == "receipt_aggregate"
     assert projection["usage"]["input_tokens"] == 900
     assert projection["usage"]["requests"] == 2
+
+
+# --- deterministic run inspection ------------------------------------------
+
+
+def test_inspection_completed_summary_and_artifact_facts(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-inspection", COMPLETED_RUN)
+    _write_receipt(
+        settings,
+        "r-inspection",
+        _terminal_receipt(
+            "r-inspection",
+            artifact_facts=[
+                {
+                    "path": "artifacts/final.md",
+                    "size": 42,
+                    "sha256": "a" * 64,
+                    "change": "created",
+                }
+            ],
+        ),
+    )
+    markdown = render_run_markdown("r-inspection", settings=settings)
+    data = render_run_json("r-inspection", settings=settings)
+
+    assert "# Run r-inspection" in markdown
+    assert "Status: completed" in markdown
+    assert "Requests: 1" in markdown
+    assert "Tool calls: 1" in markdown
+    assert "Input tokens: 500" in markdown
+    assert data["summary"]["wall_clock_ms"] == 60_000
+    assert data["artifacts"][0]["path"] == "artifacts/final.md"
+    assert data["artifacts"][0]["size"] == 42
+
+
+def test_inspection_rankings_and_contiguous_tools_are_mechanical(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    specs = [
+        ("run_started", 0, None, None),
+        ("model_request_started", 1, None, None),
+        ("tool_call_started", 2, "read-1", "read_material"),
+        ("tool_call_completed", 2, "read-1", "read_material"),
+        ("tool_call_started", 3, "read-2", "read_material"),
+        ("tool_call_completed", 3, "read-2", "read_material"),
+        ("model_request_completed", 1, None, None),
+        ("model_request_started", 4, None, None),
+        ("tool_call_started", 5, "claim-1", "check_claim"),
+        ("tool_call_completed", 5, "claim-1", "check_claim"),
+        ("model_request_completed", 4, None, None),
+        ("model_request_started", 6, None, None),
+        ("model_request_completed", 6, None, None),
+        ("run_completed", 7, None, None),
+    ]
+    _seed_sync(tmp_path, settings, "r-ranking", specs)
+    asyncio.run(
+        _save_snapshot(
+            settings,
+            _snapshot_with_usage(
+                "r-ranking", [(100, 10), (200, 30), (300, 20)]
+            ),
+        )
+    )
+    _write_receipt(settings, "r-ranking", _terminal_receipt("r-ranking"))
+
+    data = render_run_json("r-ranking", settings=settings)
+    rankings = data["rankings"]
+    assert [row["request"] for row in rankings["slowest_requests"][:3]] == [
+        "model-request-0",
+        "model-request-1",
+        "model-request-2",
+    ]
+    assert [row["request"] for row in rankings["largest_input_requests"][:3]] == [
+        "model-request-2",
+        "model-request-1",
+        "model-request-0",
+    ]
+    assert [row["request"] for row in rankings["largest_output_requests"][:3]] == [
+        "model-request-1",
+        "model-request-2",
+        "model-request-0",
+    ]
+    tools = {item["tool"]: item for item in data["tool_activity"]}
+    assert tools["read_material"] == {
+        "tool": "read_material",
+        "total": 2,
+        "contiguous_groups": [2],
+    }
+    assert tools["check_claim"]["total"] == 1
+
+
+def test_inspection_unknown_usage_is_not_distributed(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(
+        tmp_path,
+        settings,
+        "r-partial-inspection",
+        [
+            ("run_started", 0, None, None),
+            ("model_request_started", 1, None, None),
+            ("model_request_completed", 1, None, None),
+            ("model_request_started", 2, None, None),
+            ("model_request_completed", 2, None, None),
+            ("run_completed", 3, None, None),
+        ],
+    )
+    asyncio.run(
+        _save_snapshot(
+            settings,
+            _snapshot("r-partial-inspection", responses=1, requests=2),
+        )
+    )
+    _write_receipt(
+        settings,
+        "r-partial-inspection",
+        _terminal_receipt(
+            "r-partial-inspection", usage={"input_tokens": 900, "output_tokens": 90}
+        ),
+    )
+    data = render_run_json("r-partial-inspection", settings=settings)
+    assert data["summary"]["input_tokens"] == 900
+    assert data["summary"]["output_tokens"] == 90
+    assert data["summary"]["usage_source"] == "receipt_aggregate"
+    assert data["rankings"]["largest_input_requests"] == []
+    assert data["rankings"]["largest_output_requests"] == []
+    assert "per-request input tokens" in data["unknown_facts"]["unavailable_usage"]
+    assert "per-request output tokens" in data["unknown_facts"]["unavailable_usage"]
+    markdown = render_run_markdown("r-partial-inspection", settings=settings)
+    assert markdown.count("Unavailable: no authoritative per-request input usage.") == 1
+    assert markdown.count("Unavailable: no authoritative per-request output usage.") == 1
+    assert "| model-request-0 | 1.000s | Unknown | Unknown | completed |" in markdown
+
+
+def test_inspection_incomplete_request_is_not_running(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(
+        tmp_path,
+        settings,
+        "r-incomplete-inspection",
+        [
+            ("run_started", 0, None, None),
+            ("model_request_started", 1, None, None),
+        ],
+    )
+    data = render_run_json("r-incomplete-inspection", settings=settings)
+    assert data["summary"]["status"] == "incomplete"
+    assert data["unknown_facts"]["incomplete_requests"] == [
+        {"request": "model-request-0", "step": 1}
+    ]
+    assert "running" not in render_run_markdown(
+        "r-incomplete-inspection", settings=settings
+    ).lower()
+
+
+def test_inspection_unresolved_tool_is_preserved(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(
+        tmp_path,
+        settings,
+        "r-unresolved-inspection",
+        [
+            ("run_started", 0, None, None),
+            ("tool_call_started", 1, "tc-x", "external_write"),
+        ],
+    )
+    _write_receipt(
+        settings,
+        "r-unresolved-inspection",
+        {
+            "schema_version": "2.0",
+            "state": "paused",
+            "run_id": "r-unresolved-inspection",
+            "conversation_id": "c1",
+            "model": "test-model",
+            "started_at": T0.isoformat(),
+            "finished_at": (T0 + timedelta(seconds=5)).isoformat(),
+            "pending_approvals": [],
+            "pending_calls": [],
+        },
+    )
+    data = render_run_json("r-unresolved-inspection", settings=settings)
+    assert data["summary"]["status"] == "paused"
+    assert data["unknown_facts"]["unresolved_tool_calls"] == [
+        {
+            "tool_call": "tool-call-0",
+            "tool": "external_write",
+            "step": 1,
+        }
+    ]
+
+
+def test_inspection_large_run_has_bounded_chronology_and_markdown(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    specs: list[tuple[str, int, str | None, str | None]] = [("run_started", 0, None, None)]
+    for index in range(100):
+        step = index + 1
+        specs.extend(
+            [
+                ("model_request_started", step, None, None),
+                ("model_request_completed", step, None, None),
+            ]
+        )
+    specs.append(("run_completed", 101, None, None))
+    _seed_sync(tmp_path, settings, "r-large-inspection", specs)
+    _write_receipt(settings, "r-large-inspection", _terminal_receipt("r-large-inspection"))
+
+    data = render_run_json(
+        "r-large-inspection", settings=settings, chronology_limit=5
+    )
+    markdown = render_run_markdown(
+        "r-large-inspection", settings=settings, chronology_limit=5
+    )
+    assert len(data["timeline"]) == 5
+    assert data["bounds"]["chronology_omitted"] > 0
+    assert len(markdown) <= 12_000
+    assert "chronology rows omitted" in markdown
+
+
+def test_inspection_json_and_markdown_share_projection_facts_without_content(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-interoperable", COMPLETED_RUN)
+    asyncio.run(
+        _save_snapshot(
+            settings,
+            _snapshot("r-interoperable", responses=1, requests=1),
+        )
+    )
+    _write_receipt(settings, "r-interoperable", _terminal_receipt("r-interoperable"))
+    projection = project_run(_load(settings, "r-interoperable"))
+    direct = inspect_run(projection)
+    json_data = render_run_json("r-interoperable", settings=settings)
+    markdown = render_run_markdown("r-interoperable", settings=settings)
+
+    assert json_data == direct
+    assert f"Requests: {json_data['summary']['requests']}" in markdown
+    assert f"Tool calls: {json_data['summary']['tool_calls']}" in markdown
+    assert [
+        row["request"] for row in json_data["rankings"]["slowest_requests"]
+    ] == [row["request"] for row in direct["rankings"]["slowest_requests"]]
+    serialized = json.dumps(json_data)
+    assert "q0" not in serialized
+    assert "a0" not in serialized
+    assert "q0" not in markdown
+    assert "a0" not in markdown
+
+
+def test_inspection_segment_is_step_bounded_and_content_free(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-segment", COMPLETED_RUN)
+    projection = project_run(_load(settings, "r-segment"))
+    segment = inspect_run_segment(projection, 1, 2)
+
+    assert segment["scope"] == {"start_step": 1, "end_step": 2}
+    assert segment["timeline"]
+    assert all(
+        row["step"] is not None and 1 <= row["step"] <= 2
+        for row in segment["timeline"]
+    )
+    assert all("payload" not in row for row in segment["timeline"])
+
+
+def test_inspection_segment_markdown_keeps_scope_and_content_gap(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-segment-md", COMPLETED_RUN)
+    markdown = render_run_segment_markdown(
+        "r-segment-md", 1, 2, settings=settings
+    )
+    assert "## Scope" in markdown
+    assert "Steps: 1–2" in markdown
+    assert "Content: unavailable" in markdown
+    assert "q0" not in markdown
+
+
+def test_inspection_legacy_receipt_keeps_events_and_diagnostics(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-legacy-inspection", COMPLETED_RUN)
+    _write_receipt(
+        settings,
+        "r-legacy-inspection",
+        {"schema_version": "1.1", "state": "terminal", "run_id": "r-legacy-inspection"},
+    )
+    data = render_run_json("r-legacy-inspection", settings=settings)
+    markdown = render_run_markdown("r-legacy-inspection", settings=settings)
+    assert data["summary"]["status"] == "completed"
+    assert data["summary"]["requests"] == 1
+    assert data["summary"]["tool_calls"] == 1
+    assert any(
+        "receipt_unavailable" in diagnostic
+        for diagnostic in data["unknown_facts"]["diagnostics"]
+    )
+    assert "receipt_unavailable" in markdown
 
 
 # --- API surface (read-only) --------------------------------------------------

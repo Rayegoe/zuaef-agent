@@ -3,15 +3,18 @@
 import type { RunView, TimelineRow } from "./api";
 
 export type InspectorTab = "summary" | "io" | "usage" | "raw";
+export type InspectorView = "run" | "inspection" | "analysis";
 
 export interface UiState {
   selectedRunId?: string;
   selectedEventId?: string;
+  inspectorView: InspectorView;
   inspectorTab: InspectorTab;
   runFilter?: string;
 }
 
 export const initialUiState: UiState = {
+  inspectorView: "run",
   inspectorTab: "summary",
 };
 

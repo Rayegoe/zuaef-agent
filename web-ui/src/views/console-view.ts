@@ -1,7 +1,19 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { api, type RunListPage, type RunProjection, type RunView } from "../api";
-import { initialUiState, type InspectorTab, type UiState } from "../state";
+import {
+  api,
+  type RunAnalysis,
+  type RunInspection,
+  type RunListPage,
+  type RunProjection,
+  type RunView,
+} from "../api";
+import {
+  initialUiState,
+  type InspectorTab,
+  type InspectorView,
+  type UiState,
+} from "../state";
 import "../components/artifact-bar";
 import "../components/inspector";
 import "../components/run-list";
@@ -25,6 +37,12 @@ export class ZuaefConsole extends LitElement {
   @state() private projection: RunProjection | null = null;
   @state() private projectionLoading = false;
   @state() private projectionError = "";
+  @state() private inspection: RunInspection | null = null;
+  @state() private inspectionLoading = false;
+  @state() private inspectionError = "";
+  @state() private analysis: RunAnalysis | null = null;
+  @state() private analysisLoading = false;
+  @state() private analysisError = "";
 
   @state() private live = true;
   /** SSE endpoint unreachable/errored — degrade to manual Refresh once. */
@@ -33,6 +51,7 @@ export class ZuaefConsole extends LitElement {
   private es: EventSource | null = null;
   private esRunId: string | undefined = undefined;
   private invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+  private analysisPollTimer: ReturnType<typeof setTimeout> | null = null;
   private listRequestGeneration = 0;
   private projectionRequestGeneration = 0;
 
@@ -109,6 +128,7 @@ export class ZuaefConsole extends LitElement {
     super.disconnectedCallback();
     this.closeStream();
     if (this.invalidateTimer !== null) clearTimeout(this.invalidateTimer);
+    if (this.analysisPollTimer !== null) clearTimeout(this.analysisPollTimer);
   }
 
   protected willUpdate(changed: Map<string, unknown>) {
@@ -168,6 +188,12 @@ export class ZuaefConsole extends LitElement {
         return;
       }
       void this.reloadProjection(runId);
+      if (this.ui.inspectorView === "inspection") {
+        void this.reloadInspection(runId);
+      }
+      if (this.ui.inspectorView === "analysis") {
+        void this.reloadAnalysis(runId);
+      }
       void this.reloadRuns();
     }, 150);
   }
@@ -242,6 +268,79 @@ export class ZuaefConsole extends LitElement {
     }
   }
 
+  private async reloadInspection(runId: string): Promise<void> {
+    this.inspectionLoading = true;
+    this.inspectionError = "";
+    try {
+      const inspection = await api.getRunInspection(runId);
+      if (this.ui.selectedRunId !== runId || this.ui.inspectorView !== "inspection") {
+        return;
+      }
+      this.inspection = inspection;
+    } catch (error) {
+      if (this.ui.selectedRunId !== runId || this.ui.inspectorView !== "inspection") {
+        return;
+      }
+      this.inspection = null;
+      this.inspectionError = `Failed to load inspection: ${messageOf(error)}`;
+    } finally {
+      if (this.ui.selectedRunId === runId && this.ui.inspectorView === "inspection") {
+        this.inspectionLoading = false;
+      }
+    }
+  }
+
+  private async reloadAnalysis(runId: string): Promise<void> {
+    if (this.analysisPollTimer !== null) {
+      clearTimeout(this.analysisPollTimer);
+      this.analysisPollTimer = null;
+    }
+    this.analysisLoading = this.analysis === null;
+    this.analysisError = "";
+    try {
+      const analysis = await api.getRunAnalysis(runId);
+      if (this.ui.selectedRunId !== runId || this.ui.inspectorView !== "analysis") {
+        return;
+      }
+      this.analysis = analysis;
+      if (analysis.state === "running") {
+        this.analysisPollTimer = setTimeout(() => {
+          this.analysisPollTimer = null;
+          void this.reloadAnalysis(runId);
+        }, 750);
+      }
+    } catch (error) {
+      if (this.ui.selectedRunId !== runId || this.ui.inspectorView !== "analysis") {
+        return;
+      }
+      this.analysis = null;
+      this.analysisError = `Failed to load analysis: ${messageOf(error)}`;
+    } finally {
+      if (this.ui.selectedRunId === runId && this.ui.inspectorView === "analysis") {
+        this.analysisLoading = false;
+      }
+    }
+  }
+
+  private async createAnalysis(): Promise<void> {
+    const runId = this.ui.selectedRunId;
+    if (!runId) return;
+    this.analysisLoading = true;
+    this.analysisError = "";
+    try {
+      await api.createRunAnalysis(runId, {
+        selectedRowId: this.ui.selectedEventId ?? null,
+      });
+      await this.reloadAnalysis(runId);
+    } catch (error) {
+      if (this.ui.selectedRunId === runId) {
+        this.analysisError = `Failed to create analysis: ${messageOf(error)}`;
+      }
+    } finally {
+      if (this.ui.selectedRunId === runId) this.analysisLoading = false;
+    }
+  }
+
   private patchUi(patch: Partial<UiState>) {
     this.ui = { ...this.ui, ...patch };
   }
@@ -255,9 +354,25 @@ export class ZuaefConsole extends LitElement {
       void this.reloadProjection(runId);
       return;
     }
+    this.inspection = null;
+    this.inspectionError = "";
+    this.analysis = null;
+    this.analysisError = "";
+    if (this.analysisPollTimer !== null) clearTimeout(this.analysisPollTimer);
     this.patchUi({ selectedRunId: runId, selectedEventId: undefined });
     this.syncStream();
     void this.reloadProjection(runId);
+  }
+
+  private selectInspectorView(view: InspectorView) {
+    if (view === this.ui.inspectorView) return;
+    this.patchUi({ inspectorView: view });
+    if (view === "inspection" && this.ui.selectedRunId) {
+      void this.reloadInspection(this.ui.selectedRunId);
+    }
+    if (view === "analysis" && this.ui.selectedRunId) {
+      void this.reloadAnalysis(this.ui.selectedRunId);
+    }
   }
 
   render() {
@@ -322,10 +437,20 @@ export class ZuaefConsole extends LitElement {
 
         <zuaef-inspector
           .projection=${this.projection}
+          .inspection=${this.inspection}
+          .inspectionLoading=${this.inspectionLoading}
+          .inspectionError=${this.inspectionError}
+          .analysis=${this.analysis}
+          .analysisLoading=${this.analysisLoading}
+          .analysisError=${this.analysisError}
+          .inspectorView=${this.ui.inspectorView}
           .selectedEventId=${this.ui.selectedEventId ?? ""}
           .inspectorTab=${this.ui.inspectorTab}
+          @view-selected=${(e: CustomEvent<{ view: InspectorView }>) =>
+            this.selectInspectorView(e.detail.view)}
           @tab-selected=${(e: CustomEvent<{ tab: InspectorTab }>) =>
             this.patchUi({ inspectorTab: e.detail.tab })}
+          @analysis-create=${() => void this.createAnalysis()}
         ></zuaef-inspector>
       </div>
       <zuaef-artifact-bar
@@ -344,6 +469,12 @@ export class ZuaefConsole extends LitElement {
     await this.reloadRuns();
     if (selectedRunId && this.ui.selectedRunId === selectedRunId) {
       await this.reloadProjection(selectedRunId);
+      if (this.ui.inspectorView === "inspection") {
+        await this.reloadInspection(selectedRunId);
+      }
+      if (this.ui.inspectorView === "analysis") {
+        await this.reloadAnalysis(selectedRunId);
+      }
     }
   }
 }

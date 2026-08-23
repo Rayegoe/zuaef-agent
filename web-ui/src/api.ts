@@ -85,6 +85,75 @@ export interface RunListPage {
   next_cursor: string | null;
 }
 
+export interface InspectionRequestFact {
+  request: string;
+  step: number | null;
+  latency_ms: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  status: string | null;
+}
+
+export interface InspectionTimelineFact {
+  id: string;
+  step: number | null;
+  kind: string | null;
+  title: string | null;
+  status: string | null;
+  duration_ms: number | null;
+  usage: Record<string, number> | null;
+}
+
+export interface InspectionToolFact {
+  tool: string;
+  total: number;
+  contiguous_groups: number[];
+}
+
+export interface RunInspection {
+  run_id: string | null;
+  summary: {
+    run_id: string | null;
+    status: string | null;
+    started_at: string | null;
+    finished_at: string | null;
+    wall_clock_ms: number | null;
+    duration_ms: number | null;
+    model: string | null;
+    profile: string | null;
+    requests: number | null;
+    tool_calls: number | null;
+    input_tokens: number | null;
+    output_tokens: number | null;
+    usage_source: string | null;
+  };
+  rankings: {
+    slowest_requests: InspectionRequestFact[];
+    largest_input_requests: InspectionRequestFact[];
+    largest_output_requests: InspectionRequestFact[];
+  };
+  tool_activity: InspectionToolFact[];
+  timeline: InspectionTimelineFact[];
+  artifacts: ArtifactFact[];
+  unknown_facts: {
+    incomplete_requests: Record<string, unknown>[];
+    unresolved_tool_calls: Record<string, unknown>[];
+    started_tool_calls: Record<string, unknown>[];
+    unavailable_usage: string[];
+    diagnostics: string[];
+  };
+  bounds: Record<string, number>;
+}
+
+export interface RunAnalysis {
+  state: "not_started" | "running" | "completed" | "failed" | string;
+  subject_run_id: string;
+  analysis_run_id: string | null;
+  artifact_path: string | null;
+  content?: string | null;
+  error?: string | null;
+}
+
 export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
@@ -113,6 +182,27 @@ async function get<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+async function post<T>(url: string, body: Record<string, unknown>): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    let code = "INTERNAL_ERROR";
+    let message = `HTTP ${response.status}`;
+    try {
+      const payload = (await response.json()) as { error?: { code?: string; message?: string } };
+      if (payload.error?.code) code = payload.error.code;
+      if (payload.error?.message) message = payload.error.message;
+    } catch {
+      // non-JSON error body — keep the HTTP fallbacks
+    }
+    throw new ApiError(code, message, response.status);
+  }
+  return (await response.json()) as T;
+}
+
 const PAGE_LIMIT = 200;
 
 export const api = {
@@ -127,6 +217,28 @@ export const api = {
 
   getRun: (runId: string) =>
     get<RunProjection>(`/api/runs/${encodeURIComponent(runId)}`),
+
+  getRunInspection: (runId: string) =>
+    get<RunInspection>(`/api/runs/${encodeURIComponent(runId)}/inspection`),
+
+  getRunAnalysis: (runId: string) =>
+    get<RunAnalysis>(`/api/runs/${encodeURIComponent(runId)}/analysis`),
+
+  createRunAnalysis: (
+    runId: string,
+    options: { selectedRowId?: string | null; intent?: string } = {},
+  ) =>
+    post<{
+      accepted: boolean;
+      subject_run_id: string;
+      analysis_run_id: string;
+      artifact_path: string;
+    }>(`/api/runs/${encodeURIComponent(runId)}/analysis`, {
+      scope: "full",
+      selected_row_id: options.selectedRowId ?? null,
+      intent: options.intent ?? "Diagnose this run for the next smallest engineering experiment.",
+      agent: true,
+    }),
 
   /** SSE invalidation stream (T008C): thin run_changed frames only. */
   runEventsUrl: (runId: string) =>
