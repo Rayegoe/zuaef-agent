@@ -77,9 +77,9 @@ explicit; correlation is not causation.
 
 ## 4. Causal Hypothesis
 State one primary hypothesis and, only when necessary, one secondary
-hypothesis. Explicitly distinguish projected observations, interpretation,
-and unproved causal assumptions. Use uncertain language, identify what is not
-proved, and never upgrade a hypothesis to fact.
+hypothesis. Explicitly distinguish Observed, Supported inference, Hypothesis,
+and Unknown. Use uncertain language, identify what is not proved, and never
+upgrade a hypothesis to fact later in the report.
 
 ## 5. Smallest Next Experiment
 Propose exactly one discriminating experiment that can distinguish the
@@ -236,9 +236,21 @@ async def _subject_facts(
 def make_inspection_toolset(
     settings: AgentSettings,
     subject_run_id: str,
+    bound_facts: RunFacts | None = None,
 ) -> AbstractToolset[CoreDeps]:
     """Bind exactly two read-only inspection tools to one subject run."""
     subject_run_id = _safe_run_id(subject_run_id)
+    if bound_facts is not None and bound_facts.run_id != subject_run_id:
+        raise AnalysisError(
+            "RUN_ID_MISMATCH",
+            "bound inspection facts do not match the subject run",
+        )
+
+    async def inspection_facts() -> RunFacts:
+        if bound_facts is not None:
+            return bound_facts
+        return await _subject_facts(settings, subject_run_id)
+
     toolset: FunctionToolset[CoreDeps] = FunctionToolset(
         instructions=(
             "Run Inspection is read-only and is bound to the subject run "
@@ -253,7 +265,7 @@ def make_inspection_toolset(
         """Inspect the compact deterministic summary of the subject run."""
         del ctx
         try:
-            facts = await _subject_facts(settings, subject_run_id)
+            facts = await inspection_facts()
             rendered = render_projection_markdown(facts)
             if len(rendered) <= _MAX_PROJECTION_CHARS:
                 return rendered
@@ -302,7 +314,7 @@ def make_inspection_toolset(
                 ensure_ascii=False,
             )
         try:
-            facts = await _subject_facts(settings, subject_run_id)
+            facts = await inspection_facts()
             projection = render_projection_json(facts)
             if section not in projection:
                 return json.dumps(
@@ -380,9 +392,35 @@ def _analysis_prompt(
 def _extract_model_sections(presentation: str) -> dict[str, str]:
     sections: dict[str, list[str]] = {}
     current: str | None = None
-    for line in presentation.strip().splitlines():
-        if line.startswith("## "):
-            current = line if line in _MODEL_SECTION_HEADINGS else None
+    fence: tuple[str, int] | None = None
+    for line in presentation.splitlines():
+        indent = len(line) - len(line.lstrip(" "))
+        commonmark_line = line[indent:] if indent <= 3 else ""
+        marker_char = commonmark_line[:1]
+        marker_length = 0
+        if marker_char in {"`", "~"}:
+            marker_length = len(commonmark_line) - len(
+                commonmark_line.lstrip(marker_char)
+            )
+        if fence is not None:
+            if current is not None:
+                sections[current].append(line)
+            fence_char, opening_length = fence
+            if (
+                marker_char == fence_char
+                and marker_length >= opening_length
+                and not commonmark_line[marker_length:].strip()
+            ):
+                fence = None
+            continue
+        if marker_length >= 3:
+            if current is not None:
+                sections[current].append(line)
+            fence = (marker_char, marker_length)
+            continue
+        if commonmark_line.startswith("## "):
+            heading = commonmark_line
+            current = heading if heading in _MODEL_SECTION_HEADINGS else None
             if current is not None:
                 if current in sections:
                     raise AnalysisError(
@@ -420,19 +458,20 @@ def _nested_subject_run_id(facts: RunFacts) -> str | None:
                 continue
             content = getattr(part, "content", None)
             if not isinstance(content, str):
-                continue
+                return None
             lines = content.splitlines()
             first_line = lines[0] if lines else ""
             if not (
                 first_line.startswith(_ANALYSIS_PROMPT_PREFIX)
                 and first_line.endswith(_ANALYSIS_PROMPT_SUFFIX)
             ):
-                continue
+                return None
             nested = first_line[
                 len(_ANALYSIS_PROMPT_PREFIX) : -len(_ANALYSIS_PROMPT_SUFFIX)
             ]
             if nested and all(char in _VALID_RUN_ID_CHARS for char in nested):
                 return nested
+            return None
     return None
 
 
@@ -546,7 +585,11 @@ def _run_analysis(
             run_id=analysis_run_id,
             instructions=ANALYSIS_INSTRUCTIONS,
             extra_toolsets=[
-                make_inspection_toolset(effective_settings, subject_run_id)
+                make_inspection_toolset(
+                    effective_settings,
+                    subject_run_id,
+                    bound_facts=facts,
+                )
             ],
         )
         deps = CoreDeps(

@@ -10,7 +10,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .analysis_projector import render_projection_json_text, render_projection_markdown
+from ..models import PauseReceipt
+from .analysis_projector import (
+    render_projection_json,
+    render_projection_json_text,
+    render_projection_markdown,
+)
 from .projector import RunFacts, project_run
 
 _WORKSPACE_DIR = "analysis"
@@ -66,7 +71,7 @@ def export_projection(settings, facts: RunFacts) -> dict[str, Path]:
 
 def _observed_value(value: object) -> object:
     """Preserve projected values while making absence explicit."""
-    return "unknown" if value is None else value
+    return "unknown" if value is None or value == "" else value
 
 
 def render_observed_facts(facts: RunFacts) -> str:
@@ -77,11 +82,18 @@ def render_observed_facts(facts: RunFacts) -> str:
     identifiers.
     """
     projection = project_run(facts)
+    bounded_projection = render_projection_json(facts)
     run = projection["run"]
+    execution_state = (
+        "paused"
+        if isinstance(facts.receipt, PauseReceipt)
+        else getattr(facts.receipt, "execution_state", None)
+    )
     outgoing = [
         "## 2. Observed Facts",
         f"- Run ID: `{facts.run_id}`",
         f"- Status: {_observed_value(run.get('status'))}",
+        f"- Execution state: {_observed_value(execution_state)}",
         f"- Model: {_observed_value(run.get('model'))}",
         f"- Requests: {_observed_value(run.get('request_count'))}",
         f"- Tool calls: {_observed_value(run.get('tool_call_count'))}",
@@ -108,24 +120,31 @@ def render_observed_facts(facts: RunFacts) -> str:
     else:
         outgoing.append("  - unknown")
 
-    outgoing.append("- Tools:")
-    tools = [row for row in projection["timeline"] if row["kind"] == "tool_call"]
+    tools = bounded_projection["tool_sequence"]["sequence"]
+    tool_total = run["tool_call_count"]
+    tools_omitted = max(tool_total - len(tools), 0)
+    outgoing.append(
+        f"- Tools ({tool_total} total, {len(tools)} shown, "
+        f"{tools_omitted} omitted):"
+    )
     if tools:
         for row in tools:
-            events = row.get("payload", {}).get("events", ())
-            raw_names = [event.get("tool_name") for event in events]
-            tool_name = next((name for name in raw_names if name is not None), None)
             outgoing.append(
                 "  - "
-                f"`{_observed_value(tool_name)}` "
-                f"(step={_observed_value(row.get('step_index'))}, "
+                f"`{_observed_value(row.get('tool'))}` "
+                f"(step={_observed_value(row.get('step'))}, "
                 f"status={_observed_value(row.get('status'))})"
             )
     else:
-        outgoing.append("  - unknown")
+        outgoing.append("  - none")
 
-    outgoing.append("- Artifacts:")
-    artifacts = projection["artifacts"]
+    artifacts = bounded_projection["artifacts"]
+    artifact_total = len(projection["artifacts"])
+    artifacts_omitted = max(artifact_total - len(artifacts), 0)
+    outgoing.append(
+        f"- Artifacts ({artifact_total} total, {len(artifacts)} shown, "
+        f"{artifacts_omitted} omitted):"
+    )
     if artifacts:
         outgoing.extend(
             "  - "
@@ -135,7 +154,7 @@ def render_observed_facts(facts: RunFacts) -> str:
             for artifact in artifacts
         )
     else:
-        outgoing.append("  - unknown")
+        outgoing.append("  - none")
     return "\n".join(outgoing)
 
 
