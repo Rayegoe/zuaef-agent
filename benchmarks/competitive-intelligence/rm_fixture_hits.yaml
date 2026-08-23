@@ -1,0 +1,100 @@
+queries:
+  site:r-m.de/de/bikes Riese Müller Bikes Zubehör Deutschland:
+  - title: rm-official-product-index — seeded fixture hit
+    url: https://www.r-m.de/de/bikes/
+    snippet: 'Official official_product_index surface: discover current German product
+      surface'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-official-product-index — secondary hint
+    url: https://media.example.com/rm-official-product-index
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/bikes/charger5 Charger5 Riese Müller:
+  - title: rm-charger5 — seeded fixture hit
+    url: https://www.r-m.de/de/bikes/charger5/
+    snippet: 'Official official_product surface: current passenger family/configuration
+      page'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-charger5 — secondary hint
+    url: https://media.example.com/rm-charger5
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/bikes/nevo5 Nevo5 Riese Müller:
+  - title: rm-nevo5 — seeded fixture hit
+    url: https://www.r-m.de/de/bikes/nevo5/
+    snippet: 'Official official_product surface: current low-step passenger family'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-nevo5 — secondary hint
+    url: https://media.example.com/rm-nevo5
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/bikes/delite5 Delite5 Riese Müller:
+  - title: rm-delite5 — seeded fixture hit
+    url: https://www.r-m.de/de/bikes/delite5/
+    snippet: 'Official official_product surface: current full-suspension family'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-delite5 — secondary hint
+    url: https://media.example.com/rm-delite5
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/bikes/superdelite5 Superdelite5 Riese Müller:
+  - title: rm-superdelite5 — seeded fixture hit
+    url: https://www.r-m.de/de/bikes/superdelite5/
+    snippet: 'Official official_product surface: premium full-suspension family'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-superdelite5 — secondary hint
+    url: https://media.example.com/rm-superdelite5
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/bikes/load5-75 Load5 75 Riese Müller:
+  - title: rm-load5-75 — seeded fixture hit
+    url: https://www.r-m.de/de/bikes/load5-75/
+    snippet: 'Official official_product surface: cargo platform/configuration page'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-load5-75 — secondary hint
+    url: https://media.example.com/rm-load5-75
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/bikes/multitinker2 Multitinker2 Riese Müller:
+  - title: rm-multitinker2 — seeded fixture hit
+    url: https://www.r-m.de/de/bikes/multitinker2/multitinker2-family/
+    snippet: 'Official official_product surface: compact cargo family'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-multitinker2 — secondary hint
+    url: https://media.example.com/rm-multitinker2
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/bikes/packster2-70-ct Packster2 70 CT Riese Müller:
+  - title: rm-packster2-70-ct — seeded fixture hit
+    url: https://www.r-m.de/de/bikes/packster2-70-ct/
+    snippet: 'Official official_product surface: family cargo architecture'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-packster2-70-ct — secondary hint
+    url: https://media.example.com/rm-packster2-70-ct
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de 2027 model year Riese Müller updates:
+  - title: rm-my2027 — seeded fixture hit
+    url: https://www.r-m.de/en-en/press/press-releases/riese-muller-updates-for-the-2027-model-year/
+    snippet: 'Official official_press surface: announced-next lifecycle evidence'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-my2027 — secondary hint
+    url: https://media.example.com/rm-my2027
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/presse Veya Riese Müller:
+  - title: rm-veya-release — seeded fixture hit
+    url: https://www.r-m.de/de/presse/pressemeldungen/das-neue-veya/
+    snippet: 'Official official_press surface: new-model announcement evidence'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-veya-release — secondary hint
+    url: https://media.example.com/rm-veya-release
+    snippet: Secondary summary (discovery hint only).
+  site:r-m.de/de/presse Cargo Bike Updates Carrie2 Load5 Multitinker2:
+  - title: rm-cargo-updates — seeded fixture hit
+    url: https://www.r-m.de/de/presse/pressemeldungen/cargo-bike-updates-bei-riese-muller-carrie2-load5-multicharger3-und-multitinker2/
+    snippet: 'Official official_press surface: cargo model-year transition evidence'
+    published_or_indexed_date: '2026-08-01'
+  - title: rm-cargo-updates — secondary hint
+    url: https://media.example.com/rm-cargo-updates
+    snippet: Secondary summary (discovery hint only).
+  site:ziv-zweirad.de Market Data Bicycle Industry 2025 PDF:
+  - title: ziv-market-pdf — seeded fixture hit
+    url: https://www.ziv-zweirad.de/wp-content/uploads/2026/03/Market-Data-Bicycle-Industry-2025.pdf
+    snippet: 'Official industry_pdf surface: German market context and PDF extraction
+      proof'
+    published_or_indexed_date: '2026-08-01'
+  - title: ziv-market-pdf — secondary hint
+    url: https://media.example.com/ziv-market-pdf
+    snippet: Secondary summary (discovery hint only).

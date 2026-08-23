@@ -1,0 +1,84 @@
+cases:
+  - id: rm-official-product-index
+    target_url: "https://www.r-m.de/de/bikes/"
+    search_queries: ["site:r-m.de/de/bikes Riese Müller Bikes Zubehör Deutschland"]
+    expected_source_class: official_product_index
+    must_contain_any: ["Bikes", "Riese", "Müller"]
+    decision_use: "discover current German product surface"
+
+  - id: rm-charger5
+    target_url: "https://www.r-m.de/de/bikes/charger5/"
+    search_queries: ["site:r-m.de/de/bikes/charger5 Charger5 Riese Müller"]
+    expected_source_class: official_product
+    must_contain_all: ["Charger5"]
+    decision_use: "current passenger family/configuration page"
+
+  - id: rm-nevo5
+    target_url: "https://www.r-m.de/de/bikes/nevo5/"
+    search_queries: ["site:r-m.de/de/bikes/nevo5 Nevo5 Riese Müller"]
+    expected_source_class: official_product
+    must_contain_all: ["Nevo5"]
+    decision_use: "current low-step passenger family"
+
+  - id: rm-delite5
+    target_url: "https://www.r-m.de/de/bikes/delite5/"
+    search_queries: ["site:r-m.de/de/bikes/delite5 Delite5 Riese Müller"]
+    expected_source_class: official_product
+    must_contain_all: ["Delite5"]
+    decision_use: "current full-suspension family"
+
+  - id: rm-superdelite5
+    target_url: "https://www.r-m.de/de/bikes/superdelite5/"
+    search_queries: ["site:r-m.de/de/bikes/superdelite5 Superdelite5 Riese Müller"]
+    expected_source_class: official_product
+    must_contain_all: ["Superdelite5"]
+    decision_use: "premium full-suspension family"
+
+  - id: rm-load5-75
+    target_url: "https://www.r-m.de/de/bikes/load5-75/"
+    search_queries: ["site:r-m.de/de/bikes/load5-75 Load5 75 Riese Müller"]
+    expected_source_class: official_product
+    must_contain_any: ["Load5", "75"]
+    decision_use: "cargo platform/configuration page"
+
+  - id: rm-multitinker2
+    target_url: "https://www.r-m.de/de/bikes/multitinker2/multitinker2-family/"
+    search_queries: ["site:r-m.de/de/bikes/multitinker2 Multitinker2 Riese Müller"]
+    expected_source_class: official_product
+    must_contain_all: ["Multitinker2"]
+    decision_use: "compact cargo family"
+
+  - id: rm-packster2-70-ct
+    target_url: "https://www.r-m.de/de/bikes/packster2-70-ct/"
+    search_queries: ["site:r-m.de/de/bikes/packster2-70-ct Packster2 70 CT Riese Müller"]
+    expected_source_class: official_product
+    must_contain_any: ["Packster2", "70"]
+    decision_use: "family cargo architecture"
+
+  - id: rm-my2027
+    target_url: "https://www.r-m.de/en-en/press/press-releases/riese-muller-updates-for-the-2027-model-year/"
+    search_queries: ["site:r-m.de 2027 model year Riese Müller updates"]
+    expected_source_class: official_press
+    must_contain_any: ["2027", "model year"]
+    decision_use: "announced-next lifecycle evidence"
+
+  - id: rm-veya-release
+    target_url: "https://www.r-m.de/de/presse/pressemeldungen/das-neue-veya/"
+    search_queries: ["site:r-m.de/de/presse Veya Riese Müller"]
+    expected_source_class: official_press
+    must_contain_all: ["Veya"]
+    decision_use: "new-model announcement evidence"
+
+  - id: rm-cargo-updates
+    target_url: "https://www.r-m.de/de/presse/pressemeldungen/cargo-bike-updates-bei-riese-muller-carrie2-load5-multicharger3-und-multitinker2/"
+    search_queries: ["site:r-m.de/de/presse Cargo Bike Updates Carrie2 Load5 Multitinker2"]
+    expected_source_class: official_press
+    must_contain_any: ["Carrie2", "Load5", "Multitinker2"]
+    decision_use: "cargo model-year transition evidence"
+
+  - id: ziv-market-pdf
+    target_url: "https://www.ziv-zweirad.de/wp-content/uploads/2026/03/Market-Data-Bicycle-Industry-2025.pdf"
+    search_queries: ["site:ziv-zweirad.de Market Data Bicycle Industry 2025 PDF"]
+    expected_source_class: industry_pdf
+    must_contain_any: ["2025", "E-Bike", "E-bike"]
+    decision_use: "German market context and PDF extraction proof"
