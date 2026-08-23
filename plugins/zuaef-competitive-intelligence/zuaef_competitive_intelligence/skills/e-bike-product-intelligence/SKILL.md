@@ -98,6 +98,15 @@ When credible sources disagree, preserve both, test market/model-year/configurat
 
 Use `catalog.csv` as a flexible working map. Recommended columns are optional. The matrix supports reasoning; it does not dictate the report.
 
+## Persistence checkpoint — mandatory
+
+A run that never saves produces no business artifact. Persist early and keep the working map on disk:
+
+- As soon as evidence for roughly five product families is on the table (or earlier, at the first moment a provisional map exists), save the provisional `catalog.csv` and `evidence.md` with `save_work_product`, even if rows are partial.
+- Mark fields not yet confirmed with `UNKNOWN` (lifecycle labels too). UNKNOWN entries are explicit unknowns, not failures; they do not require approval and must not block a save.
+- Continue acquisition from the saved map: every later save replaces the previous version and adds only what changed. Between saves, record evidence URLs so no read is ever stranded in a working buffer.
+- Never defer the first save to "final synthesis": synthesis is the last phase, but the first persistence checkpoint is a phase boundary that happens long before it.
+
 ## Stop rule
 
 Stop searching a fact when authoritative evidence is sufficient for the decision, or current evidence cannot resolve it and another search is unlikely to change that. UNKNOWN is better than repetitive inspection.
