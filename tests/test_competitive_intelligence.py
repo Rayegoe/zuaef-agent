@@ -349,11 +349,14 @@ def test_fetch_rejects_private_redirect_target(monkeypatch: pytest.MonkeyPatch) 
         max_preview_chars=100,
         client_factory=_mock_client(handler),
     )
-    with pytest.raises(SourceToolError) as exc_info:
+    payload = json.loads(
         asyncio.run(
-        _tool_map(toolset)["read_source"].call_func({"url": "https://example.com/redirect"}, _tool_ctx())
+            _tool_map(toolset)["read_source"].call_func(
+                {"url": "https://example.com/redirect"}, _tool_ctx()
+            )
         )
-    assert exc_info.value.code == "URL_UNSAFE"
+    )
+    assert payload["error"]["code"] == "URL_UNSAFE"
 
 
 def test_fetch_byte_cap(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -373,11 +376,14 @@ def test_fetch_byte_cap(monkeypatch: pytest.MonkeyPatch) -> None:
         max_preview_chars=100,
         client_factory=_mock_client(handler),
     )
-    with pytest.raises(SourceToolError) as exc_info:
+    payload = json.loads(
         asyncio.run(
-        _tool_map(toolset)["read_source"].call_func({"url": "https://example.com/big"}, _tool_ctx())
+            _tool_map(toolset)["read_source"].call_func(
+                {"url": "https://example.com/big"}, _tool_ctx()
+            )
         )
-    assert exc_info.value.code == "DOWNLOAD_TOO_LARGE"
+    )
+    assert payload["error"]["code"] == "DOWNLOAD_TOO_LARGE"
 
 
 def test_fetch_unsupported_content_type(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -395,11 +401,14 @@ def test_fetch_unsupported_content_type(monkeypatch: pytest.MonkeyPatch) -> None
         max_preview_chars=100,
         client_factory=_mock_client(handler),
     )
-    with pytest.raises(SourceToolError) as exc_info:
+    payload = json.loads(
         asyncio.run(
-        _tool_map(toolset)["read_source"].call_func({"url": "https://example.com/weird"}, _tool_ctx())
+            _tool_map(toolset)["read_source"].call_func(
+                {"url": "https://example.com/weird"}, _tool_ctx()
+            )
         )
-    assert exc_info.value.code == "UNSUPPORTED_CONTENT"
+    )
+    assert payload["error"]["code"] == "UNSUPPORTED_CONTENT"
 
 
 def test_empty_parse_is_failure_not_evidence(
@@ -419,13 +428,14 @@ def test_empty_parse_is_failure_not_evidence(
         max_preview_chars=100,
         client_factory=_mock_client(handler),
     )
-    with pytest.raises(SourceToolError) as exc_info:
+    payload = json.loads(
         asyncio.run(
             _tool_map(toolset)["read_source"].call_func(
                 {"url": "https://example.com/empty"}, _tool_ctx()
             )
         )
-    assert exc_info.value.code == "PARSE_EMPTY"
+    )
+    assert payload["error"]["code"] == "PARSE_EMPTY"
 
 
 def test_search_empty_is_specific_failure() -> None:
@@ -436,13 +446,15 @@ def test_search_empty_is_specific_failure() -> None:
         max_preview_chars=100,
         client_factory=_mock_client(_html_handler),
     )
-    with pytest.raises(SourceToolError) as exc_info:
+    payload = json.loads(
         asyncio.run(
             _tool_map(toolset)["search_sources"].call_func(
                 {"query": "es gibt hier nichts"}, _tool_ctx()
             )
         )
-    assert exc_info.value.code == "SEARCH_EMPTY"
+    )
+    assert payload["error"]["code"] == "SEARCH_EMPTY"
+    assert payload["results"] == []
 
 
 def test_search_sources_bounded_limit() -> None:
@@ -508,11 +520,12 @@ def test_save_work_product_invalid_kind(tmp_path: Path) -> None:
     async def _scenario():
         toolset = make_work_product_toolset()
         ctx = _ctx(tmp_path)
-        with pytest.raises(WorkProductError) as exc_info:
+        payload = json.loads(
             await (await _tool_map_async(toolset))["save_work_product"].call_func(
                 {"kind": "manifest", "content": "x"}, ctx
             )
-        assert exc_info.value.code == "INVALID_KIND"
+        )
+        assert payload["error"]["code"] == "INVALID_KIND"
 
 
     asyncio.run(_scenario())
@@ -603,15 +616,14 @@ def test_download_asset_non_image_rejected(
         )
 
     toolset = make_work_product_toolset(client_factory=_mock_client(handler))
-    with pytest.raises(WorkProductError) as exc_info:
+    payload = json.loads(
         asyncio.run(
-            asyncio.run(
             _tool_map(toolset)["download_asset"].call_func(
                 {"url": "https://example.com/x", "name": "img"}, _ctx(tmp_path)
             )
-            )
         )
-    assert exc_info.value.code == "UNSUPPORTED_CONTENT"
+    )
+    assert payload["error"]["code"] == "UNSUPPORTED_CONTENT"
 
 
 # ── renderer + preview ──────────────────────────────────────────────────────
@@ -698,11 +710,12 @@ def test_render_report_missing_report(tmp_path: Path) -> None:
             model="test",
             prompt="p",
         )
-        with pytest.raises(ReportToolError) as exc_info:
+        payload = json.loads(
             await (await _tool_map_async(toolset))["render_report"].call_func(
                 {"style": "executive"}, ctx
             )
-        assert exc_info.value.code == "REPORT_MISSING"
+        )
+        assert payload["error"]["code"] == "REPORT_MISSING"
 
 
     asyncio.run(_scenario())

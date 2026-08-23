@@ -25,12 +25,19 @@ _CONTACT_COLS = 4
 
 
 class ReportToolError(RuntimeError):
-    """Model-visible tool failure with a stable machine code prefix."""
+    """Raised for programming errors only; tool-level failures return
+    structured JSON error results (repo convention)."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = message
+
+
+def _error_result(code: str, message: str) -> str:
+    return json.dumps(
+        {"error": {"code": code, "message": message}}, ensure_ascii=False
+    )
 
 
 def make_report_toolset() -> AbstractToolset[CoreDeps]:
@@ -61,7 +68,7 @@ def make_report_toolset() -> AbstractToolset[CoreDeps]:
         root = artifact_root(ctx.deps.workspace_root, ctx.deps.run_id)
         report_md = root / "report.md"
         if not report_md.is_file():
-            raise ReportToolError(
+            return _error_result(
                 "REPORT_MISSING",
                 f"no report.md in {root}; save it first with "
                 "save_work_product(kind='report', ...)",
@@ -74,12 +81,15 @@ def make_report_toolset() -> AbstractToolset[CoreDeps]:
                 base_dir=root,
             )
         except RenderError as exc:
-            raise ReportToolError(exc.code, exc.message) from exc
-        except Exception as exc:
-            raise ReportToolError(
+            return _error_result(exc.code, exc.message)
+        # Renderer boundary: any renderer-family failure becomes a specific
+        # JSON error result so the run survives (precedent: runtime receipt
+        # boundary uses the same wide catch with noqa: BLE001).
+        except Exception as exc:  # noqa: BLE001 — renderer boundary failures
+            return _error_result(
                 "RENDER_FAILED",
                 f"render failed for {report_md!s}: {type(exc).__name__}: {exc}",
-            ) from exc
+            )
         return json.dumps(
             {
                 "report.pdf": str((root / "report.pdf").relative_to(ctx.deps.workspace_root)),
@@ -107,7 +117,7 @@ def make_report_toolset() -> AbstractToolset[CoreDeps]:
         root = artifact_root(ctx.deps.workspace_root, ctx.deps.run_id)
         pdf_path = root / "report.pdf"
         if not pdf_path.is_file():
-            raise ReportToolError(
+            return _error_result(
                 "PDF_MISSING", "no report.pdf yet; run render_report first"
             )
         preview_dir = root / "preview"

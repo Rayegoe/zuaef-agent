@@ -43,12 +43,19 @@ _IMAGE_SUFFIXES = {
 
 
 class WorkProductError(RuntimeError):
-    """Model-visible tool failure with a stable machine code prefix."""
+    """Raised for programming errors only; tool-level failures return
+    structured JSON error results (repo convention)."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = message
+
+
+def _error_result(code: str, message: str) -> str:
+    return json.dumps(
+        {"error": {"code": code, "message": message}}, ensure_ascii=False
+    )
 
 
 def artifact_root(workspace_root: Path, run_id: str) -> Path:
@@ -94,16 +101,16 @@ def make_work_product_toolset(
         中文关键词：保存成果、写入目录、产品清单CSV、证据文件、分析笔记、报告文件。
         """
         if kind not in _ALLOWED_KINDS:
-            raise WorkProductError(
+            return _error_result(
                 "INVALID_KIND",
                 f"kind {kind!r} not allowed; choose one of "
                 + ", ".join(sorted(_ALLOWED_KINDS)),
             )
         if content is None or not isinstance(content, str):
-            raise WorkProductError("INVALID_CONTENT", "content must be a string")
+            return _error_result("INVALID_CONTENT", "content must be a string")
         data = content.encode("utf-8")
         if len(data) > _MAX_WORK_PRODUCT_BYTES:
-            raise WorkProductError(
+            return _error_result(
                 "CONTENT_TOO_LARGE",
                 f"content is {len(data)} bytes, over the "
                 f"{_MAX_WORK_PRODUCT_BYTES}-byte cap",
@@ -134,9 +141,9 @@ def make_work_product_toolset(
         url = url.strip()
         name = (name or "").strip()
         if not url:
-            raise WorkProductError("INVALID_URL", "url must not be empty")
+            return _error_result("INVALID_URL", "url must not be empty")
         if not name:
-            raise WorkProductError("INVALID_NAME", "name must not be empty")
+            return _error_result("INVALID_NAME", "name must not be empty")
         client = client_factory(timeout_seconds=timeout_seconds)
         try:
             with client:
@@ -146,16 +153,16 @@ def make_work_product_toolset(
                     max_bytes=max_asset_bytes,
                 )
         except NetworkError as exc:
-            raise WorkProductError(exc.code, exc.message) from exc
+            return _error_result(exc.code, exc.message)
         except httpx.HTTPError as exc:
-            raise WorkProductError(
+            return _error_result(
                 "FETCH_BLOCKED",
                 f"network error downloading {url!r}: {type(exc).__name__}: {exc}",
-            ) from exc
+            )
         base = _SAFE_FILENAME.sub("_", name).strip("._")
         base = re.sub(r"\.{2,}", ".", base)
         if not base:
-            raise WorkProductError(
+            return _error_result(
                 "INVALID_NAME", f"name {name!r} sanitizes to an empty filename"
             )
         filename = f"{base}{_IMAGE_SUFFIXES[document.content_type]}"

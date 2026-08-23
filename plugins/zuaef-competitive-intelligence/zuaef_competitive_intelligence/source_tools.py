@@ -49,12 +49,21 @@ product/price/config does not exist; official checks decide that.
 
 
 class SourceToolError(RuntimeError):
-    """Model-visible tool failure with a stable machine code prefix."""
+    """Raised for programming errors only; tool-level failures return
+    structured JSON error results (repo convention) so a failing call can
+    never terminate the run."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = message
+
+
+def _error_result(code: str, message: str) -> str:
+    return json.dumps(
+        {"error": {"code": code, "message": message}, "results": []},
+        ensure_ascii=False,
+    )
 
 
 def make_source_toolset(
@@ -94,16 +103,16 @@ def make_source_toolset(
         """
         capped = min(limit or max_search_results, max_search_results)
         if capped < 1:
-            raise SourceToolError("INVALID_LIMIT", "limit must be >= 1")
+            return _error_result("INVALID_LIMIT", "limit must be >= 1")
         query = query.strip()
         if not query:
-            raise SourceToolError("INVALID_QUERY", "query must not be empty")
+            return _error_result("INVALID_QUERY", "query must not be empty")
         try:
             hits = backend.search(query, limit=capped)
         except SearchBackendError as exc:
-            raise SourceToolError(exc.code, exc.message) from exc
+            return _error_result(exc.code, exc.message)
         if not hits:
-            raise SourceToolError(
+            return _error_result(
                 "SEARCH_EMPTY",
                 f"search for {query!r} returned no results — revise the "
                 "query or preserve the unknown instead of assuming absence",
@@ -123,7 +132,7 @@ def make_source_toolset(
         """
         url = url.strip()
         if not url:
-            raise SourceToolError("INVALID_URL", "url must not be empty")
+            return _error_result("INVALID_URL", "url must not be empty")
         client = client_factory(timeout_seconds=timeout_seconds)
         try:
             with client:
@@ -134,12 +143,12 @@ def make_source_toolset(
                 )
                 title, text = extract_document(document)
         except NetworkError as exc:
-            raise SourceToolError(exc.code, exc.message) from exc
+            return _error_result(exc.code, exc.message)
         except httpx.HTTPError as exc:
-            raise SourceToolError(
+            return _error_result(
                 "FETCH_BLOCKED",
                 f"network error reading {url!r}: {type(exc).__name__}: {exc}",
-            ) from exc
+            )
         truncated = len(text) > max_preview_chars
         body = text[:max_preview_chars]
         result: dict[str, Any] = {

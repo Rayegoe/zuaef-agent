@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import os
+import threading
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -25,6 +27,24 @@ BRAVE_SECRET_ENV = "ZUAEF_BRAVE_SEARCH_API_KEY"
 BRAVE_SECRET_ENV_FALLBACK = "BRAVE_API_KEY"
 
 _BRAVE_ENDPOINT = "https://api.search.brave.com/res/v1/web/search"
+
+# Provider contract: 1 query/second (x-ratelimit-policy 1;w=1, 2000;w=2678400).
+# This is deterministic transport pacing shared by every backend instance —
+# reproduced failure: a burst of searches drew HTTP 429 and killed a run.
+_BRAVE_MIN_QUERY_INTERVAL = 1.1
+_TRANSIENT_STATUSES = (429, 500, 502, 503, 504)
+_pace_lock = threading.Lock()
+_last_query_at = 0.0
+
+
+def _retryable(exc: httpx.HTTPStatusError, *, attempt: int, max_retries: int) -> bool:
+    """Bounded backoff decision: transient status + retry budget left."""
+    if not BraveSearchBackend._should_backoff(
+        exc.response.status_code, attempt, max_retries
+    ):
+        return False
+    time.sleep(1.5 * (attempt + 1))
+    return True
 
 
 class SearchBackendError(RuntimeError):
@@ -95,6 +115,11 @@ class BraveSearchBackend:
         return os.getenv(BRAVE_SECRET_ENV) or os.getenv(BRAVE_SECRET_ENV_FALLBACK)
 
     def search(self, query: str, *, limit: int) -> list[SearchHit]:
+        """Run the query with bounded backoff retries on transient HTTP
+        429/5xx responses (reproduced: a benchmark burst hit Brave's rate
+        limit and killed an otherwise healthy run). Failures after the
+        last retry stay specific — no provider fallback chain.
+        """
         if limit < 1:
             raise SearchBackendError("INVALID_LIMIT", "limit must be >= 1")
         headers = {
@@ -106,28 +131,67 @@ class BraveSearchBackend:
         factory = self._client_factory or (
             lambda: make_client(self._timeout)
         )
-        try:
-            with factory() as client:
-                response = client.get(
-                    self._endpoint,
-                    params=params,
-                    headers=headers,
-                    follow_redirects=True,
+        self._pace()
+        last_error: SearchBackendError | None = None
+        for attempt in range(self._max_retries + 1):
+            try:
+                with factory() as client:
+                    response = client.get(
+                        self._endpoint,
+                        params=params,
+                        headers=headers,
+                        follow_redirects=True,
+                    )
+                    if BraveSearchBackend._should_backoff(
+                        response.status_code, attempt, self._max_retries
+                    ):
+                        time.sleep(1.5 * (attempt + 1))
+                        continue
+                    response.raise_for_status()
+                    payload = response.json()
+            except httpx.HTTPStatusError as exc:
+                last_error = SearchBackendError(
+                    "SEARCH_BACKEND_HTTP",
+                    f"Brave search returned HTTP {exc.response.status_code} "
+                    f"for query {query!r}",
                 )
-                response.raise_for_status()
-                payload = response.json()
-        except httpx.HTTPStatusError as exc:
-            raise SearchBackendError(
-                "SEARCH_BACKEND_HTTP",
-                f"Brave search returned HTTP {exc.response.status_code} "
-                f"for query {query!r}",
-            ) from exc
-        except (httpx.HTTPError, ValueError) as exc:
-            raise SearchBackendError(
-                "SEARCH_BACKEND_UNAVAILABLE",
-                f"Brave search failed for query {query!r}: {type(exc).__name__}: {exc}",
-            ) from exc
+                if _retryable(exc, attempt=attempt, max_retries=self._max_retries):
+                    continue
+                raise last_error from exc
+            except (httpx.HTTPError, ValueError) as exc:
+                raise SearchBackendError(
+                    "SEARCH_BACKEND_UNAVAILABLE",
+                    f"Brave search failed for query {query!r}: "
+                    f"{type(exc).__name__}: {exc}",
+                ) from exc
+            return self._hits(payload, limit)
+        if last_error is not None:
+            raise last_error
+        raise SearchBackendError(
+            "SEARCH_BACKEND_UNAVAILABLE",
+            f"Brave search failed for query {query!r}",
+        )
 
+    @staticmethod
+    def _should_backoff(status: int, attempt: int, max_retries: int) -> bool:
+        return status in _TRANSIENT_STATUSES and attempt < max_retries
+
+    @staticmethod
+    def _pace() -> None:
+        """Respect the provider's 1-query-per-second contract across all
+        backend instances (reproduced: a burst of benchmark queries drew
+        HTTP 429 and killed a healthy run). Deterministic transport pacing
+        — never a model decision."""
+        global _last_query_at
+        with _pace_lock:
+            now = time.monotonic()
+            wait = _BRAVE_MIN_QUERY_INTERVAL - (now - _last_query_at)
+            if wait > 0:
+                time.sleep(wait)
+            _last_query_at = time.monotonic()
+
+    @staticmethod
+    def _hits(payload: dict, limit: int) -> list[SearchHit]:
         results = payload.get("web", {}).get("results") or []
         hits: list[SearchHit] = []
         for result in results[:limit]:
