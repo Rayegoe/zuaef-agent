@@ -1388,8 +1388,8 @@
     },
     {
       "path": "tests/test_competitive_intelligence.py",
-      "bytes": 31938,
-      "sha256": "64228dc2e2b893c8af5898bcb5994a0bd285624820fb66458ab4b05171e1d019"
+      "bytes": 31866,
+      "sha256": "5de27ce8c96efa18c11437fdcc824110bb08ef21832daa7086782bafeb1f0cc6"
     },
     {
       "path": "tests/test_config.py",
@@ -1788,8 +1788,8 @@
     },
     {
       "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/report_renderer.py",
-      "bytes": 18945,
-      "sha256": "e5e3b60739ea3b7b3993d37de5b1df04e60d5f560adc94cdf7417686b27845d0"
+      "bytes": 18957,
+      "sha256": "929a717ac128952886ad7dd37524d161df3f3d666e4266d66029f415750496f5"
     },
     {
       "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/report_tools.py",

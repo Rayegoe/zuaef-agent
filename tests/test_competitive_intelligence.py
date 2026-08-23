@@ -27,11 +27,9 @@ from zuaef_competitive_intelligence.search_backend import (
     SearchBackendError,
 )
 from zuaef_competitive_intelligence.source_tools import (
-    SourceToolError,
     make_source_toolset,
 )
 from zuaef_competitive_intelligence.work_product_tools import (
-    WorkProductError,
     make_work_product_toolset,
 )
 
@@ -699,7 +697,6 @@ def test_render_report_missing_report(tmp_path: Path) -> None:
 
     async def _scenario():
         from zuaef_competitive_intelligence.report_tools import (
-            ReportToolError,
             make_report_toolset,
         )
 

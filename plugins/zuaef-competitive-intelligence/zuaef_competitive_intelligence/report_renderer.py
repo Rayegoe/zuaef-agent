@@ -485,7 +485,7 @@ def render_docx(markdown_text: str, docx_path: Path, base_dir: Path) -> None:
                 table = document.add_table(rows=len(rows), cols=len(rows[0]))
                 try:
                     table.style = "Table Grid"
-                except Exception:  # noqa: BLE001 — absent style falls back
+                except Exception:  # noqa: BLE001, S110 — absent style falls back
                     pass
                 for row_index, row in enumerate(rows):
                     for col_index, cell in enumerate(row):
@@ -509,7 +509,7 @@ def render_docx(markdown_text: str, docx_path: Path, base_dir: Path) -> None:
                 continue
             try:
                 document.add_picture(str(image_file), width=Inches(5.5))
-            except Exception:  # noqa: BLE001 — keep the text report intact
+            except Exception:  # noqa: BLE001, S112 — keep the text report intact
                 continue
             if block["alt"]:
                 caption = document.add_paragraph()
