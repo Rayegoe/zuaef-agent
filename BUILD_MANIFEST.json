@@ -1098,13 +1098,13 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 2859,
-      "sha256": "838d29489e92a41a2b5f7012523b58f6bcc3498297cd45c4909b395612bdd3a1"
+      "bytes": 2917,
+      "sha256": "ba3ee853d6e33775df2928bcbfc613c5e5fe3920dabc9c2677c75b9da99d1baf"
     },
     {
       "path": "uv.lock",
-      "bytes": 509232,
-      "sha256": "306e70571592e62a296405abf8666cb2f7a115952f61075b6de0e3d57ea93292"
+      "bytes": 509675,
+      "sha256": "804d48233f675126754f13c0a5e7093681be219a5d7c3fd27c6bbe9a380c6917"
     },
     {
       "path": "spec/SPEC.md",
@@ -1612,6 +1612,11 @@
       "sha256": "be17ae192f9660a1e21b5d084d7fcb4e20bab0bd616480451895e279ae91b53a"
     },
     {
+      "path": "tests/test_telegram_plugin.py",
+      "bytes": 11063,
+      "sha256": "5fa583e89850147e649b4290d5257d08c9c70b3cba4b504ccd1ff11f498bff53"
+    },
+    {
       "path": "tests/test_web_console.py",
       "bytes": 51732,
       "sha256": "dc33cbb37e0d7680aad7b870db6fe43d216737ed5d21021bfc29cddf0ecbae40"
@@ -1882,6 +1887,31 @@
       "sha256": "91fe7b09530ee1d37b2aa4910db3f469654641484691a7af9ade228fd0ca3d71"
     },
     {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/__init__.py",
+      "bytes": 285,
+      "sha256": "3638a49a3b6aec4e366e45cd0f68bacacc830b11673fbb3bdabb893005e4e6e0"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/canary.py",
+      "bytes": 1419,
+      "sha256": "5a02bbb4fd210ed243c9193cfae8c92827aa2378df2a5de8d6af073d8938aed5"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/client.py",
+      "bytes": 3932,
+      "sha256": "26a38ca0fc7dc3e3af25950172dd2e05cb737eee7a693746d47e96cce0ad7c38"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/plugin.py",
+      "bytes": 1799,
+      "sha256": "abebac5d370ceaca7aa884a1358d36d4949e1d61d2e212ca32ebb6d6b548aa94"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/toolset.py",
+      "bytes": 1783,
+      "sha256": "08c140cca336de9d64a37e4472f678be98667d33a60f91979244af461f3df5fb"
+    },
+    {
       "path": "plugins/zuaef-wordpress/zuaef_wordpress/__init__.py",
       "bytes": 1424,
       "sha256": "1add585fca470c96fb990b59e01e443401cc33e5fc22c95841eb246b02d3217b"
@@ -1945,6 +1975,11 @@
       "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/skills/executive-competitor-report/SKILL.md",
       "bytes": 3615,
       "sha256": "ff840c835cbf605ec253700490885bb389319c7b3385ed4ff5072ba4fbca3a4e"
+    },
+    {
+      "path": "plugins/zuaef-telegram/skill/SKILL.md",
+      "bytes": 499,
+      "sha256": "b29c5ad22936014a087883c2ea6779d4dbbed385fe995fc5af7ee4ae81405ab1"
     },
     {
       "path": "plugins/zuaef-writing-pack/README.md",

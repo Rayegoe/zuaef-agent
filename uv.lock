@@ -16,6 +16,7 @@ members = [
     "zuaef-client-service",
     "zuaef-competitive-intelligence",
     "zuaef-emtb-budget",
+    "zuaef-telegram",
     "zuaef-wordpress",
     "zuaef-writing-pack",
 ]
@@ -2841,6 +2842,7 @@ dependencies = [
     { name = "zuaef-client-service" },
     { name = "zuaef-competitive-intelligence" },
     { name = "zuaef-emtb-budget" },
+    { name = "zuaef-telegram" },
     { name = "zuaef-wordpress" },
     { name = "zuaef-writing-pack" },
 ]
@@ -2867,6 +2869,7 @@ requires-dist = [
     { name = "zuaef-client-service", editable = "plugins/zuaef-client-service" },
     { name = "zuaef-competitive-intelligence", editable = "plugins/zuaef-competitive-intelligence" },
     { name = "zuaef-emtb-budget", editable = "plugins/zuaef-emtb-budget" },
+    { name = "zuaef-telegram", editable = "plugins/zuaef-telegram" },
     { name = "zuaef-wordpress", editable = "plugins/zuaef-wordpress" },
     { name = "zuaef-writing-pack", editable = "plugins/zuaef-writing-pack" },
 ]
@@ -2950,6 +2953,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic-ai", specifier = ">=2.27,<3" }]
+
+[[package]]
+name = "zuaef-telegram"
+version = "0.1.0"
+source = { editable = "plugins/zuaef-telegram" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic-ai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "pydantic-ai", specifier = ">=2.27,<3" },
+]
 
 [[package]]
 name = "zuaef-wordpress"
