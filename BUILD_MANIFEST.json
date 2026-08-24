@@ -1613,8 +1613,8 @@
     },
     {
       "path": "tests/test_telegram_plugin.py",
-      "bytes": 11063,
-      "sha256": "5fa583e89850147e649b4290d5257d08c9c70b3cba4b504ccd1ff11f498bff53"
+      "bytes": 13480,
+      "sha256": "1728b11acc7be502ba2737ce30259315434cd08ca90935d5c68fb2c8edf95e5d"
     },
     {
       "path": "tests/test_web_console.py",
@@ -1900,6 +1900,11 @@
       "path": "plugins/zuaef-telegram/zuaef_telegram/client.py",
       "bytes": 3932,
       "sha256": "26a38ca0fc7dc3e3af25950172dd2e05cb737eee7a693746d47e96cce0ad7c38"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/notify.py",
+      "bytes": 2107,
+      "sha256": "a23414f3b45ebe2eba8258dcb030d91f79c4a2884c929ec076ad2332f478f086"
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/plugin.py",

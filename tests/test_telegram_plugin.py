@@ -17,6 +17,7 @@ from pydantic_ai import RunContext, RunUsage, models
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from zuaef_telegram import create_plugin
+from zuaef_telegram import notify as tg_notify
 from zuaef_telegram.client import TelegramClient, TelegramError, redact_token
 from zuaef_telegram.toolset import make_toolset
 
@@ -310,3 +311,65 @@ def test_send_after_approval_executes_and_settles(tmp_path: Path, monkeypatch):
         if e.tool_name == "report_to_telegram"
     ]
     assert settled and settled[0].status == "completed"
+
+
+# ── operator notifier (unattended attention path) ───────────────────────────
+
+
+def _patch_notify_client(monkeypatch, fake: FakeTelegram) -> None:
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", TOKEN)
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", CHAT_ID)
+    monkeypatch.setattr(tg_notify, "TelegramClient", lambda **kwargs: _client(fake))
+
+
+def test_notify_operator_sends_immediately_without_any_approval(monkeypatch, capsys):
+    """The notifier is not a model tool: a plain host call sends at once."""
+    fake = FakeTelegram([_send_ok(52)])
+    _patch_notify_client(monkeypatch, fake)
+
+    assert tg_notify.notify_operator("ZUAEF Supervisor report published.") == {
+        "ok": True,
+        "message_id": 52,
+        "date": 1735689600,
+    }
+    assert len(fake.requests) == 1, "notifier must send without tool approval"
+    assert json.loads(fake.requests[0].content) == {
+        "chat_id": CHAT_ID,
+        "text": "ZUAEF Supervisor report published.",
+    }
+
+
+def test_notify_operator_missing_credentials_raise(monkeypatch):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    with pytest.raises(TelegramError, match="not configured"):
+        tg_notify.notify_operator("x")
+
+
+def test_notify_operator_send_failure_is_bounded_and_redacted(monkeypatch):
+    def _boom(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="boom")
+
+    fake = FakeTelegram([_boom])
+    _patch_notify_client(monkeypatch, fake)
+    with pytest.raises(TelegramError, match="HTTP 500") as err:
+        tg_notify.notify_operator("x")
+    assert TOKEN not in str(err.value)
+
+
+def test_notify_cli_prints_bounded_fact_and_exits_zero(monkeypatch, capsys):
+    fake = FakeTelegram([_send_ok(53)])
+    _patch_notify_client(monkeypatch, fake)
+
+    assert tg_notify.main(["report done"]) == 0
+    out = capsys.readouterr().out
+    assert json.loads(out) == {"ok": True, "message_id": 53, "date": 1735689600}
+
+
+def test_notify_cli_missing_credentials_exit_one(monkeypatch, capsys):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    assert tg_notify.main(["x"]) == 1
+    err = capsys.readouterr().err
+    assert "not configured" in err
+    assert TOKEN not in err
