@@ -948,8 +948,8 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 9552,
-      "sha256": "8ad822d17cde48b65e9462ddcdb3386123a9c468cf0056346a129e09fe2b355f"
+      "bytes": 9826,
+      "sha256": "05e30e7adecd84cb680a82c7855433941645833bea82e460774076f4f678c463"
     },
     {
       "path": "CHANGELOG.md",
@@ -1607,6 +1607,11 @@
       "sha256": "21a6834f044ff06b23239df1b232c1f833f307d571034a4549439c8eb180c6c1"
     },
     {
+      "path": "tests/test_supervisor_loop.py",
+      "bytes": 25880,
+      "sha256": "5374b27d1ad511b6b0cacaf460e29840bf6abe0d2376956270f2f671756224f7"
+    },
+    {
       "path": "tests/test_task_inputs.py",
       "bytes": 4763,
       "sha256": "be17ae192f9660a1e21b5d084d7fcb4e20bab0bd616480451895e279ae91b53a"
@@ -2120,6 +2125,11 @@
       "path": "tools/run_writing_eval.py",
       "bytes": 9991,
       "sha256": "443205b2e9048cb2e4b3214d95efec4bfd45864c3edb0741675eb224b54dd7f4"
+    },
+    {
+      "path": "tools/supervisor_loop.py",
+      "bytes": 28515,
+      "sha256": "94ecb668c5365dc552effb4ac2f340e3e5a450385e8c1f841482f5243cebfcad"
     },
     {
       "path": "workspace/knowledge/index.md",

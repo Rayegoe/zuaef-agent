@@ -135,3 +135,10 @@ For runtime re-foundation work:
 5. compare business outcome and model-boundary complexity;
 6. do not add Harness capabilities without admission evidence;
 7. delete or quarantine superseded production authority.
+
+## Supervisor-launched worker authority
+
+When a worker is launched from a merged `.supervisor/NEXT.md`, that exact
+instruction is the worker's execution authority. `TASKS.md` remains
+backlog/evidence. Completing the authorized instruction does not authorize the
+next task.
