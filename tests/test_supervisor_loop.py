@@ -717,7 +717,7 @@ STOP.
     capture = (worker / "codex-capture.txt").read_text(encoding="utf-8")
     assert "'exec'" in capture
     assert f"'--cd', '{worker}'" in capture
-    assert "'--sandbox', 'workspace-write'" in capture
+    assert "'--sandbox'" not in capture
     assert "'--approve-for-me', '-'" in capture
     assert "Execute only the supplied NEXT.md and STOP." in capture
     assert (

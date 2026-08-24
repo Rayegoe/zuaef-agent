@@ -523,8 +523,6 @@ def _invoke_codex(config: LoopConfig, worker_root: Path, prompt: str) -> int:
             "exec",
             "--cd",
             str(worker_root),
-            "--sandbox",
-            "workspace-write",
             "--approve-for-me",
             "-",
         ),
