@@ -1,4 +1,4 @@
-CONTROL_COMMIT: 968f67da652a2818c4cb2aa54542e6d290a1fe10
+CONTROL_COMMIT: 0b27f09b18eea8fcb85b1665c9554469bc32314a
 WORKER_BASE_COMMIT: a4a1c71b7713be1d9fa7fde7c4e8a9a61bba3990
 
 # Supervisor Report
@@ -7,7 +7,7 @@ WORKER_BASE_COMMIT: a4a1c71b7713be1d9fa7fde7c4e8a9a61bba3990
 Worker process exited without the required report.
 
 ## Outcome
-Observed process exit code: 127.
+Observed process exit code: 2.
 
 ## Protected outcome
 Not evaluated by the mechanical launcher.
@@ -25,7 +25,7 @@ Not evaluated by the mechanical launcher.
 Not evaluated by the mechanical launcher.
 
 ## Evidence / artifacts
-Launcher-observed process fact only: Observed process exit code: 127.
+Launcher-observed process fact only: Observed process exit code: 2.
 
 ## Files changed
 Not evaluated by the mechanical launcher.
