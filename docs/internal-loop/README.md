@@ -59,7 +59,7 @@ uv run python tools/supervisor_loop.py sync-control
 ```
 
 The normal launcher uses the installed Codex CLI's supported non-interactive
-form, `codex exec --cd <worker> --sandbox workspace-write --approve-for-me -`.
+form, `codex exec --cd <worker> --approve-for-me -`.
 It materializes the exact merged instruction inside the fresh worktree, passes
 the fixed prompt plus exact `NEXT.md`, publishes the report after process exit,
 and never asks the worker for another task. A missing report produces only a

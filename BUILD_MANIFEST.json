@@ -1608,8 +1608,8 @@
     },
     {
       "path": "tests/test_supervisor_loop.py",
-      "bytes": 25880,
-      "sha256": "5374b27d1ad511b6b0cacaf460e29840bf6abe0d2376956270f2f671756224f7"
+      "bytes": 25865,
+      "sha256": "76156c2f42555e355e9925f048a27850870d2d0e684e753f4809fed08a075b80"
     },
     {
       "path": "tests/test_task_inputs.py",
@@ -2128,8 +2128,8 @@
     },
     {
       "path": "tools/supervisor_loop.py",
-      "bytes": 28515,
-      "sha256": "94ecb668c5365dc552effb4ac2f340e3e5a450385e8c1f841482f5243cebfcad"
+      "bytes": 28459,
+      "sha256": "13ac82d00f610d149e7ca1656c0f619b8c263a36112f34e5c6ba480fa86e0804"
     },
     {
       "path": "workspace/knowledge/index.md",
