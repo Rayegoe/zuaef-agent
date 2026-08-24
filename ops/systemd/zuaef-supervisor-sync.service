@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll the ZUAEF merged Supervisor control branch once
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/barry/zuaef-agent
+TimeoutStartSec=infinity
+ExecStart=/usr/bin/python3 /home/barry/zuaef-agent/tools/supervisor_loop.py --codex-bin=%h/.local/share/pi-node/node-v22.23.1-linux-x64/bin/codex sync-control

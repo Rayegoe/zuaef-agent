@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll ZUAEF Supervisor control every 60 seconds
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=60s
+Unit=zuaef-supervisor-sync.service
+
+[Install]
+WantedBy=timers.target
