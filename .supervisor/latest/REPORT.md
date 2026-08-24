@@ -1,37 +1,37 @@
-CONTROL_COMMIT: NONE
+CONTROL_COMMIT: 968f67da652a2818c4cb2aa54542e6d290a1fe10
 WORKER_BASE_COMMIT: a4a1c71b7713be1d9fa7fde7c4e8a9a61bba3990
 
 # Supervisor Report
 
 ## Subject
-Gate F initial transport canary
+Worker process exited without the required report.
 
 ## Outcome
-Initial canary report created successfully.
+Observed process exit code: 127.
 
 ## Protected outcome
-Verify the real GitHub report/control transport and remote Supervisor loop without changing production behavior.
+Not evaluated by the mechanical launcher.
 
 ## What changed
-No product or runtime code was changed. A disposable no-op canary report was created.
+Not evaluated by the mechanical launcher.
 
 ## What stayed unchanged
-Production Agent behavior, business plugins, Run Analysis, StepPersistence, runtime-refoundation tasks, and main application semantics remain unchanged.
+Not evaluated by the mechanical launcher.
 
 ## Observed result
-The local Gate F canary reached the report-publication boundary.
+`.zuaef-supervisor/REPORT.md` was absent after process exit.
 
 ## Acceptance result
-Pending live Supervisor → control PR → human merge → local worker → report round trip.
+Not evaluated by the mechanical launcher.
 
 ## Evidence / artifacts
-This REPORT.md is the initial Gate F evidence.
+Launcher-observed process fact only: Observed process exit code: 127.
 
 ## Files changed
-No production files.
+Not evaluated by the mechanical launcher.
 
 ## Unknowns / conflicts
-The live control-path round trip has not yet been exercised.
+Worker semantic outcome and workspace changes are unknown to the launcher.
 
 ## Worker stop
-STOP. Awaiting Supervisor decision.
+The worker process has exited. No automatic retry was attempted.
