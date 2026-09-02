@@ -87,10 +87,17 @@ def main() -> int:
     args = parser.parse_args()
 
     active_cfg = load_config(args.strategy)
-    universe_meta = json.loads(
-        (CACHE_DIR / "universe" / "csi500_subset.meta.json").read_text(encoding="utf-8")
-    )
-    symbols = universe_meta["symbols"]
+    committed_universe = Path("benchmarks/quant/gen1/universe.toml")
+    try:
+        uni = load_config(committed_universe)
+        symbols = [str(s).strip() for s in uni["symbols"]]
+        universe_source = str(uni.get("name", "user_universe"))
+    except (OSError, KeyError, ValueError, TypeError):
+        universe_meta = json.loads(
+            (CACHE_DIR / "universe" / "csi500_subset.meta.json").read_text(encoding="utf-8")
+        )
+        symbols = universe_meta["symbols"]
+        universe_source = "csi500_subset"
     cons, _ = read_cache("universe", "csi500_cons", CACHE_DIR)
     name_by_symbol = (
         dict(zip(cons["constituent_code"], cons["constituent_name"]))
@@ -188,7 +195,7 @@ def main() -> int:
             "stop_loss_pct": active_cfg["stop_loss_pct"],
             "take_profit_pct": active_cfg["take_profit_pct"],
         },
-        "universe": "csi500_subset",
+        "universe": universe_source,
         "universe_size": len(symbols),
         "quotes_fetched": len(quotes),
         "as_of": datetime.now(TZ_SHANGHAI).isoformat(),

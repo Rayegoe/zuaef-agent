@@ -50,7 +50,7 @@ else:
         f.write(line + "\n")
     print("已追加:", line)
 PY
-python3 workspace/artifacts/quant/render_dashboard.py
+python3 tools/quant_render_dashboard.py
 cp workspace/artifacts/quant/dashboard.html docs/quant/dashboard.html
 echo "完成 → docs/quant/dashboard.html  (如需发布: git add docs/quant/dashboard.html && git commit -m 'docs(quant): refresh dashboard' && git push)"
 rm -f "$SCAN_TMP"

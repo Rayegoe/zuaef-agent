@@ -109,7 +109,7 @@ footer{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(
       <span class="badge b-obs">OBSERVATION MODE · <span id="freeze-since"></span></span>
     </h1>
     <div class="sub">Spec ZUAEF-ASHARE-001 v1.0-final · 观察模式日常巡检页 (只读 · 数据由既有工件渲染) · 生成于 <span id="gen-time"></span>
-      · 再生成: <code>python3 workspace/artifacts/quant/render_dashboard.py</code></div>
+      · 再生成: <code>python3 tools/quant_render_dashboard.py</code></div>
   </header>
 
   <div class="kpi" style="margin-top:18px">
@@ -230,12 +230,12 @@ footer{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(
   <footer>
     本看板是 P5.5 观察模式的 <b>只读巡检页</b>: 数据全部来自既有工件 (STATUS.md / OBSERVATION_LOG.md / evidence.json / briefs), 不含任何交易建议。
     <br>语义色: 红=正向结论/被选策略, 绿=风险信号, 非 A股涨跌方向。看板上所有历史数字都受 PIT 局限 (今日 CSI500 成分回看历史) 与 <b>+0.37%/29 笔噪声内</b> 约束; 盈利声明唯一前置门是 PIT universe 重建。
-    <br>再生成: <code>python3 workspace/artifacts/quant/render_dashboard.py</code> · 冻结期禁改清单见 README §6 (dashboard/watcher/结算引擎不建 — 本页只是把已有证据渲染出来)。
+    <br>再生成: <code>python3 tools/quant_render_dashboard.py</code> · 冻结期禁改清单见 README §6 (dashboard/watcher/结算引擎不建 — 本页只是把已有证据渲染出来)。
   </footer>
 </div>
 <script>
 window.DASH = {
- "generated_at": "2026-09-02 09:48 UTC",
+ "generated_at": "2026-09-02 10:58 UTC",
  "proofs": [
   {
    "name": "Research Engine Proof",
