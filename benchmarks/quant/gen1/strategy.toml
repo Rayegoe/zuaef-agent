@@ -1,0 +1,22 @@
+# ZUAEF-ASHARE-001 gen1 baseline strategy — one fixed complete strategy.
+# Entry/exit are expressed with Qlib 0.9.7 validated operators:
+#   pullback_5d       = $close / Ref($close, 5) - 1
+#   volume_ratio_20d  = $volume / Mean($volume, 20)
+#   close_strength_1d = $close - Ref($close, 1)
+# Signals are computed on day-T data; execution is T+1 open (no lookahead).
+schema = 1
+name = "volume_pullback_reversal"
+universe = "csi500_subset"
+
+entry_expression = "pullback_5d <= -0.06 AND volume_ratio_20d >= 1.80 AND close_strength_1d >= 0"
+exit_expression = "holding_days >= 5 OR close_below_ma5"
+
+max_holding_days = 5
+stop_loss_pct = 0.03
+take_profit_pct = 0.06
+position_fraction = 0.10
+max_positions = 5
+
+# Mutatable entry-clause thresholds (one material change per Agent child).
+entry_pullback_max = -0.06
+entry_volume_ratio_min = 1.80

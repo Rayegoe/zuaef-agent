@@ -5,6 +5,7 @@ import logging
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, is_dataclass
 from datetime import UTC, datetime
+from pathlib import Path, PurePosixPath
 from typing import Any
 from uuid import uuid4
 
@@ -23,6 +24,7 @@ from .core import build_agent
 from .integrity import (
     IntegrityError,
     latest_tool_effects,
+    normalize_artifact_path,
     read_tool_effects,
     snapshot_artifacts,
     verify_artifact,
@@ -168,7 +170,9 @@ def _changed_artifact_facts(
     seen: set[str] = set()
     for recorded in inherited:
         try:
-            facts.append(_recheck_inherited_artifact(recorded, workspace_root=workspace_root))
+            facts.append(
+                _recheck_inherited_artifact(recorded, workspace_root=workspace_root)
+            )
         except IntegrityError:
             continue  # integrity anomaly is recorded by the caller as unresolved
         seen.add(recorded.path)
@@ -178,7 +182,9 @@ def _changed_artifact_facts(
         if path in seen:
             continue
         try:
-            facts.append(verify_artifact(path, workspace_root=workspace_root, snapshot=snapshot))
+            facts.append(
+                verify_artifact(path, workspace_root=workspace_root, snapshot=snapshot)
+            )
         except IntegrityError:
             continue
     return facts
@@ -252,9 +258,7 @@ def finalize_terminal(
         if prior_pause_receipt is not None
         else []
     )
-    artifact_facts = _changed_artifact_facts(
-        workspace, snapshot, inherited=inherited
-    )
+    artifact_facts = _changed_artifact_facts(workspace, snapshot, inherited=inherited)
     tool_effect_facts, unresolved_effects = _tool_effect_facts(settings, run_id)
     knowledge_updates = KnowledgeStore(workspace).list_generated_by_run(run_id)
 
@@ -579,3 +583,107 @@ def run_task(prompt: str, settings: AgentSettings | None = None) -> RuntimeOutco
     agent = build_agent(settings, run_id=run_id)
     deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
     return execute_run(agent, deps, prompt=prompt, settings=settings, run_id=run_id)
+
+
+class DeliveryExportError(RuntimeError):
+    """Durable-delivery transport failure after settlement.
+
+    Execution truth (the RunReceipt) is already settled when this is raised;
+    the error must never be used to rewrite the receipt or change execution
+    state. Surfacing the failure is the caller's host-boundary job (CLI
+    stderr / Gateway log), completely separate from run execution truth.
+    """
+
+
+def _export_write_tree(target: Path, data: bytes) -> None:
+    """Write-then-replace so a failed write never leaves a partial durable copy.
+
+    The proven atomic-write pattern (temp file beside the target, then
+    replace), reproduced here so the generic exporter carries zero plugin
+    dependency.
+    """
+    tmp = target.with_name(f".{target.name}.tmp")
+    tmp.write_bytes(data)
+    tmp.replace(target)
+
+
+def export_receipt_artifacts(
+    outcome: RuntimeOutcome,
+    workspace_root: Path,
+    delivery_root: str | Path | None,
+) -> dict[str, Any]:
+    """Caller-side durable delivery of a completed run's receipt-listed artifacts.
+
+    Generic mechanical transport with zero profile/domain/CI awareness: after
+    ``execute_run`` returns a completed ``TerminalRun``, the host copies exactly
+    the artifacts the RunReceipt already declares (``artifact_facts``) from the
+    runtime workspace to a caller-owned durable root, before any workspace
+    cleanup. No model action, no business branching, no Core lifecycle hook.
+
+    Returns a plain deterministic status mapping:
+      {"status": "skipped", ...}   outcome is not a completed TerminalRun
+      {"status": "disabled", ...}  no delivery_root configured (clean no-op)
+      {"status": "delivered", ...} copies landed under <delivery_root>/<rel>
+      raises DeliveryExportError    transport/config failure for the host to surface
+
+    Never rewrites the receipt, never changes execution state, never follows
+    symlinks, and adds no hashes/manifests/stores/schemas: the receipt's own
+    paths are the only selection and the copied tree is the durable truth.
+    """
+    if not isinstance(outcome, TerminalRun):
+        return {"status": "skipped", "reason": "outcome is not a terminal run"}
+    if outcome.receipt.execution_state != "completed":
+        return {
+            "status": "skipped",
+            "reason": f"execution_state={outcome.receipt.execution_state}",
+        }
+    if delivery_root is None or (
+        isinstance(delivery_root, str) and not delivery_root.strip()
+    ):
+        return {"status": "disabled", "reason": "no delivery root configured"}
+
+    workspace = Path(workspace_root).resolve()
+    root = Path(delivery_root)
+    if str(root) in ("", "."):
+        raise DeliveryExportError("delivery root must be a non-empty path")
+    root = root.resolve()
+    if root == workspace or root.is_relative_to(workspace):
+        raise DeliveryExportError(
+            "delivery root must resolve outside the runtime workspace so a "
+            f"cleanup of {workspace} cannot reach it; got {root}"
+        )
+
+    delivered: list[str] = []
+    failures: list[str] = []
+    total_bytes = 0
+    for fact in outcome.receipt.artifact_facts:
+        rel = fact.path.strip()
+        try:
+            target = normalize_artifact_path(rel, workspace_root=workspace)
+        except IntegrityError as exc:
+            failures.append(f"{rel}: {exc}")
+            continue
+        if target.is_symlink() or not target.is_file():
+            failures.append(f"{rel}: not a regular file")
+            continue
+        destination = root / Path(*PurePosixPath(rel).parts)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        data = target.read_bytes()
+        _export_write_tree(destination, data)
+        delivered.append(rel)
+        total_bytes += len(data)
+
+    delivered.sort()
+    if failures:
+        raise DeliveryExportError(
+            f"durable delivery failed for run {outcome.receipt.run_id}: "
+            + "; ".join(failures)
+        )
+    return {
+        "status": "delivered",
+        "delivery_root": str(root),
+        "run_id": outcome.receipt.run_id,
+        "files": delivered,
+        "promoted": len(delivered),
+        "promoted_bytes": total_bytes,
+    }

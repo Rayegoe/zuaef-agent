@@ -13,8 +13,11 @@ dependencies = [
   "pydantic>=2.10",
   "python-dotenv>=1.0",
   "pyyaml>=6.0",
-  "pydantic-ai>=2.27,<3",
-  "pydantic-ai-harness[skills,code-mode]>=0.1",
+  "playwright>=1.61,<2",
+  "pydantic-ai>=2.35.3,<3",
+  # Minor-bound after U0 validation (ZUAEF-ASHARE-001 U006): 0.x Harness
+  # releases may break API between minors, so the pin stays within 0.27.x.
+  "pydantic-ai-harness[skills,code-mode]>=0.27,<0.28",
   # Agent Console (src/zuaef_agent/web): already in the closure via pydantic-ai's
   # mcp extra; declared because the console imports them directly (precedent:
   # pydantic-ai-slim's `web` extra = httpx/starlette/uvicorn).
@@ -32,13 +35,20 @@ dependencies = [
   "zuaef-writing-pack",
   "zuaef-competitive-intelligence",
   "zuaef-telegram",
+  "zuaef-quant",
 ]
 
 [project.scripts]
 zuaef-agent = "zuaef_agent.cli:main"
+chatgpt-handoff = "chatgpt_handoff.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8.3", "ruff>=0.8"]
+# ZUAEF-ASHARE-001 P0 (D001): real A-share market data lives in an isolated,
+# opt-in group — production agent installs (`uv sync --frozen`) never carry it.
+# Pin follows the audited release in the spec pack; P3 moves it into the
+# zuaef-quant plugin package.
+quant = ["akshare==1.18.94"]
 
 [tool.uv.workspace]
 # All production plugins live in-repo as workspace members; `uv sync --frozen`
@@ -54,6 +64,7 @@ zuaef-wordpress = { workspace = true }
 zuaef-writing-pack = { workspace = true }
 zuaef-competitive-intelligence = { workspace = true }
 zuaef-telegram = { workspace = true }
+zuaef-quant = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -69,13 +80,10 @@ pythonpath = [
 [tool.ruff]
 # `ruff check .` gates P2-7. These are committed trees outside the zuaef-agent
 # delivery scope (installed third-party skill scripts, bmad workspace config,
-# and the separate editorial-control package overlay) — their lint health is
-# owned upstream, so the product gate scans the delivery tree only.
-exclude = [
-  ".agents",
-  "_bmad",
-  "zuaef-editorial-control-v0.1",
-]
+# the separate editorial-control package overlay, and the vendored qlib
+# dump_bin ingestion script) — their lint health is owned upstream, so the
+# product gate scans the delivery tree only.
+exclude = [".agents", "_bmad", "zuaef-editorial-control-v0.1", "tools/quant/upstream"]
 
 [tool.ruff.lint.per-file-ignores]
 # E402: deliberate sys.path bootstrapping before importing the editable plugins
@@ -84,4 +92,4 @@ exclude = [
 "tests/*.py" = ["E402"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/zuaef_agent"]
+packages = ["src/zuaef_agent", "src/chatgpt_handoff"]

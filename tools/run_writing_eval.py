@@ -56,6 +56,15 @@ from zuaef_agent.config import AgentSettings
 CASES = REPO / "benchmarks" / "writing-cases"
 EVAL_ROOT = REPO / "workspace" / "artifacts" / "writing-v0.2" / "eval"
 
+# T006-B5 benchmark-only candidate: ONE compact synthesis instruction appended
+# to the writer instructions. Stays general; encodes no X/Y/Z correction.
+SYNTHESIS_BOUNDARY_INSTRUCTION = (
+    "When turning evidence into article claims, preserve who owns or states "
+    "the evidence, its source/benchmark scope, its modal/logical strength, "
+    "and the responsibility subject. Do not strengthen, generalize, or "
+    "transfer these boundaries merely to make the thesis cleaner."
+)
+
 
 def load_case(case_dir: Path) -> dict:
     """Case manifest + material paths — mechanical data entry."""
@@ -81,6 +90,7 @@ def run_case(
     variant: str = "baseline",
     include_technique_guidance: bool = True,
     technique_selection_mode: str = "host",
+    synthesis_boundary_instruction: str | None = None,
 ) -> dict:
     """One case through the production profile; returns the bundle record.
 
@@ -116,6 +126,7 @@ def run_case(
         profile=profile,
         include_technique_guidance=include_technique_guidance,
         technique_selection_mode=technique_selection_mode,
+        synthesis_boundary_instruction=synthesis_boundary_instruction,
     )
     passes.append({"pass": "draft", **draft})
     (out_dir / "draft-record.json").write_text(
@@ -141,6 +152,7 @@ def run_case(
             profile=profile,
             include_technique_guidance=include_technique_guidance,
             technique_selection_mode=technique_selection_mode,
+            synthesis_boundary_instruction=synthesis_boundary_instruction,
         )
         passes.append({"pass": "revision", "feedback": rev_feedback, **revision})
         (out_dir / "revision-record.json").write_text(
@@ -157,6 +169,9 @@ def run_case(
         "observation_controls": {
             "include_technique_guidance": include_technique_guidance,
             "technique_selection_mode": technique_selection_mode,
+            "synthesis_boundary_instruction": (
+                synthesis_boundary_instruction is not None
+            ),
         },
         "manifest": {k: v for k, v in manifest.items() if k != "feedback"},
         "materials": [str(p) for p in case["materials"]],
@@ -174,6 +189,7 @@ def run_case(
         f"- variant: {variant} (metadata label only)",
         f"- include technique guidance: {include_technique_guidance}",
         f"- technique selection mode: {technique_selection_mode}",
+        f"- synthesis boundary instruction: {synthesis_boundary_instruction is not None}",
         f"- assignment: {manifest['assignment']}",
         f"- audience: {manifest.get('audience')}",
         f"- constraints: {json.dumps(manifest.get('constraints') or [], ensure_ascii=False)}",
@@ -213,14 +229,20 @@ def run_case(
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("case", help="case name, e.g. WCASE-1 (dir under benchmarks/writing-cases/)")
+    ap.add_argument(
+        "case", help="case name, e.g. WCASE-1 (dir under benchmarks/writing-cases/)"
+    )
     ap.add_argument("--profile", default=PRODUCTION_PROFILE)
     ap.add_argument("--feedback", default=None)
     ap.add_argument("--request-limit", type=int, default=None)
     ap.add_argument("--out", default=None)
-    ap.add_argument("--variant", choices=("baseline", "learned"), default="baseline",
-                    help="T012 label only: run 'baseline' BEFORE a promoted lesson "
-                         "becomes a repo skill, 'learned' after")
+    ap.add_argument(
+        "--variant",
+        choices=("baseline", "learned"),
+        default="baseline",
+        help="T012 label only: run 'baseline' BEFORE a promoted lesson "
+        "becomes a repo skill, 'learned' after",
+    )
     ap.add_argument(
         "--no-technique-guidance",
         action="store_false",
@@ -234,8 +256,22 @@ def main(argv: list[str] | None = None) -> None:
         default="host",
         help="T006-B2 experiment seam: host, none, or model-owned technique selection",
     )
-    ap.add_argument("--materials", action="append", default=None,
-                    help="optional explicit material list (default: all files under raw/)")
+    ap.add_argument(
+        "--synthesis-boundary",
+        action="store_true",
+        default=False,
+        help=(
+            "T006-B5 candidate: append the ONE compact evidence-boundary "
+            "synthesis instruction to the writer instructions (desk pack "
+            "stays byte-identical)"
+        ),
+    )
+    ap.add_argument(
+        "--materials",
+        action="append",
+        default=None,
+        help="optional explicit material list (default: all files under raw/)",
+    )
     args = ap.parse_args(argv)
 
     case_dir = CASES / args.case
@@ -259,6 +295,9 @@ def main(argv: list[str] | None = None) -> None:
         variant=args.variant,
         include_technique_guidance=args.include_technique_guidance,
         technique_selection_mode=args.technique_selection_mode,
+        synthesis_boundary_instruction=(
+            SYNTHESIS_BOUNDARY_INSTRUCTION if args.synthesis_boundary else None
+        ),
     )
     print(json.dumps(bundle, ensure_ascii=False, indent=2))
 

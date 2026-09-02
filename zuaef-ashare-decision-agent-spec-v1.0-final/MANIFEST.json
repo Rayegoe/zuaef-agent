@@ -1,0 +1,79 @@
+{
+  "spec_id": "ZUAEF-ASHARE-001",
+  "version": "1.0-final",
+  "freeze_date": "2026-08-28",
+  "files": {
+    "00_README.md": {
+      "sha256": "3eb11c6690e1977a7b89f3b1c5cddeb2ac303208fc5c635be9c85e4aa3889a60",
+      "bytes": 4006
+    },
+    "01_PRODUCT_PRD.md": {
+      "sha256": "d0fb69b9e7fbbf9099534ab809315481f6e6cba914eee8831d581691f2da77e0",
+      "bytes": 4261
+    },
+    "02_ARCHITECTURE.md": {
+      "sha256": "91a43d0f0d98f98281a5b9d9e059e199cffed5c10838e06413d1b661b6dba51a",
+      "bytes": 3142
+    },
+    "03_CAPABILITY_PLUGIN_CONTRACT.md": {
+      "sha256": "2f27a6e1f9eed7b3b75ca822e0de3be6d834dc62f3f1d1691b915c0a2919ab13",
+      "bytes": 3325
+    },
+    "04_DATA_AND_MARKET.md": {
+      "sha256": "44ec9342ec816ae28053aa7d8b061704929158291e214c2f02d0b64a6680b749",
+      "bytes": 3772
+    },
+    "05_STRATEGY_AND_EVALUATION.md": {
+      "sha256": "41ed4b135b214cea6a9e8e9c45a09d6d038293d4259d4dbfbe161c0376d77186",
+      "bytes": 4204
+    },
+    "06_AGENT_LEARNING_LOOP.md": {
+      "sha256": "65001ec2d135b0df74c3ca644f87acc1000ed000d4b32516f1c6634bd021cf42",
+      "bytes": 2917
+    },
+    "07_REALTIME_DECISION_AND_PAPER.md": {
+      "sha256": "f92bd776ab03a080f6bc10b6587fd54b95ae785da51d8039b954c3f2ad1874ba",
+      "bytes": 2105
+    },
+    "08_IMPLEMENTATION_PLAN.md": {
+      "sha256": "78a99ac4ef9217c5663c0d8aa332429be37eb526923a1763648df69cf52bfd61",
+      "bytes": 2366
+    },
+    "09_TASKS.md": {
+      "sha256": "9c5e582662dee26bdbc3a19decd1ef010773804ead6913977ad07bf7c3df181a",
+      "bytes": 4908
+    },
+    "10_ACCEPTANCE_CHECKLIST.md": {
+      "sha256": "ebfc3326c2a1b2eee350db35461af0861a30b5e673811ee28f7165df63ffb2d9",
+      "bytes": 3153
+    },
+    "11_CODEX_MASTER_PROMPT.md": {
+      "sha256": "4443179e7b377e29d951080b186769237640828b2c3388d41ee75cc320e88238",
+      "bytes": 4421
+    },
+    "12_UPSTREAM_LOCK.toml": {
+      "sha256": "d2ac004ddfe26d247977f145b8a7f9616290f5536acaf120827422a654ed089b",
+      "bytes": 2680
+    },
+    "13_DECISIONS_AND_NON_GOALS.md": {
+      "sha256": "af6217542e65a7955035a27af64c653a5a2858c777ffa9fbe9ff267904f68474",
+      "bytes": 2023
+    },
+    "templates/decision-brief.md": {
+      "sha256": "3a901e2274b2987798ca01e0578c00785b1dcf5d140765d3b076450dd0b6bf56",
+      "bytes": 771
+    },
+    "templates/quant.toml": {
+      "sha256": "375210eb8533ce5eae89c02370610d83c7cf88ac967fccb4f6198a30b97c3186",
+      "bytes": 597
+    },
+    "templates/strategy-result.md": {
+      "sha256": "77f1bc0a3a60d3249301d36ce71361a8794c161dd1a2b4a24d1f9567454f0f24",
+      "bytes": 686
+    },
+    "templates/strategy.toml": {
+      "sha256": "5678c0fadc3221539a4182e3c79ec8344ec53caae957ceba02cb3b1c848d5e0f",
+      "bytes": 423
+    }
+  }
+}

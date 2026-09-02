@@ -25,7 +25,12 @@ from ..config import AgentSettings
 from ..models import PauseReceipt, RunReceipt
 from ..profiles import list_profiles
 from ..receipt_store import ReceiptStore
-from ..runtime import PausedRun, TerminalRun
+from ..runtime import (
+    DeliveryExportError,
+    PausedRun,
+    TerminalRun,
+    export_receipt_artifacts,
+)
 from . import bridge
 from .models import (
     CONTROL_CALLBACK_ACTIONS,
@@ -133,7 +138,9 @@ class GatewayService:
             self.allowed_user_ids is not None
             and envelope.user_id not in self.allowed_user_ids
         ):
-            logger.info("service rejected inbound from unauthorized user %s", envelope.user_id)
+            logger.info(
+                "service rejected inbound from unauthorized user %s", envelope.user_id
+            )
             return
         session = self.store.get_or_create_session(
             surface=envelope.surface,
@@ -213,8 +220,42 @@ class GatewayService:
             }
         )
         self.store.save_session(session)
-        logger.info("gateway run %s settled %s", outcome.receipt.run_id, outcome.receipt.execution_state)
+        logger.info(
+            "gateway run %s settled %s",
+            outcome.receipt.run_id,
+            outcome.receipt.execution_state,
+        )
+        self._export_delivery(session, outcome)
         self._send_text(session, render_terminal(outcome))
+
+    def _export_delivery(self, session: SessionBinding, outcome: TerminalRun) -> None:
+        """Caller-side durable delivery of a completed run's artifacts.
+
+        Generic mechanical transport after settlement (Candidate C): export the
+        receipt-listed artifacts to a caller-owned durable root before the
+        surface transport completes. Execution truth stays ``completed``; a
+        delivery failure is independently observable to the operator through
+        the existing surface (a text error notice) — never a receipt rewrite,
+        a new terminal state, an approval, or a new delivery schema.
+        """
+        try:
+            export_receipt_artifacts(
+                outcome,
+                self.settings.workspace_root,
+                self.settings.delivery_root,
+            )
+        except DeliveryExportError as exc:
+            logger.error(
+                "durable delivery failed for run %s: %s",
+                outcome.receipt.run_id,
+                exc,
+            )
+            self._send_text(
+                session,
+                render_error(
+                    f"Durable delivery failed for run {outcome.receipt.run_id}: {exc}"
+                ),
+            )
 
     def _outbound_draft_content(
         self, session: SessionBinding, paused: PausedRun
@@ -245,7 +286,10 @@ class GatewayService:
             if not text:
                 continue
             if len(text) > DRAFT_PREVIEW_MAX:
-                return text[:DRAFT_PREVIEW_MAX] + f"\n…(truncated — full text: {draft_ref})"
+                return (
+                    text[:DRAFT_PREVIEW_MAX]
+                    + f"\n…(truncated — full text: {draft_ref})"
+                )
             return text
         return None
 
@@ -262,7 +306,9 @@ class GatewayService:
             ttl_seconds=self.approval_ttl_seconds,
         )
         self.store.save_session(session)
-        logger.info("gateway run %s paused awaiting approval", paused.pause_receipt.run_id)
+        logger.info(
+            "gateway run %s paused awaiting approval", paused.pause_receipt.run_id
+        )
         batch = len(paused.pause_receipt.pending_approvals) > 1
         self.surface.send_approval(
             session.channel_id,
@@ -296,7 +342,10 @@ class GatewayService:
         except ApprovalTokenError as exc:
             self._reject_callback(callback_id, session, str(exc))
             return
-        if session.paused_run_id is None or session.paused_run_id != binding.paused_run_id:
+        if (
+            session.paused_run_id is None
+            or session.paused_run_id != binding.paused_run_id
+        ):
             self._reject_callback(
                 callback_id,
                 session,
@@ -316,7 +365,9 @@ class GatewayService:
         if callback_id:
             self.surface.answer_callback(
                 callback_id,
-                "Approved. Resuming…" if decision == "approved" else "Denied. Resuming…",
+                "Approved. Resuming…"
+                if decision == "approved"
+                else "Denied. Resuming…",
             )
         logger.info("approval consumed for paused run %s: %s", paused_run_id, decision)
         outcome = bridge.resume_for_surface(
@@ -343,6 +394,7 @@ class GatewayService:
             outcome.receipt.execution_state,
             paused_run_id,
         )
+        self._export_delivery(session, outcome)
         self._send_text(session, render_terminal(outcome))
 
     def _reject_callback(
@@ -400,7 +452,9 @@ class GatewayService:
                 # /cases and unbindable by name, by contract
                 continue
             marker = entry / "situation.json"
-            stamp = marker.stat().st_mtime if marker.is_file() else entry.stat().st_mtime
+            stamp = (
+                marker.stat().st_mtime if marker.is_file() else entry.stat().st_mtime
+            )
             stamped.append((stamp, name))
         stamped.sort(reverse=True)
         return [
@@ -447,7 +501,9 @@ class GatewayService:
             return session, f"unknown case: {case_id} (see /cases)"
         return self.store.bind_case(session, case_id), None
 
-    def _unbind_case(self, session: SessionBinding) -> tuple[SessionBinding, str | None]:
+    def _unbind_case(
+        self, session: SessionBinding
+    ) -> tuple[SessionBinding, str | None]:
         if session.paused_run_id:
             return session, CASE_BLOCKED_BY_PAUSE
         return self.store.bind_case(session, None), None
@@ -541,7 +597,9 @@ class GatewayService:
             self._send_text(session, render_error(PROFILE_BLOCKED_BY_PAUSE))
             return
         try:
-            bridge.validate_profile(argument, self.settings, config_root=self.config_root)
+            bridge.validate_profile(
+                argument, self.settings, config_root=self.config_root
+            )
         except CompositionError as exc:
             self._send_text(session, render_error(str(exc)))
             return
@@ -564,12 +622,15 @@ class GatewayService:
             ):
                 session = session.model_copy(update={"paused_run_id": None})
                 self.store.save_session(session)
-                self._send_text(session, render_status(
-                    profile=session.profile,
-                    conversation_id=session.conversation_id,
-                    case_id=session.case_id,
-                    state="READY",
-                ))
+                self._send_text(
+                    session,
+                    render_status(
+                        profile=session.profile,
+                        conversation_id=session.conversation_id,
+                        case_id=session.case_id,
+                        state="READY",
+                    ),
+                )
                 return
             self._send_text(
                 session,
@@ -604,22 +665,28 @@ class GatewayService:
             if receipt is None:
                 session = session.model_copy(update={"last_terminal_run_id": None})
                 self.store.save_session(session)
-                self._send_text(session, render_status(
-                    profile=session.profile,
-                    conversation_id=session.conversation_id,
-                    case_id=session.case_id,
-                    state="READY",
-                ))
+                self._send_text(
+                    session,
+                    render_status(
+                        profile=session.profile,
+                        conversation_id=session.conversation_id,
+                        case_id=session.case_id,
+                        state="READY",
+                    ),
+                )
                 return
             if not isinstance(receipt, RunReceipt):
                 session = session.model_copy(update={"last_terminal_run_id": None})
                 self.store.save_session(session)
-                self._send_text(session, render_status(
-                    profile=session.profile,
-                    conversation_id=session.conversation_id,
-                    case_id=session.case_id,
-                    state="READY",
-                ))
+                self._send_text(
+                    session,
+                    render_status(
+                        profile=session.profile,
+                        conversation_id=session.conversation_id,
+                        case_id=session.case_id,
+                        state="READY",
+                    ),
+                )
                 return
             state = {
                 "completed": "LAST COMPLETED",
@@ -678,6 +745,7 @@ class GatewayService:
             outcome.receipt.execution_state,
             paused_run_id,
         )
+        self._export_delivery(session, outcome)
         self._send_text(session, render_terminal(outcome))
 
     def _cmd_artifacts(self, session: SessionBinding) -> None:
@@ -705,9 +773,7 @@ class GatewayService:
                     session.channel_id, path, caption=artifact.path
                 )
             else:
-                self._send_text(
-                    session, f"{artifact.path} ({artifact.size} bytes)"
-                )
+                self._send_text(session, f"{artifact.path} ({artifact.size} bytes)")
 
     # ── restart recovery ────────────────────────────────────────────────────
 

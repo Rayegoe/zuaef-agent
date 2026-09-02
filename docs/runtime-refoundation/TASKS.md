@@ -15,7 +15,7 @@ first-class results:
 
 Never fabricate an outcome/evidence verdict to unblock a task.
 
-## Queue state (after T006-B4 human judgment)
+## Queue state (after T006-B6 OFF baseline stability check)
 
 - T000–T005 complete.
 - T004/T004G final verdict: `CURRENT_PATH_ALREADY_MINIMAL` — the current
@@ -85,6 +85,32 @@ Never fabricate an outcome/evidence verdict to unblock a task.
   `REVERT`; its benchmark code/profile/tests were deleted. Production remains
   unchanged and OFF is only the frozen real-case reference, not a global rule.
   See `experiments/T006-B4-human-judgment.md`.
+- T006-B5 execution is complete on the frozen baseline: a replicated 3-pair
+  A/B on the same technique-OFF path, where the ONLY changing factor was one
+  appended synthesis-boundary instruction (preserve who states/scope/modal-
+  strength/responsibility when converting evidence into claims). Desk pack
+  byte-identical across all six runs (`d9620a987ffe`, 14,733 chars); control
+  prompts 15,300 vs candidate 15,605 chars. See
+  `experiments/T006-B5-synthesis-evidence-preservation.md`.
+- T006-B5 blind adjudication found NO material evidence reduction: controls
+  2 minor failures (c2 benchmark scope; c5 figure 10→5 min), candidates 2
+  minor failures (c2 benchmark scope; c5 product-name drift). Same failure
+  families persist in the candidate; business quality guard passed (all six
+  remain articles). Verdict: `WEAKEN_PRIMARY_HYPOTHESIS`, increase support for
+  the competing salience/context-representation explanation, no production
+  promotion. Evidence returned to Supervisor.
+- T006-B6 observation is complete: five fresh OFF-control runs on identical
+  fixed conditions (current code, technique OFF, no instruction, same desk
+  pack `d9620a987ffe`, same model/budget) produced only ONE counted minor
+  failure (class-5 duration drift 多年→几十年; 4/5 clean; two borderline
+  class-2 notes). Across the eight protocol-strict OFF runs (B5×3 + B6×5) the
+  only families with any recurrence are class-5 detail drift (2/8) and class-2
+  benchmark scope (1–2/8); the class-3 necessity and class-4 responsibility
+  failures flagged in B3/B4 did NOT recur in ANY fresh run. Verdict: B —
+  stochastic synthesis variance remains material; no specific semantic failure
+  mechanism is stable on OFF. See
+  `experiments/T006-B6-off-baseline-stability.md`. No next intervention
+  chosen (STOP).
 - The next T006 causal boundary is shared evidence interpretation, not another
   technique mode: preserve attribution roles, source/benchmark scope, logical
   strength and the responsibility subject. Do not add a claim checker, Host
@@ -95,31 +121,41 @@ Never fabricate an outcome/evidence verdict to unblock a task.
   reviewed one causal change at a time.
 
 ## T000 — Coach installation
+
 Status: complete (ADR-RF-004).
+
 - add this coach pack;
 - do not change runtime code;
 - confirm paths and repository tests still work.
 
 ## T001 — Metrics normalization
+
 Status: complete.
+
 - identify existing WCASE record format;
 - implement/adapt normalization into the coach metric schema;
 - preserve raw provider fields.
 
 Acceptance:
+
 - one command can emit comparable JSON for an existing WCASE record.
 
 ## T002 — Wall-clock instrumentation
+
 Status: complete.
+
 - add per-request and per-tool timing only where measurement is missing;
 - avoid custom telemetry framework.
 
 Acceptance:
+
 - timestamps/latencies can explain where time is spent.
 
 ## T003 — WCASE-1 current baseline
+
 Status: complete — baseline frozen in
 `experiments/T003-wcase1-current-baseline.md`.
+
 - capture current accepted baseline;
 - list model-visible capabilities/tools;
 - classify every tool call as semantic, mechanical, validation or control.
@@ -127,8 +163,10 @@ Status: complete — baseline frozen in
 No code optimization happened in T003.
 
 ## T004 — WCASE-1 minimality + outcome proof
+
 Status: complete — final verdict `CURRENT_PATH_ALREADY_MINIMAL`; see
 `experiments/T004-wcase1-minimality-outcome-proof.md`.
+
 - re-derive minimality from the current path, not the historical diagnosis;
 - current loop: request 1 writes and submits, request 2 is a
   protocol/presentation continuation with a native explanation;
@@ -139,6 +177,7 @@ Status: complete — final verdict `CURRENT_PATH_ALREADY_MINIMAL`; see
   profile.
 
 ## T004G — Human outcome/evidence verdict gate
+
 Status: complete — human verdict recorded in the T004 experiment record.
 
 - adjudicate the frozen T003/T004 artifact against the WCASE-1 source and
@@ -148,10 +187,12 @@ Status: complete — human verdict recorded in the T004 experiment record.
 - rejected comparator: `final-revised.md` as a prose-quality regression.
 
 ## T005 — WCASE-1 surface admission proof
+
 Status: complete — `NO_REMOVAL_JUSTIFIED`; see
 `experiments/T005-wcase1-surface-admission-proof.md`.
 
 For each remaining model-visible surface in the writing profile:
+
 - admission evidence or remove from this profile.
 
 Already settled by composition — do not re-litigate: Planning, Skills,
@@ -160,6 +201,7 @@ writing profile. Removing an exposed-but-unused tool requires evidence that
 the exposure itself costs a decision or degrades output.
 
 ## T006 — WCASE-2 semantic-selection boundary
+
 Status: T006-A diagnosis complete; T006-B1 A/B execution, reverse variance
 check and blind quality verdict complete, with evidence subchecks unclear;
 T006-B2 execution and blind judgment complete with verdict `REFINE`. See
@@ -173,6 +215,7 @@ The question is not transport shape first. It is:
 
 Step 1 — audit current host preselection in `build_writer_context()`
 (`plugins/zuaef-ace-writing/zuaef_ace_writing/writing_toolset.py`):
+
 - per-paragraph lexical `_relevance` ranking;
 - bounded per-material excerpt selection;
 - keyword-driven `_technique_tags`;
@@ -183,6 +226,7 @@ drops; measure whether dropped content was materially relevant to the
 accepted article.
 
 Step 2 — A/B observation designs:
+
 - item-by-item regular tool calls;
 - bounded batch transport;
 - CodeMode only if the experiment specifically tests it.
@@ -193,6 +237,7 @@ Do not host-preselect relevance. Efficiency bought with host-side semantic
 selection is a regression (SPEC RUNTIME-5), not a win.
 
 Current T006-B2 boundary:
+
 - Control keeps production `_technique_tags()` and its 3/18 projection;
 - Candidate exposes only the existing 18-row metadata catalog and one
   mechanical ID-addressed batch retrieval action;
@@ -206,9 +251,18 @@ Current T006-B2 boundary:
   production authority.
 
 ## T007 — WCASE-3 convergence (premise check first)
-Status: deferred — Phase 2 has not exited; do not run until the current-main
-real-corpus input comparison has converged and the selected observation
-design is justified.
+
+Status: complete — `PROBLEM_NOT_REPRODUCED` with zero code change. Fresh WCASE-3
+run on current main (production ace-writing surface: `pull_context` +
+`save_article` only): 2 requests, tool sequence `[save_article]` exactly once,
+zero retrieval calls, no repeated equivalent observation, no non-convergence;
+unresolved renewal/long-term-repeat evidence was genuinely unresolvable from
+the available surface and the model preserved the unknown in one pass per SPEC
+RUNTIME-6. Business artifact completed within material support (870 hanzi, no
+invented data/quote/scene). The historical `check_claim` loop is not exposed by
+the current surface and did not reproduce. No convergence state, claim state,
+retry logic, memory, evidence schema, stopping gate or capability added. See
+`experiments/T007-wcase3-premise-check.md`.
 
 - the historical repeated `check_claim` loop is not exposed by the current
   writing surface (`pull_context`, `save_article` only);
@@ -218,6 +272,7 @@ design is justified.
   hallucinated long-term/reorder facts.
 
 ## T008 — WCASE-4 bounded revision (premise check first)
+
 Status: pending — current code may already satisfy the contract.
 
 - current revision already passes current article + human feedback + bounded
@@ -229,7 +284,9 @@ Status: pending — current code may already satisfy the contract.
 - otherwise make the narrowest change toward SPEC RUNTIME-7.
 
 ## T009 — Capability ledger
+
 Status: pending.
+
 - classify every current capability:
   REQUIRED_INVARIANT / ADMITTED_PROFILE / EXPERIMENTAL / QUARANTINED / DELETE_CANDIDATE.
 
@@ -240,21 +297,27 @@ answer: platform availability or default production admission?
 Writing-profile OFF does not settle the generic default.
 
 ## T010 — Non-Writing canary
+
 Choose one real non-Writing slice and reproduce:
+
 - unknown convergence or
 - bounded revision or
 - minimal loop.
 
 ## T011 — Core promotion review
+
 Only mechanisms proven cross-domain may modify Core.
 
 ## T012 — Delete zombie architecture
+
 - delete or quarantine superseded runtime path;
 - remove stale flags, tests and docs;
 - leave exactly one production authority per behavior.
 
 ## T013 — Final architecture review
+
 Must answer:
+
 - What is the minimal core?
 - Which capabilities are admitted where?
 - Why does each model turn exist?

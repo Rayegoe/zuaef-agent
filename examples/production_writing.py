@@ -139,9 +139,7 @@ def mechanical_prepare(
     computed — those are writing judgments (SPEC §5.2, §16).
     """
     if rights not in RIGHTS_STATUSES:
-        raise ValueError(
-            f"rights must be one of {RIGHTS_STATUSES}, got {rights!r}"
-        )
+        raise ValueError(f"rights must be one of {RIGHTS_STATUSES}, got {rights!r}")
     if not material_paths:
         raise ValueError("at least one material file is required")
     ace_root_path = resolve_ace_root(ace_root)
@@ -189,9 +187,7 @@ def mechanical_prepare(
             continue
         if isinstance(rec, dict) and rec.get("id") and rec.get("filename"):
             by_name[str(rec["filename"])] = str(rec["id"])
-    bound = [
-        replace(f, material_id=by_name.get(f.source_ref)) for f in prepared
-    ]
+    bound = [replace(f, material_id=by_name.get(f.source_ref)) for f in prepared]
     return PrepResult(
         task=task,
         run_id=run_id,
@@ -210,8 +206,16 @@ def render_agent_prompt(
     *,
     feedback: str | None = None,
     previous_article: str | None = None,
+    synthesis_boundary_instruction: str | None = None,
 ) -> str:
-    """Render the normal or deliberately narrow revision entry."""
+    """Render the normal or deliberately narrow revision entry.
+
+    ``synthesis_boundary_instruction`` is the T006-B5 benchmark-only seam: one
+    optional compact writer instruction appended to the writer instructions
+    without touching the evidence desk pack (``writer_context`` stays
+    byte-identical). Default ``None`` keeps production writer behavior
+    unchanged.
+    """
     task = prep.task
     revision = feedback is not None
     if revision and not previous_article:
@@ -244,10 +248,18 @@ def render_agent_prompt(
                 feedback or "",
             ]
         )
+    lines.extend(["", writer_context])
+    if synthesis_boundary_instruction:
+        lines.extend(
+            [
+                "",
+                "# Evidence-boundary synthesis rule",
+                "",
+                synthesis_boundary_instruction,
+            ]
+        )
     lines.extend(
         [
-            "",
-            writer_context,
             "",
             (
                 "Write or revise the complete article now. Use pull_context only if "
@@ -350,6 +362,7 @@ def run_production_task(
     profile: str = PRODUCTION_PROFILE,
     include_technique_guidance: bool = True,
     technique_selection_mode: str = "host",
+    synthesis_boundary_instruction: str | None = None,
 ) -> dict:
     """One production article: mechanical prep -> profile agent -> execute_run.
 
@@ -423,6 +436,7 @@ def run_production_task(
             writer_context,
             feedback=feedback,
             previous_article=previous_article,
+            synthesis_boundary_instruction=synthesis_boundary_instruction,
         )
     outcome = execute_run(
         agent,
@@ -587,7 +601,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--constraints", action="append", default=[])
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--request-limit", type=int, default=None)
-    ap.add_argument("--feedback", default=None, help="natural-language editorial feedback (revision pass)")
+    ap.add_argument(
+        "--feedback",
+        default=None,
+        help="natural-language editorial feedback (revision pass)",
+    )
     ap.add_argument("--ace-root", default=None)
     ap.add_argument("--corpus-root", default=None)
     ap.add_argument(

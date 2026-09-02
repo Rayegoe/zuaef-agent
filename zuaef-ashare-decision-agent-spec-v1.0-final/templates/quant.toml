@@ -1,0 +1,25 @@
+schema = 1
+
+[market]
+region = "cn"
+primary_universe = "csi500"
+history_frequency = "day"
+live_poll_seconds = 60
+
+[execution]
+default_historical_execution = "next_open"
+slippage_bps = 10
+
+[research]
+# Freeze these before a benchmark generation. Final holdout is never fed to iterative Agent runs.
+research_start = "2018-01-01"
+research_end = "2022-12-31"
+promotion_start = "2023-01-01"
+promotion_end = "2024-12-31"
+holdout_start = "2025-01-01"
+holdout_end = "2025-12-31"
+# Set and freeze when paper deployment actually begins.
+forward_start = ""
+
+[consistency]
+max_annualized_return_diff_pct = 3.0

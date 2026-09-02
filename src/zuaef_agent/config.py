@@ -147,6 +147,11 @@ class AgentSettings:
     openai_timeout_seconds: float = 180.0
     openai_max_retries: int = 3
     openai_enable_thinking: bool | None = None
+    # Caller-owned durable delivery root (host setting, never plugin business
+    # config): after a completed run, generic host transport copies the
+    # receipt-listed artifacts here — outside the model-writable workspace so
+    # cleanup of the runtime tree can never reach the delivered copies.
+    delivery_root: Path | None = None
 
     def __post_init__(self) -> None:
         if self.request_limit <= 0:
@@ -174,6 +179,12 @@ class AgentSettings:
             raise ValueError(
                 "runtime state must live outside the model-writable workspace"
             )
+        if self.delivery_root is not None:
+            delivery = self.delivery_root.resolve()
+            if delivery == workspace or delivery.is_relative_to(workspace):
+                raise ValueError(
+                    "delivery_root must live outside the model-writable workspace"
+                )
 
     @property
     def state_root(self) -> Path:
@@ -205,6 +216,11 @@ class AgentSettings:
             runtime_state_root=Path(os.environ["ZUAEF_STATE_ROOT"])
             if os.getenv("ZUAEF_STATE_ROOT")
             else None,
+            delivery_root=(
+                Path(os.environ["ZUAEF_DELIVERY_ROOT"])
+                if os.getenv("ZUAEF_DELIVERY_ROOT")
+                else None
+            ),
             request_limit=_env_int("ZUAEF_REQUEST_LIMIT", cls.request_limit),
             tool_calls_limit=_env_int("ZUAEF_TOOL_CALLS_LIMIT", cls.tool_calls_limit),
             total_tokens_limit=(

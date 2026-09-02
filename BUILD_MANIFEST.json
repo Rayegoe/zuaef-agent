@@ -938,13 +938,13 @@
     },
     {
       "path": ".env.example",
-      "bytes": 3592,
-      "sha256": "4aea1807fc36e5772298afac4f0f288554547486b4ea092945b90ba91e73142d"
+      "bytes": 3908,
+      "sha256": "27318038e2c2e7d9e0de3fab0652c246e5965f97a06500efd592a47ae06b2532"
     },
     {
       "path": ".gitignore",
-      "bytes": 569,
-      "sha256": "29160a1c9e652122bcdeeca138de6b906d4e4c1d5bef146b53daf909a0b149ae"
+      "bytes": 619,
+      "sha256": "53bb8df45e36c9a65270c14f1c62f9d1f9c802286da87a89e2162a4d400b29b0"
     },
     {
       "path": "AGENTS.md",
@@ -1028,8 +1028,8 @@
     },
     {
       "path": "docs/upstream-baseline.md",
-      "bytes": 4086,
-      "sha256": "370e8d7a950637e035d8ae014d002b524720db61d8086519b5b94488c6bb8e80"
+      "bytes": 4155,
+      "sha256": "1dd4300411a4d192fdbb4080af603538a56797dab9255b9478e24e33e3ee4ed9"
     },
     {
       "path": "examples/approval_toolset.py",
@@ -1068,8 +1068,8 @@
     },
     {
       "path": "examples/production_writing.py",
-      "bytes": 20762,
-      "sha256": "d5998f496271734241c867a291f3bfbcf625fb1e496b8ba16d03396e61496498"
+      "bytes": 21495,
+      "sha256": "6774a40f92ec0e13aeebbc36240f85307c4b25f1ec116419dc353747be73ee97"
     },
     {
       "path": "examples/research_toolset.py",
@@ -1098,13 +1098,13 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 2917,
-      "sha256": "ba3ee853d6e33775df2928bcbfc613c5e5fe3920dabc9c2677c75b9da99d1baf"
+      "bytes": 3572,
+      "sha256": "6386e61ff5738ca4361a872529a8a461e3b863b311f4613f0ff6082f02f17272"
     },
     {
       "path": "uv.lock",
-      "bytes": 509675,
-      "sha256": "804d48233f675126754f13c0a5e7093681be219a5d7c3fd27c6bbe9a380c6917"
+      "bytes": 624706,
+      "sha256": "b4c08dba465dda7091eef0b8981792bd5d4e03dc686bb449053bf8d5c2caf343"
     },
     {
       "path": "spec/SPEC.md",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "src/zuaef_agent/cli.py",
-      "bytes": 12935,
-      "sha256": "2d206df45b32cdea77941092d0fb9818e5b6f2a14bc519f9d1f80040257a59c2"
+      "bytes": 14189,
+      "sha256": "83b16c9a9da63ec3e46e900be04f572682fa92e186edb762dfc6b3e9279cfdf5"
     },
     {
       "path": "src/zuaef_agent/composition.py",
@@ -1148,8 +1148,8 @@
     },
     {
       "path": "src/zuaef_agent/config.py",
-      "bytes": 10936,
-      "sha256": "0a66d4e1b17a2b382f0754303b50251f65d391e91862cd686302598dbbca98ff"
+      "bytes": 11759,
+      "sha256": "9d54cf187aa6e34d4939af723f87404656ca017efbeca62599319b9c3977d753"
     },
     {
       "path": "src/zuaef_agent/continuation.py",
@@ -1208,8 +1208,8 @@
     },
     {
       "path": "src/zuaef_agent/runtime.py",
-      "bytes": 20544,
-      "sha256": "eb71289b82c3bd15494ccff2a9d4e5f2ea3b3017b6668bfa77d89604f75f7672"
+      "bytes": 24847,
+      "sha256": "6529dceca8712f8f04baac8ed91106d50c3b1e3238b552a254f3992e2f3679ff"
     },
     {
       "path": "src/zuaef_agent/gateway/__init__.py",
@@ -1243,8 +1243,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 30474,
-      "sha256": "734f42216ca948bf446ac1ab6732447d354c586d95eea9f658384c9a309429c0"
+      "bytes": 32405,
+      "sha256": "98315c345427c25d470ed7fb91f3e7ebf808d9ba294a83233570627f3dc672ff"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
@@ -1327,6 +1327,11 @@
       "sha256": "e1db885a53aff0eec142bc2521d62d6cb1c6b25b943cb0cf7a66e75fb3f1378f"
     },
     {
+      "path": "tests/test_artifact_export.py",
+      "bytes": 14098,
+      "sha256": "991c51f96af21c03ffde8c4b92a1f73595d2dfb5797c0183163ae30721d5f5ae"
+    },
+    {
       "path": "tests/test_budget_slice.py",
       "bytes": 19767,
       "sha256": "75fbc3b7029e7c98d8d2e9a152cd568bcf556e183bafc243eb44d9e42af6e412"
@@ -1340,6 +1345,11 @@
       "path": "tests/test_case_toolset.py",
       "bytes": 9549,
       "sha256": "37930f300af5da40b948d6cf53871329ebee4afbf2f5290155b502ae6d748a37"
+    },
+    {
+      "path": "tests/test_chatgpt_handoff.py",
+      "bytes": 8423,
+      "sha256": "85c5eaf6bb4073a9e495109490f57e27aab484dcf1152047d1a7b568ef7fc997"
     },
     {
       "path": "tests/test_cli_and_providers.py",
@@ -1483,8 +1493,8 @@
     },
     {
       "path": "tests/test_gateway_service.py",
-      "bytes": 34069,
-      "sha256": "77e5f7d9395bc0442a2df260476e8d8a6b2dc1ab5cb6a82a247c560d57c09096"
+      "bytes": 39124,
+      "sha256": "ca0cac12b6108cbbc1973be8fe3f2efb59ac9e5b0cae290e01fb095c1ec17100"
     },
     {
       "path": "tests/test_gateway_store.py",
@@ -1590,6 +1600,16 @@
       "path": "tests/test_production_writing.py",
       "bytes": 16235,
       "sha256": "96b562835fc1f46208adfa2958821896f59e4030116ebf6bec9678c0ca8017ba"
+    },
+    {
+      "path": "tests/test_quant_plugin.py",
+      "bytes": 11974,
+      "sha256": "ee8c5650c4eeabdd54484858162f31ebc2eb41b5f01a8e1d16fe9a24ba1b6111"
+    },
+    {
+      "path": "tests/test_quant_replay.py",
+      "bytes": 11564,
+      "sha256": "5e138c641af0f67436f6804a669e57c23b4c0443327903d9e1b966f13cbf3922"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -1892,6 +1912,21 @@
       "sha256": "91fe7b09530ee1d37b2aa4910db3f469654641484691a7af9ade228fd0ca3d71"
     },
     {
+      "path": "plugins/zuaef-quant/zuaef_quant/__init__.py",
+      "bytes": 132,
+      "sha256": "70218619aa93c0f6afe1db416a7d6c5f4ad09f26191f39aaf3aa686306bebaf6"
+    },
+    {
+      "path": "plugins/zuaef-quant/zuaef_quant/plugin.py",
+      "bytes": 3512,
+      "sha256": "628d07c5925f63c9394fdf91be3a305ba9c8cd8cb69d69b8a0b656d392797bd9"
+    },
+    {
+      "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
+      "bytes": 13642,
+      "sha256": "205c2f4611496a5ee08ce2a5a2c0e28281ccc44a117aa0d4cfcfde8c94b10569"
+    },
+    {
       "path": "plugins/zuaef-telegram/zuaef_telegram/__init__.py",
       "bytes": 285,
       "sha256": "3638a49a3b6aec4e366e45cd0f68bacacc830b11673fbb3bdabb893005e4e6e0"
@@ -1987,6 +2022,11 @@
       "sha256": "ff840c835cbf605ec253700490885bb389319c7b3385ed4ff5072ba4fbca3a4e"
     },
     {
+      "path": "plugins/zuaef-quant/README.md",
+      "bytes": 403,
+      "sha256": "23f1e7aa06785351473e8c6fc0dfc4dfa37c9234b58af3fd11518721720ae0bb"
+    },
+    {
       "path": "plugins/zuaef-telegram/skill/SKILL.md",
       "bytes": 499,
       "sha256": "b29c5ad22936014a087883c2ea6779d4dbbed385fe995fc5af7ee4ae81405ab1"
@@ -2025,6 +2065,11 @@
       "path": "profiles/emtb-budget.toml",
       "bytes": 339,
       "sha256": "ccf603130855213707084b51a53bd356c0b66bacbc269665fe96c23aea300e1f"
+    },
+    {
+      "path": "profiles/quant-decision.toml",
+      "bytes": 438,
+      "sha256": "2b1b4ba6c8cfb81cfa2fc2ca054d5009042f38d7a7c08d6faa667b9155d09169"
     },
     {
       "path": "profiles/stillevo-ebike-intel.toml",
@@ -2112,6 +2157,31 @@
       "sha256": "93424daa7b5ff0dc1a4f0174363ba13081c9d3aa7544ce2bece930841d2cf44a"
     },
     {
+      "path": "tools/quant_core.py",
+      "bytes": 21512,
+      "sha256": "3174b12310b6c4d8f8de040d84f0ecf928a078de9d40c5df032ed367ca129a35"
+    },
+    {
+      "path": "tools/quant_eval_qlib.py",
+      "bytes": 14791,
+      "sha256": "baaefdc1e85046fcb3edadbb6aeb414a0e28dab1077bfe866c5e982b23d355be"
+    },
+    {
+      "path": "tools/quant_fetch_universe.py",
+      "bytes": 3782,
+      "sha256": "de5017f89909df7dbd391fe3706f56ac020971f5f094237f635ac42b9f9aafa6"
+    },
+    {
+      "path": "tools/quant_live_scan.py",
+      "bytes": 6548,
+      "sha256": "31fe063a249525018d8d1f8f8cce4b71456281fe0ca489f8568c96b3bf88cde7"
+    },
+    {
+      "path": "tools/quant_p0_data_proof.py",
+      "bytes": 6295,
+      "sha256": "e97e38b9a615f8bdf4221855778047548cac3544825b779e42f8619e3adf0832"
+    },
+    {
       "path": "tools/regen_manifest.py",
       "bytes": 3401,
       "sha256": "c574a177ef64211e32aabbea48439f96717b181f92d43a05f7af470fe56bad7d"
@@ -2123,8 +2193,8 @@
     },
     {
       "path": "tools/run_writing_eval.py",
-      "bytes": 9991,
-      "sha256": "443205b2e9048cb2e4b3214d95efec4bfd45864c3edb0741675eb224b54dd7f4"
+      "bytes": 11381,
+      "sha256": "f024ddf042a3b1d397438fbef3948b4b8be9e21f3418823a42f2c61ade5b1d0a"
     },
     {
       "path": "tools/supervisor_loop.py",

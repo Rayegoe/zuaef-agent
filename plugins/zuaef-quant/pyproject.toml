@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-quant"
+version = "0.1.0"
+description = "ZUAEF A-share decision plugin: QuantDecision capability exposing deterministic strategy evaluation, live triggers and trade-outcome recording."
+requires-python = ">=3.11"
+# Peer dependency of zuaef_agent (same environment, never on PyPI). Heavy
+# quant dependencies (akshare, qlib) deliberately live OUTSIDE this package:
+# evaluation and live scans run in the .venv-quant side environment via
+# subprocess (ZUAEF-ASHARE-001 D001 isolation), so agent installs never
+# carry a quant data stack.
+dependencies = ["pydantic>=2.10"]
+
+[project.entry-points."zuaef.plugins"]
+quant = "zuaef_quant:create_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["zuaef_quant"]

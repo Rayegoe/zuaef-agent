@@ -4,6 +4,8 @@ __pycache__/
 .pytest_cache/
 *.pyc
 .zuaef-state/
+.chatgpt-handoff/
+.zuaef-supervisor/
 workspace/artifacts/
 # Private/derived knowledge the model may write stays out of the public repo;
 # only index.md / concepts/* already committed are tracked (gitignore never
@@ -14,3 +16,4 @@ workspace/knowledge/
 # benchmarks/editorial-learning/scripts/fetch_sources.py) and derived full
 # texts are local-only; committed assets carry bounded excerpts + hashes.
 data/
+.venv-quant/

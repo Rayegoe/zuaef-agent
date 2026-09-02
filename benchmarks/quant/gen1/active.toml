@@ -1,0 +1,26 @@
+# DEMO_ACTIVE_STRATEGY — frozen host decision, 2026-09-02 (ZUAEF-ASHARE-001 P4.5).
+
+# Not frozen because it is proven profitable — Profitability Proof is NOT YET.
+# Frozen because it is the best-evidenced research child and the right
+# instrument to prove the live decision product chain (P5) end to end.
+
+# Provenance (research window 2018-01-01..2022-12-31, independent replay):
+#   baseline volume_pullback_reversal  annualized +0.2035%, 24 trades
+#   S1 s1_softer_pullback (-0.05)      annualized +0.3351%, 29 trades
+#   S2 s2_tighter_volume (2.2)         REJECTED (+0.0121%, 9 trades)
+#   S3 s3_longer_hold (hold 8)         annualized +0.3653%, 29 trades  <- frozen
+# Historical tuning stops here. Next evidence must come from the future
+# (paper/shadow), not from more in-sample mutation.
+
+schema = 1
+name = "s3_longer_hold"
+label = "DEMO_ACTIVE_STRATEGY"
+universe = "csi500_subset"
+
+entry_pullback_max = -0.05
+entry_volume_ratio_min = 1.80
+max_holding_days = 8
+stop_loss_pct = 0.03
+take_profit_pct = 0.06
+position_fraction = 0.10
+max_positions = 5

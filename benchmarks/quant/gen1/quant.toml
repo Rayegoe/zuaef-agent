@@ -1,0 +1,64 @@
+# ZUAEF-ASHARE-001 — benchmark generation 1 (frozen before first strategy run).
+# Boundaries follow the spec pack template; windows fit the reachable data
+# plane (Tencent daily history from 2018-01-01, CSI500 subset universe).
+schema = 1
+
+[market]
+region = "cn"
+primary_universe = "csi500_subset"
+history_frequency = "day"
+live_poll_seconds = 60
+
+[execution]
+default_historical_execution = "next_open"
+slippage_bps = 10
+commission_rate = 0.00025
+commission_min = 5.0
+lot_size = 100
+t_plus_1 = true
+initial_capital = 100000.0
+
+# Sell-side stamp duty, effective-dated (rate cut on 2023-08-28).
+[[execution.stamp_duty]]
+effective_from = "2018-01-01"
+sell_rate = 0.001
+
+[[execution.stamp_duty]]
+effective_from = "2023-08-28"
+sell_rate = 0.0005
+
+# Board-specific price limits, effective-dated.
+[[execution.price_limits]]
+prefixes = ["600", "601", "603", "605", "000", "001", "002", "003"]
+effective_from = "2018-01-01"
+limit_pct = 0.10
+
+[[execution.price_limits]]
+prefixes = ["300"]
+effective_from = "2018-01-01"
+limit_pct = 0.10
+
+[[execution.price_limits]]
+prefixes = ["300"]
+effective_from = "2020-08-24"
+limit_pct = 0.20
+
+[[execution.price_limits]]
+prefixes = ["688"]
+effective_from = "2019-07-22"
+limit_pct = 0.20
+
+[research]
+# Agent-visible iterative window.
+research_start = "2018-01-01"
+research_end = "2022-12-31"
+# Host-only promotion test for finalists; not exposed per-iteration.
+promotion_start = "2023-01-01"
+promotion_end = "2024-12-31"
+# Hidden champion holdout; never fed back into iterative search.
+holdout_start = "2025-01-01"
+holdout_end = "2026-08-28"
+forward_start = ""
+
+[consistency]
+max_annualized_return_diff_pct = 3.0

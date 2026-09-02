@@ -1,6 +1,6 @@
 # UPSTREAM BASELINE — ZUAEF pinned release record
 
-Inspection anchor: 2026-08-19 (v2.1 upstream-adoption work).
+Inspection anchor: 2026-08-28 (ZUAEF-ASHARE-001 U0 upstream refresh; prior anchor 2026-08-19 v2.1).
 
 Source of truth for what the ZUAEF platform baseline is built on. Execute
 `uv run python tools/probe_upstream_baseline.py` against the locked
@@ -11,8 +11,8 @@ no model request, no credentials).
 
 | Package | Version | Lockfile |
 |---|---|---|
-| `pydantic-ai` | 2.30.0 | `uv.lock` |
-| `pydantic-ai-harness[skills,code-mode]` | 0.20.0 | `uv.lock` |
+| `pydantic-ai` | 2.35.3 | `uv.lock` |
+| `pydantic-ai-harness[skills,code-mode]` | 0.27.0 (minor-bound: `>=0.27,<0.28`) | `uv.lock` |
 | Python | 3.13 | — |
 
 `uv.lock` is the exact execution baseline. Production never consumes upstream

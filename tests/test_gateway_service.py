@@ -113,7 +113,9 @@ def _write_profile(tmp_path: Path, name: str = "writing", text: str = PROFILE) -
     return config_root
 
 
-def _fixture_builder(settings, *, run_id=None, profile=None, snapshot=None, config_root=None, **_):
+def _fixture_builder(
+    settings, *, run_id=None, profile=None, snapshot=None, config_root=None, **_
+):
     from zuaef_agent.composition import build_profile_agent as real
 
     return real(
@@ -166,9 +168,7 @@ def _service(tmp_path: Path, monkeypatch, surface: FakeSurface, fn) -> GatewaySe
     settings = _settings(tmp_path)
     _write_profile(tmp_path)
     store = GatewayStore(tmp_path / "gateway.sqlite3")
-    monkeypatch.setattr(
-        core_module, "resolve_model", lambda s: FunctionModel(fn)
-    )
+    monkeypatch.setattr(core_module, "resolve_model", lambda s: FunctionModel(fn))
     monkeypatch.setattr(
         "zuaef_agent.gateway.bridge.build_profile_agent", _fixture_builder
     )
@@ -230,7 +230,9 @@ def _ensure_session(
 
 def test_normal_message_starts_run_and_sets_last_terminal(tmp_path: Path, monkeypatch):
     surface = FakeSurface()
-    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="checked"))
+    service = _service(
+        tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="checked")
+    )
 
     service.handle(_envelope("check the post"))
 
@@ -312,9 +314,7 @@ def test_deny_callback_resumes_without_effect(tmp_path: Path, monkeypatch):
     service.handle(_envelope("publish the article", n=1))
     token = surface.approvals[0]["token"]
 
-    service.handle(
-        _envelope("", n=2, callback_token=token, callback_action="deny")
-    )
+    service.handle(_envelope("", n=2, callback_token=token, callback_action="deny"))
 
     session = _session(service)
     assert session.paused_run_id is None
@@ -324,7 +324,9 @@ def test_deny_callback_resumes_without_effect(tmp_path: Path, monkeypatch):
     ]
 
 
-def test_duplicate_approval_is_rejected_without_second_resume(tmp_path: Path, monkeypatch):
+def test_duplicate_approval_is_rejected_without_second_resume(
+    tmp_path: Path, monkeypatch
+):
     seen: dict = {}
     surface = FakeSurface()
     service = _service(tmp_path, monkeypatch, surface, _pause_fn(seen))
@@ -434,6 +436,7 @@ def test_status_is_host_grounded_and_never_calls_model(tmp_path: Path, monkeypat
 
 def test_status_after_terminal_shows_last_state(tmp_path: Path, monkeypatch):
     surface = FakeSurface()
+
     # Host-decided partial: the enforced usage boundary trips when the model
     # needs a second request after its tool call — never a model claim.
     def fn(messages, info):
@@ -450,9 +453,7 @@ def test_status_after_terminal_shows_last_state(tmp_path: Path, monkeypatch):
     settings = settings.with_overrides(request_limit=1)
     _write_profile(tmp_path)
     store = GatewayStore(tmp_path / "gateway.sqlite3")
-    monkeypatch.setattr(
-        core_module, "resolve_model", lambda s: FunctionModel(fn)
-    )
+    monkeypatch.setattr(core_module, "resolve_model", lambda s: FunctionModel(fn))
     monkeypatch.setattr(
         "zuaef_agent.gateway.bridge.build_profile_agent", _fixture_builder
     )
@@ -519,7 +520,9 @@ def test_artifacts_delivers_integrity_checked_files_only(tmp_path: Path, monkeyp
         execution_state="completed",
         outcome="done",
         artifact_facts=[
-            ArtifactFact(path="artifacts/report.md", size=8, sha256="x" * 64, change="created"),
+            ArtifactFact(
+                path="artifacts/report.md", size=8, sha256="x" * 64, change="created"
+            ),
         ],
     )
     ReceiptStore(settings.state_root).write(receipt)
@@ -547,7 +550,9 @@ def test_artifacts_missing_file_sends_path_and_size(tmp_path: Path, monkeypatch)
         execution_state="completed",
         outcome="done",
         artifact_facts=[
-            ArtifactFact(path="artifacts/ghost.md", size=4096, sha256="y" * 64, change="created")
+            ArtifactFact(
+                path="artifacts/ghost.md", size=4096, sha256="y" * 64, change="created"
+            )
         ],
     )
     ReceiptStore(settings.state_root).write(receipt)
@@ -567,8 +572,15 @@ def test_help_lists_commands(tmp_path: Path, monkeypatch):
     service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
     service.handle(_envelope("/help", n=1))
     for command in (
-        "/new", "/case", "/cases", "/unbind", "/profile", "/status",
-        "/approve", "/deny", "/artifacts",
+        "/new",
+        "/case",
+        "/cases",
+        "/unbind",
+        "/profile",
+        "/status",
+        "/approve",
+        "/deny",
+        "/artifacts",
     ):
         assert command in surface.last_text()
 
@@ -653,7 +665,9 @@ def _make_case_dir(service: GatewayService, name: str, stamp: float) -> None:
     os.utime(marker, (stamp, stamp))
 
 
-def _control_envelope(n: int, action: str, payload: str | None = None) -> InboundEnvelope:
+def _control_envelope(
+    n: int, action: str, payload: str | None = None
+) -> InboundEnvelope:
     return _envelope(
         "",
         n=n,
@@ -872,12 +886,15 @@ def _CASE_ID_SHAPE_OK(name: str) -> bool:
 def test_authoring_task_presents_deliverable_without_approval(
     tmp_path: Path, monkeypatch
 ):
-    """"改写这篇文章" must surface the rewritten article as the main reply
+    """ "改写这篇文章" must surface the rewritten article as the main reply
     with ZERO approval cards — work process is never approval-gated."""
     article = "### 夏天的指尖,不必太热闹\n\n到了八月,美甲似乎也该从好看里退一步。"
     surface = FakeSurface()
     service = _service(
-        tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="已改写", deliverable=article)
+        tmp_path,
+        monkeypatch,
+        surface,
+        lambda m, i: _final(outcome="已改写", deliverable=article),
     )
     _ensure_session(service)
 
@@ -948,7 +965,9 @@ def test_outbound_draft_content_truncates_long_drafts(tmp_path: Path, monkeypatc
     service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
     drafts = service.settings.workspace_root / "cases" / "acme" / "drafts"
     drafts.mkdir(parents=True)
-    (drafts / "msg-004.md").write_text("x" * (DRAFT_PREVIEW_MAX + 100), encoding="utf-8")
+    (drafts / "msg-004.md").write_text(
+        "x" * (DRAFT_PREVIEW_MAX + 100), encoding="utf-8"
+    )
     session = _ensure_session(service)
     session = service.store.bind_case(session, "acme")
 
@@ -957,3 +976,126 @@ def test_outbound_draft_content_truncates_long_drafts(tmp_path: Path, monkeypatc
     assert content is not None
     assert "truncated" in content
     assert len(content) < DRAFT_PREVIEW_MAX + 100
+
+
+# ── generic durable delivery: Candidate C wiring ───────────────────────────
+
+
+def _service_with_delivery(
+    tmp_path: Path, monkeypatch, surface, fn, delivery_root: Path
+):
+    """GatewayService over the fixture plugin with a caller-owned delivery root."""
+    settings = _settings(tmp_path).with_overrides(delivery_root=delivery_root)
+    _write_profile(tmp_path)
+    store = GatewayStore(tmp_path / "gateway.sqlite3")
+    monkeypatch.setattr(core_module, "resolve_model", lambda s: FunctionModel(fn))
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.continuation.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.validate_profile", _fixture_validate
+    )
+    return GatewayService(
+        settings=settings,
+        store=store,
+        surface=surface,
+        default_profile="writing",
+        config_root=tmp_path / "config",
+    )
+
+
+def test_gateway_terminal_path_exports_delivery(tmp_path: Path, monkeypatch):
+    """Normal profile run -> TerminalRun -> generic exporter invoked on the
+    terminal settlement path, before the surface transport completes."""
+    calls = []
+
+    def spy(outcome, workspace_root, delivery_root):  # type: ignore[no-untyped-def]
+        calls.append((outcome, workspace_root, delivery_root))
+        return {"status": "delivered", "files": []}
+
+    monkeypatch.setattr("zuaef_agent.gateway.service.export_receipt_artifacts", spy)
+    surface = FakeSurface()
+    service = _service_with_delivery(
+        tmp_path, monkeypatch, surface, lambda m, i: _final(), tmp_path / "delivery"
+    )
+
+    service.handle(_envelope("do it", n=1))
+
+    assert len(calls) == 1
+    outcome, workspace_root, delivery_root = calls[0]
+    assert outcome.receipt.execution_state == "completed"
+    assert delivery_root == tmp_path / "delivery"
+    assert workspace_root == service.settings.workspace_root
+    # the run still reached the surface: execution truth is untouched
+    assert "✅ Completed" in surface.last_text()
+
+
+def test_gateway_resume_path_exports_delivery(tmp_path: Path, monkeypatch):
+    """Paused run -> approval resume -> completed TerminalRun -> generic
+    exporter invoked on the resume settlement path."""
+    calls = []
+
+    def spy(outcome, workspace_root, delivery_root):  # type: ignore[no-untyped-def]
+        calls.append((outcome, workspace_root, delivery_root))
+        return {"status": "delivered", "files": []}
+
+    monkeypatch.setattr("zuaef_agent.gateway.service.export_receipt_artifacts", spy)
+    surface = FakeSurface()
+    seen: dict = {}
+    service = _service_with_delivery(
+        tmp_path, monkeypatch, surface, _pause_fn(seen), tmp_path / "delivery"
+    )
+    service.handle(_envelope("publish the article", n=1))
+    assert _session(service).paused_run_id is not None
+    token = surface.approvals[0]["token"]
+    paused_run_id = _session(service).paused_run_id
+
+    service.handle(
+        _envelope(
+            "",
+            n=2,
+            callback_token=token,
+            callback_action="approve",
+            transport_context={"callback_query_id": "cb-1"},
+        )
+    )
+
+    assert len(calls) == 1
+    outcome, workspace_root, delivery_root = calls[0]
+    assert outcome.receipt.execution_state == "completed"
+    assert outcome.receipt.continued_from_run_id == paused_run_id
+    assert delivery_root == tmp_path / "delivery"
+    assert workspace_root == service.settings.workspace_root
+    assert "✅ Completed" in surface.last_text()
+
+
+def test_gateway_delivery_failure_is_operator_visible_and_truth_preserved(
+    tmp_path: Path, monkeypatch
+):
+    """Invariant: run execution truth stays completed AND a durable-delivery
+    failure is independently observable on the existing surface (a text
+    notice) — never a receipt rewrite or a new terminal state."""
+    from zuaef_agent.runtime import DeliveryExportError
+
+    def failing_exporter(outcome, workspace_root, delivery_root):
+        raise DeliveryExportError(f"boom for {outcome.receipt.run_id}")
+
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.service.export_receipt_artifacts", failing_exporter
+    )
+    surface = FakeSurface()
+    service = _service_with_delivery(
+        tmp_path, monkeypatch, surface, lambda m, i: _final(), tmp_path / "delivery"
+    )
+
+    service.handle(_envelope("do it", n=1))
+
+    session = _session(service)
+    receipt = service.receipts.read(session.last_terminal_run_id)  # type: ignore[arg-type]
+    assert receipt.execution_state == "completed"  # execution truth untouched
+    combined = "".join(text for _, text in surface.texts)
+    assert "✅ Completed" in combined  # the run result is still delivered
+    assert "Durable delivery failed for run" in combined  # failure is separate/visible

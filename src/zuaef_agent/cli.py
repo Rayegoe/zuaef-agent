@@ -20,7 +20,15 @@ from .continuation import resume_paused_run
 from .gateway.store import GatewayStore
 from .models import CoreDeps
 from .profiles import list_profiles, load_profile
-from .runtime import PausedRun, RuntimeOutcome, execute_run, run_task
+from .runtime import (
+    DeliveryExportError,
+    PausedRun,
+    RuntimeOutcome,
+    TerminalRun,
+    execute_run,
+    export_receipt_artifacts,
+    run_task,
+)
 
 # Exit-code contract: completed 0, partial 1, blocked 2, paused 3 (distinct from
 # failure), process errors (pre-acceptance config/CLI problems) 64.
@@ -49,10 +57,21 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--request-limit", type=int)
     run.add_argument("--tool-calls-limit", type=int)
     run.add_argument("--total-tokens-limit", type=int)
+    run.add_argument(
+        "--delivery-root",
+        type=Path,
+        help="caller-owned durable directory outside the workspace; the "
+        "completed run's receipt-listed artifacts are copied here after "
+        "settlement (also settable via ZUAEF_DELIVERY_ROOT)",
+    )
 
-    resume = sub.add_parser("resume", help="Continue a paused run by approving or denying it")
+    resume = sub.add_parser(
+        "resume", help="Continue a paused run by approving or denying it"
+    )
     resume.add_argument("run_id", help="run_id of the paused run (pause receipt)")
-    resume.add_argument("--approve", action="store_true", help="approve pending approvals")
+    resume.add_argument(
+        "--approve", action="store_true", help="approve pending approvals"
+    )
     resume.add_argument("--deny", action="store_true", help="deny pending approvals")
     resume.add_argument("--reason", help="message shown to the model when denying")
     resume.add_argument("--model")
@@ -67,11 +86,15 @@ def _parser() -> argparse.ArgumentParser:
     plugin_inspect = plugin_sub.add_parser(
         "inspect", help="show one installed plugin's metadata"
     )
-    plugin_inspect.add_argument("plugin_id", help="plugin id (zuaef.plugins entry point name)")
+    plugin_inspect.add_argument(
+        "plugin_id", help="plugin id (zuaef.plugins entry point name)"
+    )
 
     profile = sub.add_parser("profile", help="manage explicit plugin compositions")
     profile_sub = profile.add_subparsers(dest="profile_command", required=True)
-    profile_list = profile_sub.add_parser("list", help="list profiles under the config root")
+    profile_list = profile_sub.add_parser(
+        "list", help="list profiles under the config root"
+    )
     profile_list.add_argument("--config-root", type=Path)
     profile_show = profile_sub.add_parser(
         "show", help="show one profile's declared (non-secret) configuration"
@@ -109,7 +132,9 @@ def _parser() -> argparse.ArgumentParser:
     gateway_bind.add_argument("--channel", required=True)
     gateway_bind.add_argument("--thread", default=None)
     gateway_bind.add_argument("--case", default=None, help="case_id to bind")
-    gateway_bind.add_argument("--unbind", action="store_true", help="remove the binding")
+    gateway_bind.add_argument(
+        "--unbind", action="store_true", help="remove the binding"
+    )
     gateway_bind.add_argument("--workspace", type=Path)
     gateway_bind.add_argument("--state-root", type=Path)
 
@@ -118,9 +143,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     web.add_argument("--host", default="127.0.0.1", help="loopback address only")
     web.add_argument("--port", type=int, default=8765)
-    web.add_argument(
-        "--no-open", action="store_true", help="do not open a browser tab"
-    )
+    web.add_argument("--no-open", action="store_true", help="do not open a browser tab")
     web.add_argument("--workspace", type=Path)
     web.add_argument("--state-root", type=Path)
     return p
@@ -137,6 +160,8 @@ def _settings_from_args(args: argparse.Namespace) -> AgentSettings:
         value = getattr(args, key, None)
         if value is not None:
             changes[key] = value
+    if getattr(args, "delivery_root", None) is not None:
+        changes["delivery_root"] = args.delivery_root
     if changes:
         settings = settings.with_overrides(**changes)
     return settings
@@ -168,12 +193,8 @@ def _run(args: argparse.Namespace) -> int:
         outcome = run_task(args.task, settings)
     else:
         run_id = uuid4().hex
-        agent, snapshot = build_profile_agent(
-            settings, run_id=run_id, profile=profile
-        )
-        deps = CoreDeps(
-            workspace_root=settings.workspace_root.resolve(), run_id=run_id
-        )
+        agent, snapshot = build_profile_agent(settings, run_id=run_id, profile=profile)
+        deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
         outcome = execute_run(
             agent,
             deps,
@@ -182,6 +203,20 @@ def _run(args: argparse.Namespace) -> int:
             run_id=run_id,
             composition=snapshot,
         )
+    # Durable delivery (generic, caller-side): after a completed run settles,
+    # copy the receipt-listed artifacts to a caller-owned durable root before
+    # the workspace is ever cleaned. Execution truth is already settled, so a
+    # transport failure is surfaced on the host boundary (stderr) only and the
+    # actual run execution result is preserved.
+    if isinstance(outcome, TerminalRun):
+        try:
+            export_receipt_artifacts(
+                outcome,
+                settings.workspace_root,
+                settings.delivery_root,
+            )
+        except DeliveryExportError as exc:
+            print(f"delivery failure notice: {exc}", file=sys.stderr)
     _print_outcome(outcome)
     return _outcome_exit_code(outcome)
 
@@ -235,15 +270,11 @@ def _profile(args: argparse.Namespace) -> int:
     config_root = args.config_root
     if args.profile_command == "show":
         profile = load_profile(args.name, config_root)
-        print(
-            json.dumps(profile.model_dump(), ensure_ascii=False, indent=2)
-        )
+        print(json.dumps(profile.model_dump(), ensure_ascii=False, indent=2))
         return 0
     settings = AgentSettings.from_env()
     snapshot = resolve_profile(args.name, settings, config_root=config_root)
-    print(
-        json.dumps(snapshot.model_dump(), ensure_ascii=False, indent=2)
-    )
+    print(json.dumps(snapshot.model_dump(), ensure_ascii=False, indent=2))
     return 0
 
 
@@ -282,7 +313,10 @@ def _gateway_bind_case(args: argparse.Namespace) -> int:
         settings = settings.with_overrides(runtime_state_root=args.state_root)
     case_id = None if args.unbind else args.case
     if case_id is None and not args.unbind:
-        print("process error: --case is required unless --unbind is given", file=sys.stderr)
+        print(
+            "process error: --case is required unless --unbind is given",
+            file=sys.stderr,
+        )
         return EXIT_PROCESS_ERROR
     store = GatewayStore(settings.state_root / "gateway.sqlite3")
     try:
@@ -325,7 +359,9 @@ def main() -> None:
     parser = _parser()
     try:
         args = parser.parse_args()
-        _settings_from_args(args)  # validates limits pre-acceptance: process error, no receipt
+        _settings_from_args(
+            args
+        )  # validates limits pre-acceptance: process error, no receipt
     except (ValueError, argparse.ArgumentError) as exc:
         print(f"process error: {exc}", file=sys.stderr)
         sys.exit(EXIT_PROCESS_ERROR)
@@ -346,7 +382,13 @@ def main() -> None:
             code = _web(args)
         else:
             code = _profile(args)
-    except (ValueError, FileNotFoundError, LookupError, UserError, httpx.HTTPError) as exc:
+    except (
+        ValueError,
+        FileNotFoundError,
+        LookupError,
+        UserError,
+        httpx.HTTPError,
+    ) as exc:
         print(f"process error: {exc}", file=sys.stderr)
         sys.exit(EXIT_PROCESS_ERROR)
     sys.exit(code)

@@ -1,0 +1,13 @@
+schema = 1
+name = "volume_pullback_reversal"
+universe = "csi500"
+
+# Example conceptual expression. Implementation must map only validated supported operators.
+entry_expression = "pullback_5d <= -0.06 AND volume_ratio_20d >= 1.80 AND close_strength_1d >= 0"
+exit_expression = "holding_days >= 5 OR close_below_ma5"
+
+max_holding_days = 5
+stop_loss_pct = 0.03
+take_profit_pct = 0.06
+position_fraction = 0.10
+max_positions = 5

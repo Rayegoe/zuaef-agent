@@ -1,0 +1,76 @@
+# Audited external state for ZUAEF-ASHARE-001.
+# Local uv.lock after validated implementation is final execution authority.
+
+[audit]
+date = "2026-08-28"
+spec_version = "1.0-final"
+
+[zuaef_agent]
+repository = "Rayegoe/zuaef-agent"
+audited_remote_main_commit = "164a9140a3e0c467b3f2a3ef38590bbb56cec0c7"
+audited_remote_main_commit_date = "2026-08-24"
+authority = "Record local HEAD and dirty state at start; local checkout wins."
+
+[pydantic_ai]
+repository = "pydantic/pydantic-ai"
+target_release = "2.35.3"
+target_release_date = "2026-08-28"
+audited_main_commit = "68061750322e7dd97f722a2f9000a242214dab24"
+audited_main_commit_date = "2026-08-28"
+note = "U0 validates compatibility before production lock changes."
+
+[pydantic_ai_harness]
+repository = "pydantic/pydantic-ai-harness"
+target_release = "0.27.0"
+target_release_date = "2026-08-27"
+audited_main_commit = "6daf761ca64a6876eb2871841403c5dfa3a2315c"
+audited_main_commit_date = "2026-08-27"
+note = "Harness is 0.x; pin validated minor range after U0."
+
+[akshare]
+repository = "akfamily/akshare"
+latest_release = "release-v1.18.94"
+latest_release_date = "2026-08-21"
+audited_main_commit = "8e95744b79ae22326308ccd2b4e62650c5b53c55"
+audited_main_commit_date = "2026-08-28"
+role = "real/public A-share market data"
+runtime_policy = "Pin a validated release; do not automatically track main."
+
+[qlib]
+repository = "microsoft/qlib"
+runtime_version = "0.9.7"
+latest_release = "v0.9.7"
+latest_release_date = "2025-08-15"
+audited_main_commit = "79633dd9506ea689e5400dea0197717b5b3d74b7"
+audited_main_commit_date = "2026-07-23"
+role = "deterministic quant research kernel"
+runtime_tracks_main = false
+
+[rd_agent]
+repository = "microsoft/RD-Agent"
+latest_release = "v0.8.0"
+latest_release_date = "2025-11-03"
+audited_main_commit = "6762f84f9bc0f5c6486c50a00e128a57ac6c3683"
+audited_quant_commit = "be47e5bd6cd316254073927dd6c2d047f9593b4f"
+runtime_dependency = false
+role = "methodology reference: hypothesis -> experiment -> feedback"
+
+[alphapilot]
+repository = "ai-yang/AlphaPilot"
+audited_main_commit = "e6ada47402285777a579a8f90de1d18264c6679c"
+audited_main_commit_date = "2026-08-26"
+runtime_dependency = false
+role = "A-share cost-aware/factor engineering reference"
+
+[abq]
+repository = "abell12134/abq"
+audited_main_commit = "f262bec523e060543fdd51f9aaa5b98709ebf4e7"
+audited_main_commit_date = "2026-08-18"
+runtime_dependency = false
+role = "Qlib + independent event replay / A-share execution reference"
+
+[replay]
+preferred_candidate = "backtrader-next"
+audited_pypi_release = "2.3.7"
+audited_pypi_release_date = "2026-03-26"
+note = "Validate in P2 before runtime lock. Independence/execution correctness is the requirement."

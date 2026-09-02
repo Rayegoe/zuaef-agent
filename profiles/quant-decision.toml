@@ -1,0 +1,11 @@
+# Quant-decision profile (ZUAEF-ASHARE-001 Z005): the zuaef-quant plugin
+# alone, capabilities allowed (the QuantDecision Capability is the domain
+# surface). Non-secret config only; the side-environment python is resolved
+# from ZUAEF_QUANT_PYTHON or the repo default .venv-quant.
+# Install: cp profiles/quant-decision.toml ~/.config/zuaef/profiles/
+schema = 1
+name = "quant-decision"
+
+[[plugins]]
+id = "quant"
+allow_capabilities = true
