@@ -94,7 +94,9 @@ def main() -> int:
         universe_source = str(uni.get("name", "user_universe"))
     except (OSError, KeyError, ValueError, TypeError):
         universe_meta = json.loads(
-            (CACHE_DIR / "universe" / "csi500_subset.meta.json").read_text(encoding="utf-8")
+            (CACHE_DIR / "universe" / "csi500_subset.meta.json").read_text(
+                encoding="utf-8"
+            )
         )
         symbols = universe_meta["symbols"]
         universe_source = "csi500_subset"

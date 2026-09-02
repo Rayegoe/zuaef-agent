@@ -11,6 +11,7 @@ briefs/*.json / active.toml / quant.toml), 输出单一自包含 HTML (内联 CS
 冻结期定位 (docs/quant/README.md §6): dashboard 属禁改清单, 本脚本仅是把既有
 证据渲染成页面供观察期肉眼巡检, 不是新的量化基础设施; 不用于交易决策。
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,6 +33,7 @@ DEFAULT_OUT = ART / "dashboard.html"
 # harvest helpers (all tolerant: missing files -> safe defaults)
 # --------------------------------------------------------------------------
 
+
 def read_text(p: Path) -> str:
     try:
         return p.read_text(encoding="utf-8", errors="replace")
@@ -52,8 +54,15 @@ def parse_status_proofs() -> list[dict]:
     for line in read_text(GEN1 / "STATUS.md").splitlines():
         if not line.strip().startswith("|"):
             continue
-        cells = [c.strip().replace("**", "").strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) >= 3 and cells[0] not in ("", "Proof") and not set(cells[0]) <= {"-"}:
+        cells = [
+            c.strip().replace("**", "").strip()
+            for c in line.strip().strip("|").split("|")
+        ]
+        if (
+            len(cells) >= 3
+            and cells[0] not in ("", "Proof")
+            and not set(cells[0]) <= {"-"}
+        ):
             rows.append({"name": cells[0], "state": cells[1], "evidence": cells[2]})
     return rows
 
@@ -65,17 +74,24 @@ def parse_obs_log() -> list[dict]:
         if not line.strip().startswith("|"):
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) < 5 or cells[0] == "日期" or not re.match(r"\d{4}-\d{2}-\d{2}", cells[0]):
+        if (
+            len(cells) < 5
+            or cells[0] == "日期"
+            or not re.match(r"\d{4}-\d{2}-\d{2}", cells[0])
+        ):
             continue
-        rows.append({
-            "date": cells[0], "time": cells[1] if len(cells) > 1 else "",
-            "scanned": cells[2] if len(cells) > 2 else "",
-            "triggers": cells[3] if len(cells) > 3 else "",
-            "action": cells[4] if len(cells) > 4 else "",
-            "scan_s": cells[5] if len(cells) > 5 else "",
-            "brief_s": cells[6] if len(cells) > 6 else "",
-            "note": cells[7] if len(cells) > 7 else "",
-        })
+        rows.append(
+            {
+                "date": cells[0],
+                "time": cells[1] if len(cells) > 1 else "",
+                "scanned": cells[2] if len(cells) > 2 else "",
+                "triggers": cells[3] if len(cells) > 3 else "",
+                "action": cells[4] if len(cells) > 4 else "",
+                "scan_s": cells[5] if len(cells) > 5 else "",
+                "brief_s": cells[6] if len(cells) > 6 else "",
+                "note": cells[7] if len(cells) > 7 else "",
+            }
+        )
     return rows
 
 
@@ -122,7 +138,9 @@ def parse_equity(p: Path, max_points: int = 200) -> dict | None:
 
 def harvest_evolution() -> dict:
     """Baseline (gen1) + S1/S2/S3 children comparison from evidence.json files."""
-    ev = read_json(ART / "gen1" / "evidence.json") or {}  # baseline evidence lives in artifact dir
+    ev = (
+        read_json(ART / "gen1" / "evidence.json") or {}
+    )  # baseline evidence lives in artifact dir
     rp = ev.get("independent_replay", {}) or {}
     vc = ev.get("vector_stage", {}) or {}
     baseline = {
@@ -140,7 +158,9 @@ def harvest_evolution() -> dict:
         "note": "P1 冻结基准策略, 平进平出。",
     }
     children = []
-    for d in sorted((ART / "children").iterdir()) if (ART / "children").is_dir() else []:
+    for d in (
+        sorted((ART / "children").iterdir()) if (ART / "children").is_dir() else []
+    ):
         if not d.is_dir():
             continue
         e = read_json(d / "evidence.json")
@@ -151,35 +171,52 @@ def harvest_evolution() -> dict:
         name = e.get("strategy", {}).get("name", d.name)
         verdict, note = "未知", ""
         if name == "s2_tighter_volume":
-            verdict, note = "被证据否决", "S2 收严量比 -> 9 笔, 年化崩塌; 入场阈值以 S1 为准。"
+            verdict, note = (
+                "被证据否决",
+                "S2 收严量比 -> 9 笔, 年化崩塌; 入场阈值以 S1 为准。",
+            )
         elif name == "s3_longer_hold":
-            verdict, note = "冻结 (DEMO_ACTIVE_STRATEGY)", "S3 延长持有 5->8 天: 纯出场侧收益, 零新增成本; S4+ 停调参。"
+            verdict, note = (
+                "冻结 (DEMO_ACTIVE_STRATEGY)",
+                "S3 延长持有 5->8 天: 纯出场侧收益, 零新增成本; S4+ 停调参。",
+            )
         else:
-            verdict, note = "改善", "S1 放宽回撤 -> 29 笔, 年化提升; 入场条件被后续轮次继承。"
-        children.append({
-            "id": name,
-            "name": name,
-            "annual": r.get("annualized_return_pct"),
-            "total": r.get("total_return_pct"),
-            "dd": r.get("max_drawdown_pct"),
-            "trades": r.get("trade_count"),
-            "cost": r.get("total_cost"),
-            "intents": e.get("intents", {}).get("total"),
-            "vector_annual": v.get("annualized_return_pct"),
-            "diff_pp": (e.get("consistency", {}) or {}).get("annualized_return_diff_pp"),
-            "verdict": verdict,
-            "note": note,
-        })
+            verdict, note = (
+                "改善",
+                "S1 放宽回撤 -> 29 笔, 年化提升; 入场条件被后续轮次继承。",
+            )
+        children.append(
+            {
+                "id": name,
+                "name": name,
+                "annual": r.get("annualized_return_pct"),
+                "total": r.get("total_return_pct"),
+                "dd": r.get("max_drawdown_pct"),
+                "trades": r.get("trade_count"),
+                "cost": r.get("total_cost"),
+                "intents": e.get("intents", {}).get("total"),
+                "vector_annual": v.get("annualized_return_pct"),
+                "diff_pp": (e.get("consistency", {}) or {}).get(
+                    "annualized_return_diff_pp"
+                ),
+                "verdict": verdict,
+                "note": note,
+            }
+        )
     return {"baseline": baseline, "children": children}
 
 
 def harvest_equity_curves() -> list[dict]:
     """Baseline + children replay equity curves (% of initial capital)."""
     series = []
-    b = parse_equity(ART / "gen1" / "equity_replay.csv")  # baseline curve lives in artifact dir
+    b = parse_equity(
+        ART / "gen1" / "equity_replay.csv"
+    )  # baseline curve lives in artifact dir
     if b:
         series.append({"name": "基线", "dates": b["dates"], "eq": b["eq"]})
-    for d in sorted((ART / "children").iterdir()) if (ART / "children").is_dir() else []:
+    for d in (
+        sorted((ART / "children").iterdir()) if (ART / "children").is_dir() else []
+    ):
         if not d.is_dir():
             continue
         c = parse_equity(d / "equity_replay.csv")
@@ -190,7 +227,11 @@ def harvest_equity_curves() -> list[dict]:
 
 def c_name(ts_dir: str) -> str:
     base = re.sub(r"-\d{8}T\d{6}Z$", "", ts_dir)
-    return {"s1_softer_pullback": "S1", "s2_tighter_volume": "S2", "s3_longer_hold": "S3"}.get(base, base)
+    return {
+        "s1_softer_pullback": "S1",
+        "s2_tighter_volume": "S2",
+        "s3_longer_hold": "S3",
+    }.get(base, base)
 
 
 def harvest_briefs() -> list[dict]:
@@ -242,12 +283,21 @@ VERSIONS = [
 ARTIFACT_MAP = [
     ("benchmarks/quant/gen1/quant.toml", "冻结市场规则/成本/基准窗口 (生效日期化)"),
     ("benchmarks/quant/gen1/strategy.toml", "gen1 基线策略 (默认参数出处)"),
-    ("benchmarks/quant/gen1/active.toml", "DEMO_ACTIVE_STRATEGY = s3_longer_hold (冻结)"),
+    (
+        "benchmarks/quant/gen1/active.toml",
+        "DEMO_ACTIVE_STRATEGY = s3_longer_hold (冻结)",
+    ),
     ("benchmarks/quant/gen1/STATUS.md", "四行证明状态 + 冻结决策 + 已知局限"),
     ("benchmarks/quant/gen1/OBSERVATION_LOG.md", "观察模式每日一行日志"),
     ("workspace/artifacts/quant/gen1/", "基线评估工件 evidence/trades/equity/result"),
-    ("workspace/artifacts/quant/children/", "S1/S2/S3 子策略工件 (evidence/equity/result)"),
-    ("workspace/artifacts/quant/briefs/", "Decision Brief JSON (含实测 signal->brief 延迟)"),
+    (
+        "workspace/artifacts/quant/children/",
+        "S1/S2/S3 子策略工件 (evidence/equity/result)",
+    ),
+    (
+        "workspace/artifacts/quant/briefs/",
+        "Decision Brief JSON (含实测 signal->brief 延迟)",
+    ),
     ("workspace/artifacts/quant/p0-data-proof-2026-08-28.log", "P0 真实数据证明日志"),
     ("data/quant-cache/", "行情缓存+sidecar、qlib bin 库 (gitignored 可重建)"),
     (".venv-quant/", "Python 3.12 侧环境 akshare+pyqlib (gitignored)"),
@@ -258,51 +308,156 @@ ARTIFACT_MAP = [
 
 COMMANDS = [
     ("数据证明 (P0)", "uv run --group quant python tools/quant_p0_data_proof.py"),
-    ("宇宙准备 (仅首次/换宇宙)", "uv run --group quant python tools/quant_fetch_universe.py"),
-    ("基线评估 (不经 Agent)", ".venv-quant/bin/python tools/quant_eval_qlib.py --config benchmarks/quant/gen1/quant.toml --strategy benchmarks/quant/gen1/strategy.toml --out workspace/artifacts/quant/gen1 --window research"),
+    (
+        "宇宙准备 (仅首次/换宇宙)",
+        "uv run --group quant python tools/quant_fetch_universe.py",
+    ),
+    (
+        "基线评估 (不经 Agent)",
+        ".venv-quant/bin/python tools/quant_eval_qlib.py --config benchmarks/quant/gen1/quant.toml --strategy benchmarks/quant/gen1/strategy.toml --out workspace/artifacts/quant/gen1 --window research",
+    ),
     ("实时扫描 (无 LLM)", "uv run --group quant python tools/quant_live_scan.py"),
-    ("日常决策 (经 Agent)", ".venv/bin/zuaef-agent run --profile quant-decision --request-limit 10 --tool-calls-limit 12 \"...\""),
+    (
+        "日常决策 (经 Agent)",
+        '.venv/bin/zuaef-agent run --profile quant-decision --request-limit 10 --tool-calls-limit 12 "..."',
+    ),
     ("测试", "uv run pytest -q  # 810"),
-    ("quant 测试", "uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.py -q"),
+    (
+        "quant 测试",
+        "uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.py -q",
+    ),
     ("ruff", ".venv/bin/python -m ruff check ."),
-    ("manifest", ".venv/bin/python tools/regen_manifest.py && .venv/bin/python -m pytest tests/test_manifest_integrity.py -q"),
+    (
+        "manifest",
+        ".venv/bin/python tools/regen_manifest.py && .venv/bin/python -m pytest tests/test_manifest_integrity.py -q",
+    ),
 ]
 
 TROUBLESHOOT = [
-    ("EastMoney / SSL EOF", "本网络对 EastMoney 被拒 (正常, 数据面已是腾讯/新浪/CSIndex)", "检查 qt.gtimg.cn 可达性"),
+    (
+        "EastMoney / SSL EOF",
+        "本网络对 EastMoney 被拒 (正常, 数据面已是腾讯/新浪/CSIndex)",
+        "检查 qt.gtimg.cn 可达性",
+    ),
     ("历史抓取偶发 SSL 失败", "腾讯限流", "引擎内有界重试 (2s/8s), 重跑即可"),
-    ("quant plugin side environment missing", "侧环境不存在或路径错", "确认 .venv-quant/bin/python, 或设 ZUAEF_QUANT_PYTHON"),
-    ("cannot locate repository quant tooling", "agent 不在仓库根运行", "从仓库根运行, 或设 ZUAEF_QUANT_REPO_ROOT"),
-    ("profile not found", "profile 未安装", "cp profiles/quant-decision.toml ~/.config/zuaef/profiles/"),
-    ("evaluate_strategy already ran this round", "一轮守卫生效 (设计行为)", "写完 Strategy Result 即结束任务"),
-    ("execution_state: failed 但产物已落盘", "撞 tool-call limit (探索过头)", "检查产物; 必要时再降 limit"),
-    ("扫描全是 0 触发", "S3 条件选择性高 (正常)", "记日志; 连续多周 0 触发才构成 §6 研究信号"),
+    (
+        "quant plugin side environment missing",
+        "侧环境不存在或路径错",
+        "确认 .venv-quant/bin/python, 或设 ZUAEF_QUANT_PYTHON",
+    ),
+    (
+        "cannot locate repository quant tooling",
+        "agent 不在仓库根运行",
+        "从仓库根运行, 或设 ZUAEF_QUANT_REPO_ROOT",
+    ),
+    (
+        "profile not found",
+        "profile 未安装",
+        "cp profiles/quant-decision.toml ~/.config/zuaef/profiles/",
+    ),
+    (
+        "evaluate_strategy already ran this round",
+        "一轮守卫生效 (设计行为)",
+        "写完 Strategy Result 即结束任务",
+    ),
+    (
+        "execution_state: failed 但产物已落盘",
+        "撞 tool-call limit (探索过头)",
+        "检查产物; 必要时再降 limit",
+    ),
+    (
+        "扫描全是 0 触发",
+        "S3 条件选择性高 (正常)",
+        "记日志; 连续多周 0 触发才构成 §6 研究信号",
+    ),
 ]
 
 STAGES = [
-    {"k": "U0", "t": "上游兼容刷新", "state": "PASS", "summary": "pydantic-ai 2.35.3 / harness 0.27.0, 759/759 全绿; U005 按证据记 no-op"},
-    {"k": "P0", "t": "真实数据证明", "state": "PASS", "summary": "akshare 1.18.94; 600519 qfq≠raw 复权真实; 全市场快照 5550; 新鲜度 0 天; EastMoney 被拒→腾讯/新浪/CSIndex 替代"},
-    {"k": "P1", "t": "固定策略 + Qlib 评估", "state": "PASS", "summary": "CSI500 stride 采样 37 只; 冻结 gen1 窗口; 基线 +0.20%/24 笔 (真实不 attractive)"},
-    {"k": "P2", "t": "独立重放 + A股执行真相", "state": "PASS", "summary": "事件循环引擎: T+1/涨跌停/停牌/整手/成本; 14 防伪测试抓出真 bug (次日开盘成交); 双引擎年化差 0.02pp"},
-    {"k": "P3", "t": "QuantDecision 接入 ZUAEF", "state": "PASS", "summary": "Capability + 3 确定性工具; 弱模型不会调 TOML→改普通数值参数; 12 契约测试"},
-    {"k": "P4", "t": "三轮真实模型进化", "state": "PASS", "summary": "S1 改善 (+0.34%) → S2 被证据否决 (+0.01%) → S3 换杠杆 (+0.37%); 循环为真非预写 workflow"},
-    {"k": "P4.5", "t": "三项修复 + 冻结", "state": "PASS", "summary": "workspace/workspace 根因修复; 单轮 clean exit 硬守卫; S3 冻结为 DEMO_ACTIVE_STRATEGY, 停止 S4 调参"},
-    {"k": "P5", "t": "实时决策链路首验", "state": "PASS", "summary": "scan 提速 16× (qt.gtimg.cn 批量报价 2.9s/37只); record_decision_brief 端到端延迟 86s 实测"},
-    {"k": "P5.5", "t": "观察模式 (当前)", "state": "OBSERVING", "summary": "代码冻结; 每日 run → observe → record → judge; 不开发 P6/P7/dashboard/watcher/结算引擎"},
+    {
+        "k": "U0",
+        "t": "上游兼容刷新",
+        "state": "PASS",
+        "summary": "pydantic-ai 2.35.3 / harness 0.27.0, 759/759 全绿; U005 按证据记 no-op",
+    },
+    {
+        "k": "P0",
+        "t": "真实数据证明",
+        "state": "PASS",
+        "summary": "akshare 1.18.94; 600519 qfq≠raw 复权真实; 全市场快照 5550; 新鲜度 0 天; EastMoney 被拒→腾讯/新浪/CSIndex 替代",
+    },
+    {
+        "k": "P1",
+        "t": "固定策略 + Qlib 评估",
+        "state": "PASS",
+        "summary": "CSI500 stride 采样 37 只; 冻结 gen1 窗口; 基线 +0.20%/24 笔 (真实不 attractive)",
+    },
+    {
+        "k": "P2",
+        "t": "独立重放 + A股执行真相",
+        "state": "PASS",
+        "summary": "事件循环引擎: T+1/涨跌停/停牌/整手/成本; 14 防伪测试抓出真 bug (次日开盘成交); 双引擎年化差 0.02pp",
+    },
+    {
+        "k": "P3",
+        "t": "QuantDecision 接入 ZUAEF",
+        "state": "PASS",
+        "summary": "Capability + 3 确定性工具; 弱模型不会调 TOML→改普通数值参数; 12 契约测试",
+    },
+    {
+        "k": "P4",
+        "t": "三轮真实模型进化",
+        "state": "PASS",
+        "summary": "S1 改善 (+0.34%) → S2 被证据否决 (+0.01%) → S3 换杠杆 (+0.37%); 循环为真非预写 workflow",
+    },
+    {
+        "k": "P4.5",
+        "t": "三项修复 + 冻结",
+        "state": "PASS",
+        "summary": "workspace/workspace 根因修复; 单轮 clean exit 硬守卫; S3 冻结为 DEMO_ACTIVE_STRATEGY, 停止 S4 调参",
+    },
+    {
+        "k": "P5",
+        "t": "实时决策链路首验",
+        "state": "PASS",
+        "summary": "scan 提速 16× (qt.gtimg.cn 批量报价 2.9s/37只); record_decision_brief 端到端延迟 86s 实测",
+    },
+    {
+        "k": "P5.5",
+        "t": "观察模式 (当前)",
+        "state": "OBSERVING",
+        "summary": "代码冻结; 每日 run → observe → record → judge; 不开发 P6/P7/dashboard/watcher/结算引擎",
+    },
 ]
 
 FIVE_METRICS = [
-    ("Trigger frequency", "有没有足够交易机会", "0 次真实 trigger (≥10 次才进入结算复盘, 条件 A)"),
-    ("Signal→Brief latency", "Agent 是否赶得上", "86s (2026-09-02 实测, 含模型推理; scan 仅 ~3s)"),
-    ("Signal→Brief price drift", "延迟是否造成真实损失", "无 trigger, 待首笔 forward evidence"),
+    (
+        "Trigger frequency",
+        "有没有足够交易机会",
+        "0 次真实 trigger (≥10 次才进入结算复盘, 条件 A)",
+    ),
+    (
+        "Signal→Brief latency",
+        "Agent 是否赶得上",
+        "86s (2026-09-02 实测, 含模型推理; scan 仅 ~3s)",
+    ),
+    (
+        "Signal→Brief price drift",
+        "延迟是否造成真实损失",
+        "无 trigger, 待首笔 forward evidence",
+    ),
     ("Subsequent return path", "信号本身是否有意义", "无 trigger, 无持仓, 待积累"),
-    ("Agent veto / 增量判断", "LLM 相对裸扫描器是否有增益", "1/1 次遵守: 空触发→NO_TRADE 未硬推候选 (V007)"),
+    (
+        "Agent veto / 增量判断",
+        "LLM 相对裸扫描器是否有增益",
+        "1/1 次遵守: 空触发→NO_TRADE 未硬推候选 (V007)",
+    ),
 ]
 
 
 # --------------------------------------------------------------------------
 # template
 # --------------------------------------------------------------------------
+
 
 def format_number(v, digits=2):
     if v is None:
@@ -320,7 +475,9 @@ def read_universe_size() -> int:
         tomllib = None  # Python < 3.11: fall back to the cache meta path
     if tomllib is not None:
         try:
-            with (REPO_ROOT / "benchmarks" / "quant" / "gen1" / "universe.toml").open("rb") as fh:
+            with (REPO_ROOT / "benchmarks" / "quant" / "gen1" / "universe.toml").open(
+                "rb"
+            ) as fh:
                 return len(tomllib.load(fh).get("symbols", []))
         except (OSError, KeyError, ValueError, TypeError):
             pass
@@ -333,7 +490,9 @@ def read_universe_size() -> int:
 
 def build_data() -> dict:
     obs = parse_obs_log()
-    trigger_count = sum(1 for r in obs if str(r.get("triggers", "0")).strip() not in ("", "0"))
+    trigger_count = sum(
+        1 for r in obs if str(r.get("triggers", "0")).strip() not in ("", "0")
+    )
     briefs = harvest_briefs()
     return {
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
@@ -344,7 +503,9 @@ def build_data() -> dict:
         "obs_log": obs,
         "obs_stats": {
             "runs": len(obs),
-            "trigger_runs": len([r for r in obs if str(r.get("triggers", "")).strip() not in ("", "0")]),
+            "trigger_runs": len(
+                [r for r in obs if str(r.get("triggers", "")).strip() not in ("", "0")]
+            ),
             "trigger_count": trigger_count,
             "last_action": obs[-1].get("action", "—") if obs else "—",
             "last_scan_s": obs[-1].get("scan_s", "—") if obs else "—",
@@ -891,13 +1052,16 @@ __JS__
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Render ZUAEF-ASHARE-001 observation dashboard.")
+    ap = argparse.ArgumentParser(
+        description="Render ZUAEF-ASHARE-001 observation dashboard."
+    )
     ap.add_argument("--out", default=str(DEFAULT_OUT), help="output html path")
     args = ap.parse_args()
 
     data = build_data()
     # sanity first: embedded JSON must be loadable (check before __JS__ is injected)
     import re as _re
+
     templ = build_html(data)
     m = _re.search(r"window\.DASH = (\{.*?\});", templ, _re.DOTALL)
     if m:
@@ -913,8 +1077,10 @@ def main() -> int:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
-    print(f"OK -> {out}  ({out.stat().st_size/1024:.1f} KB, proofs={len(data['proofs'])}, "
-          f"obs_rows={len(data['obs_log'])}, briefs={len(data['briefs'])}, equity_series={len(data['equity'])})")
+    print(
+        f"OK -> {out}  ({out.stat().st_size / 1024:.1f} KB, proofs={len(data['proofs'])}, "
+        f"obs_rows={len(data['obs_log'])}, briefs={len(data['briefs'])}, equity_series={len(data['equity'])})"
+    )
     return 0
 
 

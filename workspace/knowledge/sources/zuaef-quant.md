@@ -7,7 +7,7 @@ claim in the concept nodes traces to one of these resources.
 ## Canonical resources (fully read)
 
 | Resource | Role | Key evidence |
-|---|---|---|
+| --- | --- | --- |
 | `docs/quant/README.md` | Implementation summary + 实操指南 (authoritative) | §2 development chain U0–P5.5; §3 architecture/data flow/frozen authority map; §4 honest implementation list; §5 daily operation; §6 restart admission rules & 禁改清单; §7 command cheatsheet & troubleshooting |
 | `zuaef-ashare-decision-agent-spec-v1.0-final/00_README.md` | Spec pack entry: definition, objectives, build order | "One-sentence definition"; "Highest-priority rule: Do not build a quant platform"; business outcomes = Decision Brief + Strategy Result only |
 | `zuaef-ashare-decision-agent-spec-v1.0-final/02_ARCHITECTURE.md` | Authority boundaries, historical/live paths, forbidden second runtime | §1 authority boundaries; §3 live path "No candidate → no LLM request"; §8 no QuantRuntime/StrategyManager/GateManager |
@@ -20,7 +20,7 @@ claim in the concept nodes traces to one of these resources.
 | `profiles/quant-decision.toml` | Agent profile | plugin `quant`, allow_capabilities = true; env var contract |
 | `data/quant-cache/universe/csi500_subset.meta.json` | Live universe manifest (gitignored) | 37 symbols, selection "sorted codes stride 10", PIT limitation note, excluded lists |
 | `tools/quant_live_scan.py` (lines 55–145) | Live scanner internals | universe read from csi500_subset.meta.json; qt.gtimg.cn batch quotes; needs ≥25 daily bars |
-| `tools/quant_core.py` (lines 72–165) | History fetch + cache + rules | `fetch_history(symbol, adjust, start_date=20180101)`; cache key `<symbol>_<qfq|raw>`; sidecar meta; `fetch_csi500_constituents` (CSIndex 000905) |
+| `tools/quant_core.py` (lines 72–165) | History fetch + cache + rules | `fetch_history(symbol, adjust, start_date=20180101)`; cache key `<symbol>_<qfq | raw>`; sidecar meta;`fetch_csi500_constituents` (CSIndex 000905) |
 | `tools/quant_eval_qlib.py` (lines 82, 232–235) | Eval pipeline universe usage | rewrites `csi500_subset.txt` from meta; reads symbols from meta |
 | `tools/quant_fetch_universe.py` | Universe builder | stride sampling of sorted CSI500 codes; ST & insufficient-lookback exclusion |
 | `plugins/zuaef-quant/zuaef_quant/toolset.py` (lines 29–271) | Plugin tools | `_run` subprocess isolation; evaluate_strategy/get_live_signals/record_decision_brief/record_trade_outcome |
@@ -28,10 +28,10 @@ claim in the concept nodes traces to one of these resources.
 ## Resources partially observed
 
 | Resource | What was observed | Not observed |
-|---|---|---|
+| --- | --- | --- |
 | `zuaef-ashare-decision-agent-spec-v1.0-final/01/03/06/07/08/09/10/11/12/13_*.md` | file inventory + README table of contents | full contents — concepts cite 00/02/04/05 only |
 | `docs/quant/dashboard.html` | header/title (observation board, self-contained, 72KB) | full page body |
-| `workspace/artifacts/quant/` (gitignored) | file names + render_dashboard.py docstring | artifact contents (evidence.json etc.) |
+| `tools/quant_render_dashboard.py` | dashboard renderer (moved from workspace/artifacts; committed for cross-host portability) | full body not read
 | `tools/quant_core.py` / `quant_eval_qlib.py` full bodies | key functions cited above | full source |
 
 ## Verification notes
