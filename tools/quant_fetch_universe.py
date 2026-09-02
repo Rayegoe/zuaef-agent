@@ -87,7 +87,7 @@ def main() -> int:
 
 
 def pd_first_date(df) -> date:
-    return df["date"].min()
+    return date.fromisoformat(str(df["date"].min())[:10])
 
 
 if __name__ == "__main__":
