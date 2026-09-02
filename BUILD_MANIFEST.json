@@ -1602,6 +1602,11 @@
       "sha256": "96b562835fc1f46208adfa2958821896f59e4030116ebf6bec9678c0ca8017ba"
     },
     {
+      "path": "tests/test_quant_business.py",
+      "bytes": 23382,
+      "sha256": "26bf2f3e768d26ab974266fd5607d4b146225c3011d3fb0f355c6d9b25dff34e"
+    },
+    {
       "path": "tests/test_quant_plugin.py",
       "bytes": 11974,
       "sha256": "ee8c5650c4eeabdd54484858162f31ebc2eb41b5f01a8e1d16fe9a24ba1b6111"
@@ -1923,8 +1928,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
-      "bytes": 13642,
-      "sha256": "205c2f4611496a5ee08ce2a5a2c0e28281ccc44a117aa0d4cfcfde8c94b10569"
+      "bytes": 13731,
+      "sha256": "c71b58ac3ad260d38ec563e3babcc87f6aab8010b05f6679dc57f13a1fe2dd4e"
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/__init__.py",
@@ -2157,6 +2162,11 @@
       "sha256": "93424daa7b5ff0dc1a4f0174363ba13081c9d3aa7544ce2bece930841d2cf44a"
     },
     {
+      "path": "tools/quant_build_candidates.py",
+      "bytes": 53646,
+      "sha256": "59c6a89df040e97c703ed6e7550a9e64dbe5e26617429596e7f5ac44d8ae366c"
+    },
+    {
       "path": "tools/quant_core.py",
       "bytes": 21512,
       "sha256": "3174b12310b6c4d8f8de040d84f0ecf928a078de9d40c5df032ed367ca129a35"
@@ -2168,18 +2178,33 @@
     },
     {
       "path": "tools/quant_fetch_universe.py",
-      "bytes": 3782,
-      "sha256": "de5017f89909df7dbd391fe3706f56ac020971f5f094237f635ac42b9f9aafa6"
+      "bytes": 3812,
+      "sha256": "e9e9daf5767ea9c2071b016e452a4db85c1d2d23f035e49d0b6104245caba0a5"
     },
     {
       "path": "tools/quant_live_scan.py",
-      "bytes": 6548,
-      "sha256": "31fe063a249525018d8d1f8f8cce4b71456281fe0ca489f8568c96b3bf88cde7"
+      "bytes": 15048,
+      "sha256": "584f154614fc4b3ff4a57b9d431e936a35c2517e008d5fd2e129ffdac6ec8792"
     },
     {
       "path": "tools/quant_p0_data_proof.py",
       "bytes": 6295,
       "sha256": "e97e38b9a615f8bdf4221855778047548cac3544825b779e42f8619e3adf0832"
+    },
+    {
+      "path": "tools/quant_render_business_dashboard.py",
+      "bytes": 38705,
+      "sha256": "734ec8c50e597a77a32bc3aee10e026b25fec65653a30340e31835c6e54d1d9f"
+    },
+    {
+      "path": "tools/quant_render_dashboard.py",
+      "bytes": 50824,
+      "sha256": "290afed8af558bf855ae285b89ea9eda69418f3ca15bc7fd0cfbc6283b1bde99"
+    },
+    {
+      "path": "tools/quant_serve.py",
+      "bytes": 4658,
+      "sha256": "672d0192edbaee58f40c016699288a8a7667b251d9f12bf3ad21a9c1c10fa8be"
     },
     {
       "path": "tools/regen_manifest.py",
@@ -2203,8 +2228,8 @@
     },
     {
       "path": "workspace/knowledge/index.md",
-      "bytes": 134,
-      "sha256": "46e066ed5b7305c4ddd83cf702298ebb172bbd1d7813cd989595bf8d70191e74"
+      "bytes": 1161,
+      "sha256": "914cb5265ad7049bb0c68acdedc4ebcdd694a8d9398a49c221ae6014b1ccde23"
     },
     {
       "path": "benchmarks/editorial-learning/README.md",

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ZUAEF-ASHARE-001 · A股决策 Agent 观察看板</title>
+<title>ZUAEF-ASHARE-001 · 量化工程 / 审计看板 (Engineering / Audit)</title>
 <style>:root{
   --bg:#0b0e14; --panel:#12161f; --panel2:#0f1420; --line:#1f2733; --line2:#27303f;
   --tx:#d7dde8; --mut:#8b96a8; --dim:#5c6678;
@@ -104,11 +104,13 @@ footer{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(
 <div class="wrap">
   <header>
     <h1>
-      ZUAEF-ASHARE-001 · A股决策 Agent 观察看板
-      <span class="badge b-freeze">ENGINEERING FREEZE</span>
+      ZUAEF-ASHARE-001 · 量化工程 / 审计看板
+      <span class="badge b-freeze">ENGINEERING / AUDIT</span>
       <span class="badge b-obs">OBSERVATION MODE · <span id="freeze-since"></span></span>
+      <a class="badge b-live" href="/business" style="margin-left:auto">业务决策页 → /business</a>
     </h1>
-    <div class="sub">Spec ZUAEF-ASHARE-001 v1.0-final · 观察模式日常巡检页 (只读 · 数据由既有工件渲染) · 生成于 <span id="gen-time"></span>
+    <div class="sub">本页是工程证据与审计链路 (U0–P5.5 证明链 · 重放 · 数据溯源 · 工件追溯), 不是业务决策页;
+      市场机会 / 候选排名 / 今日决策见 <a href="/business">业务看板 /business</a> · 生成于 <span id="gen-time"></span>
       · 再生成: <code>python3 tools/quant_render_dashboard.py</code></div>
   </header>
 
@@ -228,14 +230,14 @@ footer{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(
   </div>
 
   <footer>
-    本看板是 P5.5 观察模式的 <b>只读巡检页</b>: 数据全部来自既有工件 (STATUS.md / OBSERVATION_LOG.md / evidence.json / briefs), 不含任何交易建议。
+    本页是 P5.5 观察模式的 <b>工程/审计只读页</b> (business 决策页见 /business): 数据全部来自既有工件 (STATUS.md / OBSERVATION_LOG.md / evidence.json / briefs), 不含任何交易建议。
     <br>语义色: 红=正向结论/被选策略, 绿=风险信号, 非 A股涨跌方向。看板上所有历史数字都受 PIT 局限 (今日 CSI500 成分回看历史) 与 <b>+0.37%/29 笔噪声内</b> 约束; 盈利声明唯一前置门是 PIT universe 重建。
     <br>再生成: <code>python3 tools/quant_render_dashboard.py</code> · 冻结期禁改清单见 README §6 (dashboard/watcher/结算引擎不建 — 本页只是把已有证据渲染出来)。
   </footer>
 </div>
 <script>
 window.DASH = {
- "generated_at": "2026-09-02 11:17 UTC",
+ "generated_at": "2026-09-02 16:14 UTC",
  "proofs": [
   {
    "name": "Research Engine Proof",
@@ -2014,17 +2016,40 @@ window.DASH = {
    "scan_s": "2.9s",
    "brief_s": "86s",
    "note": "首次真实盘中验证;brief-live-1788319808.json"
+  },
+  {
+   "date": "2026-09-03",
+   "time": "00:09",
+   "scanned": "50",
+   "triggers": "0",
+   "action": "NO_TRADE",
+   "scan_s": "1.8s",
+   "brief_s": "10s",
+   "note": "auto;brief-live-1788278965.json"
   }
  ],
  "obs_stats": {
-  "runs": 1,
+  "runs": 2,
   "trigger_runs": 0,
   "trigger_count": 0,
   "last_action": "NO_TRADE",
-  "last_scan_s": "2.9s",
-  "last_brief_s": "86s"
+  "last_scan_s": "1.8s",
+  "last_brief_s": "10s"
  },
  "briefs": [
+  {
+   "decision_id": "brief-live-1788278965",
+   "recorded_at": "2026-09-02T16:09:35.285429+00:00",
+   "symbol": "UNIVERSE (50 symbols)",
+   "action": "NO_TRADE",
+   "strategy_name": "s3_longer_hold",
+   "signal_timestamp": "2026-09-03T00:09:25.651828+08:00",
+   "brief_latency_seconds": 9.6,
+   "why": "Scan of the 50-symbol candidate pool (candidate_pool_active, as_of 2026-09-03T00:09:25+08:00) returned zero triggers. No symbol simultaneously met the entry conditions (5d pullback <= -0.05 AND 20d volume ratio >= 1.8). Closest approaches: 600015 华夏银行 (pullback -0.0798 but vol ratio 1.626 < 1.8), 000157 中联重科 (vol ratio 105.09 but pullback -0.0692 vs -0.05 threshold... pullback -0.0692 < -0.05 AND vol 105.094 >= 1.8 would appear to satisfy, yet the deterministic scan flagged trigger=false — the scan's volume_ratio uses intraday cumulative vs full-day average, so the trigger logic as executed is authoritative and returned false). Empty triggers = NO_TRADE per protocol; no candidate forced.",
+   "invalidation": "Any refresh where a symbol shows trigger=true would require re-evaluation; per protocol, empty trigger list means no entry candidate exists now and the decision stands.",
+   "expected_holding": "n/a — no position opened",
+   "trigger_facts": "none"
+  },
   {
    "decision_id": "brief-live-1788319808",
    "recorded_at": "2026-09-02T03:31:34.227174+00:00",
@@ -2063,20 +2088,46 @@ window.DASH = {
    "invalidation": "Verdict invalidates if a later scan returns a deterministic trigger for any symbol meeting entry_pullback_max ≤ -0.05 and volume_ratio_min ≥ 1.8; re-check next scan.",
    "expected_holding": "N/A - no position taken",
    "trigger_facts": "none"
+  },
+  {
+   "decision_id": "brief-live-1788365640",
+   "recorded_at": "2026-09-02T16:14:13.597715+00:00",
+   "symbol": "NONE",
+   "action": "NO_TRADE",
+   "strategy_name": "s3_longer_hold",
+   "signal_timestamp": "2026-09-03T00:13:59.870945+08:00",
+   "brief_latency_seconds": 13.7,
+   "why": "Empty trigger list from get_live_signals: all 50 symbols in candidate_pool_active had trigger=false. No symbol simultaneously met entry_pullback_max=-0.05 and entry_volume_ratio_min=1.8. Closest misses: 600015 (pullback -0.0798 but vol ratio 1.626 < 1.8), 000157 (vol ratio 105.1 but pullback -0.0692 > -0.05 — noted: several volume_ratio values of 50–140 look like data artifacts of intraday cumulative-volume scaling, so they are not treated as valid volume confirmation). No deterministic entry evidence; NO_TRADE is the correct verdict.",
+   "invalidation": "Re-scan may flip this if any symbol shows pullback_5d <= -0.05 AND volume_ratio_20d >= 1.8 in a later quote batch; also invalid if quote source goes stale or universe changes. This NO_TRADE stands until the next scan output.",
+   "expected_holding": "N/A — no position and no candidate; next scan determines any entry.",
+   "trigger_facts": "none (triggers list empty; universe=50, all trigger=false; latest_quote_time=20260902 161500)"
+  },
+  {
+   "decision_id": "brief-live-1788450280",
+   "recorded_at": "2026-09-02T15:45:00.544284+00:00",
+   "symbol": "NONE",
+   "action": "NO_TRADE",
+   "strategy_name": "s3_longer_hold",
+   "signal_timestamp": "2026-09-02T23:44:40.267991+08:00",
+   "brief_latency_seconds": 20.3,
+   "why": "No deterministic entry trigger in scan evidence. Active strategy s3_longer_hold requires 5d pullback <= -5% AND 20d volume ratio >= 1.8 AND non-negative close strength; zero symbols satisfied all three tonight, so no candidate is justified and no ENTER_CANDIDATE should be fabricated from empty evidence.",
+   "invalidation": "Verdict flips to a candidate evaluation only if a later scan (next session) returns a deterministic trigger: pullback_5d <= -0.05, volume_ratio_20d >= 1.8, close strength non-negative. Volume ratio is intraday cumulative vs full-day average and understates, so re-scan after close for confirmation.",
+   "expected_holding": "n/a — no position opened",
+   "trigger_facts": "none — scan returned empty triggers list; 50/50 universe quotes fetched (candidate_pool_active, as_of 2026-09-02T23:44:40+08:00, latest quote 20260902161500), all trigger:false. Near-misses: 000157 pullback_5d -0.0692/vol_ratio 105.1 and 000623 vol_ratio 100.5 both closed down (close-strength fail); 600015 pullback_5d -0.0798 but vol_ratio 1.63 <1.8."
   }
  ],
  "latest_brief": {
-  "decision_id": "brief-live-1788341847",
-  "recorded_at": "2026-09-02T09:37:40.681200+00:00",
+  "decision_id": "brief-live-1788450280",
+  "recorded_at": "2026-09-02T15:45:00.544284+00:00",
   "symbol": "NONE",
   "action": "NO_TRADE",
   "strategy_name": "s3_longer_hold",
-  "signal_timestamp": "2026-09-02T17:37:27.739444+08:00",
-  "brief_latency_seconds": 12.9,
-  "why": "get_live_signals returned an empty trigger list (triggers: []). All 4 scanned quotes (601233 桐昆股份, 002460 赣锋锂业, 002415 海康威视, 000009 中国宝安) failed the entry rule: pullback_5d must be ≤ -0.05 with volume_ratio_20d ≥ 1.8. Closest was 002460 (pullback -0.0611) but volume_ratio only 1.061; 000009 shows volume_ratio 60.63 (intraday cumulative vs full-day average) but pullback 0.0; none satisfied both conditions. No deterministic trigger evidence, so no entry candidate.",
-  "invalidation": "Verdict invalidates if a later scan returns a deterministic trigger for any symbol meeting entry_pullback_max ≤ -0.05 and volume_ratio_min ≥ 1.8; re-check next scan.",
-  "expected_holding": "N/A - no position taken",
-  "trigger_facts": "none"
+  "signal_timestamp": "2026-09-02T23:44:40.267991+08:00",
+  "brief_latency_seconds": 20.3,
+  "why": "No deterministic entry trigger in scan evidence. Active strategy s3_longer_hold requires 5d pullback <= -5% AND 20d volume ratio >= 1.8 AND non-negative close strength; zero symbols satisfied all three tonight, so no candidate is justified and no ENTER_CANDIDATE should be fabricated from empty evidence.",
+  "invalidation": "Verdict flips to a candidate evaluation only if a later scan (next session) returns a deterministic trigger: pullback_5d <= -0.05, volume_ratio_20d >= 1.8, close strength non-negative. Volume ratio is intraday cumulative vs full-day average and understates, so re-scan after close for confirmation.",
+  "expected_holding": "n/a — no position opened",
+  "trigger_facts": "none — scan returned empty triggers list; 50/50 universe quotes fetched (candidate_pool_active, as_of 2026-09-02T23:44:40+08:00, latest quote 20260902161500), all trigger:false. Near-misses: 000157 pullback_5d -0.0692/vol_ratio 105.1 and 000623 vol_ratio 100.5 both closed down (close-strength fail); 600015 pullback_5d -0.0798 but vol_ratio 1.63 <1.8."
  },
  "universe_size": 4,
  "active": {
@@ -2122,7 +2173,7 @@ window.DASH = {
    "limits": "10% (主板) / 20% (创业板 2020-08-24 起, 科创板 2019-07-22 起)"
   },
   "universe": {
-   "desc": "gen1 基准宇宙: CSI500 成分 stride 10 采样 37 只 (12 只因回溯不足排除); 当前活跃宇宙 = 用户自选 4 只 (见实时行情卡)",
+   "desc": "gen1 基准宇宙: CSI500 成分 stride 10 采样 37 只 (12 只因回溯不足排除); 活跃宇宙 = 候选池 handoff (data/quant-cache/candidates/active_symbols.json, 缺失时回退 37 只子集); 用户自选 4 只 = legacy_watchlist (仅显式 watchlist 扫描)",
    "snapshot": "全市场快照 5550 只 · CSI500 成分 500 只 (生效 2026-08-28)",
    "pit": "今日成员回看历史 (幸存者/成分偏差) — 任何盈利声明的前置门"
   }

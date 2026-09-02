@@ -237,11 +237,12 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
 
     @toolset.tool_plain
     def get_live_signals() -> str:
-        """Scan the active strategy set over the frozen CSI500 subset using
-        current market quotes and return bounded triggers with their
-        timestamps and scan latency. Deterministic host scan; the model never
-        scans the whole market. An empty trigger list is a valid NO_TRADE
-        answer; triggers are evidence, not orders.
+        """Scan the active candidate universe using current market quotes and
+        return bounded triggers with their timestamps and scan latency.
+        Universe resolution is deterministic (candidate-pool handoff first,
+        frozen CSI500 subset as compatibility fallback; never empty). The
+        model never scans the whole market. An empty trigger list is a valid
+        NO_TRADE answer; triggers are evidence, not orders.
         """
         stdout = _run(
             QUANT_SCAN_SCRIPT,

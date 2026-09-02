@@ -1,9 +1,16 @@
-# ZUAEF-ASHARE-001 · 活跃宇宙 (提交版本, 跨主机一致)
+# ZUAEF-ASHARE-001 · universe.toml — 不再是默认活跃宇宙
 #
-# 这是实时扫描 (quant_live_scan.py) 的活跃股票池来源, 优先于
-# data/quant-cache/universe/csi500_subset.meta.json (本地生成缓存, gitignored)。
-# 改你的自选股就在这里改, 提交后所有主机 git pull 即同步。
+# 历史备注: 本文件曾是实时扫描 (quant_live_scan.py) 的隐式默认宇宙
+# (user_watchlist 四只自选股)。自 business-dashboard 变更起 (spec 03 §1),
+# 这四只被认定为 legacy 持仓而非机会宇宙, 已迁移到
+# benchmarks/quant/gen1/legacy_watchlist.toml。
+#
+# 现在的宇宙解析优先级 (quant_live_scan.py):
+#   1. --universe-file <path> (显式指定, 本文件仍可作为显式 watchlist 输入)
+#   2. data/quant-cache/candidates/active_symbols.json (候选池 handoff)
+#   3. 冻结 37 只 CSI500 子集 (兼容回退)
+#   4. 否则响亮失败 — 绝不静默接受空宇宙。
 schema = 1
 name = "user_watchlist"
-basis = "user-specified: 601233(桐昆股份) 002460(赣锋锂业) 002415(海康威视) 000009(中国宝安), 2026-09-02"
+basis = "legacy user watchlist, superseded by legacy_watchlist.toml + candidate pool (2026-09-02)"
 symbols = ["601233", "002460", "002415", "000009"]

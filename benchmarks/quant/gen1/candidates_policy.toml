@@ -1,0 +1,78 @@
+# ZUAEF-ASHARE-001 · candidates_policy.toml — 候选发现 v1 政策 (阈值在政策, 不在代码)
+#
+# 消费者: tools/quant_build_candidates.py (--policy 本文件)。
+# 本文件只定义确定性阈值/权重; 候选排名不是买入建议, 盈利能力仍未证明。
+# 任何阈值调整都是一次策略研究变更, 须留下记录, 不做隐藏调参。
+
+schema = 1
+name = "candidate_policy_v1"
+
+[universe]
+base = "csi300_plus_csi500"      # discovery base: CSI300 ∪ CSI500
+pool_target_min = 20             # 目标池下限 (低于此值如实报告, 不凑数)
+pool_target_max = 50             # 目标池上限
+active_max_symbols = 50          # active_symbols.json handoff 上限
+
+[eligibility]
+# 硬排除 (spec 03 §2), 全部在此定义:
+exclude_name_patterns = ["ST", "退"]   # ST / *ST / 退市整理
+min_price = 0.0                        # 最新价必须 > 0
+min_turnover_cny = 50000000.0          # 最新成交额下限 (5000万) — 明显不可用流动性
+min_history_rows = 120                 # timing 计算所需最少日线根数
+financial_stale_days = 400             # 财报新鲜度预算 (年报周期 + 披露滞后)
+
+[coverage]
+deep_max_symbols = 120          # 深度数据 (财报/行业/估值史) 的有界覆盖上限
+essential_min = 0.80            # essential coverage < 0.80 => snapshot status = DEGRADED
+
+[score_weights]
+value = 40
+quality = 35
+tradeability = 15
+timing = 10
+
+[value_components]              # 合计 40
+pe_percentile = 15              # 行业相对 PE(TTM) 百分位 (仅正盈利; 负 PE = 缺失, 不是"很便宜")
+pb_percentile = 10              # 行业相对 PB 百分位
+own_3y_percentile = 10          # 自身 3Y PE(TTM) 历史百分位 ("相对自己便宜")
+dividend_yield = 5              # 股息率 (TTM); 0/缺失按缺失处理
+dividend_yield_full_pct = 4.0   # 股息率满分锚 (线性 0..4%)
+
+[quality_components]            # 合计 35 (工业模型; 金融模型跳过 CFO/杠杆并归一化)
+roe = 10                        # 3Y 平均 ROE 行业相对百分位
+cfo_to_net_profit = 10          # 经营现金流/净利润 (线性 cfo_np_zero..cfo_np_full)
+cfo_np_full = 1.0
+cfo_np_zero = 0.4
+growth = 10                     # 收入+利润增长稳定性 (线性 growth_zero..growth_full)
+growth_full_pct = 10.0
+growth_zero_pct = -10.0
+balance_safety = 5              # 资产负债率 行业相对百分位 (越低越好; 金融模型跳过)
+
+[tradeability_components]       # 合计 15 — 回答小资金能否进出, 不是动量分
+turnover = 10                   # 最新成交额 (对数线性 turnover_min..turnover_full)
+turnover_full_cny = 500000000.0 # 5亿 成交额拿满分
+history = 5                     # 日线充足度 (>= history_full_rows 满分)
+history_full_rows = 250
+
+[ranking]
+top_n_board = 30                # 业务看板价值/质量机会板行数
+sector_cap = 4                  # top 30 内每个一级行业最多 N 只 (行业未知时不假装分散)
+min_industry_peers = 8          # 行业内有效样本 < 8 时回退全池百分位并标注
+tier_a_min = 75.0
+tier_b_min = 60.0
+tier_c_min = 50.0
+critical_red_flags = [          # 命中任一不得评 A (无论分数)
+  "CFO_BELOW_NET_PROFIT_PERSISTENT",
+  "FINANCIAL_DATA_STALE",
+  "VALUATION_DATA_STALE",
+  "HIGH_LEVERAGE_REL_SECTOR",
+]
+
+[red_flags]
+cfo_np_min = 0.6                # 最近两个报告期 CFO/净利润 均低于此 => 持续性红旗
+leverage_margin_pp = 15.0       # 负债率 > 行业中位数 + 15pp => 高杠杆红旗 (仅工业)
+roe_decline_frac = 0.7          # 最新 ROE < 前 2 期均值 × 0.7 => ROE 恶化红旗
+valuation_stale_days = 14       # 估值史最后日期落后超过 N 天 => 估值数据过期红旗
+
+[financial_sector]
+industry_gate_names = ["金融业", "银行", "证券", "保险", "非银金融", "多元金融"]

@@ -18,6 +18,21 @@ scan), 属 P5 观察模式的工具化, 不是 P6。明确不做 watcher/systemd
 | Profitability Proof | **NOT YET** | best child ≈ +0.37% annualized on 29 trades with survivorship-limited universe — intentionally not chased further in-sample |
 | Live Decision Product | **FIRST PROOF PASS (2026-09-02)** | P5 interactive chain verified with a real agent run: active-universe scan (37/37 quotes in ~2.9s via qt.gtimg.cn batch) → deterministic triggers → NO_TRADE verdict without forcing a candidate → persisted Decision Brief with measured 86s signal→brief latency (`workspace/artifacts/quant/briefs/brief-live-*.json`). Interactive-only; a polling watcher remains unbuilt by design until interactive use proves insufficient (spec V008). |
 
+## 2026-09-02 增补 — 业务看板与候选发现(不变更四行证明状态)
+
+新增确定性候选发现管线与业务决策页(见 `docs/quant/README.md` §5.7):
+`legacy_watchlist.toml`(用户自选 4 只,只诊断)/ `candidate_pool`(CSI300∪CSI500 筛选,
+目标 20–50,证据排名)/ `active_symbols.json` handoff(实时扫描默认宇宙)。上表四行证明状态不变;
+**盈利能力仍未证明**,候选排名不是买入建议。上文 checkpoint 中"当前活跃宇宙 = 用户自选 4 只"
+自本增补起失效:自选 4 只降级为 legacy 诊断位,活跃宇宙改为候选池 handoff
+(缺失时回退 37 只子集,空宇宙响亮失败)。
+
+**批准记录(2026-09-03)**: 本增补经 operator 审核后批准入库 — 候选发现管线、业务决策页
+与指标备注交互均属 §6 禁改清单的有界解冻(对应"手动运行烦 → watch scheduler"触发),
+解冻范围仅限确定性候选构建 + 只读看板; 不含 watcher/scheduler/broker, 四行证明状态不变,
+盈利仍未证明。候选池时代的首个完整每日决策已产生 (2026-09-03 00:09, 50 只, 0 触发, NO_TRADE,
+延迟 10s, 见 OBSERVATION_LOG)。
+
 ## Decisions frozen at P4.5
 
 1. **S3 is frozen as `DEMO_ACTIVE_STRATEGY`** (`active.toml`). Historical

@@ -1,20 +1,31 @@
 """Deterministic live-scan for the quant plugin's get_live_signals tool (P5).
 
-Scans ONLY the active universe (frozen csi500_subset manifest) with the
-active strategy (benchmarks/quant/gen1/active.toml), computes the entry
-clauses deterministically on current quotes plus cached history, and prints
-bounded JSON: at most --max-triggers candidates with timestamps and scan
-latency. The LLM never scans the whole market (spec 07 §2).
+Scans ONLY the resolved active universe with the active strategy
+(benchmarks/quant/gen1/active.toml), computes the entry clauses
+deterministically on current quotes plus cached history, and prints bounded
+JSON: at most --max-triggers candidates with timestamps and scan latency.
+The LLM never scans the whole market (spec 07 §2).
+
+Universe resolution (business-dashboard spec 03/T005) — priority:
+  1. --universe-file <path> (explicit; e.g. legacy_watchlist.toml scan);
+  2. data/quant-cache/candidates/active_symbols.json if valid and non-empty
+     (deterministic candidate-pool handoff from tools/quant_build_candidates.py);
+  3. frozen historical CSI500 subset manifest (compatibility fallback);
+  4. otherwise loud failure. An empty/unreadable universe never silently
+     becomes a NO_TRADE conclusion — the legacy four-symbol watchlist cannot
+     implicitly define the opportunity universe.
 
 Quote path: qt.gtimg.cn batch quote (Tencent, one request per ~50 codes).
 akshare's available spot paths are full-market (Sina ~48s, Tencent ~74s),
-which is materially too slow for a ~60s live cadence on a 37-symbol
-universe, so this small implementation is substituted per spec
-04 §9; the source is recorded in the output.
+which is materially too slow for a ~60s live cadence on a ~50-symbol
+universe, so this small implementation is substituted per spec 04 §9; the
+source is recorded in the output.
 
     .venv-quant/bin/python tools/quant_live_scan.py [--max-triggers 10]
+        [--universe-file benchmarks/quant/gen1/legacy_watchlist.toml]
 
 Exit code 0 with {"triggers": []} is a valid NO_TRADE input.
+Exit code 2 means the universe could not be resolved (loud failure).
 """
 
 from __future__ import annotations
@@ -36,18 +47,48 @@ CACHE_DIR = Path("data/quant-cache")
 QUOTE_URL = "https://qt.gtimg.cn/q="
 BATCH_SIZE = 50
 
+GEN1_DIR = Path("benchmarks/quant/gen1")
+LEGACY_WATCHLIST_PATH = GEN1_DIR / "legacy_watchlist.toml"
+UNIVERSE_TOML_PATH = GEN1_DIR / "universe.toml"
+ACTIVE_SYMBOLS_PATH = CACHE_DIR / "candidates" / "active_symbols.json"
+SUBSET_META_PATH = CACHE_DIR / "universe" / "csi500_subset.meta.json"
 
-def fetch_batch_quotes(symbols: list[str]) -> dict[str, dict]:
+
+class UniverseError(RuntimeError):
+    """Raised when no valid, non-empty universe can be resolved (fail closed)."""
+
+
+def fetch_batch_quotes(symbols: list[str], *, max_batches_fail: int = 2) -> dict[str, dict]:
     """One batched Tencent quote request per ~50 codes. Deterministic parsing.
 
-    Returns symbol -> {name, price, prev_close, open, volume(shares), date, time}.
+    Each batch retries boundedly (0s/2s/8s — same pattern as quant_core
+    history fetch) because this deployment has observed transient SSL EOF
+    transport failures. Up to max_batches_fail batches may fail without
+    killing the caller: their symbols simply come back without a quote
+    (surfaced downstream as no_quote / excluded, never as fresh data).
+    Raises only when every batch failed.
+
+    Returns symbol -> {name, price, prev_close, open, volume(shares), date,
+    time, pe_ttm, pb, dividend_yield_pct, turnover_cny, market_cap_cny}.
     Field layout (v_shXXXXXX="..."), 0-indexed after '~' split:
-    1 name, 2 code, 3 last, 4 prev_close, 5 open, 6 volume(手), 30 date, 31 time.
+    1 name, 2 code, 3 last, 4 prev_close, 5 open, 6 volume(手),
+    30 quote datetime (YYYYMMDDHHMMSS), 31 change, 32 change%,
+    37 turnover(万元), 38 turnover rate(%), 39 PE(TTM), 43 amplitude,
+    44 float mktcap(亿), 45 total mktcap(亿), 46 PB, 64 dividend yield(%).
+    Fundamental fields are best-effort: empty -> None, never a guess.
     """
     out: dict[str, dict] = {}
     headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://gu.qq.com/"}
-    for i in range(0, len(symbols), BATCH_SIZE):
-        batch = [to_tx_symbol(s) for s in symbols[i : i + BATCH_SIZE]]
+
+    def _num(fields: list[str], idx: int) -> float | None:
+        if idx >= len(fields) or not fields[idx]:
+            return None
+        try:
+            return float(fields[idx])
+        except ValueError:
+            return None
+
+    def _fetch_one(batch: list[str]) -> None:
         resp = requests.get(QUOTE_URL + ",".join(batch), headers=headers, timeout=10)
         resp.raise_for_status()
         text = resp.content.decode("gbk", errors="replace")
@@ -67,12 +108,131 @@ def fetch_batch_quotes(symbols: list[str]) -> dict[str, dict]:
                     "prev_close": float(fields[4]),
                     "open": float(fields[5]),
                     "volume": float(fields[6]) * 100.0,  # 手 -> shares
-                    "date": fields[30],
-                    "time": fields[31],
+                    # field 30 is the full quote datetime; field 31 is the
+                    # abs change, not a time (pre-2026-09 misparse)
+                    "date": fields[30][:8],
+                    "time": fields[30][8:],
+                    "turnover_cny": (_num(fields, 37) or 0.0) * 10_000.0,
+                    "turnover_rate_pct": _num(fields, 38),
+                    "pe_ttm": _num(fields, 39),
+                    "market_cap_cny": (_num(fields, 45) or 0.0) * 1e8 or None,
+                    "pb": _num(fields, 46),
+                    "dividend_yield_pct": _num(fields, 64),
                 }
             except ValueError:
                 continue
+
+    batches = [
+        [to_tx_symbol(s) for s in symbols[i : i + BATCH_SIZE]]
+        for i in range(0, len(symbols), BATCH_SIZE)
+    ]
+    failed = 0
+    last_exc: Exception | None = None
+    for batch in batches:
+        for attempt, delay in enumerate((0.0, 2.0, 8.0)):
+            if delay:
+                time.sleep(delay)
+            try:
+                _fetch_one(batch)
+                last_exc = None
+                break
+            except Exception as exc:  # noqa: BLE001 — transient transport failures retried boundedly
+                last_exc = exc
+        else:
+            failed += 1
+            if failed > max_batches_fail:
+                raise RuntimeError(f"quote batches failing ({failed} failed): {last_exc}")
     return out
+
+
+def timing_from_quote_hist(quote: dict, hist: pd.DataFrame) -> tuple[float, float] | None:
+    """S3-compatible timing inputs from live quote + cached daily history.
+
+    Returns (pullback_5d, volume_ratio_20d) using the same definitions as the
+    frozen S3 evaluation: pullback vs the close 5 cached sessions back, today's
+    cumulative volume vs the 20-session full-day average.
+    """
+    hist = hist.sort_values("date")
+    if len(hist) < 25:
+        return None
+    close_5d = float(hist["close"].iloc[-6])
+    volume_ma20 = float(hist["volume"].tail(20).mean())
+    if volume_ma20 <= 0 or close_5d <= 0:
+        return None
+    pullback = quote["price"] / close_5d - 1
+    ratio = quote["volume"] / volume_ma20
+    return pullback, ratio
+
+
+def load_universe_file_symbols(path: Path) -> tuple[list[str], str]:
+    """Explicit TOML universe/watchlist input -> (symbols, name)."""
+    uni = load_config(path)
+    symbols = [str(s).strip() for s in uni["symbols"]]
+    return symbols, str(uni.get("name", path.stem))
+
+
+def load_active_symbols(path: Path) -> tuple[list[str], str]:
+    """Candidate handoff (active_symbols.json) -> (symbols, as_of).
+
+    Empty list, missing keys or unreadable JSON raise UniverseError — the
+    handoff is never silently accepted as an empty universe.
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise UniverseError(f"candidate handoff unreadable ({path}): {exc}") from exc
+    symbols = data.get("symbols")
+    if not isinstance(symbols, list) or not symbols:
+        raise UniverseError(f"candidate handoff has no symbols ({path})")
+    return [str(s).strip() for s in symbols], str(data.get("as_of", ""))
+
+
+def resolve_universe(
+    explicit_file: Path | None,
+    active_path: Path = ACTIVE_SYMBOLS_PATH,
+    subset_meta_path: Path = SUBSET_META_PATH,
+) -> dict:
+    """Deterministic universe resolution with loud empty/failed failure modes."""
+    if explicit_file is not None:
+        symbols, name = load_universe_file_symbols(explicit_file)
+        if not symbols:
+            raise UniverseError(f"universe file {explicit_file} has no symbols")
+        return {
+            "symbols": symbols,
+            "source": name,
+            "source_path": str(explicit_file),
+            "as_of": "",
+        }
+    if active_path.exists():
+        try:
+            symbols, as_of = load_active_symbols(active_path)
+        except UniverseError as exc:
+            # a present-but-broken handoff must not silently fall through
+            raise UniverseError(
+                f"{exc}; remove the file or rerun tools/quant_build_candidates.py"
+            ) from exc
+        return {
+            "symbols": symbols,
+            "source": "candidate_pool_active",
+            "source_path": str(active_path),
+            "as_of": as_of,
+        }
+    if subset_meta_path.exists():
+        meta = json.loads(subset_meta_path.read_text(encoding="utf-8"))
+        symbols = [str(s).strip() for s in meta.get("symbols", [])]
+        if not symbols:
+            raise UniverseError(f"frozen subset manifest has no symbols ({subset_meta_path})")
+        return {
+            "symbols": symbols,
+            "source": "csi500_subset",
+            "source_path": str(subset_meta_path),
+            "as_of": str(meta.get("generated_at", "")),
+        }
+    raise UniverseError(
+        "no universe resolvable: no --universe-file, no candidate handoff "
+        f"({active_path}), no frozen subset manifest ({subset_meta_path}). "
+        "Run tools/quant_build_candidates.py first."
+    )
 
 
 def main() -> int:
@@ -83,29 +243,31 @@ def main() -> int:
         default=Path("benchmarks/quant/gen1/active.toml"),
         help="active strategy (host-owned freeze)",
     )
+    parser.add_argument(
+        "--universe-file",
+        type=Path,
+        default=None,
+        help="explicit universe/watchlist TOML (e.g. legacy_watchlist.toml); "
+        "default: candidate handoff -> frozen subset fallback",
+    )
     parser.add_argument("--max-triggers", type=int, default=10)
     args = parser.parse_args()
 
     active_cfg = load_config(args.strategy)
-    committed_universe = Path("benchmarks/quant/gen1/universe.toml")
     try:
-        uni = load_config(committed_universe)
-        symbols = [str(s).strip() for s in uni["symbols"]]
-        universe_source = str(uni.get("name", "user_universe"))
-    except (OSError, KeyError, ValueError, TypeError):
-        universe_meta = json.loads(
-            (CACHE_DIR / "universe" / "csi500_subset.meta.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        symbols = universe_meta["symbols"]
-        universe_source = "csi500_subset"
-    cons, _ = read_cache("universe", "csi500_cons", CACHE_DIR)
-    name_by_symbol = (
-        dict(zip(cons["constituent_code"], cons["constituent_name"]))
-        if cons is not None
-        else {}
-    )
+        resolved = resolve_universe(args.universe_file)
+    except UniverseError as exc:
+        print(json.dumps({"error": "UNIVERSE_UNRESOLVED", "detail": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 2
+    symbols = resolved["symbols"]
+    universe_source = resolved["source"]
+
+    cons_500, _ = read_cache("universe", "csi500_cons", CACHE_DIR)
+    cons_300, _ = read_cache("universe", "csi300_cons", CACHE_DIR)
+    name_by_symbol: dict = {}
+    for cons in (cons_500, cons_300):
+        if cons is not None:
+            name_by_symbol.update(dict(zip(cons["constituent_code"], cons["constituent_name"])))
 
     scan_start = time.perf_counter()
     quotes = fetch_batch_quotes(symbols)
@@ -124,7 +286,7 @@ def main() -> int:
             quotes_detail.append({**base, "quote": False, "reason": "no_quote"})
             continue
         hist, _ = read_cache("daily", f"{symbol}_qfq", CACHE_DIR)
-        if hist is None or len(hist) < 25:
+        if hist is None:
             quotes_detail.append(
                 {
                     **base,
@@ -134,22 +296,18 @@ def main() -> int:
                 }
             )
             continue
-        hist["date"] = pd.to_datetime(hist["date"])
-        hist = hist.sort_values("date")
-        close_5d = float(hist["close"].iloc[-6])
-        volume_ma20 = float(hist["volume"].tail(20).mean())
-        if volume_ma20 <= 0:
+        timing = timing_from_quote_hist(quote, hist)
+        if timing is None:
             quotes_detail.append(
                 {
                     **base,
                     "quote": True,
                     "price": round(quote["price"], 2),
-                    "reason": "no_volume_ma",
+                    "reason": "insufficient_history",
                 }
             )
             continue
-        pullback = quote["price"] / close_5d - 1
-        ratio = quote["volume"] / volume_ma20
+        pullback, ratio = timing
         strength = quote["price"] - quote["prev_close"]
         entry_pullback_max = float(active_cfg["entry_pullback_max"])
         entry_volume_ratio_min = float(active_cfg["entry_volume_ratio_min"])
@@ -198,6 +356,8 @@ def main() -> int:
             "take_profit_pct": active_cfg["take_profit_pct"],
         },
         "universe": universe_source,
+        "universe_source_path": resolved["source_path"],
+        "universe_as_of": resolved["as_of"],
         "universe_size": len(symbols),
         "quotes_fetched": len(quotes),
         "as_of": datetime.now(TZ_SHANGHAI).isoformat(),

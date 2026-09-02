@@ -265,7 +265,7 @@ def harvest_params() -> dict:
             "limits": "10% (主板) / 20% (创业板 2020-08-24 起, 科创板 2019-07-22 起)",
         },
         "universe": {
-            "desc": "gen1 基准宇宙: CSI500 成分 stride 10 采样 37 只 (12 只因回溯不足排除); 当前活跃宇宙 = 用户自选 4 只 (见实时行情卡)",
+            "desc": "gen1 基准宇宙: CSI500 成分 stride 10 采样 37 只 (12 只因回溯不足排除); 活跃宇宙 = 候选池 handoff (data/quant-cache/candidates/active_symbols.json, 缺失时回退 37 只子集); 用户自选 4 只 = legacy_watchlist (仅显式 watchlist 扫描)",
             "snapshot": "全市场快照 5550 只 · CSI500 成分 500 只 (生效 2026-08-28)",
             "pit": "今日成员回看历史 (幸存者/成分偏差) — 任何盈利声明的前置门",
         },
@@ -906,18 +906,20 @@ TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ZUAEF-ASHARE-001 · A股决策 Agent 观察看板</title>
+<title>ZUAEF-ASHARE-001 · 量化工程 / 审计看板 (Engineering / Audit)</title>
 <style>__CSS__</style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>
-      ZUAEF-ASHARE-001 · A股决策 Agent 观察看板
-      <span class="badge b-freeze">ENGINEERING FREEZE</span>
+      ZUAEF-ASHARE-001 · 量化工程 / 审计看板
+      <span class="badge b-freeze">ENGINEERING / AUDIT</span>
       <span class="badge b-obs">OBSERVATION MODE · <span id="freeze-since"></span></span>
+      <a class="badge b-live" href="/business" style="margin-left:auto">业务决策页 → /business</a>
     </h1>
-    <div class="sub">Spec ZUAEF-ASHARE-001 v1.0-final · 观察模式日常巡检页 (只读 · 数据由既有工件渲染) · 生成于 <span id="gen-time"></span>
+    <div class="sub">本页是工程证据与审计链路 (U0–P5.5 证明链 · 重放 · 数据溯源 · 工件追溯), 不是业务决策页;
+      市场机会 / 候选排名 / 今日决策见 <a href="/business">业务看板 /business</a> · 生成于 <span id="gen-time"></span>
       · 再生成: <code>python3 tools/quant_render_dashboard.py</code></div>
   </header>
 
@@ -1037,7 +1039,7 @@ TEMPLATE = """<!DOCTYPE html>
   </div>
 
   <footer>
-    本看板是 P5.5 观察模式的 <b>只读巡检页</b>: 数据全部来自既有工件 (STATUS.md / OBSERVATION_LOG.md / evidence.json / briefs), 不含任何交易建议。
+    本页是 P5.5 观察模式的 <b>工程/审计只读页</b> (business 决策页见 /business): 数据全部来自既有工件 (STATUS.md / OBSERVATION_LOG.md / evidence.json / briefs), 不含任何交易建议。
     <br>语义色: 红=正向结论/被选策略, 绿=风险信号, 非 A股涨跌方向。看板上所有历史数字都受 PIT 局限 (今日 CSI500 成分回看历史) 与 <b>+0.37%/29 笔噪声内</b> 约束; 盈利声明唯一前置门是 PIT universe 重建。
     <br>再生成: <code>python3 tools/quant_render_dashboard.py</code> · 冻结期禁改清单见 README §6 (dashboard/watcher/结算引擎不建 — 本页只是把已有证据渲染出来)。
   </footer>

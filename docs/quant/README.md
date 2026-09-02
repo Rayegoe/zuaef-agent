@@ -3,6 +3,14 @@
 **Spec:** `ZUAEF-ASHARE-001` v1.0-final · **状态:** ENGINEERING FREEZE(P5.5 观察模式,2026-09-02 起生效)
 **当前阶段判断:** 工程链路已足够完整;最大的未知数已从"软件能不能工作"变成"它在真实市场里有没有用"。下一张 task 由真实市场派发,不由排期派发。
 
+**2026-09-02 增补 · 业务看板与候选发现(Quant Business Dashboard + Candidate Discovery v1.0):**
+新增业务决策页 `docs/quant/business.html`(默认页)与确定性候选发现管线
+`tools/quant_build_candidates.py`,把产品重心从"软件进度证明"转向"市场/策略证据"。工程/审计页保留为
+`docs/quant/dashboard.html`(经 `/engineering` 访问)。三个宇宙分离:`legacy_watchlist`(用户自选/持仓名单,
+只诊断不自动晋级; 2026-09-02 起含截图追加的 11 只自选股, 名单由用户提名扩充)/ `candidate_pool`(CSI300∪CSI500 筛出的 20–50 只证据排名)/ `action_candidates`
+(活跃策略在候选池上的确定性触发,0–10 只)。**候选排名不是买入建议;盈利能力仍未证明**;实时动作依旧
+必须来自既有确定性触发证据。详见 §5.7 与 `benchmarks/quant/gen1/candidates_policy.toml`。
+
 ---
 
 ## 目录
@@ -168,6 +176,13 @@ validate spec(白名单数值字段;任意 Python 永不越过边界)
 | `benchmarks/quant/gen1/quant.toml` | 冻结市场规则/成本/基准窗口(生效日期化) |
 | `benchmarks/quant/gen1/strategy.toml` | gen1 基线策略(默认参数的出处) |
 | `benchmarks/quant/gen1/active.toml` | **DEMO_ACTIVE_STRATEGY = s3_longer_hold(冻结)** |
+| `benchmarks/quant/gen1/legacy_watchlist.toml` | legacy 用户自选/持仓名单(只诊断, 非机会宇宙; 按用户提名扩充) |
+| `benchmarks/quant/gen1/candidates_policy.toml` | 候选发现 v1 政策(权重/阈值, 阈值在政策不在代码) |
+| `workspace/artifacts/quant/business/candidate_snapshot.json` | 候选池审计工件(评分/理由/红旗/来源/coverage) |
+| `data/quant-cache/candidates/active_symbols.json` | 候选池 → live scan 的确定性 handoff(gitignored) |
+| `tools/quant_build_candidates.py` | 确定性候选发现(CSI300∪CSI500 → 评分 → 行业封顶) |
+| `tools/quant_render_business_dashboard.py` | 业务页渲染器(纯 stdlib) |
+| `workspace/artifacts/quant/business/last_scan.json` | 最近一次活跃宇宙扫描快照(quant_daily.sh 落盘) |
 | `benchmarks/quant/gen1/STATUS.md` | 四行证明状态 + 冻结决策 + 已知局限 |
 | `benchmarks/quant/gen1/OBSERVATION_LOG.md` | 观察模式每日一行日志 |
 | `workspace/artifacts/quant/gen1/` | 基线评估工件(evidence/trades/equity/result) |
@@ -299,12 +314,65 @@ MFE(期间最大有利偏移)/ MAE(最大不利偏移)
 uv run --group quant python tools/quant_p0_data_proof.py
 
 # 改动任何代码后(冻结期内应极少):全量门禁
-uv run pytest -q && uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.py -q
+uv run pytest -q && uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.py tests/test_quant_business.py -q
 .venv/bin/python -m ruff check .
 .venv/bin/python tools/regen_manifest.py && .venv/bin/python -m pytest tests/test_manifest_integrity.py -q
 
 # 缓存可随时重建(gitignored);重建后需重跑 P0 证明 + 一次基线评估核对一致性
 ```
+
+### 5.7 业务看板与候选发现(2026-09-02 增补)
+
+#### 三个宇宙(不得混用)
+
+```text
+legacy_watchlist          benchmarks/quant/gen1/legacy_watchlist.toml
+  用户自选/持仓名单        只在 Legacy Holdings 卡诊断 + /api/watchlist 显式扫描;
+  (601233/002460/          不再是隐式默认活跃宇宙; 名单按用户提名扩充
+  002415/000009 + 11 只          ↓ 不自动晋级
+  2026-09-02 截图追加)
+candidate_pool            workspace/artifacts/quant/business/candidate_snapshot.json
+  CSI300∪CSI500 筛选       盘后/手动刷新, 目标 20–50 只, 证据排名(价值/质量/可交易/时序)
+  + 评分 + 行业封顶             ↓ 确定性 handoff
+active_candidates         data/quant-cache/candidates/active_symbols.json
+  活跃策略触发的输入        quant_live_scan.py 默认宇宙 → 0–10 触发 → Agent
+```
+
+关键规则:
+- **候选排名不是买入建议**——它只是"值得研究/关注"的注意力排序;实际动作仍需确定性触发 + Agent 判定 + 人工决策。
+- 空/失败宇宙必须响亮失败:空 `active_symbols.json` 会让 `quant_daily.sh` 与 `/api/scan` 报错,绝不能把 `0 scanned / 0 trigger` 当成合法的 `NO_TRADE` 市场结论。
+- 评分每个成分都透明(原始指标 + 百分位 + 缺失字段 + 理由 + 红旗),权重与阈值全部在 `benchmarks/quant/gen1/candidates_policy.toml`,不在代码里。负 PE 按缺失处理,不是"很便宜"。
+- top30 内每个一级行业最多 4 只;行业数据缺失时如实标记 `unknown`,不假装分散。
+- essential coverage < 80% ⇒ 快照 `DEGRADED`,页面挂 `DATA DEGRADED` 横幅,不声称 A 级完整。
+- 银行/券商/保险走金融部门模型(跳过工业 CFO/杠杆规则并显式标注 `sector_model=financial`);行业数据缺失时标记 `unsupported`。
+
+#### 刷新与运行
+
+```bash
+# 盘后/手动:候选池刷新(确定性, 无 LLM; 首次约 5-8 分钟, 之后吃缓存)
+uv run --group quant python tools/quant_build_candidates.py
+
+# 本地看板(默认业务页; 工程页在 /engineering)
+python3 tools/quant_serve.py
+#   http://127.0.0.1:8787/              → 业务决策页 docs/quant/business.html
+#   http://127.0.0.1:8787/engineering   → 工程/审计页 docs/quant/dashboard.html
+#   /api/scan      → 活跃候选宇宙实时扫描
+#   /api/watchlist → legacy watchlist 显式扫描
+
+# 只重渲页面(不起服务)
+python3 tools/quant_render_business_dashboard.py
+```
+
+数据面(全部已在本部署网络实测可用,无 EastMoney 依赖):成分 CSIndex(CSI300/CSI500,单指数失败回退
+上次缓存并标注新鲜度)、快照/估值腾讯 qt.gtimg.cn 批量报价(PE/PB/股息率/成交额)、财报新浪
+`stock_financial_analysis_indicator`、行业巨潮申万门类、3Y 估值史百度。每个数据集带
+source/retrieved_at/freshness/fallback 标注;财报新鲜度按"报告期"计(缓存回退不掩盖真过期)。
+
+#### 冻结纪律(增补后依旧有效)
+
+本增补属观察期内的业务面扩展(spec 授权),不是重启开发。再次冻结:下一张代码 task 需要真实市场/数据失败
+(覆盖率持续过低、排名被明显价值陷阱支配、金融部门误判、触发密度长期不可用、刷新过慢/不可靠、forward
+结算暴露系统性问题)。"想要更好看的页面"不构成重启理由(完整规则见 spec pack 10 §4)。
 
 ---
 
@@ -347,14 +415,26 @@ uv run --group quant python tools/quant_fetch_universe.py
   --strategy benchmarks/quant/gen1/strategy.toml \
   --out workspace/artifacts/quant/gen1 --window research
 
-# 实时扫描(无 LLM)
+# 实时扫描(无 LLM; 默认宇宙 = 候选池 handoff → 37 只子集回退 → 否则响亮失败)
 uv run --group quant python tools/quant_live_scan.py
 
-# 日常决策(经 Agent,见 §5.2)
+# 显式 watchlist 扫描(只扫 legacy 名单)
+uv run --group quant python tools/quant_live_scan.py --universe-file benchmarks/quant/gen1/legacy_watchlist.toml
+
+# 候选池刷新(盘后/手动, 无 LLM)
+uv run --group quant python tools/quant_build_candidates.py
+
+# 业务页渲染(纯 stdlib)
+python3 tools/quant_render_business_dashboard.py
+
+# 本地看板服务(loopback; / 业务页, /engineering 工程页)
+python3 tools/quant_serve.py
+
+# 日常决策(经 Agent,见 §5.2; 一键版 bash tools/quant_daily.sh)
 
 # 测试
-uv run pytest -q                                                  # 默认套件(810)
-uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.py -q
+uv run pytest -q                                                  # 默认套件(836)
+uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.py tests/test_quant_business.py -q
 ```
 
 ### 7.2 故障排查
