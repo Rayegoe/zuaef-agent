@@ -485,3 +485,293 @@ class TestServerRoutes:
         assert watch is not None and watch[-1] == "benchmarks/quant/gen1/legacy_watchlist.toml"
         assert watch[-2] == "--universe-file"
         assert serve.api_command_for_path("/") is None
+
+
+# ---------------------------------------------------------------------------
+# P0.1 volume semantics consumption: only proven FAIL suppresses triggers
+# ---------------------------------------------------------------------------
+
+
+class TestVolumeSemantics:
+    def test_missing_evidence_is_unknown_never_pass(self, tmp_path):
+        s = scan.load_volume_semantics(evidence_dir=tmp_path)
+        assert s["status"] == "UNKNOWN" and s["evidence"] is None
+
+    def test_fail_proof_is_consumed_verbatim(self, tmp_path):
+        p = tmp_path / "semantic_proof_20260903T031356Z.json"
+        p.write_text(json.dumps({"status": "FAIL", "reason": "BROKEN_VOLUME_UNIT"}))
+        s = scan.load_volume_semantics(evidence_dir=tmp_path)
+        assert s["status"] == "FAIL" and s["reason"] == "BROKEN_VOLUME_UNIT"
+        assert s["evidence"] == str(p)
+
+    def test_latest_proof_wins(self, tmp_path):
+        (tmp_path / "semantic_proof_20260901T000000Z.json").write_text(json.dumps({"status": "PASS"}))
+        (tmp_path / "semantic_proof_20260903T000000Z.json").write_text(json.dumps({"status": "FAIL"}))
+        assert scan.load_volume_semantics(evidence_dir=tmp_path)["status"] == "FAIL"
+
+    def test_unreadable_proof_is_unknown(self, tmp_path):
+        (tmp_path / "semantic_proof_20260903T000000Z.json").write_text("{not json")
+        assert scan.load_volume_semantics(evidence_dir=tmp_path)["status"] == "UNKNOWN"
+
+
+# ---------------------------------------------------------------------------
+# P0.2 separated data-quality dimensions: coverage=100% is not overall green
+# ---------------------------------------------------------------------------
+
+from datetime import datetime
+
+DQ_NOW = datetime(2026, 9, 3, 12, 0, tzinfo=biz.TZ_SHANGHAI)
+
+
+def make_dq_snapshot(**overrides) -> dict:
+    snap = {
+        "as_of": "2026-09-03T11:42:19+08:00",
+        "status": "OK",
+        "coverage": 1.0,
+        "candidate_count": 1,
+        "concentration": "enforced",
+        "sources": {},
+        "source_degradations": [],
+        "candidates": [
+            {"symbol": "600000", "red_flags": [], "data_freshness": {"financial_date": "2026-06-30"}}
+        ],
+    }
+    snap.update(overrides)
+    return snap
+
+
+def make_dq_scan(**overrides) -> dict:
+    scan = {"as_of": "2026-09-03T11:44:00+08:00", "latest_quote_time": "20260903 114421"}
+    scan.update(overrides)
+    return scan
+
+
+def write_semantic_proof(tmp_path, *, status="PASS", universe_as_of="2026-09-03T11:42:19+08:00", sample=1):
+    p = tmp_path / "semantic_proof_20260903T120000Z.json"
+    p.write_text(json.dumps({"status": status, "reason": "r", "universe_as_of": universe_as_of, "sample_size": sample}))
+    return tmp_path
+
+
+class TestSeparatedDataQuality:
+    def test_perfect_coverage_with_unknown_pit_is_not_green(self, tmp_path):
+        dq = biz.data_quality(make_dq_snapshot(), make_dq_scan(), semantic_dir=write_semantic_proof(tmp_path), now=DQ_NOW)
+        assert dq["dimensions"]["coverage"]["status"] == "PASS"
+        assert dq["dimensions"]["semantic_integrity"]["status"] == "PASS"
+        assert dq["dimensions"]["pit"]["status"] == "UNKNOWN"
+        assert dq["status"] == "UNKNOWN"
+
+    def test_semantic_fail_beats_perfect_coverage(self, tmp_path):
+        dq = biz.data_quality(make_dq_snapshot(), make_dq_scan(), semantic_dir=write_semantic_proof(tmp_path, status="FAIL"), now=DQ_NOW)
+        assert dq["dimensions"]["coverage"]["status"] == "PASS"
+        assert dq["dimensions"]["semantic_integrity"]["status"] == "FAIL"
+        assert dq["status"] == "FAIL"
+        assert "semantic_integrity=FAIL" in dq["banner"]
+
+    def test_stale_proof_after_pool_rebuild_demotes_to_warn(self, tmp_path):
+        dq = biz.data_quality(make_dq_snapshot(), make_dq_scan(), semantic_dir=write_semantic_proof(tmp_path, universe_as_of="2026-09-02T00:00:00+08:00"), now=DQ_NOW)
+        assert dq["dimensions"]["semantic_integrity"]["status"] == "WARN"
+        assert "池重建后必须重跑 validator" in dq["dimensions"]["semantic_integrity"]["detail"]
+        assert dq["status"] == "WARN"
+
+    def test_missing_proof_is_unknown_not_pass(self, tmp_path):
+        dq = biz.data_quality(make_dq_snapshot(), make_dq_scan(), semantic_dir=tmp_path, now=DQ_NOW)
+        assert dq["dimensions"]["semantic_integrity"]["status"] == "UNKNOWN"
+
+    def test_yesterdays_quotes_warn(self, tmp_path):
+        dq = biz.data_quality(make_dq_snapshot(), make_dq_scan(latest_quote_time="20260902 150000"), semantic_dir=write_semantic_proof(tmp_path), now=DQ_NOW)
+        assert dq["dimensions"]["freshness"]["status"] == "WARN"
+
+    def test_stale_financial_red_flag_warns_freshness(self, tmp_path):
+        snap = make_dq_snapshot()
+        snap["candidates"][0]["red_flags"] = ["FINANCIAL_DATA_STALE"]
+        dq = biz.data_quality(snap, make_dq_scan(), semantic_dir=write_semantic_proof(tmp_path), now=DQ_NOW)
+        assert dq["dimensions"]["freshness"]["status"] == "WARN"
+
+    def test_degraded_source_keeps_degraded_flag_and_source_warn(self, tmp_path):
+        snap = make_dq_snapshot(status="DEGRADED", source_degradations=[{"source": "financial", "error": "boom"}])
+        dq = biz.data_quality(snap, make_dq_scan(), semantic_dir=write_semantic_proof(tmp_path), now=DQ_NOW)
+        assert dq["degraded"] is True
+        assert dq["dimensions"]["source_degradation"]["status"] == "WARN"
+
+    def test_no_snapshot_still_missing(self):
+        dq = biz.data_quality(None, None)
+        assert dq["status"] == "MISSING" and dq["dimensions"] == {}
+
+
+# ---------------------------------------------------------------------------
+# P0.3 PIT correctness audit
+# ---------------------------------------------------------------------------
+
+import quant_pit_audit as pit
+
+
+class TestPitAudit:
+    def test_worst_pit_ordering(self):
+        assert pit.worst_pit(["CLEAN", "PARTIAL"]) == "PARTIAL"
+        assert pit.worst_pit(["PARTIAL", "UNKNOWN"]) == "PARTIAL"
+        assert pit.worst_pit(["UNKNOWN", "CLEAN"]) == "UNKNOWN"
+        assert pit.worst_pit(["CONTAMINATED", "PARTIAL"]) == "CONTAMINATED"
+
+    def test_current_membership_backapplied_is_contaminated(self):
+        meta = {"pit_limitation": "current membership applied to all historical dates", "basis": "b"}
+        a = pit.membership_historical_aspect(meta, ("2018-01-01", "2022-12-31"))
+        assert a["status"] == "CONTAMINATED"
+
+    def test_financial_without_announcement_dates_is_partial(self):
+        a = pit.financial_announcement_aspect([{"report_date": "2026-06-30"}, {"report_date": "2025-12-31"}])
+        assert a["status"] == "PARTIAL"
+        assert "公告日期" in a["finding"]
+
+    def test_financial_with_announcement_dates_is_clean(self):
+        a = pit.financial_announcement_aspect([{"report_date": "2026-06-30", "announcement_date": "2026-08-20"}])
+        assert a["status"] == "CLEAN"
+
+    def test_valuation_complete_metas_clean(self):
+        a = pit.valuation_asof_aspect([{"series_last_date": "2026-09-02", "retrieved_at": "2026-09-03T10:00:00+08:00"}])
+        assert a["status"] == "CLEAN"
+
+    def test_adjustment_needs_both_faces_and_rules(self):
+        assert pit.adjustment_semantics_aspect([{"adjust": "qfq"}, {"adjust": "raw"}], True)["status"] == "CLEAN"
+        assert pit.adjustment_semantics_aspect([{"adjust": "qfq"}], True)["status"] == "PARTIAL"
+        assert pit.adjustment_semantics_aspect([{"adjust": "qfq"}, {"adjust": "raw"}], False)["status"] == "PARTIAL"
+
+    def _tmp_repo(self, tmp_path, limitation):
+        cache = tmp_path / "cache"
+        for sub in ("universe", "fundamentals", "valuation3y", "daily"):
+            (cache / sub).mkdir(parents=True)
+        (cache / "universe" / "csi500_subset.meta.json").write_text(
+            json.dumps({"pit_limitation": limitation, "basis": "b"})
+        )
+        gen1 = tmp_path / "gen1"
+        gen1.mkdir()
+        (gen1 / "quant.toml").write_text(
+            '[execution]\ncommission_rate = 0.00025\n\n[research]\nresearch_start = "2018-01-01"\nresearch_end = "2022-12-31"\n'
+        )
+        return cache, gen1
+
+    def test_audit_contaminated_when_membership_backapplied(self, tmp_path):
+        cache, gen1 = self._tmp_repo(tmp_path, "current membership applied to all historical dates")
+        r = pit.audit(snapshot_path=tmp_path / "missing.json", cache=cache, gen1=gen1)
+        assert r["verdict"] == "PIT_CONTAMINATED"
+        assert r["aspects"]["membership_historical"]["status"] == "CONTAMINATED"
+
+    def test_audit_partial_when_no_contamination(self, tmp_path):
+        cache, gen1 = self._tmp_repo(tmp_path, "")
+        r = pit.audit(snapshot_path=tmp_path / "missing.json", cache=cache, gen1=gen1)
+        assert r["verdict"] == "PIT_PARTIAL"
+
+    def test_audit_insufficient_evidence_when_nothing_auditable(self, tmp_path):
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        gen1 = tmp_path / "gen1"
+        gen1.mkdir()
+        (gen1 / "quant.toml").write_text("[research]\nresearch_start = \"2018-01-01\"\n")
+        r = pit.audit(snapshot_path=tmp_path / "missing.json", cache=cache, gen1=gen1)
+        assert r["verdict"] is None
+
+
+class TestPitDimension:
+    def test_contaminated_maps_to_fail_and_fails_overall(self, tmp_path):
+        (tmp_path / "pit_audit_20260903T120000Z.json").write_text(
+            json.dumps({"verdict": "PIT_CONTAMINATED", "implication": "历史回测宇宙带幸存者/前视污染"})
+        )
+        dq = biz.data_quality(make_dq_snapshot(), make_dq_scan(), semantic_dir=tmp_path, now=DQ_NOW)
+        assert dq["dimensions"]["pit"]["status"] == "FAIL"
+        assert dq["status"] == "FAIL"
+
+    def test_clean_maps_to_pass_and_overall_pass(self, tmp_path):
+        (tmp_path / "pit_audit_20260903T120000Z.json").write_text(json.dumps({"verdict": "PIT_CLEAN", "implication": "ok"}))
+        (tmp_path / "semantic_proof_20260903T120000Z.json").write_text(
+            json.dumps({"status": "PASS", "reason": "ok", "universe_as_of": "2026-09-03T11:42:19+08:00", "sample_size": 1})
+        )
+        dq = biz.data_quality(make_dq_snapshot(), make_dq_scan(), semantic_dir=tmp_path, now=DQ_NOW)
+        assert dq["dimensions"]["pit"]["status"] == "PASS"
+        assert dq["dimensions"]["semantic_integrity"]["status"] == "PASS"
+        assert dq["status"] == "PASS"
+
+
+# ---------------------------------------------------------------------------
+# P0.4 anti-leakage behavioral check (pure logic; qlib path runs in side env)
+# ---------------------------------------------------------------------------
+
+from datetime import date
+
+import pandas as pd
+import quant_anti_leakage_check as leak
+from quant_core import Intent
+
+
+def make_panel(dates, symbols, close=10.0, volume=1_000_000.0):
+    idx = pd.MultiIndex.from_product([dates, symbols], names=["datetime", "instrument"])
+    n = len(dates) * len(symbols)
+    return pd.DataFrame(
+        {
+            "open": [close] * n,
+            "close": [close] * n,
+            "volume": [volume] * n,
+            "prev_close": [close - 0.1] * n,
+            "close_5d_ago": [close * 1.05] * n,
+            "ma5": [close - 0.05] * n,
+            "volume_ma20": [volume * 0.5] * n,
+        },
+        index=idx,
+    )
+
+
+class TestAntiLeakage:
+    def test_identical_replays_change_nothing(self):
+        days = [pd.Timestamp("2021-01-04").date(), pd.Timestamp("2021-01-05").date()]
+        f = leak.factor_frame(make_panel(days, ["600000"]))
+        diffs, compared = leak.compare_factors(f, f.copy(), days)
+        assert diffs == [] and compared == 2
+
+    def test_injected_future_leak_is_itemized_not_masked(self):
+        days = [pd.Timestamp("2021-01-04").date(), pd.Timestamp("2021-01-05").date()]
+        full = leak.factor_frame(make_panel(days, ["600000"]))
+        trunc_panel = make_panel(days, ["600000"])
+        trunc_panel.iloc[0, trunc_panel.columns.get_loc("close_5d_ago")] = 99.0
+        diffs, _ = leak.compare_factors(full, leak.factor_frame(trunc_panel), days)
+        assert len(diffs) == 1
+        assert diffs[0]["item"] == "factor:pullback_5d"
+        assert diffs[0]["full"] != diffs[0]["truncated"]
+
+    def test_membership_diff_reports_symbol_sets(self):
+        day = [pd.Timestamp("2021-01-04").date()]
+        full = leak.factor_frame(make_panel(day, ["000001", "600000"]))
+        trunc = leak.factor_frame(make_panel(day, ["600000"]))
+        diffs = leak.compare_membership(full, trunc, day)
+        assert len(diffs) == 1 and diffs[0]["only_in_full"] == ["000001"]
+
+    def test_intent_changes_are_reported(self):
+        lo, hi = date(2021, 1, 1), date(2021, 12, 31)
+        full = [Intent("BUY", "600000", date(2021, 3, 1)), Intent("SELL", "600000", date(2021, 3, 5))]
+        trunc = [Intent("BUY", "600000", date(2021, 3, 8)), Intent("SELL", "600000", date(2021, 3, 12))]
+        cmp = leak.compare_intents(full, trunc, lo, hi)
+        assert cmp["entry_intents"]["changed"] and cmp["entry_intents"]["diff_count"] == 2
+        assert cmp["exit_intents"]["changed"]
+
+    def test_timing_future_rows_are_invariant_for_truncated_frames(self, monkeypatch):
+        dates = pd.date_range("2021-01-01", periods=60, freq="D").date
+        hist = pd.DataFrame({"date": dates, "close": [10.0] * 60, "volume": [1_000_000.0] * 60})
+        monkeypatch.setattr(leak, "read_cache", lambda kind, key, cache_dir=None: (hist, {}))
+        res = leak.timing_surface_check(["600000"], [str(dates[40])])
+        assert res["truncation_invariance"]["checked"] == 1
+        assert res["truncation_invariance"]["invariant"] is True
+
+    def test_timing_stale_quote_sensitivity_is_quantified_not_hidden(self, monkeypatch):
+        dates = pd.date_range("2021-01-01", periods=60, freq="D").date
+        hist = pd.DataFrame({"date": dates, "close": [10 + 0.1 * (i % 3) for i in range(60)], "volume": [1_000_000.0] * 60})
+        monkeypatch.setattr(leak, "read_cache", lambda kind, key, cache_dir=None: (hist, {}))
+        res = leak.timing_surface_check(["600000"], [str(dates[40])])
+        # a T-dated quote paired with the full frame is frame-end-relative:
+        # the check reports it as quantified sensitivity instead of masking
+        assert res["stale_quote_sensitivity"]["checked"] == 1
+        assert res["stale_quote_sensitivity"]["sensitive"] is True
+        assert res["stale_quote_sensitivity"]["diffs"][0]["truncated"] != res["stale_quote_sensitivity"]["diffs"][0]["with_longer_frame"]
+
+    def test_overall_verdict_reducer_covers_replay_surface_only(self):
+        assert leak.overall_verdict([{"status": "PASS"}]) == "LOOKAHEAD_PASS"
+        assert leak.overall_verdict([{"status": "PASS"}, {"status": "PASS"}]) == "LOOKAHEAD_PASS"
+        assert leak.overall_verdict([{"status": "PASS"}, {"status": "LOOKAHEAD_FAIL"}]) == "LOOKAHEAD_FAIL"
+        assert leak.overall_verdict([{"status": "UNKNOWN"}]) == "LOOKAHEAD_UNKNOWN"
+        assert leak.overall_verdict([]) == "LOOKAHEAD_UNKNOWN"

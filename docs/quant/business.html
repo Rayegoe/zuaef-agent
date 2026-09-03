@@ -176,7 +176,7 @@ footer{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </div>
 <script>
 window.DASH = {
- "generated_at": "2026-09-02 16:14 UTC",
+ "generated_at": "2026-09-03 04:38 UTC",
  "warning": "历史 S3 证据薄弱;盈利能力仍未证明 (NOT YET)。",
  "not_a_buy_note": "候选排名只是研究关注度的排序,不是买入建议;实际动作仍需确定性实时触发加人工决策。盈利能力仍未证明。",
  "kpi": {
@@ -191,22 +191,22 @@ window.DASH = {
   "action": "NO_TRADE",
   "last_run_day": "2026-09-03",
   "brief": {
-   "decision_id": "brief-live-1788365640",
-   "recorded_at": "2026-09-02T16:14:13.597715+00:00",
-   "symbol": "NONE",
+   "decision_id": "brief-live-1788407299",
+   "recorded_at": "2026-09-03T03:48:33.450290+00:00",
+   "symbol": "000807",
    "action": "NO_TRADE",
    "strategy_name": "s3_longer_hold",
-   "signal_timestamp": "2026-09-03T00:13:59.870945+08:00",
-   "brief_latency_seconds": 13.7,
-   "why": "Empty trigger list from get_live_signals: all 50 symbols in candidate_pool_active had trigger=false. No symbol simultaneously met entry_pullback_max=-0.05 and entry_volume_ratio_min=1.8. Closest misses: 600015 (pullback -0.0798 but vol ratio 1.626 < 1.8), 000157 (vol ratio 105.1 but pullback -0.0692 > -0.05 — noted: several volume_ratio values of 50–140 look like data artifacts of intraday cumulative-volume scaling, so they are not treated as valid volume confirmation). No deterministic entry evidence; NO_TRADE is the correct verdict.",
-   "invalidation": "Re-scan may flip this if any symbol shows pullback_5d <= -0.05 AND volume_ratio_20d >= 1.8 in a later quote batch; also invalid if quote source goes stale or universe changes. This NO_TRADE stands until the next scan output.",
-   "expected_holding": "N/A — no position and no candidate; next scan determines any entry.",
-   "trigger_facts": "none (triggers list empty; universe=50, all trigger=false; latest_quote_time=20260902 161500)"
+   "signal_timestamp": "2026-09-03T11:48:19.048900+08:00",
+   "brief_latency_seconds": 14.4,
+   "why": "No symbol in the 50-symbol active candidate pool simultaneously satisfies the strategy entry gates (5d pullback <= -0.05 AND 20d volume ratio >= 1.8). Closest partial reads: 星宇股份 601799 pullback -0.1204 but volume_ratio 1.201 below gate; 华电国际 600027 volume_ratio 2.072 but pullback +0.0344 (no pullback). Empty deterministic trigger list => NO_TRADE by protocol; do not force a candidate.",
+   "invalidation": "If a fresh scan later shows a symbol with pullback_5d <= -0.05 and volume_ratio_20d >= 1.8, re-evaluate; also note intraday volume_ratio understates vs full-day 20d average (scan limitation), so early-session false negatives are possible without being actionable evidence now.",
+   "expected_holding": "n/a (no entry)",
+   "trigger_facts": "none (empty trigger list; 50/50 universe symbols quoted ok, triggers_suppressed=0, as_of 2026-09-03T11:48:19+08:00)"
   }
  },
  "trigger_rows": [],
  "scan_meta": {
-  "as_of": "2026-09-03T00:13:53.201131+08:00",
+  "as_of": "2026-09-03T11:48:13.165931+08:00",
   "universe": "candidate_pool_active",
   "universe_size": 50,
   "present": true
@@ -219,18 +219,18 @@ window.DASH = {
    "industry": "原材料",
    "sector_model": "industrial",
    "tier": "A",
-   "composite_score": 82.4,
-   "value_score": 28.7,
-   "quality_score": 34.7,
+   "composite_score": 79.5,
+   "value_score": 29.2,
+   "quality_score": 33.3,
    "tradeability_score": 15.0,
-   "pe_ttm": 8.4,
-   "pb": 2.41,
-   "dividend_yield_pct": 2.63,
+   "pe_ttm": 8.73,
+   "pb": 2.51,
+   "dividend_yield_pct": 2.53,
    "roe_3y_pct": 17.537,
-   "valuation_percentile_3y": 0.016408386508659983,
-   "timing_state": "NEAR",
+   "valuation_percentile_3y": 0.0300820419325433,
+   "timing_state": "WAIT",
    "reasons": [
-    "股息率 2.6%",
+    "股息率 2.5%",
     "经营现金流/净利润 1.15"
    ],
    "red_flags": []
@@ -242,15 +242,15 @@ window.DASH = {
    "industry": "金融",
    "sector_model": "industrial",
    "tier": "A",
-   "composite_score": 81.7,
-   "value_score": 36.9,
-   "quality_score": 22.6,
+   "composite_score": 78.6,
+   "value_score": 36.0,
+   "quality_score": 22.5,
    "tradeability_score": 15.0,
-   "pe_ttm": 3.95,
+   "pe_ttm": 4.0,
    "pb": 0.31,
-   "dividend_yield_pct": 6.74,
+   "dividend_yield_pct": 6.67,
    "roe_3y_pct": 8.623,
-   "valuation_percentile_3y": 0.28167730173199634,
+   "valuation_percentile_3y": 0.3673655423883318,
    "timing_state": "NEAR",
    "reasons": [
     "股息率 6.7%",
@@ -260,47 +260,47 @@ window.DASH = {
   },
   {
    "rank": 3,
-   "symbol": "601128",
-   "name": "常熟银行",
-   "industry": "金融",
+   "symbol": "600027",
+   "name": "华电国际",
+   "industry": "公用事业",
    "sector_model": "industrial",
    "tier": "A",
-   "composite_score": 79.2,
-   "value_score": 34.5,
-   "quality_score": 28.8,
-   "tradeability_score": 14.2,
-   "pe_ttm": 5.22,
-   "pb": 0.7,
-   "dividend_yield_pct": 3.87,
-   "roe_3y_pct": 13.963,
-   "valuation_percentile_3y": 0.044667274384685506,
-   "timing_state": "WAIT",
+   "composite_score": 78.5,
+   "value_score": 28.2,
+   "quality_score": 29.3,
+   "tradeability_score": 15.0,
+   "pe_ttm": 10.6,
+   "pb": 1.12,
+   "dividend_yield_pct": 4.78,
+   "roe_3y_pct": 10.937,
+   "valuation_percentile_3y": 0.5350957155879672,
+   "timing_state": "NEAR",
    "reasons": [
-    "股息率 3.9%",
-    "经营现金流/净利润 4.11"
+    "股息率 4.8%",
+    "经营现金流/净利润 3.31"
    ],
    "red_flags": []
   },
   {
    "rank": 4,
-   "symbol": "601319",
-   "name": "中国人保",
+   "symbol": "601601",
+   "name": "中国太保",
    "industry": "金融",
    "sector_model": "industrial",
    "tier": "A",
-   "composite_score": 77.7,
-   "value_score": 25.8,
-   "quality_score": 32.8,
+   "composite_score": 77.4,
+   "value_score": 27.5,
+   "quality_score": 31.2,
    "tradeability_score": 15.0,
-   "pe_ttm": 6.16,
-   "pb": 1.03,
-   "dividend_yield_pct": 2.78,
-   "roe_3y_pct": 14.147,
-   "valuation_percentile_3y": 0.0036463081130355514,
-   "timing_state": "NEAR",
+   "pe_ttm": 5.86,
+   "pb": 1.04,
+   "dividend_yield_pct": 3.35,
+   "roe_3y_pct": 15.333,
+   "valuation_percentile_3y": 0.08568824065633546,
+   "timing_state": "WAIT",
    "reasons": [
-    "股息率 2.8%",
-    "经营现金流/净利润 1.88"
+    "股息率 3.4%",
+    "经营现金流/净利润 3.53"
    ],
    "red_flags": []
   },
@@ -311,90 +311,92 @@ window.DASH = {
    "industry": "原材料",
    "sector_model": "industrial",
    "tier": "A",
-   "composite_score": 75.3,
-   "value_score": 30.5,
-   "quality_score": 29.8,
+   "composite_score": 77.3,
+   "value_score": 31.7,
+   "quality_score": 28.6,
    "tradeability_score": 15.0,
-   "pe_ttm": 8.67,
-   "pb": 1.87,
-   "dividend_yield_pct": 6.5,
+   "pe_ttm": 8.94,
+   "pb": 1.92,
+   "dividend_yield_pct": 6.3,
    "roe_3y_pct": 14.607,
-   "valuation_percentile_3y": 0.1048313582497721,
+   "valuation_percentile_3y": 0.13035551504102097,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 6.5%",
+    "股息率 6.3%",
     "经营现金流/净利润 1.67"
    ],
    "red_flags": []
   },
   {
    "rank": 6,
-   "symbol": "601601",
-   "name": "中国太保",
+   "symbol": "601128",
+   "name": "常熟银行",
    "industry": "金融",
    "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 74.6,
-   "value_score": 28.3,
-   "quality_score": 31.3,
-   "tradeability_score": 15.0,
-   "pe_ttm": 5.6,
-   "pb": 0.99,
-   "dividend_yield_pct": 3.5,
-   "roe_3y_pct": 15.333,
-   "valuation_percentile_3y": 0.05013673655423884,
+   "tier": "A",
+   "composite_score": 76.6,
+   "value_score": 34.2,
+   "quality_score": 28.5,
+   "tradeability_score": 12.9,
+   "pe_ttm": 5.3,
+   "pb": 0.71,
+   "dividend_yield_pct": 3.82,
+   "roe_3y_pct": 13.963,
+   "valuation_percentile_3y": 0.07474931631722881,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 3.5%",
-    "经营现金流/净利润 3.53"
+    "股息率 3.8%",
+    "经营现金流/净利润 4.11"
    ],
    "red_flags": []
   },
   {
    "rank": 7,
-   "symbol": "600968",
-   "name": "海油发展",
-   "industry": "能源",
+   "symbol": "600011",
+   "name": "华能国际",
+   "industry": "公用事业",
    "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 74.3,
-   "value_score": 32.9,
-   "quality_score": 24.9,
-   "tradeability_score": 12.6,
-   "pe_ttm": 10.03,
-   "pb": 1.32,
-   "dividend_yield_pct": 3.8,
-   "roe_3y_pct": 13.643,
-   "valuation_percentile_3y": 0.06198723792160438,
-   "timing_state": "NEAR",
+   "tier": "A",
+   "composite_score": 76.2,
+   "value_score": 30.2,
+   "quality_score": 31.4,
+   "tradeability_score": 13.7,
+   "pe_ttm": 9.19,
+   "pb": 1.67,
+   "dividend_yield_pct": 5.82,
+   "roe_3y_pct": 14.477,
+   "valuation_percentile_3y": 0.2689152233363719,
+   "timing_state": "WAIT",
    "reasons": [
-    "股息率 3.8%",
-    "经营现金流/净利润 1.27"
+    "股息率 5.8%",
+    "经营现金流/净利润 3.45"
    ],
    "red_flags": []
   },
   {
    "rank": 8,
-   "symbol": "600741",
-   "name": "华域汽车",
-   "industry": "可选消费",
+   "symbol": "601336",
+   "name": "新华保险",
+   "industry": "金融",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 73.0,
-   "value_score": 32.7,
-   "quality_score": 29.2,
-   "tradeability_score": 11.0,
-   "pe_ttm": 7.04,
-   "pb": 0.74,
-   "dividend_yield_pct": 6.44,
-   "roe_3y_pct": 11.787,
-   "valuation_percentile_3y": 0.12579762989972654,
+   "composite_score": 75.8,
+   "value_score": 29.6,
+   "quality_score": 28.0,
+   "tradeability_score": 15.0,
+   "pe_ttm": 4.4,
+   "pb": 1.58,
+   "dividend_yield_pct": 4.38,
+   "roe_3y_pct": 22.837,
+   "valuation_percentile_3y": 0.006381039197812215,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 6.4%",
-    "经营现金流/净利润 1.16"
+    "股息率 4.4%",
+    "经营现金流/净利润 3.06"
    ],
-   "red_flags": []
+   "red_flags": [
+    "HIGH_LEVERAGE_REL_SECTOR"
+   ]
   },
   {
    "rank": 9,
@@ -403,64 +405,154 @@ window.DASH = {
    "industry": "原材料",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 72.8,
-   "value_score": 32.4,
-   "quality_score": 25.4,
+   "composite_score": 74.8,
+   "value_score": 33.0,
+   "quality_score": 24.6,
    "tradeability_score": 15.0,
-   "pe_ttm": 8.99,
-   "pb": 1.37,
-   "dividend_yield_pct": 2.8,
+   "pe_ttm": 9.36,
+   "pb": 1.43,
+   "dividend_yield_pct": 2.68,
    "roe_3y_pct": 8.007,
-   "valuation_percentile_3y": 0.05104831358249772,
+   "valuation_percentile_3y": 0.06836827711941659,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 2.8%",
+    "股息率 2.7%",
     "经营现金流/净利润 0.86"
    ],
    "red_flags": []
   },
   {
    "rank": 10,
-   "symbol": "600011",
-   "name": "华能国际",
-   "industry": "公用事业",
+   "symbol": "601600",
+   "name": "中国铝业",
+   "industry": "原材料",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 72.1,
-   "value_score": 28.8,
-   "quality_score": 30.7,
-   "tradeability_score": 12.6,
-   "pe_ttm": 9.07,
-   "pb": 1.65,
-   "dividend_yield_pct": 5.9,
-   "roe_3y_pct": 14.477,
-   "valuation_percentile_3y": 0.25979945305378305,
+   "composite_score": 73.3,
+   "value_score": 27.4,
+   "quality_score": 28.9,
+   "tradeability_score": 15.0,
+   "pe_ttm": 9.72,
+   "pb": 2.01,
+   "dividend_yield_pct": 2.73,
+   "roe_3y_pct": 16.307,
+   "valuation_percentile_3y": 0.1349134001823154,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 5.9%",
-    "经营现金流/净利润 3.45"
+    "股息率 2.7%",
+    "经营现金流/净利润 1.58"
    ],
-   "red_flags": [
-    "HIGH_LEVERAGE_REL_SECTOR"
-   ]
+   "red_flags": []
   },
   {
    "rank": 11,
+   "symbol": "600741",
+   "name": "华域汽车",
+   "industry": "可选消费",
+   "sector_model": "industrial",
+   "tier": "B",
+   "composite_score": 69.8,
+   "value_score": 32.8,
+   "quality_score": 29.0,
+   "tradeability_score": 7.9,
+   "pe_ttm": 7.06,
+   "pb": 0.74,
+   "dividend_yield_pct": 6.42,
+   "roe_3y_pct": 11.787,
+   "valuation_percentile_3y": 0.12853236098450319,
+   "timing_state": "WAIT",
+   "reasons": [
+    "股息率 6.4%",
+    "经营现金流/净利润 1.16"
+   ],
+   "red_flags": []
+  },
+  {
+   "rank": 12,
+   "symbol": "601799",
+   "name": "星宇股份",
+   "industry": "未知",
+   "sector_model": "unsupported",
+   "tier": "B",
+   "composite_score": 68.7,
+   "value_score": 18.4,
+   "quality_score": 31.7,
+   "tradeability_score": 13.6,
+   "pe_ttm": 13.67,
+   "pb": 1.92,
+   "dividend_yield_pct": 2.61,
+   "roe_3y_pct": 14.137,
+   "valuation_percentile_3y": 0.0,
+   "timing_state": "NEAR",
+   "reasons": [
+    "股息率 2.6%",
+    "经营现金流/净利润 1.50"
+   ],
+   "red_flags": []
+  },
+  {
+   "rank": 13,
+   "symbol": "600690",
+   "name": "海尔智家",
+   "industry": "可选消费",
+   "sector_model": "industrial",
+   "tier": "B",
+   "composite_score": 67.7,
+   "value_score": 21.8,
+   "quality_score": 29.2,
+   "tradeability_score": 15.0,
+   "pe_ttm": 11.4,
+   "pb": 1.7,
+   "dividend_yield_pct": 5.29,
+   "roe_3y_pct": 17.177,
+   "valuation_percentile_3y": 0.16955332725615316,
+   "timing_state": "WAIT",
+   "reasons": [
+    "股息率 5.3%",
+    "经营现金流/净利润 1.29"
+   ],
+   "red_flags": []
+  },
+  {
+   "rank": 14,
+   "symbol": "002001",
+   "name": "新 和 成",
+   "industry": "医药卫生",
+   "sector_model": "industrial",
+   "tier": "B",
+   "composite_score": 66.0,
+   "value_score": 19.8,
+   "quality_score": 33.3,
+   "tradeability_score": 12.7,
+   "pe_ttm": 11.45,
+   "pb": 2.35,
+   "dividend_yield_pct": 3.74,
+   "roe_3y_pct": 18.297,
+   "valuation_percentile_3y": 0.25250683682771197,
+   "timing_state": "WAIT",
+   "reasons": [
+    "股息率 3.7%",
+    "经营现金流/净利润 1.29"
+   ],
+   "red_flags": []
+  },
+  {
+   "rank": 15,
    "symbol": "600873",
    "name": "梅花生物",
    "industry": "主要消费",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 71.7,
-   "value_score": 19.8,
+   "composite_score": 64.1,
+   "value_score": 20.2,
    "quality_score": 33.0,
-   "tradeability_score": 13.4,
-   "pe_ttm": 9.8,
-   "pb": 1.36,
-   "dividend_yield_pct": 5.63,
+   "tradeability_score": 8.2,
+   "pe_ttm": 9.92,
+   "pb": 1.38,
+   "dividend_yield_pct": 5.56,
    "roe_3y_pct": 21.333,
-   "valuation_percentile_3y": 0.5961713764813127,
-   "timing_state": "NEAR",
+   "valuation_percentile_3y": 0.6381039197812215,
+   "timing_state": "WAIT",
    "reasons": [
     "股息率 5.6%",
     "经营现金流/净利润 1.22"
@@ -468,113 +560,161 @@ window.DASH = {
    "red_flags": []
   },
   {
-   "rank": 12,
-   "symbol": "601600",
-   "name": "中国铝业",
-   "industry": "原材料",
+   "rank": 16,
+   "symbol": "601717",
+   "name": "中创智领",
+   "industry": "可选消费",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 71.6,
-   "value_score": 26.6,
-   "quality_score": 30.1,
-   "tradeability_score": 15.0,
-   "pe_ttm": 9.42,
-   "pb": 1.95,
-   "dividend_yield_pct": 2.81,
-   "roe_3y_pct": 16.307,
-   "valuation_percentile_3y": 0.10209662716499544,
-   "timing_state": "WAIT",
-   "reasons": [
-    "股息率 2.8%",
-    "经营现金流/净利润 1.58"
-   ],
-   "red_flags": []
-  },
-  {
-   "rank": 13,
-   "symbol": "600027",
-   "name": "华电国际",
-   "industry": "公用事业",
-   "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 68.2,
-   "value_score": 28.5,
-   "quality_score": 27.1,
-   "tradeability_score": 12.4,
-   "pe_ttm": 10.29,
+   "composite_score": 63.9,
+   "value_score": 25.3,
+   "quality_score": 24.0,
+   "tradeability_score": 9.8,
+   "pe_ttm": 7.6,
    "pb": 1.09,
-   "dividend_yield_pct": 4.93,
-   "roe_3y_pct": 10.937,
-   "valuation_percentile_3y": 0.43938012762078393,
-   "timing_state": "WAIT",
-   "reasons": [
-    "股息率 4.9%",
-    "经营现金流/净利润 3.31"
-   ],
-   "red_flags": []
-  },
-  {
-   "rank": 14,
-   "symbol": "600578",
-   "name": "京能电力",
-   "industry": "公用事业",
-   "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 68.2,
-   "value_score": 29.6,
-   "quality_score": 22.9,
-   "tradeability_score": 11.8,
-   "pe_ttm": 10.25,
-   "pb": 1.45,
-   "dividend_yield_pct": 3.14,
-   "roe_3y_pct": 8.277,
-   "valuation_percentile_3y": 0.14767547857793983,
+   "dividend_yield_pct": 8.68,
+   "roe_3y_pct": 18.123,
+   "valuation_percentile_3y": 0.4813126709206928,
    "timing_state": "NEAR",
    "reasons": [
-    "股息率 3.1%",
-    "经营现金流/净利润 2.37"
+    "股息率 8.7%",
+    "收入/利润平均增速 7.5%"
    ],
    "red_flags": []
   },
   {
-   "rank": 15,
+   "rank": 17,
    "symbol": "601117",
    "name": "中国化学",
    "industry": "工业",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 68.1,
-   "value_score": 32.6,
-   "quality_score": 16.3,
-   "tradeability_score": 15.0,
-   "pe_ttm": 6.95,
+   "composite_score": 63.2,
+   "value_score": 32.0,
+   "quality_score": 16.2,
+   "tradeability_score": 12.9,
+   "pe_ttm": 6.99,
    "pb": 0.65,
-   "dividend_yield_pct": 2.86,
+   "dividend_yield_pct": 2.84,
    "roe_3y_pct": 9.753,
-   "valuation_percentile_3y": 0.03190519598906107,
-   "timing_state": "NEAR",
+   "valuation_percentile_3y": 0.049225159525979945,
+   "timing_state": "WAIT",
    "reasons": [
-    "股息率 2.9%",
+    "股息率 2.8%",
     "收入/利润平均增速 7.7%"
    ],
    "red_flags": []
   },
   {
-   "rank": 16,
+   "rank": 18,
+   "symbol": "000528",
+   "name": "柳    工",
+   "industry": "工业",
+   "sector_model": "industrial",
+   "tier": "B",
+   "composite_score": 62.9,
+   "value_score": 26.3,
+   "quality_score": 18.7,
+   "tradeability_score": 10.3,
+   "pe_ttm": 11.26,
+   "pb": 0.86,
+   "dividend_yield_pct": 3.96,
+   "roe_3y_pct": 7.453,
+   "valuation_percentile_3y": 0.07474931631722881,
+   "timing_state": "NEAR",
+   "reasons": [
+    "股息率 4.0%",
+    "收入/利润平均增速 5.9%"
+   ],
+   "red_flags": []
+  },
+  {
+   "rank": 19,
+   "symbol": "000425",
+   "name": "徐工机械",
+   "industry": "工业",
+   "sector_model": "industrial",
+   "tier": "B",
+   "composite_score": 62.7,
+   "value_score": 14.8,
+   "quality_score": 28.7,
+   "tradeability_score": 15.0,
+   "pe_ttm": 15.15,
+   "pb": 1.5,
+   "dividend_yield_pct": 2.49,
+   "roe_3y_pct": 10.387,
+   "valuation_percentile_3y": 0.3053783044667274,
+   "timing_state": "NEAR",
+   "reasons": [
+    "股息率 2.5%",
+    "经营现金流/净利润 2.12"
+   ],
+   "red_flags": []
+  },
+  {
+   "rank": 20,
+   "symbol": "002415",
+   "name": "海康威视",
+   "industry": "信息技术",
+   "sector_model": "industrial",
+   "tier": "B",
+   "composite_score": 62.4,
+   "value_score": 14.9,
+   "quality_score": 32.5,
+   "tradeability_score": 15.0,
+   "pe_ttm": 19.54,
+   "pb": 4.05,
+   "dividend_yield_pct": 3.71,
+   "roe_3y_pct": 17.427,
+   "valuation_percentile_3y": 0.11303555150410209,
+   "timing_state": "WAIT",
+   "reasons": [
+    "股息率 3.7%",
+    "经营现金流/净利润 1.64"
+   ],
+   "red_flags": []
+  },
+  {
+   "rank": 21,
+   "symbol": "000651",
+   "name": "格力电器",
+   "industry": "可选消费",
+   "sector_model": "industrial",
+   "tier": "B",
+   "composite_score": 62.0,
+   "value_score": 22.1,
+   "quality_score": 22.9,
+   "tradeability_score": 15.0,
+   "pe_ttm": 7.83,
+   "pb": 1.47,
+   "dividend_yield_pct": 7.69,
+   "roe_3y_pct": 24.083,
+   "valuation_percentile_3y": 0.6517775752051048,
+   "timing_state": "WAIT",
+   "reasons": [
+    "股息率 7.7%",
+    "经营现金流/净利润 1.61"
+   ],
+   "red_flags": [
+    "PROFIT_GROWTH_NEGATIVE"
+   ]
+  },
+  {
+   "rank": 22,
    "symbol": "000157",
    "name": "中联重科",
    "industry": "工业",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 67.8,
-   "value_score": 22.4,
-   "quality_score": 24.0,
-   "tradeability_score": 13.3,
-   "pe_ttm": 13.58,
+   "composite_score": 61.1,
+   "value_score": 23.1,
+   "quality_score": 24.2,
+   "tradeability_score": 9.7,
+   "pe_ttm": 13.6,
    "pb": 0.99,
-   "dividend_yield_pct": 6.07,
+   "dividend_yield_pct": 6.06,
    "roe_3y_pct": 6.997,
-   "valuation_percentile_3y": 0.006381039197812215,
+   "valuation_percentile_3y": 0.007292616226071103,
    "timing_state": "NEAR",
    "reasons": [
     "股息率 6.1%",
@@ -583,45 +723,22 @@ window.DASH = {
    "red_flags": []
   },
   {
-   "rank": 17,
-   "symbol": "002001",
-   "name": "新 和 成",
-   "industry": "医药卫生",
-   "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 67.5,
-   "value_score": 18.9,
-   "quality_score": 33.7,
-   "tradeability_score": 15.0,
-   "pe_ttm": 11.42,
-   "pb": 2.35,
-   "dividend_yield_pct": 3.75,
-   "roe_3y_pct": 18.297,
-   "valuation_percentile_3y": 0.2506836827711942,
-   "timing_state": "WAIT",
-   "reasons": [
-    "股息率 3.8%",
-    "经营现金流/净利润 1.29"
-   ],
-   "red_flags": []
-  },
-  {
-   "rank": 18,
+   "rank": 23,
    "symbol": "000623",
    "name": "吉林敖东",
    "industry": "医药卫生",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 66.5,
-   "value_score": 32.8,
-   "quality_score": 16.9,
-   "tradeability_score": 11.7,
-   "pe_ttm": 6.89,
-   "pb": 0.68,
-   "dividend_yield_pct": 2.69,
+   "composite_score": 60.7,
+   "value_score": 33.0,
+   "quality_score": 16.7,
+   "tradeability_score": 10.1,
+   "pe_ttm": 6.98,
+   "pb": 0.69,
+   "dividend_yield_pct": 2.66,
    "roe_3y_pct": 6.327,
-   "valuation_percentile_3y": 0.0,
-   "timing_state": "NEAR",
+   "valuation_percentile_3y": 0.0009115770282588879,
+   "timing_state": "WAIT",
    "reasons": [
     "股息率 2.7%",
     "收入/利润平均增速 22.4%"
@@ -631,196 +748,75 @@ window.DASH = {
    ]
   },
   {
-   "rank": 19,
-   "symbol": "000651",
-   "name": "格力电器",
-   "industry": "可选消费",
+   "rank": 24,
+   "symbol": "600887",
+   "name": "伊利股份",
+   "industry": "主要消费",
    "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 66.2,
-   "value_score": 22.2,
-   "quality_score": 22.8,
+   "tier": "C",
+   "composite_score": 59.7,
+   "value_score": 12.2,
+   "quality_score": 32.5,
    "tradeability_score": 15.0,
-   "pe_ttm": 7.73,
-   "pb": 1.45,
-   "dividend_yield_pct": 7.79,
-   "roe_3y_pct": 24.083,
-   "valuation_percentile_3y": 0.5633546034639927,
-   "timing_state": "NEAR",
-   "reasons": [
-    "股息率 7.8%",
-    "经营现金流/净利润 1.61"
-   ],
-   "red_flags": [
-    "PROFIT_GROWTH_NEGATIVE"
-   ]
-  },
-  {
-   "rank": 20,
-   "symbol": "601717",
-   "name": "中创智领",
-   "industry": "可选消费",
-   "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 66.1,
-   "value_score": 25.3,
-   "quality_score": 24.3,
-   "tradeability_score": 12.4,
-   "pe_ttm": 7.52,
-   "pb": 1.07,
-   "dividend_yield_pct": 8.77,
-   "roe_3y_pct": 18.123,
-   "valuation_percentile_3y": 0.47037374658158615,
-   "timing_state": "NEAR",
-   "reasons": [
-    "股息率 8.8%",
-    "收入/利润平均增速 7.5%"
-   ],
-   "red_flags": []
-  },
-  {
-   "rank": 21,
-   "symbol": "601877",
-   "name": "正泰电器",
-   "industry": "工业",
-   "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 66.0,
-   "value_score": 22.2,
-   "quality_score": 25.7,
-   "tradeability_score": 14.8,
-   "pe_ttm": 10.55,
-   "pb": 1.16,
-   "dividend_yield_pct": 2.39,
-   "roe_3y_pct": 9.88,
-   "valuation_percentile_3y": 0.014585232452142206,
-   "timing_state": "NEAR",
-   "reasons": [
-    "经营现金流/净利润 3.77",
-    "收入/利润平均增速 4.6%"
-   ],
-   "red_flags": []
-  },
-  {
-   "rank": 22,
-   "symbol": "600690",
-   "name": "海尔智家",
-   "industry": "可选消费",
-   "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 65.4,
-   "value_score": 21.1,
-   "quality_score": 29.5,
-   "tradeability_score": 14.8,
-   "pe_ttm": 11.13,
-   "pb": 1.66,
-   "dividend_yield_pct": 5.42,
-   "roe_3y_pct": 17.177,
-   "valuation_percentile_3y": 0.14676390154968094,
+   "pe_ttm": 16.61,
+   "pb": 3.13,
+   "dividend_yield_pct": 5.19,
+   "roe_3y_pct": 18.96,
+   "valuation_percentile_3y": 0.5620437956204379,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 5.4%",
-    "经营现金流/净利润 1.29"
+    "股息率 5.2%",
+    "经营现金流/净利润 1.25"
    ],
    "red_flags": []
-  },
-  {
-   "rank": 23,
-   "symbol": "000963",
-   "name": "华东医药",
-   "industry": "医药卫生",
-   "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 65.2,
-   "value_score": 18.5,
-   "quality_score": 28.2,
-   "tradeability_score": 14.1,
-   "pe_ttm": 13.75,
-   "pb": 1.87,
-   "dividend_yield_pct": 3.43,
-   "roe_3y_pct": 14.723,
-   "valuation_percentile_3y": 0.0054694621695533276,
-   "timing_state": "NEAR",
-   "reasons": [
-    "股息率 3.4%",
-    "经营现金流/净利润 1.24"
-   ],
-   "red_flags": [
-    "PROFIT_GROWTH_NEGATIVE"
-   ]
-  },
-  {
-   "rank": 24,
-   "symbol": "000786",
-   "name": "北新建材",
-   "industry": "工业",
-   "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 64.0,
-   "value_score": 21.7,
-   "quality_score": 23.2,
-   "tradeability_score": 13.5,
-   "pe_ttm": 12.04,
-   "pb": 1.04,
-   "dividend_yield_pct": 4.12,
-   "roe_3y_pct": 14.04,
-   "valuation_percentile_3y": 0.19690063810391978,
-   "timing_state": "NEAR",
-   "reasons": [
-    "股息率 4.1%",
-    "经营现金流/净利润 1.40"
-   ],
-   "red_flags": [
-    "PROFIT_GROWTH_NEGATIVE"
-   ]
   },
   {
    "rank": 25,
-   "symbol": "002415",
-   "name": "海康威视",
-   "industry": "信息技术",
+   "symbol": "600023",
+   "name": "浙能电力",
+   "industry": "公用事业",
    "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 63.0,
-   "value_score": 15.0,
-   "quality_score": 32.9,
-   "tradeability_score": 15.0,
-   "pe_ttm": 19.62,
-   "pb": 4.07,
-   "dividend_yield_pct": 3.7,
-   "roe_3y_pct": 17.427,
-   "valuation_percentile_3y": 0.13309024612579762,
+   "tier": "C",
+   "composite_score": 59.3,
+   "value_score": 27.2,
+   "quality_score": 19.3,
+   "tradeability_score": 10.7,
+   "pe_ttm": 12.0,
+   "pb": 0.9,
+   "dividend_yield_pct": 6.68,
+   "roe_3y_pct": 10.433,
+   "valuation_percentile_3y": 0.7046490428441203,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 3.7%",
-    "经营现金流/净利润 1.64"
+    "股息率 6.7%",
+    "经营现金流/净利润 1.50"
    ],
-   "red_flags": []
+   "red_flags": [
+    "PROFIT_GROWTH_NEGATIVE"
+   ]
   },
   {
    "rank": 26,
-   "symbol": "002236",
-   "name": "大华股份",
-   "industry": "信息技术",
+   "symbol": "600098",
+   "name": "广州发展",
+   "industry": "公用事业",
    "sector_model": "industrial",
-   "tier": "B",
-   "composite_score": 62.2,
-   "value_score": 16.0,
-   "quality_score": 32.1,
-   "tradeability_score": 14.0,
-   "pe_ttm": 14.23,
-   "pb": 1.37,
-   "dividend_yield_pct": 3.37,
-   "roe_3y_pct": 13.68,
-   "valuation_percentile_3y": 0.39288969917958066,
-   "timing_state": "WAIT",
+   "tier": "C",
+   "composite_score": 58.5,
+   "value_score": 22.4,
+   "quality_score": 22.9,
+   "tradeability_score": 8.6,
+   "pe_ttm": 12.97,
+   "pb": 0.78,
+   "dividend_yield_pct": 5.8,
+   "roe_3y_pct": 7.292,
+   "valuation_percentile_3y": 0.6888686131386861,
+   "timing_state": "NEAR",
    "reasons": [
-    "股息率 3.4%",
-    "经营现金流/净利润 1.01"
+    "股息率 5.8%",
+    "经营现金流/净利润 2.27"
    ],
-   "red_flags": [
-    "ROE_DETERIORATION"
-   ]
+   "red_flags": []
   },
   {
    "rank": 27,
@@ -829,38 +825,63 @@ window.DASH = {
    "industry": "未知",
    "sector_model": "unsupported",
    "tier": "C",
-   "composite_score": 59.0,
-   "value_score": 22.5,
-   "quality_score": 25.5,
-   "tradeability_score": 11.0,
-   "pe_ttm": 11.82,
-   "pb": 1.35,
-   "dividend_yield_pct": 4.3,
+   "composite_score": 57.8,
+   "value_score": 23.0,
+   "quality_score": 25.2,
+   "tradeability_score": 8.8,
+   "pe_ttm": 11.96,
+   "pb": 1.36,
+   "dividend_yield_pct": 4.25,
    "roe_3y_pct": 12.36,
-   "valuation_percentile_3y": 0.06563354603463993,
+   "valuation_percentile_3y": 0.1349134001823154,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 4.3%",
+    "股息率 4.2%",
     "经营现金流/净利润 1.91"
    ],
    "red_flags": []
   },
   {
    "rank": 28,
+   "symbol": "601857",
+   "name": "中国石油",
+   "industry": "能源",
+   "sector_model": "industrial",
+   "tier": "C",
+   "composite_score": 55.1,
+   "value_score": 17.0,
+   "quality_score": 23.1,
+   "tradeability_score": 15.0,
+   "pe_ttm": 11.7,
+   "pb": 1.26,
+   "dividend_yield_pct": 4.17,
+   "roe_3y_pct": 10.867,
+   "valuation_percentile_3y": 0.796718322698268,
+   "timing_state": "WAIT",
+   "reasons": [
+    "股息率 4.2%",
+    "经营现金流/净利润 2.40"
+   ],
+   "red_flags": [
+    "PROFIT_GROWTH_NEGATIVE"
+   ]
+  },
+  {
+   "rank": 29,
    "symbol": "600938",
    "name": "中国海油",
    "industry": "能源",
    "sector_model": "industrial",
    "tier": "C",
-   "composite_score": 58.8,
-   "value_score": 18.8,
-   "quality_score": 23.9,
+   "composite_score": 54.0,
+   "value_score": 14.5,
+   "quality_score": 24.5,
    "tradeability_score": 15.0,
-   "pe_ttm": 11.6,
+   "pe_ttm": 11.59,
    "pb": 1.87,
    "dividend_yield_pct": 3.39,
    "roe_3y_pct": 18.183,
-   "valuation_percentile_3y": 0.7903372835004557,
+   "valuation_percentile_3y": 0.7894257064721969,
    "timing_state": "WAIT",
    "reasons": [
     "股息率 3.4%",
@@ -871,58 +892,35 @@ window.DASH = {
    ]
   },
   {
-   "rank": 29,
-   "symbol": "603345",
-   "name": "安井食品",
-   "industry": "主要消费",
+   "rank": 30,
+   "symbol": "601898",
+   "name": "中煤能源",
+   "industry": "能源",
    "sector_model": "industrial",
    "tier": "C",
-   "composite_score": 57.5,
-   "value_score": 15.3,
-   "quality_score": 25.6,
-   "tradeability_score": 14.9,
-   "pe_ttm": 16.78,
-   "pb": 1.6,
-   "dividend_yield_pct": 3.77,
-   "roe_3y_pct": 11.063,
-   "valuation_percentile_3y": 0.309024612579763,
+   "composite_score": 52.0,
+   "value_score": 15.6,
+   "quality_score": 21.0,
+   "tradeability_score": 14.7,
+   "pe_ttm": 10.99,
+   "pb": 1.21,
+   "dividend_yield_pct": 2.52,
+   "roe_3y_pct": 12.883,
+   "valuation_percentile_3y": 0.8514129443938013,
    "timing_state": "WAIT",
    "reasons": [
-    "股息率 3.8%",
-    "经营现金流/净利润 1.69"
+    "股息率 2.5%",
+    "经营现金流/净利润 1.36"
    ],
    "red_flags": [
     "PROFIT_GROWTH_NEGATIVE"
    ]
-  },
-  {
-   "rank": 30,
-   "symbol": "600642",
-   "name": "申能股份",
-   "industry": "公用事业",
-   "sector_model": "industrial",
-   "tier": "C",
-   "composite_score": 57.2,
-   "value_score": 22.2,
-   "quality_score": 25.0,
-   "tradeability_score": 10.0,
-   "pe_ttm": 11.59,
-   "pb": 1.14,
-   "dividend_yield_pct": 5.37,
-   "roe_3y_pct": 10.957,
-   "valuation_percentile_3y": 0.7110300820419325,
-   "timing_state": "WAIT",
-   "reasons": [
-    "股息率 5.4%",
-    "经营现金流/净利润 1.72"
-   ],
-   "red_flags": []
   }
  ],
  "snapshot_meta": {
-  "as_of": "2026-09-03T00:13:50.866891+08:00",
+  "as_of": "2026-09-03T11:42:19.125108+08:00",
   "base_count": 800,
-  "eligible_count": 132,
+  "eligible_count": 131,
   "candidate_count": 50,
   "coverage": 1.0,
   "pool_target": {
@@ -930,7 +928,7 @@ window.DASH = {
    "max": 50,
    "met": true
   },
-  "deep_coverage_basis": "top 120 of 806 snapshot survivors by deterministic pre-score (PE/PB/DY pool percentiles 30 + turnover log-band 10); legacy watchlist always deep-covered"
+  "deep_coverage_basis": "top 120 of 757 snapshot survivors by deterministic pre-score (PE/PB/DY pool percentiles 30 + turnover log-band 10); legacy watchlist always deep-covered"
  },
  "legacy_rows": [
   {
@@ -940,27 +938,27 @@ window.DASH = {
    "sector_model": "industrial",
    "tier": "C",
    "composite_score": 57.7,
-   "value_score": 20.3,
-   "quality_score": 21.6,
+   "value_score": 20.4,
+   "quality_score": 21.7,
    "tradeability_score": 15.0,
-   "timing_score": 0.9,
+   "timing_score": 0.6,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": 0.1117,
-    "volume_ratio_20d": 1.178
+    "pullback_5d": 0.1223,
+    "volume_ratio_20d": 0.555
    },
    "metrics": {
-    "pe_ttm": 12.12,
-    "pb": 1.48,
-    "dividend_yield_pct": 0.46,
+    "pe_ttm": 12.24,
+    "pb": 1.49,
+    "dividend_yield_pct": 0.45,
     "roe_3y_pct": 3.68,
     "cfo_to_net_profit": 3.13,
     "debt_ratio_pct": 65.7688,
     "np_growth_pct": 68.4652,
     "rev_growth_pct": -7.3197,
-    "turnover_cny": 1444560000.0,
-    "valuation_percentile_3y": 0.2187784867821331,
-    "price": 26.28
+    "turnover_cny": 687280000.0,
+    "valuation_percentile_3y": 0.21969006381039197,
+    "price": 26.53
    },
    "percentile_basis": {
     "pe": "industry",
@@ -978,14 +976,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161439"
+    "quote_time": "20260903 114042"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 26.28,
-   "quote_time": "20260902 161439"
+   "price": 26.53,
+   "quote_time": "20260903 114042"
   },
   {
    "symbol": "002460",
@@ -993,28 +991,28 @@ window.DASH = {
    "industry": "原材料",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 38.8,
-   "value_score": 7.0,
-   "quality_score": 12.5,
+   "composite_score": 38.6,
+   "value_score": 6.6,
+   "quality_score": 12.3,
    "tradeability_score": 15.0,
-   "timing_score": 4.3,
+   "timing_score": 4.8,
    "timing_state": "NEAR",
    "timing": {
-    "pullback_5d": -0.0611,
-    "volume_ratio_20d": 1.061
+    "pullback_5d": -0.0458,
+    "volume_ratio_20d": 0.423
    },
    "metrics": {
-    "pe_ttm": 16.45,
-    "pb": 2.19,
-    "dividend_yield_pct": 0.3,
+    "pe_ttm": 16.72,
+    "pb": 2.22,
+    "dividend_yield_pct": 0.29,
     "roe_3y_pct": 3.347,
     "cfo_to_net_profit": 2.3325,
     "debt_ratio_pct": 54.2306,
     "np_growth_pct": -157.489,
     "rev_growth_pct": 22.0842,
-    "turnover_cny": 2125920000.0,
-    "valuation_percentile_3y": 0.7456700091157703,
-    "price": 50.23
+    "turnover_cny": 860760000.0,
+    "valuation_percentile_3y": 0.7474931631722881,
+    "price": 51.05
    },
    "percentile_basis": {
     "pe": "industry",
@@ -1024,7 +1022,7 @@ window.DASH = {
    "missing_fields": [],
    "reasons": [
     "经营现金流/净利润 2.33",
-    "成交额 21.3亿,小资金可进出"
+    "成交额 8.6亿,小资金可进出"
    ],
    "red_flags": [
     "PROFIT_GROWTH_NEGATIVE"
@@ -1032,14 +1030,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161412"
+    "quote_time": "20260903 114036"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 50.23,
-   "quote_time": "20260902 161412"
+   "price": 51.05,
+   "quote_time": "20260903 114036"
   },
   {
    "symbol": "002415",
@@ -1047,28 +1045,28 @@ window.DASH = {
    "industry": "信息技术",
    "sector_model": "industrial",
    "tier": "B",
-   "composite_score": 63.0,
-   "value_score": 15.0,
-   "quality_score": 32.9,
+   "composite_score": 62.4,
+   "value_score": 14.9,
+   "quality_score": 32.5,
    "tradeability_score": 15.0,
    "timing_score": 0.0,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": 0.0115,
-    "volume_ratio_20d": 0.645
+    "pullback_5d": 0.0072,
+    "volume_ratio_20d": 0.358
    },
    "metrics": {
-    "pe_ttm": 19.62,
-    "pb": 4.07,
-    "dividend_yield_pct": 3.7,
+    "pe_ttm": 19.54,
+    "pb": 4.05,
+    "dividend_yield_pct": 3.71,
     "roe_3y_pct": 17.427,
     "cfo_to_net_profit": 1.6418,
     "debt_ratio_pct": 33.9246,
     "np_growth_pct": 17.4464,
     "rev_growth_pct": 0.0133,
-    "turnover_cny": 1572600000.0,
-    "valuation_percentile_3y": 0.13309024612579762,
-    "price": 35.18
+    "turnover_cny": 863110000.0,
+    "valuation_percentile_3y": 0.11303555150410209,
+    "price": 35.03
    },
    "percentile_basis": {
     "pe": "pool",
@@ -1084,25 +1082,29 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161403"
+    "quote_time": "20260903 114012"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": true,
    "legacy_status": "POOL_QUALIFIED",
-   "price": 35.18,
-   "quote_time": "20260902 161403"
+   "price": 35.03,
+   "quote_time": "20260903 114012"
   },
   {
    "symbol": "000009",
    "name": "中国宝安",
-   "industry": "工业",
-   "price": 7.2,
+   "industry": null,
+   "price": 7.11,
    "eligible": false,
    "exclusions": [
-    "NEGATIVE_EARNINGS"
+    "LOW_LIQUIDITY",
+    "NEGATIVE_EARNINGS",
+    "MISSING_FINANCIAL_DATA"
    ],
    "red_flags": [
+    "FINANCIAL_DATA_STALE",
+    "LOW_LIQUIDITY",
     "NEGATIVE_EARNINGS"
    ],
    "legacy_status": "LEGACY_ONLY",
@@ -1114,28 +1116,28 @@ window.DASH = {
    "industry": "工业",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 33.3,
-   "value_score": 0.1,
-   "quality_score": 20.0,
-   "tradeability_score": 12.5,
-   "timing_score": 0.7,
+   "composite_score": 31.1,
+   "value_score": 0.2,
+   "quality_score": 19.5,
+   "tradeability_score": 10.3,
+   "timing_score": 1.1,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": 0.0039,
-    "volume_ratio_20d": 0.822
+    "pullback_5d": -0.0142,
+    "volume_ratio_20d": 0.494
    },
    "metrics": {
-    "pe_ttm": 581.24,
-    "pb": 5.25,
-    "dividend_yield_pct": 0.06,
+    "pe_ttm": 570.74,
+    "pb": 5.15,
+    "dividend_yield_pct": 0.07,
     "roe_3y_pct": 10.753,
     "cfo_to_net_profit": 4.1348,
     "debt_ratio_pct": 66.0517,
     "np_growth_pct": -88.4617,
     "rev_growth_pct": -13.9603,
-    "turnover_cny": 283830000.0,
-    "valuation_percentile_3y": 0.9972652689152234,
-    "price": 15.51
+    "turnover_cny": 171030000.0,
+    "valuation_percentile_3y": 0.9927073837739289,
+    "price": 15.23
    },
    "percentile_basis": {
     "pe": "industry",
@@ -1145,7 +1147,7 @@ window.DASH = {
    "missing_fields": [],
    "reasons": [
     "经营现金流/净利润 4.13",
-    "成交额 2.8亿,小资金可进出"
+    "成交额 1.7亿,小资金可进出"
    ],
    "red_flags": [
     "PROFIT_GROWTH_NEGATIVE",
@@ -1154,14 +1156,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161454"
+    "quote_time": "20260903 114057"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 15.51,
-   "quote_time": "20260902 161454"
+   "price": 15.23,
+   "quote_time": "20260903 114057"
   },
   {
    "symbol": "600460",
@@ -1169,28 +1171,28 @@ window.DASH = {
    "industry": "信息技术",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 41.7,
+   "composite_score": 42.4,
    "value_score": 9.1,
-   "quality_score": 13.5,
+   "quality_score": 13.6,
    "tradeability_score": 15.0,
-   "timing_score": 4.0,
+   "timing_score": 4.7,
    "timing_state": "NEAR",
    "timing": {
-    "pullback_5d": -0.0626,
-    "volume_ratio_20d": 0.744
+    "pullback_5d": -0.0526,
+    "volume_ratio_20d": 0.325
    },
    "metrics": {
-    "pe_ttm": 79.4,
-    "pb": 4.18,
+    "pe_ttm": 80.25,
+    "pb": 4.22,
     "dividend_yield_pct": 0.26,
     "roe_3y_pct": 1.543,
     "cfo_to_net_profit": 10.8378,
     "debt_ratio_pct": 52.1029,
     "np_growth_pct": -106.1628,
     "rev_growth_pct": 16.3152,
-    "turnover_cny": 2769830000.0,
-    "valuation_percentile_3y": 0.19416590701914313,
-    "price": 31.0
+    "turnover_cny": 1213030000.0,
+    "valuation_percentile_3y": 0.203281677301732,
+    "price": 31.33
    },
    "percentile_basis": {
     "pe": "pool",
@@ -1200,7 +1202,7 @@ window.DASH = {
    "missing_fields": [],
    "reasons": [
     "经营现金流/净利润 10.84",
-    "成交额 27.7亿,小资金可进出"
+    "成交额 12.1亿,小资金可进出"
    ],
    "red_flags": [
     "PROFIT_GROWTH_NEGATIVE"
@@ -1208,14 +1210,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161431"
+    "quote_time": "20260903 114103"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 31.0,
-   "quote_time": "20260902 161431"
+   "price": 31.33,
+   "quote_time": "20260903 114103"
   },
   {
    "symbol": "002195",
@@ -1223,28 +1225,28 @@ window.DASH = {
    "industry": "通信服务",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 33.7,
+   "composite_score": 30.7,
    "value_score": 3.6,
    "quality_score": 15.2,
-   "tradeability_score": 15.0,
+   "tradeability_score": 11.9,
    "timing_score": 0.0,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": 0.011,
-    "volume_ratio_20d": 0.582
+    "pullback_5d": 0.0032,
+    "volume_ratio_20d": 0.271
    },
    "metrics": {
-    "pe_ttm": 429.08,
-    "pb": 3.67,
+    "pe_ttm": 425.73,
+    "pb": 3.64,
     "dividend_yield_pct": 0.03,
     "roe_3y_pct": 1.583,
     "cfo_to_net_profit": 1.48,
     "debt_ratio_pct": 2.801,
     "np_growth_pct": -116.8425,
     "rev_growth_pct": -1.2673,
-    "turnover_cny": 528750000.0,
-    "valuation_percentile_3y": 0.7037374658158614,
-    "price": 6.41
+    "turnover_cny": 245250000.0,
+    "valuation_percentile_3y": 0.6982680036463081,
+    "price": 6.36
    },
    "percentile_basis": {
     "pe": "pool",
@@ -1254,7 +1256,7 @@ window.DASH = {
    "missing_fields": [],
    "reasons": [
     "经营现金流/净利润 1.48",
-    "成交额 5.3亿,小资金可进出"
+    "成交额 2.5亿,小资金可进出"
    ],
    "red_flags": [
     "PROFIT_GROWTH_NEGATIVE",
@@ -1263,20 +1265,20 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161439"
+    "quote_time": "20260903 114100"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 6.41,
-   "quote_time": "20260902 161439"
+   "price": 6.36,
+   "quote_time": "20260903 114100"
   },
   {
    "symbol": "300077",
    "name": "国民技术",
    "industry": "信息技术",
-   "price": 20.94,
+   "price": 20.59,
    "eligible": false,
    "exclusions": [
     "NEGATIVE_EARNINGS"
@@ -1293,28 +1295,28 @@ window.DASH = {
    "industry": "通信服务",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 30.8,
-   "value_score": 3.5,
+   "composite_score": 30.0,
+   "value_score": 3.6,
    "quality_score": 13.0,
-   "tradeability_score": 13.6,
-   "timing_score": 0.6,
+   "tradeability_score": 12.0,
+   "timing_score": 1.4,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": -0.0073,
-    "volume_ratio_20d": 0.476
+    "pullback_5d": -0.0175,
+    "volume_ratio_20d": 0.325
    },
    "metrics": {
-    "pe_ttm": 246.64,
-    "pb": 7.28,
+    "pe_ttm": 244.11,
+    "pb": 7.2,
     "dividend_yield_pct": 0.13,
     "roe_3y_pct": 3.133,
     "cfo_to_net_profit": 8.2447,
     "debt_ratio_pct": 65.9735,
     "np_growth_pct": -65.3583,
     "rev_growth_pct": 14.0967,
-    "turnover_cny": 365140000.0,
-    "valuation_percentile_3y": 0.6855059252506837,
-    "price": 13.64
+    "turnover_cny": 248100000.0,
+    "valuation_percentile_3y": 0.6800364630811303,
+    "price": 13.5
    },
    "percentile_basis": {
     "pe": "pool",
@@ -1324,7 +1326,7 @@ window.DASH = {
    "missing_fields": [],
    "reasons": [
     "经营现金流/净利润 8.24",
-    "成交额 3.7亿,小资金可进出"
+    "成交额 2.5亿,小资金可进出"
    ],
    "red_flags": [
     "PROFIT_GROWTH_NEGATIVE",
@@ -1333,14 +1335,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161500"
+    "quote_time": "20260903 114048"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 13.64,
-   "quote_time": "20260902 161500"
+   "price": 13.5,
+   "quote_time": "20260903 114048"
   },
   {
    "symbol": "300043",
@@ -1348,15 +1350,15 @@ window.DASH = {
    "industry": "通信服务",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 28.5,
-   "value_score": 4.1,
+   "composite_score": 26.9,
+   "value_score": 4.2,
    "quality_score": 14.1,
-   "tradeability_score": 9.9,
-   "timing_score": 0.5,
+   "tradeability_score": 8.6,
+   "timing_score": 0.0,
    "timing_state": "WAIT",
    "timing": {
     "pullback_5d": 0.036,
-    "volume_ratio_20d": 1.096
+    "volume_ratio_20d": 0.822
    },
    "metrics": {
     "pe_ttm": 24.0,
@@ -1367,7 +1369,7 @@ window.DASH = {
     "debt_ratio_pct": 37.2809,
     "np_growth_pct": -1762.9864,
     "rev_growth_pct": 53.8115,
-    "turnover_cny": 152790000.0,
+    "turnover_cny": 115090000.0,
     "valuation_percentile_3y": 0.8577939835916135,
     "price": 4.61
    },
@@ -1387,14 +1389,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161415"
+    "quote_time": "20260903 114036"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
    "price": 4.61,
-   "quote_time": "20260902 161415"
+   "quote_time": "20260903 114036"
   },
   {
    "symbol": "300184",
@@ -1402,28 +1404,28 @@ window.DASH = {
    "industry": "工业",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 40.6,
-   "value_score": 12.6,
-   "quality_score": 14.1,
-   "tradeability_score": 13.9,
+   "composite_score": 38.6,
+   "value_score": 12.8,
+   "quality_score": 13.9,
+   "tradeability_score": 11.8,
    "timing_score": 0.0,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": 0.0271,
-    "volume_ratio_20d": 0.584
+    "pullback_5d": 0.0212,
+    "volume_ratio_20d": 0.362
    },
    "metrics": {
-    "pe_ttm": 37.19,
-    "pb": 2.99,
+    "pe_ttm": 36.98,
+    "pb": 2.98,
     "dividend_yield_pct": 0.0,
     "roe_3y_pct": 2.96,
     "cfo_to_net_profit": -0.5284,
     "debt_ratio_pct": 40.1764,
     "np_growth_pct": 74.6933,
     "rev_growth_pct": 13.3724,
-    "turnover_cny": 385260000.0,
+    "turnover_cny": 238460000.0,
     "valuation_percentile_3y": 0.007292616226071103,
-    "price": 12.11
+    "price": 12.04
    },
    "percentile_basis": {
     "pe": "industry",
@@ -1435,7 +1437,7 @@ window.DASH = {
    ],
    "reasons": [
     "收入/利润平均增速 44.0%",
-    "成交额 3.9亿,小资金可进出"
+    "成交额 2.4亿,小资金可进出"
    ],
    "red_flags": [
     "CFO_BELOW_NET_PROFIT_PERSISTENT"
@@ -1443,14 +1445,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161424"
+    "quote_time": "20260903 114109"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 12.11,
-   "quote_time": "20260902 161424"
+   "price": 12.04,
+   "quote_time": "20260903 114109"
   },
   {
    "symbol": "002565",
@@ -1458,28 +1460,28 @@ window.DASH = {
    "industry": "原材料",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 30.8,
+   "composite_score": 27.8,
    "value_score": 3.1,
-   "quality_score": 14.1,
-   "tradeability_score": 13.3,
-   "timing_score": 0.3,
+   "quality_score": 14.0,
+   "tradeability_score": 10.6,
+   "timing_score": 0.0,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": 0.0273,
-    "volume_ratio_20d": 0.781
+    "pullback_5d": 0.0166,
+    "volume_ratio_20d": 0.423
    },
    "metrics": {
-    "pe_ttm": 159.63,
-    "pb": 4.93,
+    "pe_ttm": 157.97,
+    "pb": 4.88,
     "dividend_yield_pct": 0.0,
     "roe_3y_pct": 2.363,
     "cfo_to_net_profit": 1.948,
     "debt_ratio_pct": 23.6381,
     "np_growth_pct": -6.348,
     "rev_growth_pct": -21.7819,
-    "turnover_cny": 339750000.0,
-    "valuation_percentile_3y": 0.7292616226071102,
-    "price": 8.64
+    "turnover_cny": 182640000.0,
+    "valuation_percentile_3y": 0.7247037374658158,
+    "price": 8.55
    },
    "percentile_basis": {
     "pe": "industry",
@@ -1491,7 +1493,7 @@ window.DASH = {
    ],
    "reasons": [
     "经营现金流/净利润 1.95",
-    "成交额 3.4亿,小资金可进出"
+    "成交额 1.8亿,小资金可进出"
    ],
    "red_flags": [
     "PROFIT_GROWTH_NEGATIVE"
@@ -1499,20 +1501,20 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161457"
+    "quote_time": "20260903 114030"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 8.64,
-   "quote_time": "20260902 161457"
+   "price": 8.55,
+   "quote_time": "20260903 114030"
   },
   {
    "symbol": "300323",
    "name": "华灿光电",
    "industry": "信息技术",
-   "price": 11.19,
+   "price": 11.22,
    "eligible": false,
    "exclusions": [
     "NEGATIVE_EARNINGS"
@@ -1528,29 +1530,29 @@ window.DASH = {
    "name": "顺网科技",
    "industry": "信息技术",
    "sector_model": "industrial",
-   "tier": "C",
-   "composite_score": 50.2,
+   "tier": "DROP",
+   "composite_score": 47.7,
    "value_score": 9.4,
-   "quality_score": 29.2,
-   "tradeability_score": 11.5,
-   "timing_score": 0.0,
+   "quality_score": 28.9,
+   "tradeability_score": 9.3,
+   "timing_score": 0.2,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": 0.046,
-    "volume_ratio_20d": 0.602
+    "pullback_5d": 0.0485,
+    "volume_ratio_20d": 0.352
    },
    "metrics": {
-    "pe_ttm": 27.38,
-    "pb": 4.33,
+    "pe_ttm": 27.45,
+    "pb": 4.34,
     "dividend_yield_pct": 0.71,
     "roe_3y_pct": 12.69,
     "cfo_to_net_profit": 0.8149,
     "debt_ratio_pct": 14.2938,
     "np_growth_pct": 59.31,
     "rev_growth_pct": -5.1788,
-    "turnover_cny": 225760000.0,
-    "valuation_percentile_3y": 0.2397447584320875,
-    "price": 16.83
+    "turnover_cny": 133330000.0,
+    "valuation_percentile_3y": 0.2415679124886053,
+    "price": 16.87
    },
    "percentile_basis": {
     "pe": "pool",
@@ -1566,14 +1568,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161448"
+    "quote_time": "20260903 114048"
    },
    "source_degraded": false,
    "eligible": true,
-   "qualifies_for_pool": false,
-   "legacy_status": "LEGACY_ONLY",
-   "price": 16.83,
-   "quote_time": "20260902 161448"
+   "qualifies_for_pool": true,
+   "legacy_status": "POOL_QUALIFIED",
+   "price": 16.87,
+   "quote_time": "20260903 114048"
   },
   {
    "symbol": "002322",
@@ -1581,18 +1583,18 @@ window.DASH = {
    "industry": "信息技术",
    "sector_model": "industrial",
    "tier": "DROP",
-   "composite_score": 38.0,
-   "value_score": 10.3,
-   "quality_score": 18.1,
-   "tradeability_score": 9.6,
+   "composite_score": 35.2,
+   "value_score": 11.0,
+   "quality_score": 18.0,
+   "tradeability_score": 6.2,
    "timing_score": 0.0,
    "timing_state": "WAIT",
    "timing": {
-    "pullback_5d": 0.0778,
-    "volume_ratio_20d": 0.787
+    "pullback_5d": 0.0769,
+    "volume_ratio_20d": 0.359
    },
    "metrics": {
-    "pe_ttm": 20.91,
+    "pe_ttm": 20.9,
     "pb": 1.67,
     "dividend_yield_pct": 4.55,
     "roe_3y_pct": 7.997,
@@ -1600,9 +1602,9 @@ window.DASH = {
     "debt_ratio_pct": 11.7736,
     "np_growth_pct": -22.6018,
     "rev_growth_pct": 0.9226,
-    "turnover_cny": 145230000.0,
-    "valuation_percentile_3y": 0.7192342752962625,
-    "price": 12.89
+    "turnover_cny": 65920000.0,
+    "valuation_percentile_3y": 0.7174111212397447,
+    "price": 12.88
    },
    "percentile_basis": {
     "pe": "pool",
@@ -1620,14 +1622,14 @@ window.DASH = {
    "data_freshness": {
     "financial_date": "2026-06-30",
     "valuation_at": "2026-09-02",
-    "quote_time": "20260902 161445"
+    "quote_time": "20260903 114027"
    },
    "source_degraded": false,
    "eligible": true,
    "qualifies_for_pool": false,
    "legacy_status": "LEGACY_ONLY",
-   "price": 12.89,
-   "quote_time": "20260902 161445"
+   "price": 12.88,
+   "quote_time": "20260903 114027"
   }
  ],
  "legacy_question": "如果不考虑已经持有,这只股票今天能进入候选池吗?",
@@ -1643,7 +1645,7 @@ window.DASH = {
    {
     "label": "基线",
     "name": "volume_pullback_reversal",
-    "annualized_pct": 0.2035,
+    "annualized_pct": 0.2032,
     "trades": 24,
     "max_drawdown_pct": -2.1415,
     "verdict": "基线 (持有 5 天)"
@@ -1693,11 +1695,33 @@ window.DASH = {
   }
  ],
  "data_quality": {
-  "status": "OK",
+  "status": "FAIL",
   "coverage": 1.0,
   "degraded": false,
-  "snapshot_as_of": "2026-09-03T00:13:50.866891+08:00",
-  "quote_as_of": "2026-09-03T00:13:53.201131+08:00",
+  "dimensions": {
+   "coverage": {
+    "status": "PASS",
+    "detail": "必要字段覆盖率 100%"
+   },
+   "freshness": {
+    "status": "PASS",
+    "detail": "行情与财报/估值均为最新"
+   },
+   "semantic_integrity": {
+    "status": "PASS",
+    "detail": "single canonical unit (share) and all cross-checks consistent"
+   },
+   "source_degradation": {
+    "status": "PASS",
+    "detail": "无来源失败"
+   },
+   "pit": {
+    "status": "FAIL",
+    "detail": "历史回测宇宙带幸存者/前视污染：不得宣称 proven profitability；live 决策不受该宇宙偏差影响"
+   }
+  },
+  "snapshot_as_of": "2026-09-03T11:42:19.125108+08:00",
+  "quote_as_of": "2026-09-03T11:48:13.165931+08:00",
   "financial_source": "akshare.stock_financial_analysis_indicator (sina)",
   "financial_retrieved_at": "2026-09-02T21:16:59.469485+08:00",
   "financial_latest_report": "2026-06-30",
@@ -1705,7 +1729,10 @@ window.DASH = {
   "quotes_source": "qt.gtimg.cn batch quote (Tencent)",
   "concentration": "enforced",
   "degradations": [],
-  "banner": ""
+  "banner": "数据质量分维未全绿: pit=FAIL"
+ },
+ "anti_leakage": {
+  "verdict": "LOOKAHEAD_PASS"
  },
  "active_params": {
   "schema": "1",
@@ -1914,13 +1941,21 @@ function renderStatic(){
   // data quality
   const q = D.data_quality;
   const deg = (q.degradations||[]);
+  const dims = q.dimensions||{};
+  const DIM_STYLE = {PASS:['var(--green)','PASS'],WARN:['#b58900','WARN'],FAIL:['var(--red)','FAIL'],UNKNOWN:['var(--dim)','UNKNOWN']};
+  const badge = (k,label)=>{const d=dims[k]||{};const c=DIM_STYLE[d.status]||DIM_STYLE.UNKNOWN;
+    return `<span title="${esc(d.detail||'')}" style="font-weight:700;color:${c[0]}">${label} ${c[1]}</span>`;};
+  const AL_VERDICT = (D.anti_leakage||{}).verdict;
+  const AL_STYLE = {LOOKAHEAD_PASS:['var(--green)','PASS'],LOOKAHEAD_FAIL:['var(--red)','FAIL'],LOOKAHEAD_UNKNOWN:['var(--dim)','UNKNOWN']};
+  const al = AL_STYLE[AL_VERDICT]||AL_STYLE.LOOKAHEAD_UNKNOWN;
   $('dq-box').innerHTML = `<dl class="kv">
-    <dt>候选快照时间</dt><dd>${esc(q.snapshot_as_of||'—')} ${q.status==='DEGRADED'?'<span class="chip bad">已降级</span>':''}</dd>
+    <dt>数据质量分维</dt><dd>${badge('coverage','覆盖')} · ${badge('freshness','新鲜')} · ${badge('semantic_integrity','语义')} · ${badge('source_degradation','源')} · ${badge('pit','PIT')} · <span title="anti-leakage 行为验证：删除未来数据不得改变过去结果" style="font-weight:700;color:${al[0]}">防前视 ${al[1]}</span> <span class="dim">分维各自判定；覆盖率 100% 不等于整体可信 (spec P0.2)</span></dd>
+    <dt>候选快照时间</dt><dd>${esc(q.snapshot_as_of||'—')} ${q.degraded?'<span class="chip bad">已降级</span>':''}</dd>
     <dt>行情时间</dt><dd>${esc(q.quote_as_of||'—')}</dd>
     <dt>财报数据源</dt><dd>${esc(q.financial_source||'—')} · 最新报告期 ${esc(q.financial_latest_report||'—')} · 取数 ${esc((q.financial_retrieved_at||'').slice(0,19))}</dd>
     <dt>估值来源</dt><dd>${esc(q.valuation_source||'—')}</dd>
     <dt>报价来源</dt><dd>${esc(q.quotes_source||'—')}</dd>
-    <dt>必要字段覆盖率</dt><dd style="color:${q.coverage!=null&&q.coverage>=0.8?'var(--green)':'var(--red)'};font-weight:700">${pct(q.coverage)} ${q.status==='DEGRADED'?'<span class="chip bad">低于阈值 — A 级完整性不作声明</span>':''}</dd>
+    <dt>必要字段覆盖率</dt><dd style="color:${q.coverage!=null&&q.coverage>=0.8?'var(--green)':'var(--red)'};font-weight:700">${pct(q.coverage)} ${(dims.coverage||{}).status==='WARN'?'<span class="chip bad">低于阈值 — A 级完整性不作声明</span>':''}</dd>
     <dt>行业集中度</dt><dd>${q.concentration==='enforced'?'已强制约束':(q.concentration==='unknown'?'未知':'—')} <span class="dim">(前 30 名内每个一级行业 ≤ 4 只; 行业数据缺失时如实标记"未知", 不假装分散)</span></dd>
     <dt>降级/失败来源</dt><dd>${deg.length? deg.map(d=>`<span class="rf">${esc(d.source||'')}: ${esc((d.error||'').slice(0,80))}</span>`).join('<br>') : '—'}</dd>
   </dl>`;

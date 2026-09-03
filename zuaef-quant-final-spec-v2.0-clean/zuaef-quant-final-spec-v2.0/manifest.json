@@ -1,0 +1,16 @@
+{
+  "name": "zuaef-quant-final-spec-v2.0",
+  "version": "2.0",
+  "status": "FINAL_EXECUTABLE_SPEC",
+  "purpose": "Business-outcome-first A-share Quant Research & Decision Harness specification.",
+  "principles": [
+    "business_outcome_first",
+    "evidence_before_architecture",
+    "genuine_agent_participation",
+    "deterministic_truth",
+    "minimal_persistent_structure",
+    "minimal_model_visible_tools",
+    "immutable_report_history",
+    "forward_learning"
+  ]
+}

@@ -40,6 +40,7 @@ STATUS_PATH = GEN1 / "STATUS.md"
 ACTIVE_PATH = GEN1 / "active.toml"
 LEGACY_PATH = GEN1 / "legacy_watchlist.toml"
 OUTCOMES_PATH = REPO_ROOT / "workspace" / "quant" / "outcomes.jsonl"
+SEMANTIC_DIR = ART / "semantic"
 DEFAULT_OUT = REPO_ROOT / "docs" / "quant" / "business.html"
 
 STRATEGY_WARNING = "历史 S3 证据薄弱;盈利能力仍未证明 (NOT YET)。"
@@ -312,14 +313,127 @@ def legacy_rows(snapshot: dict | None, legacy_symbols: list[str]) -> list[dict]:
     return rows
 
 
-def data_quality(snapshot: dict | None, scan: dict | None) -> dict:
+DIMENSION_RANK = {"FAIL": 0, "MISSING": 0, "WARN": 1, "UNKNOWN": 2, "PASS": 3}
+
+
+def _worst(statuses: list[str]) -> str:
+    return min(statuses, key=lambda s: DIMENSION_RANK.get(s, 2))
+
+
+def load_latest_semantic_proof(semantic_dir: Path = SEMANTIC_DIR) -> dict | None:
+    """Latest P0.1 volume-semantic proof, or None (absent/unreadable -> UNKNOWN)."""
+    proofs = sorted(Path(semantic_dir).glob("semantic_proof_*.json"))
+    if not proofs:
+        return None
+    try:
+        return json.loads(proofs[-1].read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+PIT_DIM_STATUS = {"PIT_CLEAN": "PASS", "PIT_PARTIAL": "WARN", "PIT_CONTAMINATED": "FAIL"}
+
+
+def load_latest_pit_audit(semantic_dir: Path = SEMANTIC_DIR) -> dict | None:
+    """Latest P0.3 PIT audit, or None (absent/unreadable -> UNKNOWN)."""
+    audits = sorted(Path(semantic_dir).glob("pit_audit_*.json"))
+    if not audits:
+        return None
+    try:
+        return json.loads(audits[-1].read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def load_latest_anti_leakage(semantic_dir: Path = SEMANTIC_DIR) -> dict | None:
+    """Latest P0.4 anti-leakage check, or None (absent/unreadable -> UNKNOWN)."""
+    checks = sorted(Path(semantic_dir).glob("anti_leakage_check_*.json"))
+    if not checks:
+        return None
+    try:
+        return json.loads(checks[-1].read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _pit_dimension(pit_audit: dict | None) -> dict:
+    """PIT badge (spec P0.2/P0.3): the audit's spec-mandated verdict, verbatim."""
+    if pit_audit is None:
+        return {"status": "UNKNOWN", "detail": "尚未运行 tools/quant_pit_audit.py"}
+    status = PIT_DIM_STATUS.get(str(pit_audit.get("verdict", "")))
+    if status is None:
+        return {"status": "UNKNOWN", "detail": "pit audit 判定不可读"}
+    return {"status": status, "detail": str(pit_audit.get("implication", ""))}
+
+
+def _semantic_dimension(proof: dict | None, snapshot: dict | None) -> dict:
+    """Semantic integrity (spec P0.2): proof verdict + staleness vs the pool.
+
+    A PASS proof only counts as PASS while it describes the candidate pool
+    the page is showing (same as_of, full sample). A pool rebuild without a
+    fresh validator run demotes to WARN — the open P0.1 rule.
+    """
+    if proof is None:
+        return {"status": "UNKNOWN", "detail": "尚未运行 tools/quant_validate_semantics.py"}
+    status = str(proof.get("status", "UNKNOWN"))
+    if status in ("FAIL", "WARN"):
+        return {"status": status, "detail": str(proof.get("reason", ""))}
+    if proof.get("universe_as_of") != (snapshot or {}).get("as_of"):
+        return {
+            "status": "WARN",
+            "detail": (
+                f"semantic proof ({proof.get('universe_as_of')}) 落后于当前候选池 "
+                f"({(snapshot or {}).get('as_of')}) — 池重建后必须重跑 validator"
+            ),
+        }
+    if (proof.get("sample_size") or 0) < ((snapshot or {}).get("candidate_count") or 0):
+        return {"status": "WARN", "detail": "semantic proof 样本小于当前候选池"}
+    return {"status": "PASS", "detail": str(proof.get("reason", ""))}
+
+
+def _freshness_dimension(snapshot: dict | None, scan: dict | None, now: datetime) -> dict:
+    """Freshness (spec P0.2): quotes from today + no stale financial/valuation flags."""
+    parts: list[str] = []
+    lqt = (scan or {}).get("latest_quote_time")
+    if not lqt:
+        quote_status = "UNKNOWN"
+        parts.append("无实时扫描")
+    else:
+        today = now.astimezone(TZ_SHANGHAI).strftime("%Y%m%d")
+        quote_day = str(lqt)[:8]
+        quote_status = "PASS" if quote_day == today else "WARN"
+        if quote_status != "PASS":
+            parts.append(f"行情非今日 ({quote_day})")
+    cands = (snapshot or {}).get("candidates") or []
+    stale = [
+        c.get("symbol")
+        for c in cands
+        if {"FINANCIAL_DATA_STALE", "VALUATION_DATA_STALE"} & set(c.get("red_flags") or [])
+    ]
+    if stale:
+        fin_status = "WARN"
+        parts.append(f"{len(stale)} 只候选财报/估值数据过期")
+    else:
+        fin_status = "PASS"
+    status = _worst([quote_status, fin_status])
+    return {"status": status, "detail": "；".join(parts) or "行情与财报/估值均为最新"}
+
+
+def data_quality(
+    snapshot: dict | None,
+    scan: dict | None,
+    semantic_dir: Path = SEMANTIC_DIR,
+    now: datetime | None = None,
+) -> dict:
     if not snapshot:
         return {
             "status": "MISSING",
             "coverage": None,
             "degraded": True,
+            "dimensions": {},
             "banner": "候选快照缺失 — 请先运行: uv run --group quant python tools/quant_build_candidates.py",
         }
+    now = now or datetime.now(TZ_SHANGHAI)
     sources = snapshot.get("sources") or {}
     degradations = snapshot.get("source_degradations") or []
     degraded = snapshot.get("status") == "DEGRADED" or bool(degradations)
@@ -328,10 +442,38 @@ def data_quality(snapshot: dict | None, scan: dict | None) -> dict:
         for c in snapshot.get("candidates") or []
         if (c.get("data_freshness") or {}).get("financial_date")
     ]
+    coverage = snapshot.get("coverage")
+    dimensions = {
+        "coverage": {
+            "status": "PASS" if coverage is not None and coverage >= 0.8 else "WARN",
+            "detail": "必要字段覆盖率 " + (f"{coverage:.0%}" if coverage is not None else "缺失"),
+        },
+        "freshness": _freshness_dimension(snapshot, scan, now),
+        "semantic_integrity": _semantic_dimension(load_latest_semantic_proof(semantic_dir), snapshot),
+        # snapshot DEGRADED is the builder's bounded fail-open state: essential
+        # coverage held but named sources failed — visible degradation, WARN
+        "source_degradation": {
+            "status": "WARN" if degraded else "PASS",
+            "detail": "; ".join(sorted({d.get("source", "?") for d in degradations})) or ("快照 DEGRADED" if degraded else "无来源失败"),
+        },
+        # P0.3 audit verdict — CLEAN/PARTIAL/CONTAMINATED, never assumed green
+        "pit": _pit_dimension(load_latest_pit_audit(semantic_dir)),
+    }
+    overall = _worst([d["status"] for d in dimensions.values()])
+    failing = [k for k, d in dimensions.items() if d["status"] in ("FAIL", "WARN")]
+    banner = (
+        "DATA DEGRADED — coverage below threshold or source failures; A-tier completeness is NOT claimed. Cached candidates are shown with their timestamps."
+        if degraded
+        else ""
+    )
+    if failing:
+        prefix = "; ".join(f"{k}={dimensions[k]['status']}" for k in failing)
+        banner = (banner + " " if banner else "") + f"数据质量分维未全绿: {prefix}"
     return {
-        "status": snapshot.get("status", "UNKNOWN"),
-        "coverage": snapshot.get("coverage"),
+        "status": overall,
+        "coverage": coverage,
         "degraded": degraded,
+        "dimensions": dimensions,
         "snapshot_as_of": snapshot.get("as_of"),
         "quote_as_of": (scan or {}).get("as_of"),
         "financial_source": (sources.get("financial") or {}).get("source"),
@@ -341,9 +483,7 @@ def data_quality(snapshot: dict | None, scan: dict | None) -> dict:
         "quotes_source": (sources.get("quotes") or {}).get("source"),
         "concentration": snapshot.get("concentration"),
         "degradations": degradations,
-        "banner": "DATA DEGRADED — coverage below threshold or source failures; A-tier completeness is NOT claimed. Cached candidates are shown with their timestamps."
-        if degraded
-        else "",
+        "banner": banner,
     }
 
 
@@ -416,6 +556,7 @@ def build_data(
         },
         "obs_rows": obs,
         "data_quality": dq,
+        "anti_leakage": {"verdict": (load_latest_anti_leakage() or {}).get("verdict")},
         "active_params": _parse_active(active_path),
     }
 
@@ -1052,13 +1193,21 @@ function renderStatic(){
   // data quality
   const q = D.data_quality;
   const deg = (q.degradations||[]);
+  const dims = q.dimensions||{};
+  const DIM_STYLE = {PASS:['var(--green)','PASS'],WARN:['#b58900','WARN'],FAIL:['var(--red)','FAIL'],UNKNOWN:['var(--dim)','UNKNOWN']};
+  const badge = (k,label)=>{const d=dims[k]||{};const c=DIM_STYLE[d.status]||DIM_STYLE.UNKNOWN;
+    return `<span title="${esc(d.detail||'')}" style="font-weight:700;color:${c[0]}">${label} ${c[1]}</span>`;};
+  const AL_VERDICT = (D.anti_leakage||{}).verdict;
+  const AL_STYLE = {LOOKAHEAD_PASS:['var(--green)','PASS'],LOOKAHEAD_FAIL:['var(--red)','FAIL'],LOOKAHEAD_UNKNOWN:['var(--dim)','UNKNOWN']};
+  const al = AL_STYLE[AL_VERDICT]||AL_STYLE.LOOKAHEAD_UNKNOWN;
   $('dq-box').innerHTML = `<dl class="kv">
-    <dt>候选快照时间</dt><dd>${esc(q.snapshot_as_of||'—')} ${q.status==='DEGRADED'?'<span class="chip bad">已降级</span>':''}</dd>
+    <dt>数据质量分维</dt><dd>${badge('coverage','覆盖')} · ${badge('freshness','新鲜')} · ${badge('semantic_integrity','语义')} · ${badge('source_degradation','源')} · ${badge('pit','PIT')} · <span title="anti-leakage 行为验证：删除未来数据不得改变过去结果" style="font-weight:700;color:${al[0]}">防前视 ${al[1]}</span> <span class="dim">分维各自判定；覆盖率 100% 不等于整体可信 (spec P0.2)</span></dd>
+    <dt>候选快照时间</dt><dd>${esc(q.snapshot_as_of||'—')} ${q.degraded?'<span class="chip bad">已降级</span>':''}</dd>
     <dt>行情时间</dt><dd>${esc(q.quote_as_of||'—')}</dd>
     <dt>财报数据源</dt><dd>${esc(q.financial_source||'—')} · 最新报告期 ${esc(q.financial_latest_report||'—')} · 取数 ${esc((q.financial_retrieved_at||'').slice(0,19))}</dd>
     <dt>估值来源</dt><dd>${esc(q.valuation_source||'—')}</dd>
     <dt>报价来源</dt><dd>${esc(q.quotes_source||'—')}</dd>
-    <dt>必要字段覆盖率</dt><dd style="color:${q.coverage!=null&&q.coverage>=0.8?'var(--green)':'var(--red)'};font-weight:700">${pct(q.coverage)} ${q.status==='DEGRADED'?'<span class="chip bad">低于阈值 — A 级完整性不作声明</span>':''}</dd>
+    <dt>必要字段覆盖率</dt><dd style="color:${q.coverage!=null&&q.coverage>=0.8?'var(--green)':'var(--red)'};font-weight:700">${pct(q.coverage)} ${(dims.coverage||{}).status==='WARN'?'<span class="chip bad">低于阈值 — A 级完整性不作声明</span>':''}</dd>
     <dt>行业集中度</dt><dd>${q.concentration==='enforced'?'已强制约束':(q.concentration==='unknown'?'未知':'—')} <span class="dim">(前 30 名内每个一级行业 ≤ 4 只; 行业数据缺失时如实标记"未知", 不假装分散)</span></dd>
     <dt>降级/失败来源</dt><dd>${deg.length? deg.map(d=>`<span class="rf">${esc(d.source||'')}: ${esc((d.error||'').slice(0,80))}</span>`).join('<br>') : '—'}</dd>
   </dl>`;
@@ -1120,11 +1269,13 @@ def main() -> int:
     BUSINESS_ART.mkdir(parents=True, exist_ok=True)
     workspace_copy.write_text(html, encoding="utf-8")
     kpi = data["kpi"]
+    dims = data["data_quality"].get("dimensions") or {}
+    dim_summary = " ".join(f"{k}={v['status']}" for k, v in dims.items())
     print(
         f"OK -> {out} ({out.stat().st_size / 1024:.1f} KB, also {workspace_copy}); "
         f"decision={kpi['today_decision']} triggers={kpi['live_triggers']} "
         f"candidates={kpi['active_candidates']} evidence={kpi['strategy_evidence']} "
-        f"dq_status={data['data_quality']['status']}"
+        f"dq_status={data['data_quality']['status']} ({dim_summary})"
     )
     return 0
 

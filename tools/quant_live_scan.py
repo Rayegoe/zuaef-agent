@@ -21,6 +21,12 @@ which is materially too slow for a ~60s live cadence on a ~50-symbol
 universe, so this small implementation is substituted per spec 04 §9; the
 source is recorded in the output.
 
+Volume semantics (spec v2.0 P0.1): the scan consumes the latest
+quant_validate_semantics.py proof. A FAIL (no canonical cached volume unit)
+suppresses all triggers fail closed — a broken volume clause must never
+manufacture an entry signal — while the status stays visible in the output
+so the decision brief can state why no trigger evidence exists.
+
     .venv-quant/bin/python tools/quant_live_scan.py [--max-triggers 10]
         [--universe-file benchmarks/quant/gen1/legacy_watchlist.toml]
 
@@ -52,6 +58,7 @@ LEGACY_WATCHLIST_PATH = GEN1_DIR / "legacy_watchlist.toml"
 UNIVERSE_TOML_PATH = GEN1_DIR / "universe.toml"
 ACTIVE_SYMBOLS_PATH = CACHE_DIR / "candidates" / "active_symbols.json"
 SUBSET_META_PATH = CACHE_DIR / "universe" / "csi500_subset.meta.json"
+SEMANTIC_DIR = Path("workspace/artifacts/quant/semantic")
 
 
 class UniverseError(RuntimeError):
@@ -235,6 +242,27 @@ def resolve_universe(
     )
 
 
+def load_volume_semantics(evidence_dir: Path = SEMANTIC_DIR) -> dict:
+    """Latest P0.1 semantic proof -> status block consumed by the scan.
+
+    Only a proven FAIL suppresses triggers. Missing or unreadable evidence
+    is UNKNOWN — surfaced, never silently treated as PASS.
+    """
+    proofs = sorted(evidence_dir.glob("semantic_proof_*.json"))
+    if not proofs:
+        return {"status": "UNKNOWN", "evidence": None, "reason": "no semantic proof run yet"}
+    latest = proofs[-1]
+    try:
+        proof = json.loads(latest.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"status": "UNKNOWN", "evidence": str(latest), "reason": "semantic proof unreadable"}
+    return {
+        "status": str(proof.get("status", "UNKNOWN")),
+        "evidence": str(latest),
+        "reason": str(proof.get("reason", "")),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -254,6 +282,7 @@ def main() -> int:
     args = parser.parse_args()
 
     active_cfg = load_config(args.strategy)
+    volume_semantics = load_volume_semantics()
     try:
         resolved = resolve_universe(args.universe_file)
     except UniverseError as exc:
@@ -342,6 +371,17 @@ def main() -> int:
             )
     triggers = triggers[: args.max_triggers]
 
+    suppressed_count = 0
+    if volume_semantics["status"] == "FAIL":
+        # spec P0.1: no canonical volume unit -> the volume clause cannot be
+        # trusted; fail closed instead of manufacturing entry evidence.
+        suppressed_count = len(triggers)
+        triggers = []
+        for q in quotes_detail:
+            if q.get("trigger"):
+                q["trigger"] = False
+                q["trigger_suppressed"] = True
+
     quote_times = sorted(
         {q["date"] + " " + q["time"] for q in quotes.values() if q.get("time")}
     )
@@ -360,6 +400,8 @@ def main() -> int:
         "universe_as_of": resolved["as_of"],
         "universe_size": len(symbols),
         "quotes_fetched": len(quotes),
+        "volume_semantics": volume_semantics,
+        "triggers_suppressed": suppressed_count,
         "as_of": datetime.now(TZ_SHANGHAI).isoformat(),
         "latest_quote_time": quote_times[-1] if quote_times else None,
         "scan_ms": int((time.perf_counter() - scan_start) * 1000),
@@ -370,6 +412,12 @@ def main() -> int:
         "limitation": (
             "volume_ratio uses today's cumulative volume vs full-day 20d average — "
             "intraday it understates; triggers are deterministic evidence, not orders"
+            + (
+                "; VOLUME SEMANTICS FAIL: cached volume unit not canonical, triggers "
+                "suppressed fail closed (spec P0.1)"
+                if suppressed_count
+                else ""
+            )
         ),
     }
     print(json.dumps(out, ensure_ascii=False))

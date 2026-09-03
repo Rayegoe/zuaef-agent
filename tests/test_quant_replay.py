@@ -19,6 +19,7 @@ pytest.importorskip("pandas")
 sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
 
 import pandas as pd
+import quant_core
 from quant_core import (
     Intent,
     MarketRules,
@@ -267,3 +268,53 @@ class TestNoLookahead:
                 and row["volume"] > 0
             )
             assert bool(signal), f"intent at {intent.intent_date} fails truncated-signal check"
+
+
+# ---------------------------------------------------------------------------
+# P0.1 volume unit canonicalization at the quant data boundary
+# ---------------------------------------------------------------------------
+
+
+class TestVolumeUnitNormalization:
+    @staticmethod
+    def _hist(volumes, closes, amounts=None):
+        n = len(volumes)
+        return pd.DataFrame(
+            {
+                "date": [f"2026-01-{i + 1:02d}" for i in range(n)],
+                "open": closes,
+                "high": closes,
+                "low": closes,
+                "close": closes,
+                "volume": volumes,
+                "amount": amounts if amounts is not None else [v * c for v, c in zip(volumes, closes)],
+            }
+        )
+
+    def test_lot_unit_series_rescaled_to_shares(self):
+        # real 000807 row: amount/(volume*close) ~ 100 -> cached volume was lots
+        df = self._hist([568369.0] * 5, [26.57] * 5, [1508687500.0] * 5)
+        out, info = quant_core.normalize_volume_unit(df)
+        assert info == {"volume_unit": "share", "volume_source_unit": "lot", "volume_unit_factor_applied": 100.0}
+        assert out["volume"].iloc[0] == pytest.approx(56836900.0)
+
+    def test_share_unit_series_unchanged(self):
+        # real 600015 row: amount/(volume*close) ~ 1 -> cached volume already shares
+        df = self._hist([147909500.0] * 5, [6.23] * 5, [927360100.0] * 5)
+        out, info = quant_core.normalize_volume_unit(df)
+        assert info == {"volume_unit": "share", "volume_source_unit": "share", "volume_unit_factor_applied": 1.0}
+        assert out["volume"].iloc[-1] == pytest.approx(147909500.0)
+
+    def test_missing_amount_leaves_series_unknown_not_guessed(self):
+        df = self._hist([100.0] * 5, [10.0] * 5).drop(columns=["amount"])
+        out, info = quant_core.normalize_volume_unit(df)
+        assert info["volume_unit"] == "unknown"
+        assert out["volume"].equals(df["volume"])
+
+    def test_suspended_tail_rows_do_not_break_inference(self):
+        volumes = [568369.0] * 5 + [0.0, 0.0]
+        closes = [26.57] * 7
+        amounts = [1508687500.0] * 5 + [0.0, 0.0]
+        out, info = quant_core.normalize_volume_unit(self._hist(volumes, closes, amounts))
+        assert info["volume_source_unit"] == "lot"
+        assert out["volume"].iloc[-1] == 0.0

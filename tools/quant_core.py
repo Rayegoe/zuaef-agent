@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import math
+import statistics
 import time
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -69,6 +70,49 @@ def write_cache(kind: str, key: str, df: pd.DataFrame, meta: dict, cache_dir: Pa
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+# Volume semantic (spec v2.0 P0.1): amount/(volume*close) clusters at ~1 when
+# volume is in shares (股) and at ~100 when in lots (手); the gap is two
+# orders of magnitude, so 10 separates them with margin.
+VOLUME_LOT_FACTOR_MIN = 10.0
+
+
+def normalize_volume_unit(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Canonicalize ingested volume to shares at the quant data boundary.
+
+    Tencent hist_tx returns volume in lots for some symbols and in shares
+    for others; per-symbol raw-history profiling shows the unit is constant
+    across each series's full history (e.g. 000786: 2101/2101 lot rows;
+    002460: 2104/2104 share rows). The recent rows of an adjusted series are
+    raw-price-anchored, so amount/(volume*close) on those rows identifies
+    the source unit; a lot series is rescaled x100 once, here, so every
+    cached series carries one canonical semantics. The applied fact is
+    returned for the cache sidecar meta.
+    """
+    info = {"volume_unit": "unknown", "volume_source_unit": None, "volume_unit_factor_applied": None}
+    if df.empty or "amount" not in df.columns:
+        return df, info
+    factors = [
+        float(row["amount"]) / (float(row["volume"]) * float(row["close"]))
+        for _, row in df.tail(5).iterrows()
+        if float(row["volume"]) > 0 and float(row["close"]) > 0 and float(row["amount"]) > 0
+    ]
+    if not factors:
+        return df, info
+    if statistics.median(factors) >= VOLUME_LOT_FACTOR_MIN:
+        df = df.copy()
+        df["volume"] = df["volume"] * 100.0
+        return df, {
+            "volume_unit": "share",
+            "volume_source_unit": "lot",
+            "volume_unit_factor_applied": 100.0,
+        }
+    return df, {
+        "volume_unit": "share",
+        "volume_source_unit": "share",
+        "volume_unit_factor_applied": 1.0,
+    }
+
+
 def fetch_history(symbol: str, adjust: str, *, refresh: bool = False, cache_dir: Path = CACHE_DIR,
                   start_date: str = "20180101") -> tuple[pd.DataFrame, dict, str]:
     """Fetch normalized daily history (Tencent path); cache; never mask failure."""
@@ -105,6 +149,7 @@ def fetch_history(symbol: str, adjust: str, *, refresh: bool = False, cache_dir:
         df[col] = pd.to_numeric(df[col], errors="raise")
     keep = [c for c in ("date", "symbol", *REQUIRED_HISTORY_COLUMNS[1:], "amount", "turnover") if c in df.columns]
     df = df[keep].sort_values("date").reset_index(drop=True)
+    df, volume_info = normalize_volume_unit(df)
     meta = {
         "source": "akshare.stock_zh_a_hist_tx",
         "symbol": symbol,
@@ -113,6 +158,7 @@ def fetch_history(symbol: str, adjust: str, *, refresh: bool = False, cache_dir:
         "retrieved_at": datetime.now(TZ_SHANGHAI).isoformat(),
         "rows": len(df),
         "date_range": [str(df["date"].min()), str(df["date"].max())],
+        **volume_info,
     }
     write_cache("daily", key, df, meta, cache_dir)
     return df, meta, "live"
