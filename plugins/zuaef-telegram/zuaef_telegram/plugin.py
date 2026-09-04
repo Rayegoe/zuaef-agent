@@ -1,14 +1,16 @@
 """``zuaef-telegram`` plugin factory.
 
-The plugin exposes exactly one model-visible action — ``report_to_telegram``
-— over the existing plugin composition ABI (one distribution, one Toolset,
-optional deferred Skill guidance). Credentials come from the environment
-(``TELEGRAM_BOT_TOKEN`` / ``TELEGRAM_CHAT_ID``) and never enter a profile, a
-CompositionSnapshot or a receipt; missing credentials are a loud composition
-error, so a profile fails to resolve instead of running half-configured.
+The plugin exposes exactly two model-visible actions — ``report_to_telegram``
+(approval-gated external write) and ``send_artifact_to_supervisor``
+(host-scoped operator self-delivery) — over the existing plugin composition
+ABI (one distribution, one Toolset, optional deferred Skill guidance).
+Credentials come from the environment (``TELEGRAM_BOT_TOKEN`` /
+``TELEGRAM_CHAT_ID``) and never enter a profile, a CompositionSnapshot or a
+receipt; missing credentials are a loud composition error, so a profile
+fails to resolve instead of running half-configured.
 
-Host does only transport; the Agent owns message content and whether a
-material update warrants a send.
+Host does only transport and path validation; the Agent owns message content
+and whether a material update warrants a send.
 """
 
 from __future__ import annotations
@@ -24,9 +26,16 @@ from .toolset import make_toolset
 
 
 def _resolve_skill_dir() -> Path | None:
-    """The bundled ``skill/`` directory (editable and wheel layout alike)."""
-    skill = Path(__file__).resolve().parent.parent / "skill"
-    return skill if skill.is_dir() else None
+    """The bundled ``skills/`` library root (harness Skills contract).
+
+    Harness Skills consumes library roots whose immediate children are skill
+    packages (``<library>/<package>/SKILL.md``); passing a package directory
+    itself fails during agent build. Editable and wheel layouts alike: the
+    distribution root is ``parent.parent`` and the library is ``skills/``.
+    """
+    root = Path(__file__).resolve().parent.parent
+    skills = root / "skills"
+    return skills if (skills / "telegram-reporting" / "SKILL.md").is_file() else None
 
 
 def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
@@ -41,6 +50,6 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
     client = TelegramClient(bot_token=bot_token, chat_id=chat_id)
     skill_dir = _resolve_skill_dir()
     return PluginBundle(
-        toolsets=[make_toolset(client)],
+        toolsets=[make_toolset(client, workspace_root=env.workspace_root)],
         skill_dirs=([skill_dir] if skill_dir is not None else []),
     )

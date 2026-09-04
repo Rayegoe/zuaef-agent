@@ -19,4 +19,4 @@ packages = ["zuaef_telegram"]
 
 # Ship the deferred Skill guidance next to the package so wheel installs keep it.
 [tool.hatch.build.targets.wheel.force-include]
-"skill" = "skill"
+"skills" = "skills"

@@ -938,8 +938,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 3908,
-      "sha256": "27318038e2c2e7d9e0de3fab0652c246e5965f97a06500efd592a47ae06b2532"
+      "bytes": 3931,
+      "sha256": "67bad2f5242f0b58bac8a4ce1b45d2510ceda739374e56dbd5e232cf7a7eefc2"
     },
     {
       "path": ".gitignore",
@@ -1603,8 +1603,8 @@
     },
     {
       "path": "tests/test_quant_business.py",
-      "bytes": 47238,
-      "sha256": "2c6d2711e07e9289022273de4d3d6c156603d64506046f7fa325542720ea5618"
+      "bytes": 69232,
+      "sha256": "b0192ae2d3bfe801a4bfc0a262f596b9ae057956fded8e912822fca45fb06397"
     },
     {
       "path": "tests/test_quant_plugin.py",
@@ -1617,9 +1617,14 @@
       "sha256": "52bf29e3bf503ecedd9253145b1c11a5fac4377c542dd54e6eb989231545f08a"
     },
     {
+      "path": "tests/test_quant_telegram_bridge.py",
+      "bytes": 21792,
+      "sha256": "6af9be50360f1db614739a64621e04f483101eb8f4a6b150d27ca1d31cf9ecf0"
+    },
+    {
       "path": "tests/test_quant_trading_monitor.py",
-      "bytes": 18170,
-      "sha256": "442fbc85231ca9e130953eacbe0b41c026a9ec1f5370466a14fd71ba2da6eb79"
+      "bytes": 19260,
+      "sha256": "29ccc368873e718e22fc47304667c71ce949bea4a61dbc9051fe18203c73b3c4"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -1648,8 +1653,8 @@
     },
     {
       "path": "tests/test_telegram_plugin.py",
-      "bytes": 13480,
-      "sha256": "1728b11acc7be502ba2737ce30259315434cd08ca90935d5c68fb2c8edf95e5d"
+      "bytes": 18784,
+      "sha256": "caf6b411c343312d760e68f03541dcc1bc4c63ab8875bb9e8b72f49ff5169d65"
     },
     {
       "path": "tests/test_web_console.py",
@@ -1948,8 +1953,8 @@
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/client.py",
-      "bytes": 3932,
-      "sha256": "26a38ca0fc7dc3e3af25950172dd2e05cb737eee7a693746d47e96cce0ad7c38"
+      "bytes": 5818,
+      "sha256": "144abc1bce98b5a8ccf04021392623ee6fb4be2f796de8c6b31b73983044f3b1"
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/notify.py",
@@ -1958,13 +1963,13 @@
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/plugin.py",
-      "bytes": 1799,
-      "sha256": "abebac5d370ceaca7aa884a1358d36d4949e1d61d2e212ca32ebb6d6b548aa94"
+      "bytes": 2325,
+      "sha256": "fd8dddf0e6788fa9bd9ccde8fa87cb75a464958338892ddd25b2973affe375ba"
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/toolset.py",
-      "bytes": 1783,
-      "sha256": "08c140cca336de9d64a37e4472f678be98667d33a60f91979244af461f3df5fb"
+      "bytes": 5112,
+      "sha256": "0129682d42db311568be83595567552c253c1063b62ebc4d60deaeaea893ee8f"
     },
     {
       "path": "plugins/zuaef-wordpress/zuaef_wordpress/__init__.py",
@@ -2037,9 +2042,9 @@
       "sha256": "d78b1d995c6055f72bbacfd39ee54f542ea076badac9c581553dcc645623b5e2"
     },
     {
-      "path": "plugins/zuaef-telegram/skill/SKILL.md",
-      "bytes": 499,
-      "sha256": "b29c5ad22936014a087883c2ea6779d4dbbed385fe995fc5af7ee4ae81405ab1"
+      "path": "plugins/zuaef-telegram/skills/telegram-reporting/SKILL.md",
+      "bytes": 673,
+      "sha256": "b3801658a4034f089af9802796f87f0715d3a8df6eb30c826f816f66fc1ff513"
     },
     {
       "path": "plugins/zuaef-writing-pack/README.md",
@@ -2078,8 +2083,8 @@
     },
     {
       "path": "profiles/quant-decision.toml",
-      "bytes": 438,
-      "sha256": "2b1b4ba6c8cfb81cfa2fc2ca054d5009042f38d7a7c08d6faa667b9155d09169"
+      "bytes": 675,
+      "sha256": "8832542d770b5387d98b7b870f1d86a5582bb01d6b8a47c14530db83b44e8d74"
     },
     {
       "path": "profiles/stillevo-ebike-intel.toml",
@@ -2213,8 +2218,8 @@
     },
     {
       "path": "tools/quant_render_business_dashboard.py",
-      "bytes": 68833,
-      "sha256": "f94ec56900e36ad5486c0345e9603faa06afca44ab383ed75b6ccc9edaeab22c"
+      "bytes": 113117,
+      "sha256": "aa1f2993e04fd76f15c3b7716105fad6e45c5d392e0fa243aa9cf72fe3ec0826"
     },
     {
       "path": "tools/quant_render_dashboard.py",
@@ -2223,13 +2228,18 @@
     },
     {
       "path": "tools/quant_serve.py",
-      "bytes": 5338,
-      "sha256": "9a60d40f323688bd06f6dcd9d595aa589e57ad2d2d1cb7a76308b93ab4c1bb06"
+      "bytes": 11196,
+      "sha256": "f224843e15bb24099964c72caf4f3bf1949212cee136ec0203283faff3aeae4c"
+    },
+    {
+      "path": "tools/quant_telegram_bridge.py",
+      "bytes": 21356,
+      "sha256": "b87f33a3fefb9c076f91f8483fea6fe96d78011a3a2e1f4100c830830c9ffa52"
     },
     {
       "path": "tools/quant_trading_monitor.py",
-      "bytes": 32189,
-      "sha256": "a0fd69aa7349562f8159f13b7a5b97034fb6cb912c51e886f27beb73dfc96dd7"
+      "bytes": 33887,
+      "sha256": "ab6f50a036e54bbbdc8b8d8d871590f012d8fe48ba72aa7b1bd33e91ca282ac4"
     },
     {
       "path": "tools/quant_validate_semantics.py",

@@ -1,3 +1,8 @@
+---
+name: telegram-reporting
+description: Report material milestones, completion, blocking failures and decisions to the configured human chat; never routine internals.
+---
+
 # Telegram Reporting
 
 Use `report_to_telegram` to notify the configured human chat of material

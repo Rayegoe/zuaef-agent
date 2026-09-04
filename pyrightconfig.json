@@ -1,0 +1,12 @@
+{
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "src",
+        "plugins/zuaef-quant",
+        "plugins/zuaef-telegram"
+      ]
+    }
+  ]
+}

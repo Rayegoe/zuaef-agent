@@ -157,7 +157,10 @@ def test_factory_returns_bundle_with_exact_tool_and_skill(tmp_path: Path, monkey
     bundle = create_plugin(_plugin_env(tmp_path), {})
     assert _tool_names(bundle) == {"report_to_telegram"}
     assert all(Path(d).is_dir() for d in bundle.skill_dirs), "bundled skill must exist"
-    assert (Path(bundle.skill_dirs[0]) / "SKILL.md").is_file()
+    # the bundle returns the skill LIBRARY root (Skills capability contract:
+    # immediate children are skill packages); the package is
+    # skills/telegram-reporting/SKILL.md
+    assert (Path(bundle.skill_dirs[0]) / "telegram-reporting" / "SKILL.md").is_file()
 
 
 def test_factory_fails_loud_without_bot_token(tmp_path: Path, monkeypatch):
