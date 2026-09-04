@@ -1,0 +1,17 @@
+{
+  "name": "zuaef-quant-final-spec-v2.0",
+  "version": "2.0",
+  "status": "FINAL_EXECUTABLE_BUSINESS_ALIGNED",
+  "purpose": "A-share continuous trading decision assistant with a trustworthy research and forward-learning spine.",
+  "principles": [
+    "continuous_trading_loop",
+    "business_outcome_first",
+    "real_market_forward_learning",
+    "deterministic_fast_monitor_agent_escalation",
+    "position_management_continuity",
+    "evidence_supports_product_not_replaces_it",
+    "strategy_is_replaceable",
+    "minimal_architecture"
+  ],
+  "revision": "business-aligned strategic clarification, 2026-09-03"
+}

@@ -376,8 +376,9 @@ def _semantic_dimension(proof: dict | None, snapshot: dict | None) -> dict:
     if proof is None:
         return {"status": "UNKNOWN", "detail": "尚未运行 tools/quant_validate_semantics.py"}
     status = str(proof.get("status", "UNKNOWN"))
-    if status in ("FAIL", "WARN"):
-        return {"status": status, "detail": str(proof.get("reason", ""))}
+    if status != "PASS":
+        mapped = status if status in ("FAIL", "WARN") else "UNKNOWN"
+        return {"status": mapped, "detail": str(proof.get("reason", ""))}
     if proof.get("universe_as_of") != (snapshot or {}).get("as_of"):
         return {
             "status": "WARN",
@@ -460,7 +461,7 @@ def data_quality(
         "pit": _pit_dimension(load_latest_pit_audit(semantic_dir)),
     }
     overall = _worst([d["status"] for d in dimensions.values()])
-    failing = [k for k, d in dimensions.items() if d["status"] in ("FAIL", "WARN")]
+    failing = [k for k, d in dimensions.items() if d["status"] != "PASS"]
     banner = (
         "DATA DEGRADED — coverage below threshold or source failures; A-tier completeness is NOT claimed. Cached candidates are shown with their timestamps."
         if degraded
@@ -472,7 +473,7 @@ def data_quality(
     return {
         "status": overall,
         "coverage": coverage,
-        "degraded": degraded,
+        "degraded": degraded or overall != "PASS",
         "dimensions": dimensions,
         "snapshot_as_of": snapshot.get("as_of"),
         "quote_as_of": (scan or {}).get("as_of"),
@@ -484,6 +485,38 @@ def data_quality(
         "concentration": snapshot.get("concentration"),
         "degradations": degradations,
         "banner": banner,
+    }
+
+
+TRADING_DIR = ART / "trading"
+
+
+def load_trading_state(trading_dir: Path = TRADING_DIR) -> dict:
+    """M1 trading-loop artifacts for the attention area (spec M1 §15).
+
+    Reads only what the monitor wrote — the page never recomputes business
+    state. Absent artifacts mean the monitor has not run yet.
+    """
+    state = read_json(trading_dir / "state.json")
+    positions = read_json(trading_dir / "positions.json") or {}
+    alerts: list[dict] = []
+    alerts_path = trading_dir / "alerts.jsonl"
+    if alerts_path.exists():
+        try:
+            lines = alerts_path.read_text(encoding="utf-8").splitlines()
+            for line in lines[-8:]:
+                try:
+                    alerts.append(json.loads(line))
+                except ValueError:
+                    continue
+            alerts.reverse()
+        except OSError:
+            pass
+    return {
+        "present": bool(state),
+        "state": state or {},
+        "open_positions": positions.get("open") or [],
+        "alerts": alerts,
     }
 
 
@@ -517,6 +550,7 @@ def build_data(
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         "warning": STRATEGY_WARNING,
         "not_a_buy_note": NOT_A_BUY_NOTE,
+        "trading": load_trading_state(),
         "kpi": {
             "today_decision": decision["state"],
             "live_triggers": len((scan or {}).get("triggers") or []),
@@ -807,7 +841,12 @@ GLOSSARY = {
 
 
 def render_html(data: dict) -> str:
-    blob = json.dumps(data, ensure_ascii=False, indent=1)
+    blob = (
+        json.dumps(data, ensure_ascii=False, indent=1)
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
     js = JS.replace("__GLOSSARY__", json.dumps(GLOSSARY, ensure_ascii=False))
     html = TEMPLATE.replace("__DATA_JSON__", blob)
     return html.replace("__CSS__", CSS).replace("__JS__", js)
@@ -832,6 +871,23 @@ TEMPLATE = """<!DOCTYPE html>
 
   <div class="banner-warn" id="strategy-warning"></div>
   <div class="banner-degraded" id="dq-banner" style="display:none"></div>
+
+  <div class="card" id="attention-card">
+    <h2>现在需要我做什么？ <span class="cnt" id="att-meta">交易盯盘 · 30s 自动刷新</span></h2>
+    <div id="att-status" style="font-weight:700;font-size:14px;margin-bottom:8px"></div>
+    <div id="att-items" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px">
+        <div class="mut" style="font-weight:600;margin-bottom:4px">今天盯什么（READY / NEAR）</div>
+        <div id="att-watch" class="mut"></div>
+      </div>
+      <div style="flex:1.4;min-width:300px">
+        <div class="mut" style="font-weight:600;margin-bottom:4px">我现在持有什么</div>
+        <div id="att-positions" class="mut"></div>
+      </div>
+    </div>
+    <div id="att-alerts" style="margin-top:8px;font-size:12px"></div>
+  </div>
 
   <div class="kpi">
     <div class="k"><div class="v" id="kpi-decision">—</div><div class="l">今日决策</div></div>
@@ -1073,7 +1129,43 @@ function drawTriggers(trs, live){
       <td class="rf">${(t.red_flags&&t.red_flags.length)?esc(zhFlags(t.red_flags)):'无候选红旗记录'}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
+function renderTrading(t){
+  const st = $('att-status'), items = $('att-items'), watch = $('att-watch'), pos = $('att-positions'), al = $('att-alerts');
+  if(!t || !t.present){
+    st.textContent = '盯盘监控未运行 — 启动: python tools/quant_trading_monitor.py session';
+    st.style.color = 'var(--amber)'; items.innerHTML=''; watch.textContent='—'; pos.textContent='无持仓记录'; al.innerHTML=''; return;
+  }
+  const s = t.state || {};
+  if (s.system_unavailable){ st.textContent = 'SYSTEM_UNAVAILABLE — 系统不可用/数据不可信（这不是 NO_TRADE）'; st.style.color = 'var(--red)'; }
+  else if (s.market_no_trade){ st.textContent = `有效 NO_TRADE — 市场已扫描 ${(s.symbols_scanned??0)} 只，当前无 READY 机会`; st.style.color = 'var(--acc)'; }
+  else if (s.status === 'MARKET_CLOSED'){ st.textContent = '已收盘 — 监控待下一交易时段（无合成活动）'; st.style.color = 'var(--mut)'; }
+  else if (s.status === 'ALERTS'){ st.textContent = `需要行动 — READY ${(s.ready||[]).length} · EXIT_ALERT ${(s.exit_alerts||[]).length}`; st.style.color = 'var(--amber)'; }
+  else { st.textContent = '监控运行中 — ' + (s.status||'?'); st.style.color = 'var(--acc)'; }
+  const chips = [];
+  (s.ready||[]).forEach(sym=>chips.push(`<span class="chip B">READY ${esc(sym)}</span>`));
+  (s.exit_alerts||[]).forEach(sym=>chips.push(`<span class="chip S">EXIT_ALERT ${esc(sym)}</span>`));
+  (s.near||[]).forEach(sym=>chips.push(`<span class="chip gray">NEAR ${esc(sym)}</span>`));
+  items.innerHTML = chips.join('') || '<span class="dim">当前无 attention 项</span>';
+  const watchList = [...(s.ready||[]), ...(s.near||[])];
+  watch.textContent = watchList.length ? watchList.join(', ') : '当前无 READY/NEAR — 快层持续扫描活跃宇宙';
+  const ps = t.open_positions || [];
+  pos.innerHTML = ps.length ? ps.map(p=>`<div><code>${esc(p.symbol)}</code> ${p.shares}股 @${p.entry_price}` +
+    (p.price!=null?` → 现价 ${p.price}`:'') + (p.pnl!=null?` · 盈亏 ${p.pnl}`:'') +
+    ` · <b>${esc(p.state||'HOLD')}</b>${p.exit_reason?` · ${esc(p.exit_reason)}`:''}</div>`).join('') : '无持仓';
+  al.innerHTML = (t.alerts||[]).slice(0,5).map(a=>
+    `<div>· <b>${esc(a.type||'')}</b> ${a.symbol?esc(a.symbol)+' — ':''}${esc(a.what||'')}${a.why?` · ${esc(a.why)}`:''}</div>`).join('');
+}
+async function pollAttention(){
+  try{
+    const r = await fetch('/api/attention', {cache:'no-store'});
+    const j = await r.json();
+    renderTrading({present: !!j.as_of, state: j, open_positions: j.positions || [], alerts: j.events || []});
+  }catch(e){ /* keep the last good render */ }
+}
+setInterval(pollAttention, 30000);
+
 function renderStatic(){
+  pollAttention();
   $('gen-time').textContent = D.generated_at;
   $('strategy-warning').textContent = '⚠ ' + D.warning;
   $('not-a-buy').textContent = D.not_a_buy_note;
@@ -1089,8 +1181,8 @@ function renderStatic(){
   const ev = $('kpi-evidence');
   ev.textContent = zh(EV_ZH, k.strategy_evidence);
   ev.style.color = 'var(--amber)';
-  if (D.data_quality.degraded && D.data_quality.banner){
-    $('dq-banner').textContent = '数据已降级 (DATA DEGRADED) — ' + D.data_quality.banner;
+  if (D.data_quality.status !== 'PASS' && D.data_quality.banner){
+    $('dq-banner').textContent = 'DATA DEGRADED / 交易可信度受限 — ' + D.data_quality.banner;
     $('dq-banner').style.display = 'block';
   }
   // triggers section
@@ -1198,8 +1290,8 @@ function renderStatic(){
   const badge = (k,label)=>{const d=dims[k]||{};const c=DIM_STYLE[d.status]||DIM_STYLE.UNKNOWN;
     return `<span title="${esc(d.detail||'')}" style="font-weight:700;color:${c[0]}">${label} ${c[1]}</span>`;};
   const AL_VERDICT = (D.anti_leakage||{}).verdict;
-  const AL_STYLE = {LOOKAHEAD_PASS:['var(--green)','PASS'],LOOKAHEAD_FAIL:['var(--red)','FAIL'],LOOKAHEAD_UNKNOWN:['var(--dim)','UNKNOWN']};
-  const al = AL_STYLE[AL_VERDICT]||AL_STYLE.LOOKAHEAD_UNKNOWN;
+  const AL_STYLE = {P0_4_SCOPED_PASS:['var(--green)','SCOPED PASS'],P0_4_FAIL:['var(--red)','FAIL'],P0_4_UNKNOWN:['var(--dim)','UNKNOWN']};
+  const al = AL_STYLE[AL_VERDICT]||AL_STYLE.P0_4_UNKNOWN;
   $('dq-box').innerHTML = `<dl class="kv">
     <dt>数据质量分维</dt><dd>${badge('coverage','覆盖')} · ${badge('freshness','新鲜')} · ${badge('semantic_integrity','语义')} · ${badge('source_degradation','源')} · ${badge('pit','PIT')} · <span title="anti-leakage 行为验证：删除未来数据不得改变过去结果" style="font-weight:700;color:${al[0]}">防前视 ${al[1]}</span> <span class="dim">分维各自判定；覆盖率 100% 不等于整体可信 (spec P0.2)</span></dd>
     <dt>候选快照时间</dt><dd>${esc(q.snapshot_as_of||'—')} ${q.degraded?'<span class="chip bad">已降级</span>':''}</dd>
@@ -1215,6 +1307,10 @@ function renderStatic(){
 
 /* live polling: deterministic scan + legacy watchlist quotes */
 function applyScan(s){
+  if ((s.volume_semantics||{}).status !== 'PASS'){
+    $('dq-banner').textContent = '交易可信度受限 — 成交量语义未通过，实时触发已关闭';
+    $('dq-banner').style.display = 'block';
+  }
   $('kpi-triggers').textContent = (s.triggers||[]).length;
   const trs = (s.triggers||[]).map(t=>{
     const cand = (D.board_rows||[]).find(c=>c.symbol===t.symbol) || {};
@@ -1234,8 +1330,14 @@ async function poll(url){
 async function pollScan(){
   try{
     const s = await poll('/api/scan');
-    if(!s.error) applyScan(s);
-  }catch(e){ /* static snapshot remains shown */ }
+    if(s.error) throw new Error(s.error);
+    applyScan(s);
+    $('scan-meta').textContent = `实时连接正常 · ${s.as_of||''} · ${s.universe||''} (${s.universe_size??'—'} 只)`;
+  }catch(e){
+    $('dq-banner').textContent = '实时连接失效 — 页面保留的扫描结果可能已经过期，不可视为当前信号';
+    $('dq-banner').style.display = 'block';
+    $('scan-meta').textContent = '实时连接失效 / 数据可能过期';
+  }
 }
 async function pollWatchlist(){
   try{

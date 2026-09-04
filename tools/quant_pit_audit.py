@@ -105,7 +105,7 @@ def financial_announcement_aspect(metas: list[dict]) -> dict:
         return {"status": "UNKNOWN", "finding": "无 fundamentals 缓存可审", "evidence": [str(CACHE / "fundamentals")]}
     with_announcement = [m for m in metas if ANNOUNCEMENT_KEYS & set(m)]
     have_report = [m for m in metas if m.get("report_date")]
-    if with_announcement:
+    if len(with_announcement) == len(metas):
         return {
             "status": "CLEAN",
             "finding": f"{len(with_announcement)}/{len(metas)} 条 fundamentals 缓存带公告日期",
@@ -114,7 +114,8 @@ def financial_announcement_aspect(metas: list[dict]) -> dict:
     return {
         "status": "PARTIAL",
         "finding": (
-            f"{len(have_report)}/{len(metas)} 条缓存只有报告期无公告日期；freshness 预算从报告期起算。"
+            f"公告日期覆盖 {len(with_announcement)}/{len(metas)}；"
+            f"{len(have_report)}/{len(metas)} 条带报告期。未覆盖记录不能用于历史 PIT 证明。"
             "今日打分安全（数据源仅返回已公告报告，不构成前视）；"
             "但任何历史研究若把报告期当作可用日即为污染 — 在引入公告日期前禁止该用法"
         ),
@@ -140,13 +141,50 @@ def valuation_asof_aspect(metas: list[dict]) -> dict:
     }
 
 
-def adjustment_semantics_aspect(daily_metas: list[dict], has_execution_rules: bool) -> dict:
+def adjustment_semantics_aspect(
+    daily_metas: list[dict],
+    has_execution_rules: bool,
+    symbols: list[str] | None = None,
+    window: tuple[str, str] | None = None,
+) -> dict:
     """qfq research face vs raw execution face, both recorded per cache."""
     if not daily_metas:
         return {"status": "UNKNOWN", "finding": "无 daily 缓存可审", "evidence": [str(CACHE / "daily")]}
+    symbols = symbols or []
+    if symbols:
+        by_symbol: dict[str, dict[str, dict]] = {}
+        for meta in daily_metas:
+            by_symbol.setdefault(str(meta.get("symbol", "")), {})[str(meta.get("adjust"))] = meta
+        missing: list[str] = []
+        short: list[str] = []
+        for symbol in symbols:
+            faces = by_symbol.get(symbol, {})
+            if not {"qfq", "raw"} <= set(faces):
+                missing.append(symbol)
+                continue
+            if window:
+                for adjust in ("qfq", "raw"):
+                    span = faces[adjust].get("date_range") or []
+                    if len(span) != 2 or str(span[0]) > window[0] or str(span[1]) < window[1]:
+                        short.append(f"{symbol}:{adjust}")
+        if missing or short or not has_execution_rules:
+            return {
+                "status": "PARTIAL",
+                "finding": (
+                    f"逐标的 raw/qfq 不完整: missing={len(missing)}, short_range={len(short)}, "
+                    f"execution={has_execution_rules}"
+                ),
+                "missing_symbols": missing,
+                "short_ranges": short,
+                "evidence": [str(CACHE / "daily"), str(QUANT_TOML)],
+            }
+        return {
+            "status": "CLEAN",
+            "finding": f"研究宇宙 {len(symbols)} 只逐标的具备 raw/qfq 且覆盖实验窗口",
+            "evidence": [str(CACHE / "daily"), str(QUANT_TOML)],
+        }
     adjusts = {str(m.get("adjust")) for m in daily_metas}
-    both = {"qfq", "raw"} <= adjusts
-    if both and has_execution_rules:
+    if {"qfq", "raw"} <= adjusts and has_execution_rules:
         return {
             "status": "CLEAN",
             "finding": "研究面 qfq / 执行面 raw 分离且逐缓存记录；qfq 比值型信号对再锚定不变",
@@ -182,7 +220,12 @@ def audit(snapshot_path: Path = SNAPSHOT_PATH, cache: Path = CACHE, gen1: Path =
         "membership_live": membership_live_aspect(_load_json(snapshot_path)),
         "financial_announcement": financial_announcement_aspect(fundamentals),
         "valuation_asof": valuation_asof_aspect(valuation),
-        "adjustment_semantics": adjustment_semantics_aspect(daily, has_execution_rules),
+        "adjustment_semantics": adjustment_semantics_aspect(
+            daily,
+            has_execution_rules,
+            [str(s) for s in (subset_meta or {}).get("symbols", [])],
+            window,
+        ),
     }
     statuses = [a["status"] for a in aspects.values()]
     if all(s == "UNKNOWN" for s in statuses):

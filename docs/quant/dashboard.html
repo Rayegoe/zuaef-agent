@@ -237,7 +237,7 @@ footer{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </div>
 <script>
 window.DASH = {
- "generated_at": "2026-09-03 03:48 UTC",
+ "generated_at": "2026-09-03 10:29 UTC",
  "proofs": [
   {
    "name": "Research Engine Proof",
@@ -2127,6 +2127,32 @@ window.DASH = {
    "invalidation": "If a fresh scan later shows a symbol with pullback_5d <= -0.05 and volume_ratio_20d >= 1.8, re-evaluate; also note intraday volume_ratio understates vs full-day 20d average (scan limitation), so early-session false negatives are possible without being actionable evidence now.",
    "expected_holding": "n/a (no entry)",
    "trigger_facts": "none (empty trigger list; 50/50 universe symbols quoted ok, triggers_suppressed=0, as_of 2026-09-03T11:48:19+08:00)"
+  },
+  {
+   "decision_id": "brief-live-1788413694",
+   "recorded_at": "2026-09-03T05:35:21.245216+00:00",
+   "symbol": "NONE",
+   "action": "NO_TRADE",
+   "strategy_name": "s3_longer_hold",
+   "signal_timestamp": "2026-09-03T13:34:54.779586+08:00",
+   "brief_latency_seconds": 26.5,
+   "why": "Empty trigger list per get_live_signals = NO_TRADE by rule. Entry requires BOTH pullback_5d<=-0.05 AND volume_ratio_20d>=1.8; no symbol in the 50-name candidate pool satisfied both legs at scan time. The two near-miss names each violated exactly one leg, and intraday volume-ratio evidence is unverified (INSUFFICIENT_EVIDENCE), so no candidate is forced.",
+   "invalidation": "None applies (no position, no candidate). Re-scan next interval; a symbol becomes a candidate only if both deterministic legs trigger in a later scan.",
+   "expected_holding": "none — no entry, no holding",
+   "trigger_facts": "none — scan of candidate_pool_active (50/50 quotes, qt.gtimg.cn, as_of 2026-09-03T13:34:54+08:00, latest quote 133452, triggers_suppressed=0) returned triggers=[]. Every symbol had trigger=false. Closest names failed one leg: 600027 华电国际 volume_ratio_20d=2.365 but pullback_5d=+0.0412; 601799 星宇股份 pullback_5d=-0.0762 but volume_ratio_20d=1.331. volume_semantics=INSUFFICIENT_EVIDENCE (0/50 same-date cross-checks; intraday volume ratio understates)."
+  },
+  {
+   "decision_id": "brief-live-1788431289",
+   "recorded_at": "2026-09-03T10:28:57.821904+00:00",
+   "symbol": "NONE",
+   "action": "NO_TRADE",
+   "strategy_name": "s3_longer_hold",
+   "signal_timestamp": "2026-09-03T18:28:09.310127+08:00",
+   "brief_latency_seconds": 48.5,
+   "why": "get_live_signals returned an EMPTY trigger list: 50/50 symbols quoted OK (candidate_pool_active, as_of 2026-09-03T18:28:09+08:00, quote time 20260903 161500, volume_semantics PASS, 0 triggers suppressed), and zero symbols met the full deterministic entry conditions. Nearest misses: 601799 星宇股份 pullback_5d=-0.0853 & volume_ratio_20d=2.204 (both headline thresholds met but engine trigger=false, so close-strength/entry filters reject it); 600015 华夏银行 pullback_5d=-0.0529 vol 1.462; 000786 北新建材 pullback=-0.0633 vol 0.716. No qualified pullback+volume+close-strength setup exists right now.",
+   "invalidation": "No position opened, so nothing to invalidate trade-wise. Watch-condition: if a later scan flags any symbol with trigger=true, verdict re-opens; in particular 601799's next-scan status (whether it converts to a trigger on close-strength confirmation) is the nearest watch item. Intraday volume ratio semantics (cumulative volume vs prior 20 sessions) may understate — early-session scans can miss volume thresholds, so re-scan later in the session before judging absence of setups.",
+   "expected_holding": "N/A - no entry taken",
+   "trigger_facts": "none"
   },
   {
    "decision_id": "brief-live-1788450280",

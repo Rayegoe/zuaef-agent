@@ -34,7 +34,9 @@ Scope facts recorded in the report (not silently omitted):
     .venv-quant/bin/python tools/quant_anti_leakage_check.py \
         [--checkpoints 2020-06-30,2021-06-30,2022-06-30]
 
-Exit codes: 0 LOOKAHEAD_PASS, 1 LOOKAHEAD_FAIL, 2 LOOKAHEAD_UNKNOWN.
+Verdict (scoped — PIT contamination stays a separate, explicitly carried fact):
+P0_4_SCOPED_PASS / P0_4_FAIL / P0_4_UNKNOWN.
+Exit codes: 0 PASS, 1 FAIL, 2 UNKNOWN.
 Evidence: workspace/artifacts/quant/semantic/anti_leakage_check_<UTC>.json
 """
 
@@ -59,7 +61,7 @@ GEN1_DIR = Path("benchmarks/quant/gen1")
 DEFAULT_CHECKPOINTS = "2020-06-30,2021-06-30,2022-06-30"
 WARMUP_BARS = 25  # factor windows need <= 20 bars; guard the comparison range
 FACTOR_COLUMNS = ("pullback_5d", "volume_ratio_20d", "close_strength_1d")
-EXIT_CODES = {"LOOKAHEAD_PASS": 0, "LOOKAHEAD_FAIL": 1, "LOOKAHEAD_UNKNOWN": 2}
+EXIT_CODES = {"P0_4_SCOPED_PASS": 0, "P0_4_FAIL": 1, "P0_4_UNKNOWN": 2}
 
 
 def build_intents_trunc(panel: pd.DataFrame, spec, window_start: str, end: str):
@@ -193,70 +195,58 @@ def compare_intents(full: list, trunc: list, lo, hi) -> dict:
 
 
 def timing_surface_check(symbols: list[str], checkpoint_days: list[str], cache_dir: Path = CACHE_DIR) -> dict:
-    """timing_from_quote_hist at fixed past dates: two distinct properties.
-
-    - truncation_invariance: given the frame that ends at the quote date T,
-      values are invariant to mutations of rows after T. This pins the
-      required call pattern: the frame handed to the function must end at
-      the quote date.
-    - stale_quote_sensitivity: pairing a T-dated quote with a LONGER frame
-      changes the value (tail(20)/iloc[-6] are frame-end-relative). This is
-      quantified as the production residual risk of a stale quote meeting a
-      refreshed cache — reported verbatim, not folded into the replay
-      verdict (see scope_notes).
+    """Give the production timing function real future rows and compare it
+    with an as-of-T frame.  Future rows are adversarially mutated in the full
+    input; deleting them before calling the function would make this test
+    vacuous and is intentionally forbidden here.
     """
-    invariance_checked = 0
-    invariance_violations: list[dict] = []
-    stale_checked = 0
-    stale_diffs: list[dict] = []
+    checked = 0
+    diffs: list[dict] = []
     for symbol in symbols:
         hist, _meta = read_cache("daily", f"{symbol}_qfq", cache_dir)
         if hist is None or len(hist) < 30:
-            invariance_violations.append({"symbol": symbol, "detail": "insufficient cached history"})
+            diffs.append({"symbol": symbol, "detail": "insufficient cached history"})
             continue
         hist = hist.sort_values("date").reset_index(drop=True)
-        # cached CSV dates read back as ISO strings; string order == date order
-        date_str = hist["date"].astype(str)
+        hist_days = pd.to_datetime(hist["date"], errors="coerce")
+        if hist_days.isna().any():
+            diffs.append({"symbol": symbol, "detail": "unparseable history date"})
+            continue
         for day_str in checkpoint_days:
-            past = hist[date_str <= day_str]
-            future = date_str > day_str
+            checkpoint = pd.to_datetime(day_str, errors="coerce")
+            if pd.isna(checkpoint):
+                diffs.append({"symbol": symbol, "detail": f"invalid checkpoint {day_str}"})
+                continue
+            past = hist.loc[hist_days <= checkpoint]
+            future = hist_days > checkpoint
             if len(past) < 26 or len(past) == len(hist):
                 continue  # checkpoint must sit strictly inside the series
             last = past.iloc[-1]
-            pseudo_quote = {"price": float(last["close"]), "volume": float(last["volume"])}
-            t_trunc = timing_from_quote_hist(pseudo_quote, past)
+            quote_day = pd.to_datetime(last["date"]).strftime("%Y%m%d")
+            pseudo_quote = {
+                "date": quote_day,
+                "price": float(last["close"]),
+                "volume": float(last["volume"]),
+            }
+            t_asof = timing_from_quote_hist(pseudo_quote, past)
 
             mutated = hist.copy()
             mutated.loc[future, "volume"] = float(hist["volume"].max() or 1.0) * 7.0 + 1.0
             mutated.loc[future, "close"] = float(hist["close"].max() or 1.0) * 2.0
-            mutated_rows = mutated[date_str <= day_str]
-            t_mutated = timing_from_quote_hist(pseudo_quote, mutated_rows)
-            invariance_checked += 1
-            if t_mutated != t_trunc:
-                invariance_violations.append({"symbol": symbol, "day": day_str, "full": t_trunc, "mutated_future": t_mutated})
-
-            t_full = timing_from_quote_hist(pseudo_quote, hist)
-            stale_checked += 1
-            if t_full != t_trunc:
-                stale_diffs.append({
+            t_with_future = timing_from_quote_hist(pseudo_quote, mutated)
+            checked += 1
+            if t_asof != t_with_future:
+                diffs.append({
                     "symbol": symbol,
                     "day": day_str,
-                    "truncated": t_trunc,
-                    "with_longer_frame": t_full,
+                    "asof": t_asof,
+                    "with_adversarial_future": t_with_future,
                 })
     return {
-        "truncation_invariance": {
-            "checked": invariance_checked,
-            "violation_count": len(invariance_violations),
-            "violations": invariance_violations[:50],
-            "invariant": invariance_checked > 0 and not invariance_violations,
-        },
-        "stale_quote_sensitivity": {
-            "checked": stale_checked,
-            "diff_count": len(stale_diffs),
-            "diffs": stale_diffs[:50],
-            "sensitive": bool(stale_diffs),
-        },
+        "status": "PASS" if checked and not diffs else ("FAIL" if diffs else "UNKNOWN"),
+        "checked": checked,
+        "diff_count": len(diffs),
+        "diffs": diffs[:50],
     }
 
 
@@ -328,17 +318,14 @@ def load_pit_context(evidence_dir: Path = EVIDENCE_DIR) -> dict | None:
     return {"verdict": data.get("verdict"), "implication": data.get("implication")}
 
 
-def overall_verdict(checkpoints: list[dict]) -> str:
-    """The LOOKAHEAD verdict covers the date-slicable replay surface (factors,
-    membership, intents). Timing-surface frame sensitivity is reported
-    separately and quantified — it is a call-pattern hazard (stale quote x
-    refreshed cache), not a replay leak, and masking it into either verdict
-    direction would be dishonest."""
-    if not checkpoints or any(c.get("status") == "UNKNOWN" for c in checkpoints):
-        return "LOOKAHEAD_UNKNOWN"
-    if any(c.get("status") == "LOOKAHEAD_FAIL" for c in checkpoints):
-        return "LOOKAHEAD_FAIL"
-    return "LOOKAHEAD_PASS"
+def scoped_verdict(checkpoints: list[dict], timing: dict) -> str:
+    """Reduce only the two explicitly tested surfaces; PIT stays separate."""
+    replay_unknown = not checkpoints or any(c.get("status") == "UNKNOWN" for c in checkpoints)
+    if replay_unknown or timing.get("status") == "UNKNOWN":
+        return "P0_4_UNKNOWN"
+    if any(c.get("status") == "LOOKAHEAD_FAIL" for c in checkpoints) or timing.get("status") == "FAIL":
+        return "P0_4_FAIL"
+    return "P0_4_SCOPED_PASS"
 
 
 def main() -> int:
@@ -362,8 +349,8 @@ def main() -> int:
 
     qlib_dir = CACHE_DIR / "qlib_data"
     if not qlib_dir.exists():
-        print(json.dumps({"verdict": "LOOKAHEAD_UNKNOWN", "reason": "qlib store missing; run tools/quant_eval_qlib.py first"}))
-        return EXIT_CODES["LOOKAHEAD_UNKNOWN"]
+        print(json.dumps({"verdict": "P0_4_UNKNOWN", "reason": "qlib store missing; run tools/quant_eval_qlib.py first"}))
+        return EXIT_CODES["P0_4_UNKNOWN"]
     pad_start = str(date.fromisoformat(window_start).replace(year=date.fromisoformat(window_start).year - 1))
 
     def panel_loader(end: str):
@@ -384,26 +371,32 @@ def main() -> int:
     checkpoint_days = [c.strip() for c in args.checkpoints.split(",") if c.strip()]
     timing = timing_surface_check(sorted(symbols)[: args.timing_symbols], checkpoint_days)
 
-    verdict = overall_verdict(checkpoints)
+    replay_status = (
+        "UNKNOWN" if not checkpoints or any(c.get("status") == "UNKNOWN" for c in checkpoints)
+        else "FAIL" if any(c.get("status") == "LOOKAHEAD_FAIL" for c in checkpoints)
+        else "PASS"
+    )
+    verdict = scoped_verdict(checkpoints, timing)
+    pit_context = load_pit_context()
     report = {
         "spec": "zuaef-quant-final-spec-v2.0 P0.4",
         "verdict": verdict,
         "as_of": datetime.now(TZ_SHANGHAI).isoformat(),
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "window": {"start": window_start, "end": window_end, "universe_size": len(symbols)},
+        "historical_replay_invariance": {"status": replay_status, "checkpoints": checkpoints},
+        "shared_timing_temporal_alignment": timing,
+        "known_pit_universe_contamination": pit_context or {"verdict": "UNKNOWN"},
         "checkpoints": checkpoints,
         "timing_surface": timing,
-        "pit_context": load_pit_context(),
+        "pit_context": pit_context,
         "scope_notes": [
             "composite candidate rank is a today-only surface (no date parameter) — not behaviorally testable",
             (
                 "universe-selection contamination (P0.3) is carried as expected evidence, not corrected here; "
                 "this check validates within-universe time-series mechanics only"
             ),
-            (
-                "timing_surface.stale_quote_sensitivity is a call-pattern hazard (stale quote meeting a refreshed "
-                "cache), quantified and reported; it does not flip the replay verdict in either direction"
-            ),
+            "historical replay PASS never overrides known PIT contamination",
         ],
     }
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -418,8 +411,8 @@ def main() -> int:
         "membership_diffs_total": sum(c.get("membership_diff_count", 0) for c in checkpoints),
         "entry_intent_changes": any(c["entry_intents"]["changed"] for c in checkpoints),
         "exit_intent_changes": any(c["exit_intents"]["changed"] for c in checkpoints),
-        "timing_truncation_invariant": timing["truncation_invariance"]["invariant"],
-        "timing_stale_quote_sensitive": timing["stale_quote_sensitivity"]["sensitive"],
+        "historical_replay_invariance": replay_status,
+        "shared_timing_temporal_alignment": timing["status"],
         "pit_context_verdict": (report.get("pit_context") or {}).get("verdict"),
         "evidence": str(out),
     }, ensure_ascii=False))

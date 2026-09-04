@@ -267,6 +267,9 @@ def main() -> int:
 
     vector = run_engine(prices_qfq, rules, spec, intents, market_truth=False)
     replay = run_engine(prices_raw, rules, spec, intents, market_truth=True)
+    unsupported_actions = quant_core.unsupported_corporate_action_trades(
+        replay["fills"], prices_raw, prices_qfq
+    )
 
     trade_records(replay["fills"]).to_csv(out / "trades.csv", index=False)
     pd.DataFrame(replay["blocked"]).to_csv(out / "blocked_trades.csv", index=False)
@@ -304,6 +307,11 @@ def main() -> int:
         "vector_stage": vector["metrics"],
         "independent_replay": replay["metrics"],
         "blocked_trades": blocked_summary,
+        "corporate_action_gate": {
+            "status": "UNSUPPORTED" if unsupported_actions else "PASS",
+            "unsupported_trades": unsupported_actions,
+            "meaning": "raw replay has no corporate-action accounting; detected crossings cannot support trusted metrics",
+        },
         "consistency": {
             "annualized_return_diff_pp": round(diff_pp, 4),
             "tolerance_pp": tolerance,
@@ -342,6 +350,12 @@ def main() -> int:
     (out / "result.md").write_text("\n".join(lines), encoding="utf-8")
     print(json.dumps(evidence["consistency"], indent=2))
     print(f"artifacts -> {out}")
+    if unsupported_actions:
+        print(
+            f"TRUST GATE FAILED: {len(unsupported_actions)} trade(s) cross unsupported corporate actions",
+            file=sys.stderr,
+        )
+        return 2
     return 0
 
 

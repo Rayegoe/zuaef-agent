@@ -21,9 +21,11 @@ pytest.importorskip("pandas")
 sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
 
 import quant_build_candidates as b
+import quant_core as core
 import quant_live_scan as scan
 import quant_render_business_dashboard as biz
 import quant_serve as serve
+import quant_validate_semantics as semantics
 from quant_live_scan import UniverseError, resolve_universe
 
 
@@ -353,6 +355,11 @@ def biz_env(tmp_path):
 
 
 class TestBusinessRenderer:
+    def test_embedded_artifact_cannot_close_script_tag(self):
+        html = biz.render_html({"payload": "</script><script>alert(1)</script>"})
+        assert "</script><script>alert(1)" not in html
+        assert "\\u003c/script\\u003e" in html
+
     def test_zero_triggers_shows_no_action_candidate(self, biz_env):
         write_snapshot(biz_env["snapshot"], [cand("600000")])
         write_scan(biz_env["scan"], [])
@@ -426,7 +433,10 @@ class TestBusinessRenderer:
         )
         html = biz.render_html(data)
         assert data["data_quality"]["status"] == "MISSING"
-        assert "DATA DEGRADED" in html
+        # the frontend shows the banner for any non-PASS data-quality status;
+        # the payload carries the actionable banner text
+        assert "候选快照缺失" in html
+        assert "D.data_quality.status !== 'PASS'" in html
         assert "quant_build_candidates.py" in html
 
     def test_first_viewport_free_of_engineering_jargon(self, biz_env):
@@ -512,6 +522,149 @@ class TestVolumeSemantics:
     def test_unreadable_proof_is_unknown(self, tmp_path):
         (tmp_path / "semantic_proof_20260903T000000Z.json").write_text("{not json")
         assert scan.load_volume_semantics(evidence_dir=tmp_path)["status"] == "UNKNOWN"
+
+    @pytest.mark.parametrize("status", ["FAIL", "WARN", "UNKNOWN", "INSUFFICIENT_EVIDENCE", "STALE"])
+    def test_every_non_pass_state_suppresses_live_trigger(self, status):
+        assert scan.volume_gate_suppresses(status)
+        assert not scan.volume_gate_suppresses("PASS")
+
+    def test_ingest_semantics_wrong_worlds_are_rejected(self):
+        assert semantics.ingest_semantics_status({"share"}, {"share": 50}, 50, 50)[0] == "PASS"
+        assert semantics.ingest_semantics_status({"lot"}, {"lot": 50}, 50, 50)[0] == "FAIL"
+        assert semantics.ingest_semantics_status(
+            {"share", "lot"}, {"share": 25, "lot": 25}, 50, 50
+        )[0] == "FAIL"
+        status, reason = semantics.ingest_semantics_status({"share"}, {"share": 50}, 50, 49)
+        assert status == "INSUFFICIENT_EVIDENCE" and "coverage incomplete" in reason
+
+    def test_old_pool_pass_becomes_stale_and_suppressed(self, tmp_path):
+        proof = {
+            "status": "PASS", "reason": "ok", "universe_as_of": "old",
+            "validated_symbols": ["600000"],
+        }
+        (tmp_path / "semantic_proof_20260903T000000Z.json").write_text(json.dumps(proof))
+        result = scan.load_volume_semantics(
+            evidence_dir=tmp_path, expected_symbols=["600001"], universe_as_of="new"
+        )
+        assert result["status"] == "STALE" and scan.volume_gate_suppresses(result["status"])
+
+
+# ---------------------------------------------------------------------------
+# P0.1-R4: persistent ingest semantics vs today's quote health
+# ---------------------------------------------------------------------------
+
+
+def _contract_cache(symbol: str, last_date: str, periods: int = 30):
+    """Contract-valid qfq cache whose volume semantics is provably share:
+    amount/(volume*close) == 1 on every row, meta satisfies the schema-2
+    ingestion contract."""
+    days = pd.bdate_range(end=last_date, periods=periods)
+    df = pd.DataFrame(
+        {
+            "symbol": symbol,
+            "date": days.strftime("%Y-%m-%d"),
+            "open": 10.0,
+            "high": 10.5,
+            "low": 9.5,
+            "close": 10.0,
+            "volume": 1_000_000.0,
+            "amount": 10_000_000.0,
+        }
+    )
+    meta = {
+        "cache_schema": core.HISTORY_CACHE_SCHEMA,
+        "normalization": core.HISTORY_NORMALIZATION,
+        "volume_unit": "share",
+        "symbol": symbol,
+        "adjust": "qfq",
+        "start_date": "20180101",
+        "rows": len(df),
+        "date_range": [str(days.min().date()), str(days.max().date())],
+    }
+    return df, meta
+
+
+def _quote(date: str, volume: float, price: float = 10.0) -> dict:
+    return {"name": "X", "price": price, "prev_close": price, "volume": volume, "date": date, "time": "103000"}
+
+
+class TestIngestSemanticsVsQuoteHealth:
+    """The three R4 counterexamples: intraday PENDING must not suppress,
+    an anomalous quote must FAIL, an unverified cache must stay INSUFFICIENT."""
+
+    def test_counterexample_normal_intraday_pending_keeps_semantic_pass(self):
+        df, meta = _contract_cache("600001", "2026-09-02")
+        row = semantics.validate_symbol("600001", _quote("20260903", 800_000.0), df, meta)
+        assert row["cache_contract_current"] is True
+        assert row["cached_volume_unit"] == "share"
+        assert row["quote_health"]["status"] == "pending_eod"
+        agg = semantics.aggregate_rows([row], 1)
+        assert agg["ingest"][0] == "PASS"
+        assert agg["health"][0] == "PENDING"
+        assert agg["status"] == "PASS"
+        assert not scan.volume_gate_suppresses(agg["status"])
+
+    def test_counterexample_anomalous_quote_fails_and_suppresses(self):
+        df, meta = _contract_cache("600002", "2026-09-02")
+        # quote claims the cached EOD date but 3x its cached volume
+        row = semantics.validate_symbol("600002", _quote("20260902", 3_000_000.0), df, meta)
+        assert row["quote_health"]["status"] == "inconsistent"
+        agg = semantics.aggregate_rows([row], 1)
+        assert agg["ingest"][0] == "PASS"  # cache truth is fine...
+        assert agg["health"][0] == "FAIL"  # ...today's quote is the anomaly
+        assert agg["status"] == "FAIL"
+        assert scan.volume_gate_suppresses(agg["status"])
+
+    def test_counterexample_unverified_cache_stays_insufficient_and_suppresses(self):
+        df, meta = _contract_cache("600003", "2026-09-02")
+        legacy_meta = {**meta, "cache_schema": 1}  # pre-normalization contract
+        row = semantics.validate_symbol("600003", _quote("20260903", 800_000.0), df, legacy_meta)
+        assert row["skip_reason"] == "cache_contract_invalid"
+        assert row["cached_volume_unit"] == "unknown"
+        assert row["quote_health"]["status"] == "not_available"
+        agg = semantics.aggregate_rows([row], 1)
+        assert agg["ingest"][0] == "INSUFFICIENT_EVIDENCE"
+        assert agg["status"] == "INSUFFICIENT_EVIDENCE"
+        assert scan.volume_gate_suppresses(agg["status"])
+
+    def test_quote_anomaly_fails_even_when_all_other_symbols_pending(self):
+        good, good_meta = _contract_cache("600004", "2026-09-02")
+        bad, bad_meta = _contract_cache("600005", "2026-09-02")
+        rows = [
+            semantics.validate_symbol("600004", _quote("20260903", 800_000.0), good, good_meta),
+            semantics.validate_symbol("600005", _quote("20260902", 3_000_000.0), bad, bad_meta),
+        ]
+        agg = semantics.aggregate_rows(rows, 2)
+        assert agg["health"][0] == "FAIL"
+        assert agg["status"] == "FAIL"
+
+    def test_composed_pass_reason_names_both_verdicts(self):
+        ingest = semantics.ingest_semantics_status({"share"}, {"share": 50}, 50, 50)
+        health = semantics.quote_health_status([{"status": "pending_eod"}] * 50)
+        status, reason = semantics.compose_overall(ingest, health)
+        assert status == "PASS"
+        assert "PENDING" in reason and "canonical share" in reason
+        assert not scan.volume_gate_suppresses(status)
+
+
+class TestTimingTemporalAlignment:
+    def test_t_minus_one_t_and_future_histories_are_equivalent(self):
+        days = pd.date_range("2021-01-01", periods=40, freq="D")
+        t = days[30]
+        hist = pd.DataFrame({
+            "date": days,
+            "close": [10.0] * 31 + [999.0] * 9,
+            "volume": [1_000_000.0] * 31 + [999_000_000.0] * 9,
+        })
+        quote = {"date": t.strftime("%Y%m%d"), "price": 9.0, "volume": 2_000_000.0}
+        a = scan.timing_from_quote_hist(quote, hist[hist["date"] < t])
+        b = scan.timing_from_quote_hist(quote, hist[hist["date"] <= t])
+        c = scan.timing_from_quote_hist(quote, hist)
+        assert a == b == c
+
+    def test_unparseable_dates_fail_closed(self):
+        hist = pd.DataFrame({"date": ["bad"] * 25, "close": [10.0] * 25, "volume": [1.0] * 25})
+        assert scan.timing_from_quote_hist({"date": "bad", "price": 10, "volume": 1}, hist) is None
 
 
 # ---------------------------------------------------------------------------
@@ -626,6 +779,13 @@ class TestPitAudit:
         a = pit.financial_announcement_aspect([{"report_date": "2026-06-30", "announcement_date": "2026-08-20"}])
         assert a["status"] == "CLEAN"
 
+    def test_partial_announcement_coverage_is_not_clean(self):
+        a = pit.financial_announcement_aspect([
+            {"report_date": "2026-06-30", "announcement_date": "2026-08-20"},
+            {"report_date": "2025-12-31"},
+        ])
+        assert a["status"] == "PARTIAL" and "1/2" in a["finding"]
+
     def test_valuation_complete_metas_clean(self):
         a = pit.valuation_asof_aspect([{"series_last_date": "2026-09-02", "retrieved_at": "2026-09-03T10:00:00+08:00"}])
         assert a["status"] == "CLEAN"
@@ -634,6 +794,17 @@ class TestPitAudit:
         assert pit.adjustment_semantics_aspect([{"adjust": "qfq"}, {"adjust": "raw"}], True)["status"] == "CLEAN"
         assert pit.adjustment_semantics_aspect([{"adjust": "qfq"}], True)["status"] == "PARTIAL"
         assert pit.adjustment_semantics_aspect([{"adjust": "qfq"}, {"adjust": "raw"}], False)["status"] == "PARTIAL"
+
+    def test_adjustment_is_checked_per_research_symbol(self):
+        metas = [
+            {"symbol": "A", "adjust": "qfq", "date_range": ["2018-01-01", "2022-12-31"]},
+            {"symbol": "A", "adjust": "raw", "date_range": ["2018-01-01", "2022-12-31"]},
+            {"symbol": "B", "adjust": "qfq", "date_range": ["2018-01-01", "2022-12-31"]},
+        ]
+        result = pit.adjustment_semantics_aspect(
+            metas, True, ["A", "B"], ("2018-01-01", "2022-12-31")
+        )
+        assert result["status"] == "PARTIAL" and result["missing_symbols"] == ["B"]
 
     def _tmp_repo(self, tmp_path, limitation):
         cache = tmp_path / "cache"
@@ -750,28 +921,40 @@ class TestAntiLeakage:
         assert cmp["entry_intents"]["changed"] and cmp["entry_intents"]["diff_count"] == 2
         assert cmp["exit_intents"]["changed"]
 
-    def test_timing_future_rows_are_invariant_for_truncated_frames(self, monkeypatch):
-        dates = pd.date_range("2021-01-01", periods=60, freq="D").date
-        hist = pd.DataFrame({"date": dates, "close": [10.0] * 60, "volume": [1_000_000.0] * 60})
-        monkeypatch.setattr(leak, "read_cache", lambda kind, key, cache_dir=None: (hist, {}))
-        res = leak.timing_surface_check(["600000"], [str(dates[40])])
-        assert res["truncation_invariance"]["checked"] == 1
-        assert res["truncation_invariance"]["invariant"] is True
-
-    def test_timing_stale_quote_sensitivity_is_quantified_not_hidden(self, monkeypatch):
+    def test_timing_passes_with_date_aligned_impl(self, monkeypatch):
         dates = pd.date_range("2021-01-01", periods=60, freq="D").date
         hist = pd.DataFrame({"date": dates, "close": [10 + 0.1 * (i % 3) for i in range(60)], "volume": [1_000_000.0] * 60})
         monkeypatch.setattr(leak, "read_cache", lambda kind, key, cache_dir=None: (hist, {}))
         res = leak.timing_surface_check(["600000"], [str(dates[40])])
-        # a T-dated quote paired with the full frame is frame-end-relative:
-        # the check reports it as quantified sensitivity instead of masking
-        assert res["stale_quote_sensitivity"]["checked"] == 1
-        assert res["stale_quote_sensitivity"]["sensitive"] is True
-        assert res["stale_quote_sensitivity"]["diffs"][0]["truncated"] != res["stale_quote_sensitivity"]["diffs"][0]["with_longer_frame"]
+        # the date-aligned production function self-truncates to the quote
+        # date, so adversarial future rows cannot move the past
+        assert res["checked"] == 1
+        assert res["status"] == "PASS"
 
-    def test_overall_verdict_reducer_covers_replay_surface_only(self):
-        assert leak.overall_verdict([{"status": "PASS"}]) == "LOOKAHEAD_PASS"
-        assert leak.overall_verdict([{"status": "PASS"}, {"status": "PASS"}]) == "LOOKAHEAD_PASS"
-        assert leak.overall_verdict([{"status": "PASS"}, {"status": "LOOKAHEAD_FAIL"}]) == "LOOKAHEAD_FAIL"
-        assert leak.overall_verdict([{"status": "UNKNOWN"}]) == "LOOKAHEAD_UNKNOWN"
-        assert leak.overall_verdict([]) == "LOOKAHEAD_UNKNOWN"
+    def test_timing_check_has_teeth_against_frame_relative_impl(self, monkeypatch):
+        dates = pd.date_range("2021-01-01", periods=60, freq="D").date
+        hist = pd.DataFrame({"date": dates, "close": [10 + 0.1 * (i % 3) for i in range(60)], "volume": [1_000_000.0] * 60})
+        monkeypatch.setattr(leak, "read_cache", lambda kind, key, cache_dir=None: (hist, {}))
+
+        def legacy_frame_relative_timing(quote, h):
+            # the pre-fix implementation: frame-end-relative, ignores quote date
+            h = h.sort_values("date")
+            if len(h) < 25:
+                return None
+            return (
+                float(quote["price"]) / float(h["close"].iloc[-6]) - 1,
+                float(quote["volume"]) / float(h["volume"].tail(20).mean()),
+            )
+
+        monkeypatch.setattr(leak, "timing_from_quote_hist", legacy_frame_relative_timing)
+        res = leak.timing_surface_check(["600000"], [str(dates[40])])
+        # the experiment must FAIL the implementation that was actually
+        # shipped before the review fix — a vacuous test could not
+        assert res["status"] == "FAIL" and res["diff_count"] == 1
+
+    def test_scoped_verdict_reducer(self):
+        assert leak.scoped_verdict([{"status": "PASS"}], {"status": "PASS"}) == "P0_4_SCOPED_PASS"
+        assert leak.scoped_verdict([{"status": "PASS"}], {"status": "FAIL"}) == "P0_4_FAIL"
+        assert leak.scoped_verdict([{"status": "LOOKAHEAD_FAIL"}], {"status": "PASS"}) == "P0_4_FAIL"
+        assert leak.scoped_verdict([], {"status": "PASS"}) == "P0_4_UNKNOWN"
+        assert leak.scoped_verdict([{"status": "UNKNOWN"}], {"status": "PASS"}) == "P0_4_UNKNOWN"

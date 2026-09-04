@@ -51,6 +51,18 @@ def api_command_for_path(path: str) -> list[str] | None:
     return None
 
 
+ATTENTION_STATE = REPO_ROOT / "workspace/artifacts/quant/trading/state.json"
+
+
+def attention_state() -> dict:
+    """M1 monitor state for /api/attention — a file read, never a scan run:
+    the fast loop owns scanning; the page only projects its artifacts."""
+    try:
+        return json.loads(ATTENTION_STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"status": "UNKNOWN", "reason": "monitor has not run yet"}
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):  # keep access logs bounded
         sys.stderr.write(f"[serve] {format % args}\n")
@@ -77,6 +89,10 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 return
             self._send(200, body, "text/html; charset=utf-8")
+            return
+        if self.path == "/api/attention":
+            body = json.dumps(attention_state(), ensure_ascii=False, default=str).encode("utf-8")
+            self._send(200, body, "application/json", no_store=True)
             return
         cmd = api_command_for_path(self.path)
         if cmd is not None:

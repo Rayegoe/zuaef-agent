@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from datetime import datetime
@@ -47,7 +48,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import pandas as pd
 import requests
-from quant_core import TZ_SHANGHAI, load_config, read_cache, to_tx_symbol
+from quant_core import (
+    TZ_SHANGHAI,
+    history_cache_is_current,
+    load_config,
+    read_cache,
+    to_tx_symbol,
+)
 
 CACHE_DIR = Path("data/quant-cache")
 QUOTE_URL = "https://qt.gtimg.cn/q="
@@ -155,19 +162,42 @@ def fetch_batch_quotes(symbols: list[str], *, max_batches_fail: int = 2) -> dict
 def timing_from_quote_hist(quote: dict, hist: pd.DataFrame) -> tuple[float, float] | None:
     """S3-compatible timing inputs from live quote + cached daily history.
 
-    Returns (pullback_5d, volume_ratio_20d) using the same definitions as the
-    frozen S3 evaluation: pullback vs the close 5 cached sessions back, today's
-    cumulative volume vs the 20-session full-day average.
+    Date-aligned to the quote (review fix 2026-09-03): rows on or after the
+    quote date are dropped before the lookbacks. The quote is the
+    authoritative price/volume for its date, so the reference close is the
+    5th cached session STRICTLY before the quote date — matching the frozen
+    evaluation's Ref(close, 5) at day T (cache ending at T-1 must yield
+    iloc[-5], not iloc[-6]) — and MA20 uses the 20 sessions before the
+    quote date. This is immune to a cache that already contains the quote
+    date (partial intraday row) and cannot read past a stale quote. A quote
+    without a date fails closed (None); alignment is never guessed.
     """
-    hist = hist.sort_values("date")
+    if hist is None or not {"date", "close", "volume"} <= set(hist.columns):
+        return None
+    quote_day = pd.to_datetime(str(quote.get("date", "")), format="mixed", errors="coerce")
+    hist_days = pd.to_datetime(hist["date"], format="mixed", errors="coerce")
+    if pd.isna(quote_day) or hist_days.isna().any():
+        return None
+    # The live quote is authoritative for T.  Cached daily rows are reference
+    # sessions only, so exclude T as well as every row after T.
+    hist = hist.loc[hist_days < quote_day].copy()
+    hist["_day"] = hist_days.loc[hist.index]
+    hist = hist.sort_values("_day")
     if len(hist) < 25:
         return None
-    close_5d = float(hist["close"].iloc[-6])
-    volume_ma20 = float(hist["volume"].tail(20).mean())
-    if volume_ma20 <= 0 or close_5d <= 0:
+    try:
+        close_5d = float(hist["close"].iloc[-5])
+        volume_ma20 = float(hist["volume"].tail(20).mean())
+        price = float(quote["price"])
+        volume = float(quote["volume"])
+    except (KeyError, TypeError, ValueError):
         return None
-    pullback = quote["price"] / close_5d - 1
-    ratio = quote["volume"] / volume_ma20
+    if not all(math.isfinite(v) for v in (close_5d, volume_ma20, price, volume)):
+        return None
+    if volume_ma20 <= 0 or close_5d <= 0 or price <= 0 or volume < 0:
+        return None
+    pullback = price / close_5d - 1
+    ratio = volume / volume_ma20
     return pullback, ratio
 
 
@@ -242,24 +272,67 @@ def resolve_universe(
     )
 
 
-def load_volume_semantics(evidence_dir: Path = SEMANTIC_DIR) -> dict:
+def volume_gate_suppresses(status: str) -> bool:
+    """Fail closed: only a proven PASS may arm the volume trigger clause.
+
+    FAIL (broken unit or a detected quote anomaly), INSUFFICIENT_EVIDENCE
+    (cache semantics unproven), UNKNOWN and STALE all suppress — an
+    unproven volume semantic must never manufacture entry evidence.
+    """
+    return status != "PASS"
+
+
+def load_volume_semantics(
+    evidence_dir: Path = SEMANTIC_DIR,
+    *,
+    expected_symbols: list[str] | None = None,
+    universe_as_of: str | None = None,
+) -> dict:
     """Latest P0.1 semantic proof -> status block consumed by the scan.
 
-    Only a proven FAIL suppresses triggers. Missing or unreadable evidence
-    is UNKNOWN — surfaced, never silently treated as PASS.
+    Only a proven PASS arms triggers; every other state suppresses them
+    (volume_gate_suppresses).  Missing or unreadable evidence is UNKNOWN —
+    surfaced, never silently treated as PASS.  The proof's two sub-verdicts
+    (persistent ingest semantics, today's quote health) are surfaced
+    verbatim so a PASS whose same-date cross-check is PENDING reads as
+    such, not as silent re-verification.
     """
     proofs = sorted(evidence_dir.glob("semantic_proof_*.json"))
     if not proofs:
-        return {"status": "UNKNOWN", "evidence": None, "reason": "no semantic proof run yet"}
+        return {
+            "status": "UNKNOWN",
+            "evidence": None,
+            "reason": "no semantic proof run yet",
+            "ingest_semantics": None,
+            "quote_health": None,
+        }
     latest = proofs[-1]
     try:
         proof = json.loads(latest.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return {"status": "UNKNOWN", "evidence": str(latest), "reason": "semantic proof unreadable"}
+        return {
+            "status": "UNKNOWN",
+            "evidence": str(latest),
+            "reason": "semantic proof unreadable",
+            "ingest_semantics": None,
+            "quote_health": None,
+        }
+    status = str(proof.get("status", "UNKNOWN"))
+    reason = str(proof.get("reason", ""))
+    if status == "PASS" and universe_as_of is not None and proof.get("universe_as_of") != universe_as_of:
+        status = "STALE"
+        reason = "semantic proof belongs to a different candidate-pool generation"
+    if status == "PASS" and expected_symbols is not None:
+        validated = {str(s) for s in proof.get("validated_symbols", [])}
+        if validated != set(expected_symbols):
+            status = "STALE"
+            reason = "semantic proof symbol set does not match the resolved universe"
     return {
-        "status": str(proof.get("status", "UNKNOWN")),
+        "status": status,
         "evidence": str(latest),
-        "reason": str(proof.get("reason", "")),
+        "reason": reason,
+        "ingest_semantics": (proof.get("ingest_semantics") or {}).get("status"),
+        "quote_health": (proof.get("same_date_cross_check") or {}).get("status"),
     }
 
 
@@ -282,7 +355,6 @@ def main() -> int:
     args = parser.parse_args()
 
     active_cfg = load_config(args.strategy)
-    volume_semantics = load_volume_semantics()
     try:
         resolved = resolve_universe(args.universe_file)
     except UniverseError as exc:
@@ -290,6 +362,10 @@ def main() -> int:
         return 2
     symbols = resolved["symbols"]
     universe_source = resolved["source"]
+    volume_semantics = load_volume_semantics(
+        expected_symbols=symbols,
+        universe_as_of=resolved["as_of"],
+    )
 
     cons_500, _ = read_cache("universe", "csi500_cons", CACHE_DIR)
     cons_300, _ = read_cache("universe", "csi300_cons", CACHE_DIR)
@@ -314,14 +390,16 @@ def main() -> int:
         if quote is None or quote["price"] <= 0:
             quotes_detail.append({**base, "quote": False, "reason": "no_quote"})
             continue
-        hist, _ = read_cache("daily", f"{symbol}_qfq", CACHE_DIR)
-        if hist is None:
+        hist, hist_meta = read_cache("daily", f"{symbol}_qfq", CACHE_DIR)
+        if hist is None or hist_meta is None or not history_cache_is_current(
+            hist, hist_meta, symbol=symbol, adjust="qfq", start_date="20180101"
+        ):
             quotes_detail.append(
                 {
                     **base,
                     "quote": True,
                     "price": round(quote["price"], 2),
-                    "reason": "insufficient_history",
+                    "reason": "invalid_or_insufficient_history_cache",
                 }
             )
             continue
@@ -372,9 +450,10 @@ def main() -> int:
     triggers = triggers[: args.max_triggers]
 
     suppressed_count = 0
-    if volume_semantics["status"] == "FAIL":
-        # spec P0.1: no canonical volume unit -> the volume clause cannot be
-        # trusted; fail closed instead of manufacturing entry evidence.
+    if volume_gate_suppresses(volume_semantics["status"]):
+        # spec P0.1, review-tightened 2026-09-03: only PASS arms the volume
+        # clause; FAIL/WARN/UNKNOWN/INSUFFICIENT all fail closed instead of
+        # manufacturing entry evidence.
         suppressed_count = len(triggers)
         triggers = []
         for q in quotes_detail:
@@ -410,11 +489,12 @@ def main() -> int:
         "quotes": quotes_detail,
         "triggers": triggers,
         "limitation": (
-            "volume_ratio uses today's cumulative volume vs full-day 20d average — "
-            "intraday it understates; triggers are deterministic evidence, not orders"
+            "volume_ratio uses today's cumulative volume vs the 20 sessions before "
+            "the quote date (intraday it understates); triggers are deterministic "
+            "evidence, not orders"
             + (
-                "; VOLUME SEMANTICS FAIL: cached volume unit not canonical, triggers "
-                "suppressed fail closed (spec P0.1)"
+                f"; VOLUME SEMANTICS {volume_semantics['status']}: triggers suppressed "
+                "fail closed (spec P0.1)"
                 if suppressed_count
                 else ""
             )

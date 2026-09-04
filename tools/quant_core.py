@@ -31,6 +31,8 @@ TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")
 CACHE_DIR = Path("data/quant-cache")
 
 REQUIRED_HISTORY_COLUMNS = ("date", "open", "high", "low", "close", "volume")
+HISTORY_CACHE_SCHEMA = 2
+HISTORY_NORMALIZATION = "volume-shares-v1"
 
 
 def to_tx_symbol(code: str) -> str:
@@ -68,6 +70,42 @@ def write_cache(kind: str, key: str, df: pd.DataFrame, meta: dict, cache_dir: Pa
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(csv_path, index=False)
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def history_cache_is_current(
+    df: pd.DataFrame,
+    meta: dict,
+    *,
+    symbol: str,
+    adjust: str,
+    start_date: str,
+) -> bool:
+    """Return whether a daily cache satisfies the current ingestion contract.
+
+    This deliberately validates both the sidecar and basic CSV facts.  A cache
+    written before volume normalization cannot be silently reused merely
+    because its files exist.
+    """
+    if not isinstance(meta, dict) or df.empty:
+        return False
+    expected_adjust = adjust or "raw"
+    if any(col not in df.columns for col in (*REQUIRED_HISTORY_COLUMNS, "symbol")):
+        return False
+    if (
+        meta.get("cache_schema") != HISTORY_CACHE_SCHEMA
+        or meta.get("normalization") != HISTORY_NORMALIZATION
+        or meta.get("volume_unit") != "share"
+        or meta.get("symbol") != symbol
+        or meta.get("adjust") != expected_adjust
+        or meta.get("start_date") != start_date
+        or meta.get("rows") != len(df)
+    ):
+        return False
+    dates = pd.to_datetime(df["date"], errors="coerce")
+    if dates.isna().any() or (df["symbol"].astype(str) != symbol).any():
+        return False
+    actual_range = [str(dates.min().date()), str(dates.max().date())]
+    return meta.get("date_range") == actual_range
 
 
 # Volume semantic (spec v2.0 P0.1): amount/(volume*close) clusters at ~1 when
@@ -118,8 +156,17 @@ def fetch_history(symbol: str, adjust: str, *, refresh: bool = False, cache_dir:
     """Fetch normalized daily history (Tencent path); cache; never mask failure."""
     key = f"{symbol}_{adjust or 'raw'}"
     if not refresh:
-        df, meta = read_cache("daily", key, cache_dir)
-        if df is not None and meta is not None and meta.get("start_date") == start_date:
+        try:
+            df, meta = read_cache("daily", key, cache_dir)
+        except (OSError, ValueError, pd.errors.ParserError):
+            df, meta = None, None
+        if (
+            df is not None
+            and meta is not None
+            and history_cache_is_current(
+                df, meta, symbol=symbol, adjust=adjust, start_date=start_date
+            )
+        ):
             return df, meta, "cache"
     import akshare as ak
 
@@ -151,6 +198,8 @@ def fetch_history(symbol: str, adjust: str, *, refresh: bool = False, cache_dir:
     df = df[keep].sort_values("date").reset_index(drop=True)
     df, volume_info = normalize_volume_unit(df)
     meta = {
+        "cache_schema": HISTORY_CACHE_SCHEMA,
+        "normalization": HISTORY_NORMALIZATION,
         "source": "akshare.stock_zh_a_hist_tx",
         "symbol": symbol,
         "adjust": adjust or "raw",
@@ -505,8 +554,14 @@ class ReplayEngine:
             equity = self.portfolio.cash
             for symbol, position in self.portfolio.positions.items():
                 closes = self._close_series.get(symbol)
-                close = float(closes.loc[today]) if closes is not None and today in closes.index else None
-                equity += position["shares"] * (close if close is not None else position["entry_price"])
+                close = None
+                if closes is not None:
+                    known = closes.loc[closes.index <= today].dropna()
+                    if len(known):
+                        close = float(known.iloc[-1])
+                equity += position["shares"] * (
+                    close if close is not None else position["entry_price"]
+                )
             self.equity_rows.append({"date": today, "equity": equity, "cash": self.portfolio.cash})
         return {
             "fills": self.fills,
@@ -524,9 +579,15 @@ class ReplayEngine:
 def compute_metrics(equity: pd.DataFrame, fills: list[FillRecord], rules: MarketRules) -> dict:
     eq = equity["equity"].astype(float)
     days_per_year = 244
-    total_return = float(eq.iloc[-1] / eq.iloc[0] - 1) if len(eq) > 1 else 0.0
+    total_return = (
+        float(eq.iloc[-1] / rules.initial_capital - 1) if len(eq) else 0.0
+    )
     years = len(eq) / days_per_year
-    annualized = float((eq.iloc[-1] / eq.iloc[0]) ** (1 / years) - 1) if years > 0 and eq.iloc[0] > 0 else 0.0
+    annualized = (
+        float((eq.iloc[-1] / rules.initial_capital) ** (1 / years) - 1)
+        if years > 0 and rules.initial_capital > 0 and eq.iloc[-1] > 0
+        else 0.0
+    )
     running_max = eq.cummax()
     drawdown = eq / running_max - 1
     sells = [f for f in fills if f.action == "SELL"]
@@ -557,3 +618,82 @@ def trade_records(fills: list[FillRecord]) -> pd.DataFrame:
         for f in fills
     ]
     return pd.DataFrame(rows, columns=["date", "symbol", "action", "shares", "price", "cost", "reason"])
+
+
+def detect_corporate_action_dates(
+    raw: pd.DataFrame,
+    qfq: pd.DataFrame,
+    *,
+    minimum_segment: int = 10,
+    absolute_tolerance: float = 0.05,
+) -> list[date]:
+    """Detect dates where the qfq/raw adjustment factor changes materially.
+
+    The replay does not implement dividends or share-count adjustments.  This
+    detector is therefore a conservative trust gate, not corporate-action
+    accounting: trades crossing one of these dates must be labelled
+    unsupported instead of silently entering trusted metrics.
+    """
+    left = raw[["date", "close"]].rename(columns={"close": "raw_close"}).copy()
+    right = qfq[["date", "close"]].rename(columns={"close": "qfq_close"}).copy()
+    left["date"] = pd.to_datetime(left["date"], errors="coerce")
+    right["date"] = pd.to_datetime(right["date"], errors="coerce")
+    joined = left.merge(right, on="date", how="inner").sort_values("date")
+    joined = joined[(joined["raw_close"] > 0) & (joined["qfq_close"] > 0)]
+    if len(joined) <= minimum_segment:
+        return []
+    # Within one adjustment regime Tencent raw and qfq closes have a stable
+    # affine mapping.  A dividend/split boundary changes that mapping.  Fit
+    # the established segment, detect an out-of-regime residual, then reset;
+    # this avoids treating ordinary price moves as corporate actions.
+    segment: list[tuple[float, float]] = []
+    events: list[date] = []
+    for row in joined.itertuples(index=False):
+        raw_close, qfq_close = float(row.raw_close), float(row.qfq_close)
+        if len(segment) >= minimum_segment:
+            sample = segment[-60:]
+            slope, intercept = statistics.linear_regression(
+                [p[0] for p in sample], [p[1] for p in sample]
+            )
+            residuals = [abs(y - (slope * x + intercept)) for x, y in sample]
+            tolerance = max(
+                absolute_tolerance,
+                8.0 * (statistics.median(residuals) + 0.005),
+            )
+            if abs(qfq_close - (slope * raw_close + intercept)) > tolerance:
+                events.append(pd.Timestamp(row.date).date())
+                segment = []
+        segment.append((raw_close, qfq_close))
+    return events
+
+
+def unsupported_corporate_action_trades(
+    fills: list[FillRecord],
+    prices_raw: dict[str, pd.DataFrame],
+    prices_qfq: dict[str, pd.DataFrame],
+) -> list[dict]:
+    """Return settled trades that cross an unsupported adjustment event."""
+    action_dates = {
+        symbol: detect_corporate_action_dates(prices_raw[symbol], prices_qfq[symbol])
+        for symbol in prices_raw.keys() & prices_qfq.keys()
+    }
+    entries: dict[str, date] = {}
+    unsupported: list[dict] = []
+    for fill in sorted(fills, key=lambda f: f.date):
+        if fill.action == "BUY":
+            entries.setdefault(fill.symbol, fill.date)
+            continue
+        entry = entries.pop(fill.symbol, None)
+        if entry is None:
+            continue
+        crossed = [d for d in action_dates.get(fill.symbol, []) if entry < d <= fill.date]
+        if crossed:
+            unsupported.append(
+                {
+                    "symbol": fill.symbol,
+                    "entry_date": str(entry),
+                    "exit_date": str(fill.date),
+                    "detected_action_dates": [str(d) for d in crossed],
+                }
+            )
+    return unsupported
