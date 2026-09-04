@@ -19,9 +19,17 @@ sources:
   resource: profiles/quant-decision.toml
   title: Quant-decision profile
   evidence: "plugin quant; allow_capabilities = true"
+- id: sources/zuaef-quant
+  resource: tools/quant_trading_monitor.py
+  title: M1 live trading monitor CLI
+  evidence: "once/session/ack-buy/ack-sell/status; --state-dir; MARKET_CLOSED/SYSTEM_UNAVAILABLE/NO_TRADE"
+- id: sources/zuaef-quant
+  resource: tools/quant_p05_reconcile.py
+  title: P0.5 reconcile CLI
+  evidence: "--config benchmarks/quant/gen1/quant.toml; attribution classes"
 generated:
   by: zuaef-agent
-  date: 2026-09-02
+  date: 2026-09-04
 ---
 
 # 观察模式日常运行
@@ -52,7 +60,48 @@ ZUAEF_QUANT_REPO_ROOT=$PWD \
 signal timestamp、strategy name、why/invalidation/expected_holding、raw trigger facts 或 'none'）→ 停止。
 **不调其他工具、不写文件。**
 
-快速看盘（不起 Agent、不产 brief、不耗模型）：
+## M1 交易时段循环（v0.1，spec v2.0-optimized M1；2026-09-04 增补）
+
+交易时段内的连续盯盘由确定性循环接管（Agent 不轮询；实质变化才进告警流）：
+
+```bash
+# 交易时段内连续盯盘（30–60s 间隔）
+.venv/bin/python tools/quant_trading_monitor.py session --interval 45
+# 单次扫描（等价于一次循环节拍，退出码报告机会状态）
+.venv/bin/python tools/quant_trading_monitor.py once
+# 用户成交确认（EXECUTED，唯一置位路径；价格/股数由用户给出）
+.venv/bin/python tools/quant_trading_monitor.py ack-buy --symbol 600000 --price 10.5 --shares 500
+# 持仓平仓确认
+.venv/bin/python tools/quant_trading_monitor.py ack-sell --symbol 600000 --price 10.9 --shares 500
+# 当前状态一览
+.venv/bin/python tools/quant_trading_monitor.py status
+```
+
+- 机会生命周期 **WATCH → NEAR → READY → INVALIDATED**；`EXECUTED` 只能由 `ack-buy` 置位
+  （人为外部动作，绝不自动成交）。NEAR=到冻结入场条款的最差归一化剩余差距在近带内；
+  READY=冻结扫描触发 + 语义门武装。
+- 持仓为一等公民：仅由 ack-buy 创建、按冻结 S3 退出规则监控（止损/止盈/收盘破 MA5/最大持有天数）、
+  仅由 ack-sell 关闭。
+- forward 观察（D+1/3/5/8、MFE/MAE）只对真实 NEAR/READY/EXECUTED/CLOSED 记录从缓存日线累积——
+  绝不 mock、绝不回填成成交。
+- 状态落 `workspace/artifacts/quant/trading/`；`--state-dir` 隔离 fixture/重放与真实结果。
+- 业务区分：`MARKET_CLOSED`（非交易时段，无合成活动）/ `SYSTEM_UNAVAILABLE`（断连/数据不可信，
+  绝不报成 NO_TRADE）/ `NO_TRADE`（数据健康但冻结策略无触发）。
+
+## P0.5 双引擎对账（2026-09-04 增补；spec pack 03 P0.5）
+
+独立重放与研究面的一致性不是靠 NAV 相等，而是逐笔归因；验证后无需每日跑：
+
+```bash
+.venv-quant/bin/python tools/quant_p05_reconcile.py [--config benchmarks/quant/gen1/quant.toml]
+```
+
+同策略+同 intents（重生成 intents 元素级比对证明可复现）→ Qlib 向量面（qfq、market_truth OFF）
++ 独立重放（raw、market_truth ON）→ 逐笔对账+聚合对比。差异归因 A–F（市场规则差/不支持对等/
+Qlib 局限/引擎 bug/无法解释）；任何无法解释的残留 = P0.5 失败。详见 quant-execution-truth。
+
+## 快速看盘（不起 Agent）
+
 ```bash
 uv run --group quant python tools/quant_live_scan.py
 ```

@@ -8,9 +8,13 @@ tags:
 - agent-design
 sources:
 - id: sources/zuaef-quant
-  resource: zuaef-ashare-decision-agent-spec-v1.0-final/00_README.md
-  title: Spec pack entry (ZUAEF-ASHARE-001 v1.0-final)
-  evidence: "One-sentence definition; Business outcomes; Build order; Highest-priority rule"
+  resource: zuaef-quant-final-spec-v2.0-optimized/00_START_HERE.md
+  title: Final spec v2.0 (optimized, executable baseline 2026-09-03)
+  evidence: "Status FINAL/EXECUTABLE; North Star; spec v2.0 replaces v1.1/v1.2; product success"
+- id: sources/zuaef-quant
+  resource: zuaef-quant-final-spec-v2.0-optimized/02_AGENT_AND_HARNESS.md
+  title: Agent participation + live decision harness
+  evidence: "deterministic layer vs Agent layer; Decision Mode; Research Mode; Agent is not the polling loop"
 - id: sources/zuaef-quant
   resource: docs/quant/README.md
   title: ZUAEF A股决策 Agent 实现总结与实操指南
@@ -20,12 +24,16 @@ sources:
   title: Program status (frozen 2026-09-02)
   evidence: "P5.5 ENGINEERING FREEZE; proof table"
 - id: sources/zuaef-quant
-  resource: zuaef-ashare-decision-agent-spec-v1.0-final/02_ARCHITECTURE.md
-  title: Technical architecture
-  evidence: "§1 authority boundaries; §8 no second runtime"
+  resource: tools/quant_trading_monitor.py
+  title: M1 Live Trading Loop v0.1
+  evidence: "session loop; opportunity lifecycle; ack-buy/ack-sell; state dir"
+- id: sources/zuaef-quant
+  resource: tools/quant_p05_reconcile.py
+  title: P0.5 dual-engine reconciliation
+  evidence: "same frozen inputs; attribution classes A-F; residual UNEXPLAINED fails P0.5"
 generated:
   by: zuaef-agent
-  date: 2026-09-02
+  date: 2026-09-04
 ---
 
 # 项目总览
@@ -54,6 +62,23 @@ ZUAEF Agent Core（业务域中立，零量化改动）
                  └─ 确定性工具：quant_core / quant_eval_qlib / quant_live_scan
                       └─ 数据面：akshare 1.18.94（腾讯历史/新浪快照/CSIndex 成分/qt.gtimg.cn 实时）
 ```
+
+2026-09-03/04 增补（spec v2.0-optimized 实现）：
+
+```text
+确定性侧新增两个工具（Agent 不轮询、不结算）：
+├─ quant_trading_monitor（M1 交易时段循环，30–60s）
+│    活跃 watch 宇宙 → 报价 → 时机 → 策略条件 → 机会状态机（WATCH/NEAR/READY/INVALIDATED）
+│    → 实质变化告警流；EXECUTED 仅由用户 ack-buy 置位；持仓按冻结 S3 退出规则监控
+│    状态落 workspace/artifacts/quant/trading/（file-native，无新平台）
+└─ quant_p05_reconcile（P0.5 双引擎对账）
+     同一冻结策略+同一冻结 intents → Qlib 研究面（qfq，market_truth OFF）
+     vs 独立 A 股重放（raw，market_truth ON）→ 逐笔对账 + 聚合对比
+     差异必归因（A 市场规则差  B 不支持对等  C Qlib 局限  D/E bug  F 无法解释）；F 残留= P0.5 失败
+```
+
+权威 spec：`zuaef-quant-final-spec-v2.0-optimized/`（EXECUTABLE，2026-09-03 基线 main）
+为当前执行契约；`zuaef-quant-final-spec-v2.0-clean/` 为可读精校版；v1.0-final 保留为历史。
 
 重依赖（akshare、pyqlib）**永不进 Agent 主环境**——评估/扫描在侧环境 `.venv-quant`
 （Python 3.12）以 subprocess 执行；插件包自身不背这些库（P3 设计，README §2）。
@@ -85,4 +110,6 @@ P2 独立执行重放 → P3 能力接入 → P4 三轮模型进化 → P5 实�
 | Profitability Proof | **NOT YET**（最好子策略 ≈ +0.37% 年化/29 笔，噪声内，有意停止 in-sample 追寻） |
 | Live Decision Product | **FIRST PROOF PASS**（2026-09-02 盘中实测 NO_TRADE，86s 端到端延迟） |
 
-**当前阶段**：P5.5 ENGINEERING FREEZE —— 代码冻结，转入"run → observe → record → judge"观察模式。
+**当前阶段**：P5.5 ENGINEERING FREEZE 持续 —— 观察模式本体已由 M1 交易时段循环 v0.1 接管
+（连续盯盘 + 持仓管理 + forward 观察，见 quant-live-ops）；P0.5 双引擎对账已实现并进入可信对等路径。
+代码仍冻结：新功能必须来自真实市场派发的任务。

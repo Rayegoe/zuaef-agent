@@ -20,12 +20,20 @@ sources:
   title: DEMO_ACTIVE_STRATEGY (frozen S3)
   evidence: "provenance block; all strategy params"
 - id: sources/zuaef-quant
+  resource: zuaef-quant-final-spec-v2.0-optimized/00_GLOBAL_STRATEGY.md
+  title: Spec v2.0 global strategy
+  evidence: "M1 monitoring near-band; frozen entry clauses; exit rules"
+- id: sources/zuaef-quant
+  resource: tools/quant_trading_monitor.py
+  title: M1 trading monitor
+  evidence: "WATCH/NEAR/READY/INVALIDATED lifecycle; EXECUTED via ack-buy"
+- id: sources/zuaef-quant
   resource: docs/quant/README.md
   title: Implementation summary
   evidence: "§2 P1/P4; §3.3 冻结权威与工件地图"
 generated:
   by: zuaef-agent
-  date: 2026-09-02
+  date: 2026-09-04
 ---
 
 # 策略机制
@@ -35,6 +43,7 @@ generated:
 ```text
 Strategy = Universe + Entry + Exit + Holding + Risk boundary + Position sizing
 ```
+
 因子可能有用，但现金流来自一个**完整可执行的策略**——不是单个因子。
 
 ## StrategySpec：最小 TOML ABI（spec 05 §2-3）
@@ -43,6 +52,19 @@ Strategy = Universe + Entry + Exit + Holding + Risk boundary + Position sizing
   max_holding_days、stop_loss_pct、take_profit_pct、position_fraction、max_positions。
 - **禁止任意 Python**；评估器按白名单校验（插件 `validate_spec`，越界报错）。
 - 表达式复用 Qlib 已验证算子（`Ref`/`Mean`），不发明通用量化 DSL。
+
+## M1 机会生命周期（spec v2.0-optimized M1 §6；tools/quant_trading_monitor.py）
+
+同一冻结策略在交易时段以状态机落地，入场/退出条款不被改写：
+
+```text
+WATCH（进入监控近带）→ NEAR（最差归一化剩余差距在近带内）→ READY（=冻结扫描触发+语义门）
+→ INVALIDATED；EXECUTED 仅由用户 ack-buy 置位
+```
+
+- NEAR 是真实计算：到冻结入场条款（pullback、volume ratio、1d strength）的差距，不是印象值。
+- 退出不变：止损/止盈/收盘破 MA5/最大持有天数（冻结 S3 规则）——监控器按同一 active.toml 执行。
+- 监控器不产生新策略语义，只把既有冻结条款搬到时间维度（M1 近带参数来自 spec，不来自模型）。
 
 ## gen1 基线策略 `volume_pullback_reversal`（strategy.toml）
 
@@ -57,7 +79,7 @@ Strategy = Universe + Entry + Exit + Holding + Risk boundary + Position sizing
 ## DEMO_ACTIVE_STRATEGY = `s3_longer_hold`（active.toml，冻结）
 
 | 参数 | 值 |
-|---|---|
+| --- | --- |
 | entry_pullback_max | −0.05（S1 从 −0.06 放宽） |
 | entry_volume_ratio_min | 1.80（S2 曾试 2.2，被证据否决） |
 | max_holding_days | 8（S3 从 5 延长） |
@@ -79,7 +101,7 @@ Strategy = Universe + Entry + Exit + Holding + Risk boundary + Position sizing
 ## 历史进化记录（active.toml provenance；README §2 P4）
 
 | 轮次 | 变更 | 年化（独立重放） | 笔数 | 结论 |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | 基线 | — | +0.20% | 24 | 平进平出 |
 | S1 | 回撤 −0.06→−0.05 | +0.34% | 29 | 改善 |
 | S2 | 量比 1.8→2.2 | +0.01% | 9 | 被证据否决（Result 自写 "hypothesis not supported"） |

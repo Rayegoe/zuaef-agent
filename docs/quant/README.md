@@ -1,6 +1,7 @@
 # ZUAEF A股决策 Agent — 实现总结与实操指南
 
-**Spec:** `ZUAEF-ASHARE-001` v1.0-final · **状态:** ENGINEERING FREEZE(P5.5 观察模式,2026-09-02 起生效)
+**Spec:** `ZUAEF-ASHARE-001` v2.0-final(2026-09-03, 基线 main; 见 zuaef-quant-final-spec-v2.0-optimized/) · v1.0-final 为历史
+**状态:** ENGINEERING FREEZE(P5.5 观察模式,2026-09-02 起生效)
 **当前阶段判断:** 工程链路已足够完整;最大的未知数已从"软件能不能工作"变成"它在真实市场里有没有用"。下一张 task 由真实市场派发,不由排期派发。
 
 **2026-09-02 增补 · 业务看板与候选发现(Quant Business Dashboard + Candidate Discovery v1.0):**
@@ -10,6 +11,20 @@
 只诊断不自动晋级; 2026-09-02 起含截图追加的 11 只自选股, 名单由用户提名扩充)/ `candidate_pool`(CSI300∪CSI500 筛出的 20–50 只证据排名)/ `action_candidates`
 (活跃策略在候选池上的确定性触发,0–10 只)。**候选排名不是买入建议;盈利能力仍未证明**;实时动作依旧
 必须来自既有确定性触发证据。详见 §5.7 与 `benchmarks/quant/gen1/candidates_policy.toml`。
+
+**2026-09-04 增补 · M1 交易时段循环 + P0.5 双引擎对账 + Final Spec v2.0:**
+① `tools/quant_trading_monitor.py`(M1 Live Trading Loop v0.1):交易时段内连续盯盘循环(30–60s),
+机会状态机 WATCH→NEAR→READY→INVALIDATED,`EXECUTED` 仅由用户 `ack-buy` 置位;持仓为一等公民
+(仅 ack-buy 创建/ack-sell 关闭,按冻结 S3 退出规则监控);forward 观察(D+1/3/5/8、MFE/MAE)只从缓存
+日线对真实记录累积,绝不 mock/回填。状态落 `workspace/artifacts/quant/trading/`。**Agent 不轮询**:
+循环全确定性,实质状态变化进告警流后由 Agent 事后解读(详见 spec 02)。
+② `tools/quant_p05_reconcile.py`(P0.5):同一冻结策略+同一冻结 intents 双引擎逐笔对账——Qlib 研究面
+(qfq, market_truth OFF)vs 独立 A 股重放(raw, market_truth ON),差异必归因(A 市场规则差/B 不支持对等/
+C Qlib 局限/D-E bug/F 无法解释),**任何 UNEXPLAINED 残留 = P0.5 失败**。验证通过后无需每日跑。
+③ 权威 spec 升级为 `zuaef-quant-final-spec-v2.0-optimized/`(EXECUTABLE);`zuaef-quant-final-spec-v2.0-clean/`
+为可读精校版;产品北星=`select → monitor → decide → manage → observe → learn`。
+另:评估/审计工具(quant_core/live_scan/anti_leakage/pit_audit/eval_qlib/validate_semantics)随冻结期
+修订同步更新;business/dashboard 快照刷新。日常操作索引见 `workspace/knowledge/concepts/quant-live-ops.md`。
 
 ---
 
@@ -92,7 +107,7 @@ Live Decision Product    FIRST PROOF PASS(交互式;watcher 有意未建)
 三轮全新 `zuaef-agent run --profile quant-decision`,每轮**一个实质 mutation**,读上轮证据、调一次 evaluate_strategy、自写 Strategy Result:
 
 | 轮次 | 变更 | 年化(replay) | 笔数 | 结论 |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | 基线 | — | +0.20% | 24 | 平进平出 |
 | S1 | 回撤 −0.06→−0.05 | **+0.34%** | 29 | 改善 |
 | S2 | 量比 1.8→2.2 | +0.01% | 9 | **被证据否决** |
@@ -172,7 +187,7 @@ validate spec(白名单数值字段;任意 Python 永不越过边界)
 ### 3.3 冻结权威与工件地图
 
 | 路径 | 角色 |
-|---|---|
+| --- | --- |
 | `benchmarks/quant/gen1/quant.toml` | 冻结市场规则/成本/基准窗口(生效日期化) |
 | `benchmarks/quant/gen1/strategy.toml` | gen1 基线策略(默认参数的出处) |
 | `benchmarks/quant/gen1/active.toml` | **DEMO_ACTIVE_STRATEGY = s3_longer_hold(冻结)** |
@@ -208,7 +223,7 @@ validate spec(白名单数值字段;任意 Python 永不越过边界)
 ### 已证明(全部有工件证据)
 
 | 能力 | 证据 |
-|---|---|
+| --- | --- |
 | 真实行情接入(历史/成分/快照/新鲜度) | `workspace/artifacts/quant/p0-data-proof-2026-08-28.log` |
 | 确定性策略评估(Qlib + 双引擎 + 成本) | `workspace/artifacts/quant/gen1/evidence.json` |
 | A股执行真相重放(T+1/涨跌停/停牌/整手/成本) | `tests/test_quant_replay.py` 14 项全绿 |
@@ -298,7 +313,7 @@ MFE(期间最大有利偏移)/ MAE(最大不利偏移)
 ### 5.5 观察期只看五个指标
 
 | 指标 | 回答的问题 |
-|---|---|
+| --- | --- |
 | Trigger frequency | 有没有足够交易机会 |
 | Signal→Brief latency | Agent 是否赶得上 |
 | Signal→Brief price drift | 延迟是否造成真实经济损失 |
@@ -339,6 +354,7 @@ active_candidates         data/quant-cache/candidates/active_symbols.json
 ```
 
 关键规则:
+
 - **候选排名不是买入建议**——它只是"值得研究/关注"的注意力排序;实际动作仍需确定性触发 + Agent 判定 + 人工决策。
 - 空/失败宇宙必须响亮失败:空 `active_symbols.json` 会让 `quant_daily.sh` 与 `/api/scan` 报错,绝不能把 `0 scanned / 0 trigger` 当成合法的 `NO_TRADE` 市场结论。
 - 评分每个成分都透明(原始指标 + 百分位 + 缺失字段 + 理由 + 红旗),权重与阈值全部在 `benchmarks/quant/gen1/candidates_policy.toml`,不在代码里。负 PE 按缺失处理,不是"很便宜"。
@@ -386,7 +402,7 @@ source/retrieved_at/freshness/fallback 标注;财报新鲜度按"报告期"计(�
 具体触发映射(真实问题 → 才允许做的事):
 
 | 观察到的真实问题 | 才允许开发 |
-|---|---|
+| --- | --- |
 | 每天手动跑 N 次太烦 | watch scheduler |
 | brief 积累到几十个、人工结算吃力 | paper settlement(按当时真正需要的字段设计) |
 | 行情延迟/失败率影响判断 | 更换付费/broker 数据源 |
@@ -440,7 +456,7 @@ uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.p
 ### 7.2 故障排查
 
 | 症状 | 原因 | 处置 |
-|---|---|---|
+| --- | --- | --- |
 | `EastMoney / SSL EOF / RemoteDisconnected` | 本网络对 EastMoney 被拒 | 正常;数据面已是腾讯/新浪/CSIndex。若腾讯报价也失败,检查 `qt.gtimg.cn` 可达性 |
 | 历史抓取偶发 SSL 失败 | 腾讯限流 | 引擎内已有有界重试(2s/8s);重跑即可 |
 | `quant plugin side environment missing` | 侧环境不存在或路径错 | 确认 `.venv-quant/bin/python` 存在,或设 `ZUAEF_QUANT_PYTHON` 绝对路径 |
@@ -454,7 +470,7 @@ uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.p
 ### 7.3 版本锁定(当前执行基线)
 
 | 组件 | 版本 | 位置 |
-|---|---|---|
+| --- | --- | --- |
 | pydantic-ai | 2.35.3 | uv.lock |
 | pydantic-ai-harness[skills,code-mode] | 0.27.0(`>=0.27,<0.28`) | uv.lock |
 | akshare | 1.18.94 | uv 依赖组 quant |

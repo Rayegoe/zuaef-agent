@@ -1,13 +1,19 @@
 # Source node: ZUAEF-ASHARE-001 (zuaef-quant) project corpus
 
-Observed 2026-09-02. All resources are in-repo files; evidence locators below are
-file paths + section/line references. Nothing in this corpus is inferred — every
-claim in the concept nodes traces to one of these resources.
+Observed 2026-09-02; supplemented 2026-09-04 (M1 monitor, P0.5 reconcile, spec v2.0-optimized).
+All resources are in-repo files; evidence locators below are file paths + section/line
+references. Nothing in this corpus is inferred — every claim in the concept nodes traces
+to one of these resources.
 
 ## Canonical resources (fully read)
 
 | Resource | Role | Key evidence |
 | --- | --- | --- |
+| `zuaef-quant-final-spec-v2.0-optimized/00_START_HERE.md` | Final spec v2.0 entry (executable contract) | Status FINAL/EXECUTABLE; verified baseline main 2026-09-03; reads 00_GLOBAL_STRATEGY first; replaces v1.1/v1.2; not a platform reconstruction |
+| `zuaef-quant-final-spec-v2.0-optimized/02_AGENT_AND_HARNESS.md` | Agent participation + live decision harness | deterministic layer vs Agent layer; Decision Mode A–E triggers; Research Mode; Agent never the polling loop |
+| `zuaef-quant-final-spec-v2.0-optimized/03_DATA_EXECUTION_TRUTH.md` | Data + execution truth (spec v2.0) | P0.5 dual-engine reconciliation; market rule differences |
+| `tools/quant_trading_monitor.py` | M1 live trading monitor v0.1 | once/session/ack-buy/ack-sell/status; WATCH→NEAR→READY→INVALIDATED; EXECUTED only via ack-buy; workspaces/artifacts/quant/trading/; MARKET_CLOSED/SYSTEM_UNAVAILABLE/NO_TRADE |
+| `tools/quant_p05_reconcile.py` | P0.5 dual-engine reconciliation | same frozen strategy+intents; attribution A–F; UNEXPLAINED residual fails P0.5 |
 | `docs/quant/README.md` | Implementation summary + 实操指南 (authoritative) | §2 development chain U0–P5.5; §3 architecture/data flow/frozen authority map; §4 honest implementation list; §5 daily operation; §6 restart admission rules & 禁改清单; §7 command cheatsheet & troubleshooting |
 | `zuaef-ashare-decision-agent-spec-v1.0-final/00_README.md` | Spec pack entry: definition, objectives, build order | "One-sentence definition"; "Highest-priority rule: Do not build a quant platform"; business outcomes = Decision Brief + Strategy Result only |
 | `zuaef-ashare-decision-agent-spec-v1.0-final/02_ARCHITECTURE.md` | Authority boundaries, historical/live paths, forbidden second runtime | §1 authority boundaries; §3 live path "No candidate → no LLM request"; §8 no QuantRuntime/StrategyManager/GateManager |

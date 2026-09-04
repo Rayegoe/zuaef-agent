@@ -12,20 +12,20 @@ sources:
   title: Frozen market rules (effective-dated)
   evidence: "[execution] block; stamp_duty periods; price_limits periods; consistency tolerance"
 - id: sources/zuaef-quant
-  resource: zuaef-ashare-decision-agent-spec-v1.0-final/04_DATA_AND_MARKET.md
-  title: Data and A-Share Market Truth
-  evidence: "§7 minimum execution truth; §8 never trade on adjusted price"
+  resource: zuaef-quant-final-spec-v2.0-optimized/03_DATA_EXECUTION_TRUTH.md
+  title: Data + Execution truth (spec v2.0)
+  evidence: "P0.5 dual-engine reconciliation; attribution classes"
 - id: sources/zuaef-quant
-  resource: zuaef-ashare-decision-agent-spec-v1.0-final/05_STRATEGY_AND_EVALUATION.md
-  title: Strategy and Evaluation Protocol
-  evidence: "§7 independent replay; §8 replay runtime"
+  resource: tools/quant_p05_reconcile.py
+  title: P0.5 reconcile implementation
+  evidence: "comparison chain; attribution classes A-F; fail condition"
 - id: sources/zuaef-quant
   resource: docs/quant/README.md
   title: Implementation summary
   evidence: "§2 P2; §4 已证明与未构建"
 generated:
   by: zuaef-agent
-  date: 2026-09-02
+  date: 2026-09-04
 ---
 
 # A 股执行真相
@@ -73,6 +73,23 @@ generated:
 `tests/test_quant_replay.py`：**14 个防伪 alpha 测试**（T+1、涨跌停、停牌、整手、成本、
 board 差异、market_truth 开关、无未来函数）。测试真实抓出过一个 bug：intent 在决策日当天成交
 （未来函数）→ 修复为"次日开盘成交"。
+
+## P0.5 双引擎对账（2026-09-04 增补；tools/quant_p05_reconcile.py）
+
+问题：同一冻结策略、同一冻结 intents，Qlib 研究面与独立 A 股重放是否描述同一组经济成交事实？
+**不是实现相等/NAV 相等要求**——每个实质性差异都必须被归因：
+
+| 类 | 含义 | 处置 |
+|---|---|---|
+| A EXPECTED_MARKET_RULE_DIFFERENCE | T+1 开盘成交、涨停买阻/贴稳卖延、停牌无bar、整手舍入（含 raw-vs-qfq 价格面×整手交互与前期规则差异级联进现金状态）、最低佣金、印花税、滑点 | 预期差，计入对账 |
+| B UNSUPPORTED_FOR_TRUSTED_PARITY | 跨不支持的除权（qfq/raw 调整机制切换） | 从可信对等子集隔离，绝不静默计入 |
+| C QLIB_MODEL_LIMITATION | 向量面按设计不建模涨跌停 | 已知局限 |
+| D QUANT_CORE_BUG / E QLIB_EVAL_BUG | 仅凭具体市场规则证据 | bug，需修 |
+| F UNEXPLAINED | 残余 | **任何无法解释的残留 = P0.5 失败** |
+
+对账链（冻结输入不动）：同策略 → 同 qlib panel → 持久化 intents.csv（重生成后元素级比对
+证明可复现）→ 向量面（qfq、market_truth OFF）+ 独立重放（raw、market_truth ON）→
+逐笔对账 → 聚合对比（只做异常检测）。P0.5 验证通过后无需每日跑。
 
 ## 与 Agent 的关系
 
