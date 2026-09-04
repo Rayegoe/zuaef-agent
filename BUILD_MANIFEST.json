@@ -107,61 +107,6 @@
       "sha256": "0f79535d72eefe6c55bd5ae47fe4753de8d27235cf129f10b2c596a124c26526"
     },
     {
-      "path": ".agents/skills/bmad-build-auto/SKILL.md",
-      "bytes": 697,
-      "sha256": "ea6931f8210e92f7d9cfb845040d557d4d8c02eced3acc3d77bd2fcc4fffc235"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/compile-epic-context.md",
-      "bytes": 2992,
-      "sha256": "64d13b41974cfa0dfc1de64b6fbd8365e9b99f91c7c98f0ee1a9fbd018f324ca"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/references/deletion-check.md",
-      "bytes": 1009,
-      "sha256": "0f1f124e4e957147e89164a272b10bedc694ad0d9ad2618c8610ac74ee9cb0da"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/review-prompts/edge-case-hunter.md",
-      "bytes": 5708,
-      "sha256": "4ccb3599ed1b8cc54876b304dc567d1b4e3e0ec5c1add34df9a2445224ac77af"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/review-prompts/verification-gap.md",
-      "bytes": 9268,
-      "sha256": "11b6bbbd4e3426a25cca81229c98971e5f20ce99638940c47c9c1484011b457a"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/spec-template.md",
-      "bytes": 4212,
-      "sha256": "5fccfa92dd632d4be646ab40f2882452189aba49db57fe3fa00fcc1806666d74"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/step-01-clarify-and-route.md",
-      "bytes": 10477,
-      "sha256": "7480db7720720212bd045793fddcb91f06091fe512e53b38127f6440c3fd96e2"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/step-02-plan.md",
-      "bytes": 3342,
-      "sha256": "a08e303c10f88dbfce88c55044757ec5059afe338793eb414e1ddb0b7c324625"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/step-03-implement.md",
-      "bytes": 3308,
-      "sha256": "f3e427c6033a26adcc327e4367db38c619527858a1175b148ec5a6f53d1bb408"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/step-04-review.md",
-      "bytes": 9708,
-      "sha256": "8e9ff909192e1d5d50f9fc071c4b5eb8830cc921200d423904a30dadca58c3e9"
-    },
-    {
-      "path": ".agents/skills/bmad-build-auto/workflow.md",
-      "bytes": 5673,
-      "sha256": "f5f538a647b2a09406b11337244d1bd74fe97e7fa85b58a990184fcb480bfd90"
-    },
-    {
       "path": ".agents/skills/bmad-build/SKILL.md",
       "bytes": 911,
       "sha256": "bce4778d8d275095ca1836733337163c1bf11a5a62e6585b951de458a5ac2c8e"
@@ -230,6 +175,61 @@
       "path": ".agents/skills/bmad-build/workflow.md",
       "bytes": 3945,
       "sha256": "481ff00ef349a9c7845feca02bbfd5722b1e318ccabac858355da6c90c2d8a39"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/SKILL.md",
+      "bytes": 697,
+      "sha256": "ea6931f8210e92f7d9cfb845040d557d4d8c02eced3acc3d77bd2fcc4fffc235"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/compile-epic-context.md",
+      "bytes": 2992,
+      "sha256": "64d13b41974cfa0dfc1de64b6fbd8365e9b99f91c7c98f0ee1a9fbd018f324ca"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/references/deletion-check.md",
+      "bytes": 1009,
+      "sha256": "0f1f124e4e957147e89164a272b10bedc694ad0d9ad2618c8610ac74ee9cb0da"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/review-prompts/edge-case-hunter.md",
+      "bytes": 5708,
+      "sha256": "4ccb3599ed1b8cc54876b304dc567d1b4e3e0ec5c1add34df9a2445224ac77af"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/review-prompts/verification-gap.md",
+      "bytes": 9268,
+      "sha256": "11b6bbbd4e3426a25cca81229c98971e5f20ce99638940c47c9c1484011b457a"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/spec-template.md",
+      "bytes": 4212,
+      "sha256": "5fccfa92dd632d4be646ab40f2882452189aba49db57fe3fa00fcc1806666d74"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/step-01-clarify-and-route.md",
+      "bytes": 10477,
+      "sha256": "7480db7720720212bd045793fddcb91f06091fe512e53b38127f6440c3fd96e2"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/step-02-plan.md",
+      "bytes": 3342,
+      "sha256": "a08e303c10f88dbfce88c55044757ec5059afe338793eb414e1ddb0b7c324625"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/step-03-implement.md",
+      "bytes": 3308,
+      "sha256": "f3e427c6033a26adcc327e4367db38c619527858a1175b148ec5a6f53d1bb408"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/step-04-review.md",
+      "bytes": 9708,
+      "sha256": "8e9ff909192e1d5d50f9fc071c4b5eb8830cc921200d423904a30dadca58c3e9"
+    },
+    {
+      "path": ".agents/skills/bmad-build-auto/workflow.md",
+      "bytes": 5673,
+      "sha256": "f5f538a647b2a09406b11337244d1bd74fe97e7fa85b58a990184fcb480bfd90"
     },
     {
       "path": ".agents/skills/bmad-checkpoint-preview/SKILL.md",
@@ -497,6 +497,11 @@
       "sha256": "26448c4017c09ad8defa8525d9517ce681bb50222320517eaa635fa0f31989f9"
     },
     {
+      "path": ".agents/skills/bmad-editorial-review/SKILL.md",
+      "bytes": 1121,
+      "sha256": "3b939876b4977bec7f2d3ee33a8871b266f25efc72768d72868ac26ff9158cd2"
+    },
+    {
       "path": ".agents/skills/bmad-editorial-review-prose/SKILL.md",
       "bytes": 507,
       "sha256": "153e7b0a240c3f5e49d6128ff1797aabc368618611d895f7f152e73fbcb12fab"
@@ -505,11 +510,6 @@
       "path": ".agents/skills/bmad-editorial-review-structure/SKILL.md",
       "bytes": 741,
       "sha256": "5e45da216b00aad3955a7196df6cb8e52167f441d2dcd7c064983881691bf1e8"
-    },
-    {
-      "path": ".agents/skills/bmad-editorial-review/SKILL.md",
-      "bytes": 1121,
-      "sha256": "3b939876b4977bec7f2d3ee33a8871b266f25efc72768d72868ac26ff9158cd2"
     },
     {
       "path": ".agents/skills/bmad-forge-idea/SKILL.md",
@@ -702,21 +702,6 @@
       "sha256": "a9c504c436038c7e47d08322413aa3c213d2859b36ae30e873cb8c60fd9e008e"
     },
     {
-      "path": ".agents/skills/bmad-review-adversarial-general/SKILL.md",
-      "bytes": 370,
-      "sha256": "ca1d05a05eb41ec446abd862e9afe4a88b9188a3bb93bc3e70ca68ecb8740619"
-    },
-    {
-      "path": ".agents/skills/bmad-review-edge-case-hunter/SKILL.md",
-      "bytes": 485,
-      "sha256": "f9db1d7f58c5e3f7586c10c920d4dd9d6c6d6e2dff5cd49110ec1edb387937a1"
-    },
-    {
-      "path": ".agents/skills/bmad-review-verification-gap/SKILL.md",
-      "bytes": 447,
-      "sha256": "4ee67cc3d7355ba05d195797cb2d57d45f9046ee31781f2d133ff3484cfb53ae"
-    },
-    {
       "path": ".agents/skills/bmad-review/SKILL.md",
       "bytes": 7535,
       "sha256": "144e6c46d9157f7a88722c56139cd78c12903b1283ed84dd9c2b1f5dfa7673c1"
@@ -755,6 +740,21 @@
       "path": ".agents/skills/bmad-review/references/structure-models.md",
       "bytes": 1972,
       "sha256": "f84f85070e1af75f2482757aba9d37d69d805a20826d185527e598f2ba6b9292"
+    },
+    {
+      "path": ".agents/skills/bmad-review-adversarial-general/SKILL.md",
+      "bytes": 370,
+      "sha256": "ca1d05a05eb41ec446abd862e9afe4a88b9188a3bb93bc3e70ca68ecb8740619"
+    },
+    {
+      "path": ".agents/skills/bmad-review-edge-case-hunter/SKILL.md",
+      "bytes": 485,
+      "sha256": "f9db1d7f58c5e3f7586c10c920d4dd9d6c6d6e2dff5cd49110ec1edb387937a1"
+    },
+    {
+      "path": ".agents/skills/bmad-review-verification-gap/SKILL.md",
+      "bytes": 447,
+      "sha256": "4ee67cc3d7355ba05d195797cb2d57d45f9046ee31781f2d133ff3484cfb53ae"
     },
     {
       "path": ".agents/skills/bmad-spec/SKILL.md",
@@ -1012,216 +1012,6 @@
       "sha256": "3ac89fe3cde85543c7d7feb8d8284580ed3440e30d48eeb1887697e45e9a48e2"
     },
     {
-      "path": "benchmarks/editorial-learning/README.md",
-      "bytes": 9885,
-      "sha256": "c396993893a38a0a162cf2e8f7d8bd75f72c9052bd460ad94ff07f344846158e"
-    },
-    {
-      "path": "benchmarks/editorial-learning/benchmark.jsonl",
-      "bytes": 4667,
-      "sha256": "21771919c721023887e6a605f830b739227492210147655fd7232c2c777c9914"
-    },
-    {
-      "path": "benchmarks/editorial-learning/compiled/evidence.jsonl",
-      "bytes": 10413,
-      "sha256": "4bc4148125f3037daeeb9b45592750ad0ba0fe84c34665749eea61e4d279ce28"
-    },
-    {
-      "path": "benchmarks/editorial-learning/compiled/manifest.json",
-      "bytes": 1045,
-      "sha256": "3b0389511a2f2757aa7ba512fb01f853b76f5e91e04b7702d0a3538f268522df"
-    },
-    {
-      "path": "benchmarks/editorial-learning/compiled/sequential_inputs.jsonl",
-      "bytes": 6668,
-      "sha256": "7b1c7d4567a832c983f8a74abb5d2af3b904640587bee44dfdff00735e906332"
-    },
-    {
-      "path": "benchmarks/editorial-learning/compiled/sources.jsonl",
-      "bytes": 7283,
-      "sha256": "b634d960e597367e82c2110dd4efff509c057dd64911f7593bc8fe6e574895d9"
-    },
-    {
-      "path": "benchmarks/editorial-learning/compiled/techniques.jsonl",
-      "bytes": 15794,
-      "sha256": "db90e7a7368973f066b764f15d47e68afed54dba8efc3a128b838ad704bbba58"
-    },
-    {
-      "path": "benchmarks/editorial-learning/curated/sources.jsonl",
-      "bytes": 3376,
-      "sha256": "6d1656799984cb3b34ee0cb8c27ce46ede8575208751d26b3e680d5fa89c7445"
-    },
-    {
-      "path": "benchmarks/editorial-learning/curated/techniques.jsonl",
-      "bytes": 16015,
-      "sha256": "face6564300460527c8844f3ddf4730692b9567d92b414ee2dd773fad0019d70"
-    },
-    {
-      "path": "benchmarks/editorial-learning/evidence/human_patches.jsonl",
-      "bytes": 21887,
-      "sha256": "831866c59464f7d4b49d70f64f0b16e37eaf574a705dd49d6fc0da800ce3fea0"
-    },
-    {
-      "path": "benchmarks/editorial-learning/evidence/seed_snapshot.jsonl",
-      "bytes": 3396,
-      "sha256": "adc0ef0eeaf289d8e9c5c7318781121343ca30fd02ffadbc41ae42a181409fcb"
-    },
-    {
-      "path": "benchmarks/editorial-learning/provenance/licenses.md",
-      "bytes": 1092,
-      "sha256": "57ac21766a2cef214f91dbee9e1e1a3d0b13d381cced60cb8a7148fb2c1404a4"
-    },
-    {
-      "path": "benchmarks/editorial-learning/provenance/sources.jsonl",
-      "bytes": 1942,
-      "sha256": "da607c7e68ba20979dce5a261dc3d3d792866fe18ba14f5711fc5ff69b3a5595"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/build_tasks.py",
-      "bytes": 28903,
-      "sha256": "6e56174ef58803caa4fa38380b197e49c57f5528a3cf365d2b7583f015d6b9e2"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/compare_paths.py",
-      "bytes": 20419,
-      "sha256": "ee9f2f4d001d77da43d8ca5b35eca3fcfa8e4e1e7810c4333afce50123c78507"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/compile_learning_pack.py",
-      "bytes": 24710,
-      "sha256": "158c2e4c47efc65cc3c4f56be877e40eac6a823b7dbf4701cf6e27d639ed450c"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/fetch_sources.py",
-      "bytes": 5820,
-      "sha256": "0d1d723931e514355036e95b0a7feeb3ef087fb19c58aaaedd9c7373abfcfe79"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/host_projection_legacy.py",
-      "bytes": 19180,
-      "sha256": "c6bca6b2ae1fb4d43ca8f73647f7981b4820c05c10240c9fa6e98bb35bfadcbf"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/promote_patch.py",
-      "bytes": 4790,
-      "sha256": "675a9118daed6c73753ea0b3735f15f5eb032fdcb655d3f42bfbf37759b7e67d"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/report.py",
-      "bytes": 2500,
-      "sha256": "b2c7350636768333eaade4b9a6586ef2f08162429cae6cd3500f319f654512db"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/run_benchmark.py",
-      "bytes": 11660,
-      "sha256": "6f6c82e233a72ded55ca6d3349bfa01157093376049e3720ac8a89ae7d1f51cc"
-    },
-    {
-      "path": "benchmarks/editorial-learning/scripts/task_inputs.py",
-      "bytes": 1761,
-      "sha256": "493b3ad04b4586333ab7512d46fd0ec45c77f30268c6c1a5d166eeaa51b2addc"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T01.json",
-      "bytes": 6609,
-      "sha256": "10f34c060d24c3462c704b6c88c6a663c649cb7bfad0ce858c2b4b22e8d21eb5"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T02.json",
-      "bytes": 6046,
-      "sha256": "9e6e5b03e3ead55902fd5472274b82b2ce748261a4413fbf360b343b9cf6b5ac"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T03.json",
-      "bytes": 4600,
-      "sha256": "f6cd901afcf582d526e33f553dfbeab49be8ee24ac9b8e88d404260df1499a2f"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T04.json",
-      "bytes": 4827,
-      "sha256": "0f2e837d115796b38b3a11b1f2b0e88b6c0e62f28374b648e5c4be8f9c7ac1e8"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T05.json",
-      "bytes": 6098,
-      "sha256": "5bdc1a5f57d42dab037c4a1851be8f15188ad061d9741428f67b688fd574d180"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T06.json",
-      "bytes": 4778,
-      "sha256": "eb3659d14353c4a0978605d510551d34ded61367866dd5a87d299949a78cb8b7"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T07.json",
-      "bytes": 4687,
-      "sha256": "09f376fe07bc6621347e034eee2f067499d8397c3a393ee64b020668eada215d"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T08.json",
-      "bytes": 5916,
-      "sha256": "af2d83f71ecdb3305aaad10870cac7b0b7de8633e8919929a73491f49e09275f"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T09.json",
-      "bytes": 5295,
-      "sha256": "fd0a6954aeb8eb683262fc379462bddf8f0e69f948947f2c928a2d505bcf9d8a"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T10.json",
-      "bytes": 4541,
-      "sha256": "fff0c6c0aec11eeb48a7d32ba608b7667cbec487017a6570e5dc3f11f7595b6c"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T11.json",
-      "bytes": 9907,
-      "sha256": "0d0081462d92546e18dfaea3daa86a648c5a6c7dae1f76c11f3be3b9834f8eeb"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T12.json",
-      "bytes": 5948,
-      "sha256": "20616c5faa94a621728b30bc20c51777c7bc3b6654afb04c98508f49ae913206"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T13.json",
-      "bytes": 8915,
-      "sha256": "7e4aa3508a094745b7020e9774968f229f5f1060d71276d93fcd4e932c6910d3"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T14.json",
-      "bytes": 10684,
-      "sha256": "97776216072bc9ba4a5ce1c79eb4ae384d1d7086f3a7cfb6c61c1f4cdfc06f8a"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T15.json",
-      "bytes": 6869,
-      "sha256": "3b871b6457c66cc983253818be2d4696bad2cfaa5ee603266b70a0bde1c607cc"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T16.json",
-      "bytes": 6412,
-      "sha256": "38b2ea8be84eb00dd629ef036b25db2f997fe851a8f9e23301dfb7b6a9ba9173"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T17.json",
-      "bytes": 9756,
-      "sha256": "d7c7afe0e68c93e212efc0b8604a814c85a98851980fcdff5fd726f9a55b1355"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T18.json",
-      "bytes": 9200,
-      "sha256": "a4b105ac5da74ef75aedfeafefc91b5640cca47a793124fa1aedb4d706edc93d"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T19.json",
-      "bytes": 10502,
-      "sha256": "54ae761a922bba7ac4db2e4396a0bbe9595897bd893a96aba258107a85b47a98"
-    },
-    {
-      "path": "benchmarks/editorial-learning/tasks/T20.json",
-      "bytes": 8756,
-      "sha256": "46489ae616f5312de0950932b31f7fe9715254a3b2241c8e5f7613d0be4e5d9e"
-    },
-    {
       "path": "docs/gateway-continuity-trace.md",
       "bytes": 10848,
       "sha256": "a960385349852077660e90b6143989f3d7aa67104c67123bec50377871954868"
@@ -1282,11 +1072,6 @@
       "sha256": "6774a40f92ec0e13aeebbc36240f85307c4b25f1ec116419dc353747be73ee97"
     },
     {
-      "path": "examples/profiles/client-service-beauty.toml",
-      "bytes": 499,
-      "sha256": "faef55867445ea0ee7ffde02d402ef162f92cb294751e00af9db0e4b225c83c4"
-    },
-    {
       "path": "examples/research_toolset.py",
       "bytes": 3831,
       "sha256": "bc8657009dc4fa619912e578e95f7fe8a27cc17ab9f9f1540a0baa50fc689f53"
@@ -1312,374 +1097,14 @@
       "sha256": "7d94e9544c980b9d690509ad4793ec0c0c56c3822b1bb6dab1728f1bc97ab211"
     },
     {
-      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/__init__.py",
-      "bytes": 647,
-      "sha256": "d336f4b8c9d2b2bf3606ca074fd308911ce8371194cb45a92dcba2fa11e1ddb7"
-    },
-    {
-      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/epub_corpus.py",
-      "bytes": 9918,
-      "sha256": "6edaffe4d9ab38f83e61376d9d89ea7038d026e95ef6a0645a7a1860da35c8ab"
-    },
-    {
-      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/plugin.py",
-      "bytes": 4491,
-      "sha256": "0445a80a489300b359fd5be50cce35b6007b2e390ec388dd4cec09ab5bd2a7a2"
-    },
-    {
-      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/writing_toolset.py",
-      "bytes": 22954,
-      "sha256": "ce7b55e00acf4faa4735057d9343bf303a97fac37267246710fae16d7cc00a1f"
-    },
-    {
-      "path": "plugins/zuaef-case/zuaef_case/__init__.py",
-      "bytes": 1340,
-      "sha256": "ba80cba2448231f805b4bed1a5499d1fb64932bb785a1ff819846f948c8bc6ed"
-    },
-    {
-      "path": "plugins/zuaef-case/zuaef_case/context.py",
-      "bytes": 6557,
-      "sha256": "b4e200243d094ee3b7fb0a3727ddad27bc0dadf241b83d6c6f9ca44da51ad5a8"
-    },
-    {
-      "path": "plugins/zuaef-case/zuaef_case/models.py",
-      "bytes": 4278,
-      "sha256": "54faf866aff86a9ac5c4fff1c606473e718fd07f6fde30f7c01e3ca54d110dfb"
-    },
-    {
-      "path": "plugins/zuaef-case/zuaef_case/store.py",
-      "bytes": 8662,
-      "sha256": "0f1019d37b573a9c7ba827b35699d0753b5270695661cdfbb5153ae9e5c980be"
-    },
-    {
-      "path": "plugins/zuaef-case/zuaef_case/toolset.py",
-      "bytes": 13959,
-      "sha256": "af20901ea478a4bcbb6130a39960d83e7aef1873322923ca5ebd77d230722a93"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/__init__.py",
-      "bytes": 987,
-      "sha256": "9931415661dea40461b60c40abbe6db8b303992e87e09eaca9a8381b9b7c9274"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/canonical.py",
-      "bytes": 16981,
-      "sha256": "8647025131d5b58c6d93f7abd842060b9e5af72ac89ce17fb1a841a1243516dd"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/models.py",
-      "bytes": 8170,
-      "sha256": "14eb1f24925fd975de4583c442935f40e82e77b3222af52d994c2ac0255ace66"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/plugin.py",
-      "bytes": 2460,
-      "sha256": "bbcaa9e0e15a947a6b32956e889a2bfc3e22ee5389384ba13767aa8127a5d64e"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/policy.py",
-      "bytes": 4532,
-      "sha256": "9a28b448105de0a3a7cccdeace59435a5d7dcc7bcdb73a3281e3982b5503783e"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/skills/beauty-content-domain/SKILL.md",
-      "bytes": 1257,
-      "sha256": "7a6f411c31abd8fddae3d777e6abbb3a926d158fa5aa4aa2786bd5c4e378cfc3"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/skills/client-service/SKILL.md",
-      "bytes": 1765,
-      "sha256": "b3b2e3a58ca6ce929952d41097cfc55f452bf3a6744511b69f91aafcf23415cf"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/skills/sales-disclosure-boundary/SKILL.md",
-      "bytes": 1579,
-      "sha256": "9f1700f96c4495ddb7ce88be7fa9ac88cea76dcd277b53b7e593111a7f66d8e2"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/skills/semantic-preference/SKILL.md",
-      "bytes": 1292,
-      "sha256": "98c18bda1e701e3ae9ad3fcb0eb78f1f72a0815f1efa069c2a63030a9bdd08af"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/store.py",
-      "bytes": 9279,
-      "sha256": "424506be7b5b363b9b4e0c412101250ad248b0a6aade2feb514dc8e286696a32"
-    },
-    {
-      "path": "plugins/zuaef-client-service/zuaef_client_service/toolset.py",
-      "bytes": 17329,
-      "sha256": "fa4f96f986574b424c871392df0cb1573e64763e6191aa6f66756f328244b86a"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/__init__.py",
-      "bytes": 132,
-      "sha256": "fa05f088f1227da59d1987a629fa7a549441db3cf35c6849f52f5db87771af3e"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/network.py",
-      "bytes": 14124,
-      "sha256": "c247183ab7a4ce76c070a2a0b295f3fc1073b96ed67ecabd7fde71d74d6a1e4d"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/plugin.py",
-      "bytes": 4402,
-      "sha256": "2168ab2a23a079ee5d030d31a12fa731c3f1c42cdf87d683f35215939921d887"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/report_renderer.py",
-      "bytes": 18957,
-      "sha256": "929a717ac128952886ad7dd37524d161df3f3d666e4266d66029f415750496f5"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/report_tools.py",
-      "bytes": 8175,
-      "sha256": "0877777c29dd457e7a34ea90018bf681890b92dfcecc0e55f7a6f23f7acb90f2"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/search_backend.py",
-      "bytes": 10205,
-      "sha256": "b519ffb9653273c2505eec913d5c11b145c1c39034d7f39baed6114e7be2b968"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/skills/e-bike-product-intelligence/SKILL.md",
-      "bytes": 6142,
-      "sha256": "3742adfdf239b39644db79ed95c242436f4e158408fcd250a1bb0aa8bf9f3b03"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/skills/executive-competitor-report/SKILL.md",
-      "bytes": 3615,
-      "sha256": "ff840c835cbf605ec253700490885bb389319c7b3385ed4ff5072ba4fbca3a4e"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/source_tools.py",
-      "bytes": 6158,
-      "sha256": "2a4af3f43829fb7e0076d96d2542c3252eda2221ae9a83f3ea25dde3b386d75d"
-    },
-    {
-      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/work_product_tools.py",
-      "bytes": 7185,
-      "sha256": "d238cf5f1a26aeb3b4e0cd4d45ec392c8e85fe4d77d6f2729ecfc1e1bec561d3"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/__init__.py",
-      "bytes": 731,
-      "sha256": "6f8d13337c18ab0a2e8890b4171ba7e004cbdba8b2533d47e73c4abc3c685695"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/__init__.py",
-      "bytes": 1709,
-      "sha256": "dd985231905ed76c48a6b3ae34dc86d2ac92b1b48d41aa5acb4cd2d1cc13dad2"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_consistency.py",
-      "bytes": 4735,
-      "sha256": "34ec51cc4053df74e71f59c8ac95a971b7bc6f6e52f6ef0b246a494cd203e05e"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_diff.py",
-      "bytes": 5298,
-      "sha256": "86fb8011efc7c44ded675dc92c4c010ebc3a07efb113b111d30849b763cb36b1"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_health.py",
-      "bytes": 5939,
-      "sha256": "a1f88b509f5dd28f8d5218c1c2c7379c03758bb80042dcfe7c043236dbe1700e"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_query.py",
-      "bytes": 3250,
-      "sha256": "dfdff130b6c15a5ba831393bfb05beee2e240c40bd24836bcb7a704d6cd0df3f"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_summary.py",
-      "bytes": 3141,
-      "sha256": "5698b1b0e8dd22df993c08d4845ea6e53d909f6929c656a8c1be92411bfd10c6"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_variance.py",
-      "bytes": 2152,
-      "sha256": "7874c05c2e1ead2ad51fdb95b2afa1dcd303a846cea28fa3431771a1f8c02cf5"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/csv_parser.py",
-      "bytes": 4185,
-      "sha256": "d7942fc801194a873dbbb92bd920ec66ffbeb980be30048a1a85ba80104fd94a"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/models.py",
-      "bytes": 11544,
-      "sha256": "9b3e927867ff70ebb891cc2f9be0b15920f8835a1645513beb8f7af2e099b312"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/significant_changes.py",
-      "bytes": 2356,
-      "sha256": "ee073378e32bed27bbfd37c936f328682f126046c7d2b909bdde43f8354140ce"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/utils.py",
-      "bytes": 897,
-      "sha256": "c781e9ba0be49da9e59a3131826d67afefad1686c87d50b81d52af203733d6ab"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/data/emtb_budget_sample.csv",
-      "bytes": 648,
-      "sha256": "5c5bf85a2472fc929c07db028953403abcc1fb56979cca990b9c4b4b6b1bcf95"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/plugin.py",
-      "bytes": 1126,
-      "sha256": "3395f6852daa8bdd205348473fb8095c6f7ab46eb6db45d57b720c5c58a3fc2f"
-    },
-    {
-      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/toolset.py",
-      "bytes": 8668,
-      "sha256": "91fe7b09530ee1d37b2aa4910db3f469654641484691a7af9ade228fd0ca3d71"
-    },
-    {
-      "path": "plugins/zuaef-quant/README.md",
-      "bytes": 403,
-      "sha256": "23f1e7aa06785351473e8c6fc0dfc4dfa37c9234b58af3fd11518721720ae0bb"
-    },
-    {
-      "path": "plugins/zuaef-quant/zuaef_quant/__init__.py",
-      "bytes": 132,
-      "sha256": "70218619aa93c0f6afe1db416a7d6c5f4ad09f26191f39aaf3aa686306bebaf6"
-    },
-    {
-      "path": "plugins/zuaef-quant/zuaef_quant/plugin.py",
-      "bytes": 3512,
-      "sha256": "628d07c5925f63c9394fdf91be3a305ba9c8cd8cb69d69b8a0b656d392797bd9"
-    },
-    {
-      "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
-      "bytes": 13731,
-      "sha256": "c71b58ac3ad260d38ec563e3babcc87f6aab8010b05f6679dc57f13a1fe2dd4e"
-    },
-    {
-      "path": "plugins/zuaef-telegram/skill/SKILL.md",
-      "bytes": 499,
-      "sha256": "b29c5ad22936014a087883c2ea6779d4dbbed385fe995fc5af7ee4ae81405ab1"
-    },
-    {
-      "path": "plugins/zuaef-telegram/zuaef_telegram/__init__.py",
-      "bytes": 285,
-      "sha256": "3638a49a3b6aec4e366e45cd0f68bacacc830b11673fbb3bdabb893005e4e6e0"
-    },
-    {
-      "path": "plugins/zuaef-telegram/zuaef_telegram/canary.py",
-      "bytes": 1419,
-      "sha256": "5a02bbb4fd210ed243c9193cfae8c92827aa2378df2a5de8d6af073d8938aed5"
-    },
-    {
-      "path": "plugins/zuaef-telegram/zuaef_telegram/client.py",
-      "bytes": 3932,
-      "sha256": "26a38ca0fc7dc3e3af25950172dd2e05cb737eee7a693746d47e96cce0ad7c38"
-    },
-    {
-      "path": "plugins/zuaef-telegram/zuaef_telegram/notify.py",
-      "bytes": 2107,
-      "sha256": "a23414f3b45ebe2eba8258dcb030d91f79c4a2884c929ec076ad2332f478f086"
-    },
-    {
-      "path": "plugins/zuaef-telegram/zuaef_telegram/plugin.py",
-      "bytes": 1799,
-      "sha256": "abebac5d370ceaca7aa884a1358d36d4949e1d61d2e212ca32ebb6d6b548aa94"
-    },
-    {
-      "path": "plugins/zuaef-telegram/zuaef_telegram/toolset.py",
-      "bytes": 1783,
-      "sha256": "08c140cca336de9d64a37e4472f678be98667d33a60f91979244af461f3df5fb"
-    },
-    {
-      "path": "plugins/zuaef-wordpress/zuaef_wordpress/__init__.py",
-      "bytes": 1424,
-      "sha256": "1add585fca470c96fb990b59e01e443401cc33e5fc22c95841eb246b02d3217b"
-    },
-    {
-      "path": "plugins/zuaef-wordpress/zuaef_wordpress/client.py",
-      "bytes": 4030,
-      "sha256": "da14a63f265c7346c38e5ae9b89fb0efed8f084388fd90b78f1bbde1ec9c2fe8"
-    },
-    {
-      "path": "plugins/zuaef-wordpress/zuaef_wordpress/toolset.py",
-      "bytes": 2619,
-      "sha256": "b7af912770595ae3a43d04f4753b99767f4fbc12616462f7d29ca467c072b526"
-    },
-    {
-      "path": "plugins/zuaef-writing-pack/README.md",
-      "bytes": 603,
-      "sha256": "a6e92535b39fc2b0582c2e99a357c3421fcc4842ac12bd30e45593a0892c6d59"
-    },
-    {
-      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/__init__.py",
-      "bytes": 257,
-      "sha256": "0f6cf77e9b06f68d6df80f16b1c3bd9d238ad14527389aef826460b3a8674e94"
-    },
-    {
-      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/plugin.py",
-      "bytes": 2951,
-      "sha256": "3ca1e5ab62be6ebcbb2dc97accf6e1505e6525adb2650aabf6eb4e6d88073fc5"
-    },
-    {
-      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/toolset.py",
-      "bytes": 3896,
-      "sha256": "f618fbf912c01481c090b886fbcdd65b68ca74d731166beb40a72d24162256f6"
-    },
-    {
-      "path": "profiles/ace-writing-codemode.toml",
-      "bytes": 306,
-      "sha256": "41fa7b0eb9ef41dfb078b781847496b1b442b9b9dc179860bacf10783529afb4"
-    },
-    {
-      "path": "profiles/ace-writing-sanlian.toml",
-      "bytes": 525,
-      "sha256": "bae809402301ed2dbc941cd20e639052564eb558fba18c1981b9aaeb25d8e2b9"
-    },
-    {
-      "path": "profiles/ace-writing-t006-b1-technique-off.toml",
-      "bytes": 582,
-      "sha256": "32891b91ea10d072dc39d1cf17a5cb7a7f2fe701a57ba91e1f25ddcf23395a27"
-    },
-    {
-      "path": "profiles/ace-writing-t006-b2-model-owned-techniques.toml",
-      "bytes": 523,
-      "sha256": "82aed80849bf957de92ed115b165207af44c2b66b74e68cb10df3752915f9e89"
-    },
-    {
-      "path": "profiles/ace-writing.toml",
-      "bytes": 1443,
-      "sha256": "7c6a78bec613ea78422f9aaa5f4164ce626fbbe26cf8b92c6e83480fe3b15507"
-    },
-    {
-      "path": "profiles/emtb-budget.toml",
-      "bytes": 339,
-      "sha256": "ccf603130855213707084b51a53bd356c0b66bacbc269665fe96c23aea300e1f"
-    },
-    {
-      "path": "profiles/quant-decision.toml",
-      "bytes": 438,
-      "sha256": "2b1b4ba6c8cfb81cfa2fc2ca054d5009042f38d7a7c08d6faa667b9155d09169"
-    },
-    {
-      "path": "profiles/stillevo-ebike-intel.toml",
-      "bytes": 684,
-      "sha256": "01b671a137ec98324db90ba0ded32673c133bdd67608198f0c2379e61adfd19a"
-    },
-    {
-      "path": "profiles/stillevo-fde.toml",
-      "bytes": 2411,
-      "sha256": "b3f52eb4d82fbf1ff979ab18e1892c1e6d9f54887f2adfc71ee7de588bdf2d0a"
-    },
-    {
-      "path": "profiles/wordpress-operator.toml",
-      "bytes": 489,
-      "sha256": "76b08f2924ad8dbd46996c744601f5b67bd13a29f2c04d04e486138be0284231"
-    },
-    {
       "path": "pyproject.toml",
       "bytes": 3572,
       "sha256": "6386e61ff5738ca4361a872529a8a461e3b863b311f4613f0ff6082f02f17272"
+    },
+    {
+      "path": "uv.lock",
+      "bytes": 624706,
+      "sha256": "b4c08dba465dda7091eef0b8981792bd5d4e03dc686bb449053bf8d5c2caf343"
     },
     {
       "path": "spec/SPEC.md",
@@ -1742,6 +1167,51 @@
       "sha256": "eb2fe4f2cd3a1b4d0013dc8ea3d01c9315ad9b108f71b183a927ab16e834fda9"
     },
     {
+      "path": "src/zuaef_agent/integrity.py",
+      "bytes": 9259,
+      "sha256": "ff29a61d46ce568743e250e7a30db8420bf0199b2c8aa085a6520a6dbac99bb4"
+    },
+    {
+      "path": "src/zuaef_agent/knowledge_capability.py",
+      "bytes": 3635,
+      "sha256": "370dc911b4d1a4cb696bceaa95a2da6d15c1410e42fb1a86ec93e8b64430930a"
+    },
+    {
+      "path": "src/zuaef_agent/knowledge_store.py",
+      "bytes": 6660,
+      "sha256": "9f8d00991d02534a9aefc6ecff128447273d11a5737ea0b71dec115285b3c8ee"
+    },
+    {
+      "path": "src/zuaef_agent/models.py",
+      "bytes": 3861,
+      "sha256": "5ef1b7a551466c61619d0283492b9db1763e736b469345f2d04c8ba89028b33c"
+    },
+    {
+      "path": "src/zuaef_agent/plugin_api.py",
+      "bytes": 5277,
+      "sha256": "95d2cf444166a2819b0d1536775cb6a05f0c1e3b4e43005c10394f722a3d9a62"
+    },
+    {
+      "path": "src/zuaef_agent/profiles.py",
+      "bytes": 6579,
+      "sha256": "b43bd1f09b23920e7b037e9f3d168e35b809146e224f8db09f81302abad023be"
+    },
+    {
+      "path": "src/zuaef_agent/providers.py",
+      "bytes": 4350,
+      "sha256": "476fdc1fef23a53d4658874623352f3b5633042b96e55d6fee0d17f7491345b3"
+    },
+    {
+      "path": "src/zuaef_agent/receipt_store.py",
+      "bytes": 1612,
+      "sha256": "01f8e53f0c33dd4bad0c49a95d84a92d3695dbbde6e876a85eadd708a6842e11"
+    },
+    {
+      "path": "src/zuaef_agent/runtime.py",
+      "bytes": 24847,
+      "sha256": "6529dceca8712f8f04baac8ed91106d50c3b1e3238b552a254f3992e2f3679ff"
+    },
+    {
       "path": "src/zuaef_agent/gateway/__init__.py",
       "bytes": 476,
       "sha256": "cd3dbec879a9c1a684a629f74d32e23d3b48a59b654ca0a111f661a2b68dbd62"
@@ -1790,51 +1260,6 @@
       "path": "src/zuaef_agent/gateway/telegram.py",
       "bytes": 13759,
       "sha256": "045e9ce685914225794f98c88d8860a01dda049d4c36e5fedda064d4834f5bf7"
-    },
-    {
-      "path": "src/zuaef_agent/integrity.py",
-      "bytes": 9259,
-      "sha256": "ff29a61d46ce568743e250e7a30db8420bf0199b2c8aa085a6520a6dbac99bb4"
-    },
-    {
-      "path": "src/zuaef_agent/knowledge_capability.py",
-      "bytes": 3635,
-      "sha256": "370dc911b4d1a4cb696bceaa95a2da6d15c1410e42fb1a86ec93e8b64430930a"
-    },
-    {
-      "path": "src/zuaef_agent/knowledge_store.py",
-      "bytes": 6660,
-      "sha256": "9f8d00991d02534a9aefc6ecff128447273d11a5737ea0b71dec115285b3c8ee"
-    },
-    {
-      "path": "src/zuaef_agent/models.py",
-      "bytes": 3861,
-      "sha256": "5ef1b7a551466c61619d0283492b9db1763e736b469345f2d04c8ba89028b33c"
-    },
-    {
-      "path": "src/zuaef_agent/plugin_api.py",
-      "bytes": 5277,
-      "sha256": "95d2cf444166a2819b0d1536775cb6a05f0c1e3b4e43005c10394f722a3d9a62"
-    },
-    {
-      "path": "src/zuaef_agent/profiles.py",
-      "bytes": 6579,
-      "sha256": "b43bd1f09b23920e7b037e9f3d168e35b809146e224f8db09f81302abad023be"
-    },
-    {
-      "path": "src/zuaef_agent/providers.py",
-      "bytes": 4350,
-      "sha256": "476fdc1fef23a53d4658874623352f3b5633042b96e55d6fee0d17f7491345b3"
-    },
-    {
-      "path": "src/zuaef_agent/receipt_store.py",
-      "bytes": 1612,
-      "sha256": "01f8e53f0c33dd4bad0c49a95d84a92d3695dbbde6e876a85eadd708a6842e11"
-    },
-    {
-      "path": "src/zuaef_agent/runtime.py",
-      "bytes": 24847,
-      "sha256": "6529dceca8712f8f04baac8ed91106d50c3b1e3238b552a254f3992e2f3679ff"
     },
     {
       "path": "src/zuaef_agent/web/__init__.py",
@@ -1890,86 +1315,6 @@
       "path": "src/zuaef_agent/web/sse.py",
       "bytes": 2275,
       "sha256": "d45cf5569eb4f7063fc413ad8855163d1d7c1a02a3719c1060d61115ffc58f0a"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/__init__.py",
-      "bytes": 289,
-      "sha256": "67914bc1d856236dec0221598ecfe5bd15a0d296175533de398e41579078cdf3"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/broken.py",
-      "bytes": 378,
-      "sha256": "5ffcda36e3c3f1f5d7f531fd2ba7d408f00e1e990d0173fa1cb242fa0f2e64fd"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/capability.py",
-      "bytes": 1003,
-      "sha256": "8357f092bcbdc54d534018ea2b267398151aa8adaff8fa47a448a200ac5e8d80"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/case_probe.py",
-      "bytes": 934,
-      "sha256": "3d6c7800fbd04de24ba7ef729454ee8e66d7f96bcc2c1913c5fd041f66e96092"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/conflict.py",
-      "bytes": 603,
-      "sha256": "4961b1a8fc4b1bb86917853f4055e4e5cbd3f2143d238b0da3f4211000941220"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/deps_probe.py",
-      "bytes": 924,
-      "sha256": "67585a1fc0fb5eacbffb05f61021928b3cb15761ed8f0ebd7fa1961b332bbfa7"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/hardware.py",
-      "bytes": 637,
-      "sha256": "aae8fb365f8dba74b3cdaf49fce0b2668c5f0e85ecc12f38711165d6578bf835"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/never_enabled.py",
-      "bytes": 595,
-      "sha256": "3474090b962ad1e1b134bb4c9f66c8659840a3679bbd5aabcfe457c9debba194"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/skills/writing/SKILL.md",
-      "bytes": 249,
-      "sha256": "a7f242be4cc173d9aad579a241d7546be4b38138ba3d33d123ef3fac90394269"
-    },
-    {
-      "path": "tests/fixture_plugins/fixture_plugins/writing.py",
-      "bytes": 1601,
-      "sha256": "0ad5ce7fb6de3725f74d62d615c3ba311bb62c7304b709155116b572717bb92f"
-    },
-    {
-      "path": "tests/fixture_plugins/pyproject.toml",
-      "bytes": 716,
-      "sha256": "263b5147b1dc987521f905eb1248dcf4917faa8e7457c153fec44b15e3151817"
-    },
-    {
-      "path": "tests/fixtures/synthetic_client_service/evidence/evidence_ledger.jsonl",
-      "bytes": 1153,
-      "sha256": "e01664f135df0df088d2a62992e66d5234724cb88fc2a2f5c8e6a077e301c4c8"
-    },
-    {
-      "path": "tests/fixtures/synthetic_client_service/knowledge/knowledge_pack.yaml",
-      "bytes": 190,
-      "sha256": "45188a3b0aafe3966ee66c68a1b03139194c94e0dc52632a8baf6f18717890fc"
-    },
-    {
-      "path": "tests/fixtures/synthetic_client_service/policies/decision_policies.yaml",
-      "bytes": 22,
-      "sha256": "3bf7d48b6b59b0d82fcaed1e8d63b12f990e1d3b456a6e24ddddef4737290f3e"
-    },
-    {
-      "path": "tests/fixtures/synthetic_client_service/semantics/semantic_preferences.yaml",
-      "bytes": 226,
-      "sha256": "10246da8663a6ada5f3a55d09dd9632de15492c4163357a53c82f8468ac22fa9"
-    },
-    {
-      "path": "tests/fixtures/synthetic_client_service/state/customers/CASE-SYN-001.yaml",
-      "bytes": 249,
-      "sha256": "4aa4b8645b9ec9b1e4a46c6e249eb8124209ee5bbeb35138102b4dddcddc2a7f"
     },
     {
       "path": "tests/test_ace_writing_plugin.py",
@@ -2263,8 +1608,8 @@
     },
     {
       "path": "tests/test_quant_plugin.py",
-      "bytes": 11974,
-      "sha256": "ee8c5650c4eeabdd54484858162f31ebc2eb41b5f01a8e1d16fe9a24ba1b6111"
+      "bytes": 19270,
+      "sha256": "c3f0fa53e1d642b12f8ef58213936106adc123b3057908736d75c630db554b8a"
     },
     {
       "path": "tests/test_quant_replay.py",
@@ -2273,8 +1618,8 @@
     },
     {
       "path": "tests/test_quant_trading_monitor.py",
-      "bytes": 15191,
-      "sha256": "2d4b87c696bc2f7a74bd5e206f0b852cdd49bec456e0e290642d621fef243a0d"
+      "bytes": 18170,
+      "sha256": "442fbc85231ca9e130953eacbe0b41c026a9ec1f5370466a14fd71ba2da6eb79"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -2330,6 +1675,456 @@
       "path": "tests/test_writing_slice.py",
       "bytes": 21183,
       "sha256": "1b1f2e0a8e82dc18e5f9bfa061dc04994775dda88a0bad0154e033b8057a9d7b"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/__init__.py",
+      "bytes": 289,
+      "sha256": "67914bc1d856236dec0221598ecfe5bd15a0d296175533de398e41579078cdf3"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/broken.py",
+      "bytes": 378,
+      "sha256": "5ffcda36e3c3f1f5d7f531fd2ba7d408f00e1e990d0173fa1cb242fa0f2e64fd"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/capability.py",
+      "bytes": 1003,
+      "sha256": "8357f092bcbdc54d534018ea2b267398151aa8adaff8fa47a448a200ac5e8d80"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/case_probe.py",
+      "bytes": 934,
+      "sha256": "3d6c7800fbd04de24ba7ef729454ee8e66d7f96bcc2c1913c5fd041f66e96092"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/conflict.py",
+      "bytes": 603,
+      "sha256": "4961b1a8fc4b1bb86917853f4055e4e5cbd3f2143d238b0da3f4211000941220"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/deps_probe.py",
+      "bytes": 924,
+      "sha256": "67585a1fc0fb5eacbffb05f61021928b3cb15761ed8f0ebd7fa1961b332bbfa7"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/hardware.py",
+      "bytes": 637,
+      "sha256": "aae8fb365f8dba74b3cdaf49fce0b2668c5f0e85ecc12f38711165d6578bf835"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/never_enabled.py",
+      "bytes": 595,
+      "sha256": "3474090b962ad1e1b134bb4c9f66c8659840a3679bbd5aabcfe457c9debba194"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/writing.py",
+      "bytes": 1601,
+      "sha256": "0ad5ce7fb6de3725f74d62d615c3ba311bb62c7304b709155116b572717bb92f"
+    },
+    {
+      "path": "tests/fixture_plugins/fixture_plugins/skills/writing/SKILL.md",
+      "bytes": 249,
+      "sha256": "a7f242be4cc173d9aad579a241d7546be4b38138ba3d33d123ef3fac90394269"
+    },
+    {
+      "path": "tests/fixture_plugins/pyproject.toml",
+      "bytes": 716,
+      "sha256": "263b5147b1dc987521f905eb1248dcf4917faa8e7457c153fec44b15e3151817"
+    },
+    {
+      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/__init__.py",
+      "bytes": 647,
+      "sha256": "d336f4b8c9d2b2bf3606ca074fd308911ce8371194cb45a92dcba2fa11e1ddb7"
+    },
+    {
+      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/epub_corpus.py",
+      "bytes": 9918,
+      "sha256": "6edaffe4d9ab38f83e61376d9d89ea7038d026e95ef6a0645a7a1860da35c8ab"
+    },
+    {
+      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/plugin.py",
+      "bytes": 4491,
+      "sha256": "0445a80a489300b359fd5be50cce35b6007b2e390ec388dd4cec09ab5bd2a7a2"
+    },
+    {
+      "path": "plugins/zuaef-ace-writing/zuaef_ace_writing/writing_toolset.py",
+      "bytes": 22954,
+      "sha256": "ce7b55e00acf4faa4735057d9343bf303a97fac37267246710fae16d7cc00a1f"
+    },
+    {
+      "path": "plugins/zuaef-case/zuaef_case/__init__.py",
+      "bytes": 1340,
+      "sha256": "ba80cba2448231f805b4bed1a5499d1fb64932bb785a1ff819846f948c8bc6ed"
+    },
+    {
+      "path": "plugins/zuaef-case/zuaef_case/context.py",
+      "bytes": 6557,
+      "sha256": "b4e200243d094ee3b7fb0a3727ddad27bc0dadf241b83d6c6f9ca44da51ad5a8"
+    },
+    {
+      "path": "plugins/zuaef-case/zuaef_case/models.py",
+      "bytes": 4278,
+      "sha256": "54faf866aff86a9ac5c4fff1c606473e718fd07f6fde30f7c01e3ca54d110dfb"
+    },
+    {
+      "path": "plugins/zuaef-case/zuaef_case/store.py",
+      "bytes": 8662,
+      "sha256": "0f1019d37b573a9c7ba827b35699d0753b5270695661cdfbb5153ae9e5c980be"
+    },
+    {
+      "path": "plugins/zuaef-case/zuaef_case/toolset.py",
+      "bytes": 13959,
+      "sha256": "af20901ea478a4bcbb6130a39960d83e7aef1873322923ca5ebd77d230722a93"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/__init__.py",
+      "bytes": 987,
+      "sha256": "9931415661dea40461b60c40abbe6db8b303992e87e09eaca9a8381b9b7c9274"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/canonical.py",
+      "bytes": 16981,
+      "sha256": "8647025131d5b58c6d93f7abd842060b9e5af72ac89ce17fb1a841a1243516dd"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/models.py",
+      "bytes": 8170,
+      "sha256": "14eb1f24925fd975de4583c442935f40e82e77b3222af52d994c2ac0255ace66"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/plugin.py",
+      "bytes": 2460,
+      "sha256": "bbcaa9e0e15a947a6b32956e889a2bfc3e22ee5389384ba13767aa8127a5d64e"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/policy.py",
+      "bytes": 4532,
+      "sha256": "9a28b448105de0a3a7cccdeace59435a5d7dcc7bcdb73a3281e3982b5503783e"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/store.py",
+      "bytes": 9279,
+      "sha256": "424506be7b5b363b9b4e0c412101250ad248b0a6aade2feb514dc8e286696a32"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/toolset.py",
+      "bytes": 17329,
+      "sha256": "fa4f96f986574b424c871392df0cb1573e64763e6191aa6f66756f328244b86a"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/__init__.py",
+      "bytes": 132,
+      "sha256": "fa05f088f1227da59d1987a629fa7a549441db3cf35c6849f52f5db87771af3e"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/network.py",
+      "bytes": 14124,
+      "sha256": "c247183ab7a4ce76c070a2a0b295f3fc1073b96ed67ecabd7fde71d74d6a1e4d"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/plugin.py",
+      "bytes": 4402,
+      "sha256": "2168ab2a23a079ee5d030d31a12fa731c3f1c42cdf87d683f35215939921d887"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/report_renderer.py",
+      "bytes": 18957,
+      "sha256": "929a717ac128952886ad7dd37524d161df3f3d666e4266d66029f415750496f5"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/report_tools.py",
+      "bytes": 8175,
+      "sha256": "0877777c29dd457e7a34ea90018bf681890b92dfcecc0e55f7a6f23f7acb90f2"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/search_backend.py",
+      "bytes": 10205,
+      "sha256": "b519ffb9653273c2505eec913d5c11b145c1c39034d7f39baed6114e7be2b968"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/source_tools.py",
+      "bytes": 6158,
+      "sha256": "2a4af3f43829fb7e0076d96d2542c3252eda2221ae9a83f3ea25dde3b386d75d"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/work_product_tools.py",
+      "bytes": 7185,
+      "sha256": "d238cf5f1a26aeb3b4e0cd4d45ec392c8e85fe4d77d6f2729ecfc1e1bec561d3"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/__init__.py",
+      "bytes": 731,
+      "sha256": "6f8d13337c18ab0a2e8890b4171ba7e004cbdba8b2533d47e73c4abc3c685695"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/__init__.py",
+      "bytes": 1709,
+      "sha256": "dd985231905ed76c48a6b3ae34dc86d2ac92b1b48d41aa5acb4cd2d1cc13dad2"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_consistency.py",
+      "bytes": 4735,
+      "sha256": "34ec51cc4053df74e71f59c8ac95a971b7bc6f6e52f6ef0b246a494cd203e05e"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_diff.py",
+      "bytes": 5298,
+      "sha256": "86fb8011efc7c44ded675dc92c4c010ebc3a07efb113b111d30849b763cb36b1"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_health.py",
+      "bytes": 5939,
+      "sha256": "a1f88b509f5dd28f8d5218c1c2c7379c03758bb80042dcfe7c043236dbe1700e"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_query.py",
+      "bytes": 3250,
+      "sha256": "dfdff130b6c15a5ba831393bfb05beee2e240c40bd24836bcb7a704d6cd0df3f"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_summary.py",
+      "bytes": 3141,
+      "sha256": "5698b1b0e8dd22df993c08d4845ea6e53d909f6929c656a8c1be92411bfd10c6"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/budget_variance.py",
+      "bytes": 2152,
+      "sha256": "7874c05c2e1ead2ad51fdb95b2afa1dcd303a846cea28fa3431771a1f8c02cf5"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/csv_parser.py",
+      "bytes": 4185,
+      "sha256": "d7942fc801194a873dbbb92bd920ec66ffbeb980be30048a1a85ba80104fd94a"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/models.py",
+      "bytes": 11544,
+      "sha256": "9b3e927867ff70ebb891cc2f9be0b15920f8835a1645513beb8f7af2e099b312"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/significant_changes.py",
+      "bytes": 2356,
+      "sha256": "ee073378e32bed27bbfd37c936f328682f126046c7d2b909bdde43f8354140ce"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/budget_lib/utils.py",
+      "bytes": 897,
+      "sha256": "c781e9ba0be49da9e59a3131826d67afefad1686c87d50b81d52af203733d6ab"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/plugin.py",
+      "bytes": 1126,
+      "sha256": "3395f6852daa8bdd205348473fb8095c6f7ab46eb6db45d57b720c5c58a3fc2f"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/toolset.py",
+      "bytes": 8668,
+      "sha256": "91fe7b09530ee1d37b2aa4910db3f469654641484691a7af9ade228fd0ca3d71"
+    },
+    {
+      "path": "plugins/zuaef-quant/zuaef_quant/__init__.py",
+      "bytes": 132,
+      "sha256": "70218619aa93c0f6afe1db416a7d6c5f4ad09f26191f39aaf3aa686306bebaf6"
+    },
+    {
+      "path": "plugins/zuaef-quant/zuaef_quant/plugin.py",
+      "bytes": 5783,
+      "sha256": "96d5fcdb2df24ee9e92f6b92b11db3d9a0d37aee5e7d389e1abdbdf990315af0"
+    },
+    {
+      "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
+      "bytes": 19156,
+      "sha256": "f7db0bc36d265f66df0d232c691bf02fd6ec42fa0dec230a91bbc3ab487c1b0d"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/__init__.py",
+      "bytes": 285,
+      "sha256": "3638a49a3b6aec4e366e45cd0f68bacacc830b11673fbb3bdabb893005e4e6e0"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/canary.py",
+      "bytes": 1419,
+      "sha256": "5a02bbb4fd210ed243c9193cfae8c92827aa2378df2a5de8d6af073d8938aed5"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/client.py",
+      "bytes": 3932,
+      "sha256": "26a38ca0fc7dc3e3af25950172dd2e05cb737eee7a693746d47e96cce0ad7c38"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/notify.py",
+      "bytes": 2107,
+      "sha256": "a23414f3b45ebe2eba8258dcb030d91f79c4a2884c929ec076ad2332f478f086"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/plugin.py",
+      "bytes": 1799,
+      "sha256": "abebac5d370ceaca7aa884a1358d36d4949e1d61d2e212ca32ebb6d6b548aa94"
+    },
+    {
+      "path": "plugins/zuaef-telegram/zuaef_telegram/toolset.py",
+      "bytes": 1783,
+      "sha256": "08c140cca336de9d64a37e4472f678be98667d33a60f91979244af461f3df5fb"
+    },
+    {
+      "path": "plugins/zuaef-wordpress/zuaef_wordpress/__init__.py",
+      "bytes": 1424,
+      "sha256": "1add585fca470c96fb990b59e01e443401cc33e5fc22c95841eb246b02d3217b"
+    },
+    {
+      "path": "plugins/zuaef-wordpress/zuaef_wordpress/client.py",
+      "bytes": 4030,
+      "sha256": "da14a63f265c7346c38e5ae9b89fb0efed8f084388fd90b78f1bbde1ec9c2fe8"
+    },
+    {
+      "path": "plugins/zuaef-wordpress/zuaef_wordpress/toolset.py",
+      "bytes": 2619,
+      "sha256": "b7af912770595ae3a43d04f4753b99767f4fbc12616462f7d29ca467c072b526"
+    },
+    {
+      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/__init__.py",
+      "bytes": 257,
+      "sha256": "0f6cf77e9b06f68d6df80f16b1c3bd9d238ad14527389aef826460b3a8674e94"
+    },
+    {
+      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/plugin.py",
+      "bytes": 2951,
+      "sha256": "3ca1e5ab62be6ebcbb2dc97accf6e1505e6525adb2650aabf6eb4e6d88073fc5"
+    },
+    {
+      "path": "plugins/zuaef-writing-pack/zuaef_writing_pack/toolset.py",
+      "bytes": 3896,
+      "sha256": "f618fbf912c01481c090b886fbcdd65b68ca74d731166beb40a72d24162256f6"
+    },
+    {
+      "path": "plugins/zuaef-emtb-budget/zuaef_emtb_budget/data/emtb_budget_sample.csv",
+      "bytes": 648,
+      "sha256": "5c5bf85a2472fc929c07db028953403abcc1fb56979cca990b9c4b4b6b1bcf95"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/skills/beauty-content-domain/SKILL.md",
+      "bytes": 1257,
+      "sha256": "7a6f411c31abd8fddae3d777e6abbb3a926d158fa5aa4aa2786bd5c4e378cfc3"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/skills/client-service/SKILL.md",
+      "bytes": 1765,
+      "sha256": "b3b2e3a58ca6ce929952d41097cfc55f452bf3a6744511b69f91aafcf23415cf"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/skills/sales-disclosure-boundary/SKILL.md",
+      "bytes": 1579,
+      "sha256": "9f1700f96c4495ddb7ce88be7fa9ac88cea76dcd277b53b7e593111a7f66d8e2"
+    },
+    {
+      "path": "plugins/zuaef-client-service/zuaef_client_service/skills/semantic-preference/SKILL.md",
+      "bytes": 1292,
+      "sha256": "98c18bda1e701e3ae9ad3fcb0eb78f1f72a0815f1efa069c2a63030a9bdd08af"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/skills/e-bike-product-intelligence/SKILL.md",
+      "bytes": 6142,
+      "sha256": "3742adfdf239b39644db79ed95c242436f4e158408fcd250a1bb0aa8bf9f3b03"
+    },
+    {
+      "path": "plugins/zuaef-competitive-intelligence/zuaef_competitive_intelligence/skills/executive-competitor-report/SKILL.md",
+      "bytes": 3615,
+      "sha256": "ff840c835cbf605ec253700490885bb389319c7b3385ed4ff5072ba4fbca3a4e"
+    },
+    {
+      "path": "plugins/zuaef-quant/README.md",
+      "bytes": 613,
+      "sha256": "d78b1d995c6055f72bbacfd39ee54f542ea076badac9c581553dcc645623b5e2"
+    },
+    {
+      "path": "plugins/zuaef-telegram/skill/SKILL.md",
+      "bytes": 499,
+      "sha256": "b29c5ad22936014a087883c2ea6779d4dbbed385fe995fc5af7ee4ae81405ab1"
+    },
+    {
+      "path": "plugins/zuaef-writing-pack/README.md",
+      "bytes": 603,
+      "sha256": "a6e92535b39fc2b0582c2e99a357c3421fcc4842ac12bd30e45593a0892c6d59"
+    },
+    {
+      "path": "profiles/ace-writing-codemode.toml",
+      "bytes": 306,
+      "sha256": "41fa7b0eb9ef41dfb078b781847496b1b442b9b9dc179860bacf10783529afb4"
+    },
+    {
+      "path": "profiles/ace-writing-sanlian.toml",
+      "bytes": 525,
+      "sha256": "bae809402301ed2dbc941cd20e639052564eb558fba18c1981b9aaeb25d8e2b9"
+    },
+    {
+      "path": "profiles/ace-writing-t006-b1-technique-off.toml",
+      "bytes": 582,
+      "sha256": "32891b91ea10d072dc39d1cf17a5cb7a7f2fe701a57ba91e1f25ddcf23395a27"
+    },
+    {
+      "path": "profiles/ace-writing-t006-b2-model-owned-techniques.toml",
+      "bytes": 523,
+      "sha256": "82aed80849bf957de92ed115b165207af44c2b66b74e68cb10df3752915f9e89"
+    },
+    {
+      "path": "profiles/ace-writing.toml",
+      "bytes": 1443,
+      "sha256": "7c6a78bec613ea78422f9aaa5f4164ce626fbbe26cf8b92c6e83480fe3b15507"
+    },
+    {
+      "path": "profiles/emtb-budget.toml",
+      "bytes": 339,
+      "sha256": "ccf603130855213707084b51a53bd356c0b66bacbc269665fe96c23aea300e1f"
+    },
+    {
+      "path": "profiles/quant-decision.toml",
+      "bytes": 438,
+      "sha256": "2b1b4ba6c8cfb81cfa2fc2ca054d5009042f38d7a7c08d6faa667b9155d09169"
+    },
+    {
+      "path": "profiles/stillevo-ebike-intel.toml",
+      "bytes": 684,
+      "sha256": "01b671a137ec98324db90ba0ded32673c133bdd67608198f0c2379e61adfd19a"
+    },
+    {
+      "path": "profiles/stillevo-fde.toml",
+      "bytes": 2411,
+      "sha256": "b3f52eb4d82fbf1ff979ab18e1892c1e6d9f54887f2adfc71ee7de588bdf2d0a"
+    },
+    {
+      "path": "profiles/wordpress-operator.toml",
+      "bytes": 489,
+      "sha256": "76b08f2924ad8dbd46996c744601f5b67bd13a29f2c04d04e486138be0284231"
+    },
+    {
+      "path": "examples/profiles/client-service-beauty.toml",
+      "bytes": 499,
+      "sha256": "faef55867445ea0ee7ffde02d402ef162f92cb294751e00af9db0e4b225c83c4"
+    },
+    {
+      "path": "tests/fixtures/synthetic_client_service/evidence/evidence_ledger.jsonl",
+      "bytes": 1153,
+      "sha256": "e01664f135df0df088d2a62992e66d5234724cb88fc2a2f5c8e6a077e301c4c8"
+    },
+    {
+      "path": "tests/fixtures/synthetic_client_service/knowledge/knowledge_pack.yaml",
+      "bytes": 190,
+      "sha256": "45188a3b0aafe3966ee66c68a1b03139194c94e0dc52632a8baf6f18717890fc"
+    },
+    {
+      "path": "tests/fixtures/synthetic_client_service/policies/decision_policies.yaml",
+      "bytes": 22,
+      "sha256": "3bf7d48b6b59b0d82fcaed1e8d63b12f990e1d3b456a6e24ddddef4737290f3e"
+    },
+    {
+      "path": "tests/fixtures/synthetic_client_service/semantics/semantic_preferences.yaml",
+      "bytes": 226,
+      "sha256": "10246da8663a6ada5f3a55d09dd9632de15492c4163357a53c82f8468ac22fa9"
+    },
+    {
+      "path": "tests/fixtures/synthetic_client_service/state/customers/CASE-SYN-001.yaml",
+      "bytes": 249,
+      "sha256": "4aa4b8645b9ec9b1e4a46c6e249eb8124209ee5bbeb35138102b4dddcddc2a7f"
     },
     {
       "path": "tools/epub_to_corpus.py",
@@ -2433,8 +2228,8 @@
     },
     {
       "path": "tools/quant_trading_monitor.py",
-      "bytes": 29885,
-      "sha256": "7540f3aa028ee3e57108e4e75c5d8f91354b72804c81fbe229ce961b3d712fc9"
+      "bytes": 32189,
+      "sha256": "a0fd69aa7349562f8159f13b7a5b97034fb6cb912c51e886f27beb73dfc96dd7"
     },
     {
       "path": "tools/quant_validate_semantics.py",
@@ -2462,14 +2257,219 @@
       "sha256": "13ac82d00f610d149e7ca1656c0f619b8c263a36112f34e5c6ba480fa86e0804"
     },
     {
-      "path": "uv.lock",
-      "bytes": 624706,
-      "sha256": "b4c08dba465dda7091eef0b8981792bd5d4e03dc686bb449053bf8d5c2caf343"
-    },
-    {
       "path": "workspace/knowledge/index.md",
       "bytes": 1161,
       "sha256": "914cb5265ad7049bb0c68acdedc4ebcdd694a8d9398a49c221ae6014b1ccde23"
+    },
+    {
+      "path": "benchmarks/editorial-learning/README.md",
+      "bytes": 9885,
+      "sha256": "c396993893a38a0a162cf2e8f7d8bd75f72c9052bd460ad94ff07f344846158e"
+    },
+    {
+      "path": "benchmarks/editorial-learning/benchmark.jsonl",
+      "bytes": 4667,
+      "sha256": "21771919c721023887e6a605f830b739227492210147655fd7232c2c777c9914"
+    },
+    {
+      "path": "benchmarks/editorial-learning/curated/sources.jsonl",
+      "bytes": 3376,
+      "sha256": "6d1656799984cb3b34ee0cb8c27ce46ede8575208751d26b3e680d5fa89c7445"
+    },
+    {
+      "path": "benchmarks/editorial-learning/curated/techniques.jsonl",
+      "bytes": 16015,
+      "sha256": "face6564300460527c8844f3ddf4730692b9567d92b414ee2dd773fad0019d70"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/evidence.jsonl",
+      "bytes": 10413,
+      "sha256": "4bc4148125f3037daeeb9b45592750ad0ba0fe84c34665749eea61e4d279ce28"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/manifest.json",
+      "bytes": 1045,
+      "sha256": "3b0389511a2f2757aa7ba512fb01f853b76f5e91e04b7702d0a3538f268522df"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/sequential_inputs.jsonl",
+      "bytes": 6668,
+      "sha256": "7b1c7d4567a832c983f8a74abb5d2af3b904640587bee44dfdff00735e906332"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/sources.jsonl",
+      "bytes": 7283,
+      "sha256": "b634d960e597367e82c2110dd4efff509c057dd64911f7593bc8fe6e574895d9"
+    },
+    {
+      "path": "benchmarks/editorial-learning/compiled/techniques.jsonl",
+      "bytes": 15794,
+      "sha256": "db90e7a7368973f066b764f15d47e68afed54dba8efc3a128b838ad704bbba58"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/build_tasks.py",
+      "bytes": 28903,
+      "sha256": "6e56174ef58803caa4fa38380b197e49c57f5528a3cf365d2b7583f015d6b9e2"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/compare_paths.py",
+      "bytes": 20419,
+      "sha256": "ee9f2f4d001d77da43d8ca5b35eca3fcfa8e4e1e7810c4333afce50123c78507"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/compile_learning_pack.py",
+      "bytes": 24710,
+      "sha256": "158c2e4c47efc65cc3c4f56be877e40eac6a823b7dbf4701cf6e27d639ed450c"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/fetch_sources.py",
+      "bytes": 5820,
+      "sha256": "0d1d723931e514355036e95b0a7feeb3ef087fb19c58aaaedd9c7373abfcfe79"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/host_projection_legacy.py",
+      "bytes": 19180,
+      "sha256": "c6bca6b2ae1fb4d43ca8f73647f7981b4820c05c10240c9fa6e98bb35bfadcbf"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/promote_patch.py",
+      "bytes": 4790,
+      "sha256": "675a9118daed6c73753ea0b3735f15f5eb032fdcb655d3f42bfbf37759b7e67d"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/report.py",
+      "bytes": 2500,
+      "sha256": "b2c7350636768333eaade4b9a6586ef2f08162429cae6cd3500f319f654512db"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/run_benchmark.py",
+      "bytes": 11660,
+      "sha256": "6f6c82e233a72ded55ca6d3349bfa01157093376049e3720ac8a89ae7d1f51cc"
+    },
+    {
+      "path": "benchmarks/editorial-learning/scripts/task_inputs.py",
+      "bytes": 1761,
+      "sha256": "493b3ad04b4586333ab7512d46fd0ec45c77f30268c6c1a5d166eeaa51b2addc"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T01.json",
+      "bytes": 6609,
+      "sha256": "10f34c060d24c3462c704b6c88c6a663c649cb7bfad0ce858c2b4b22e8d21eb5"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T02.json",
+      "bytes": 6046,
+      "sha256": "9e6e5b03e3ead55902fd5472274b82b2ce748261a4413fbf360b343b9cf6b5ac"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T03.json",
+      "bytes": 4600,
+      "sha256": "f6cd901afcf582d526e33f553dfbeab49be8ee24ac9b8e88d404260df1499a2f"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T04.json",
+      "bytes": 4827,
+      "sha256": "0f2e837d115796b38b3a11b1f2b0e88b6c0e62f28374b648e5c4be8f9c7ac1e8"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T05.json",
+      "bytes": 6098,
+      "sha256": "5bdc1a5f57d42dab037c4a1851be8f15188ad061d9741428f67b688fd574d180"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T06.json",
+      "bytes": 4778,
+      "sha256": "eb3659d14353c4a0978605d510551d34ded61367866dd5a87d299949a78cb8b7"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T07.json",
+      "bytes": 4687,
+      "sha256": "09f376fe07bc6621347e034eee2f067499d8397c3a393ee64b020668eada215d"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T08.json",
+      "bytes": 5916,
+      "sha256": "af2d83f71ecdb3305aaad10870cac7b0b7de8633e8919929a73491f49e09275f"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T09.json",
+      "bytes": 5295,
+      "sha256": "fd0a6954aeb8eb683262fc379462bddf8f0e69f948947f2c928a2d505bcf9d8a"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T10.json",
+      "bytes": 4541,
+      "sha256": "fff0c6c0aec11eeb48a7d32ba608b7667cbec487017a6570e5dc3f11f7595b6c"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T11.json",
+      "bytes": 9907,
+      "sha256": "0d0081462d92546e18dfaea3daa86a648c5a6c7dae1f76c11f3be3b9834f8eeb"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T12.json",
+      "bytes": 5948,
+      "sha256": "20616c5faa94a621728b30bc20c51777c7bc3b6654afb04c98508f49ae913206"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T13.json",
+      "bytes": 8915,
+      "sha256": "7e4aa3508a094745b7020e9774968f229f5f1060d71276d93fcd4e932c6910d3"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T14.json",
+      "bytes": 10684,
+      "sha256": "97776216072bc9ba4a5ce1c79eb4ae384d1d7086f3a7cfb6c61c1f4cdfc06f8a"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T15.json",
+      "bytes": 6869,
+      "sha256": "3b871b6457c66cc983253818be2d4696bad2cfaa5ee603266b70a0bde1c607cc"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T16.json",
+      "bytes": 6412,
+      "sha256": "38b2ea8be84eb00dd629ef036b25db2f997fe851a8f9e23301dfb7b6a9ba9173"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T17.json",
+      "bytes": 9756,
+      "sha256": "d7c7afe0e68c93e212efc0b8604a814c85a98851980fcdff5fd726f9a55b1355"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T18.json",
+      "bytes": 9200,
+      "sha256": "a4b105ac5da74ef75aedfeafefc91b5640cca47a793124fa1aedb4d706edc93d"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T19.json",
+      "bytes": 10502,
+      "sha256": "54ae761a922bba7ac4db2e4396a0bbe9595897bd893a96aba258107a85b47a98"
+    },
+    {
+      "path": "benchmarks/editorial-learning/tasks/T20.json",
+      "bytes": 8756,
+      "sha256": "46489ae616f5312de0950932b31f7fe9715254a3b2241c8e5f7613d0be4e5d9e"
+    },
+    {
+      "path": "benchmarks/editorial-learning/evidence/human_patches.jsonl",
+      "bytes": 21887,
+      "sha256": "831866c59464f7d4b49d70f64f0b16e37eaf574a705dd49d6fc0da800ce3fea0"
+    },
+    {
+      "path": "benchmarks/editorial-learning/evidence/seed_snapshot.jsonl",
+      "bytes": 3396,
+      "sha256": "adc0ef0eeaf289d8e9c5c7318781121343ca30fd02ffadbc41ae42a181409fcb"
+    },
+    {
+      "path": "benchmarks/editorial-learning/provenance/licenses.md",
+      "bytes": 1092,
+      "sha256": "57ac21766a2cef214f91dbee9e1e1a3d0b13d381cced60cb8a7148fb2c1404a4"
+    },
+    {
+      "path": "benchmarks/editorial-learning/provenance/sources.jsonl",
+      "bytes": 1942,
+      "sha256": "da607c7e68ba20979dce5a261dc3d3d792866fe18ba14f5711fc5ff69b3a5595"
     }
   ]
 }

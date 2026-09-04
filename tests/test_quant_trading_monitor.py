@@ -256,6 +256,56 @@ class TestAckBoundary:
         assert opened["data_trust"] == "USER_CONFIRMED"  # a human fact, not a system signal
 
 
+class TestAckVenueNoteSkip:
+    def test_buy_persists_venue_and_alert_fields(self, tmp_path, monitor_env):
+        store = fresh_store(tmp_path)
+        rc = mon.cmd_ack_buy(SimpleNamespace(
+            symbol="600001", price=9.9, shares=500, time=None, venue="real", note="my entry"), store)
+        assert rc == 0
+        assert store.positions["open"][0]["venue"] == "real"
+        alerts = [json.loads(l) for l in (store.dir / "alerts.jsonl").read_text().splitlines()]
+        opened = next(a for a in alerts if a["type"] == mon.EVENT_POSITION_OPENED)
+        assert opened["venue"] == "real" and opened["note"] == "my entry"
+
+    def test_sell_rejects_partial_close(self, tmp_path, monitor_env):
+        store = fresh_store(tmp_path)
+        store.open_position("600001", 9.9, 500, "2026-09-02T10:00:00", SPEC.name)
+        rc = mon.cmd_ack_sell(SimpleNamespace(
+            symbol="600001", price=10.2, shares=100, time=None, venue="real"), store)
+        assert rc == 1 and len(store.positions["open"]) == 1
+
+    def test_sell_rejects_venue_mismatch(self, tmp_path, monitor_env):
+        store = fresh_store(tmp_path)
+        store.open_position("600001", 9.9, 500, "2026-09-02T10:00:00", SPEC.name, venue="paper")
+        rc = mon.cmd_ack_sell(SimpleNamespace(
+            symbol="600001", price=10.2, shares=500, time=None, venue="real"), store)
+        assert rc == 1 and len(store.positions["open"]) == 1
+
+    def test_sell_defaults_to_position_venue_and_closes(self, tmp_path, monitor_env):
+        store = fresh_store(tmp_path)
+        store.open_position("600001", 9.9, 500, "2026-09-02T10:00:00", SPEC.name, venue="real")
+        # args without a venue attr (older CLI callers) inherit the position venue
+        rc = mon.cmd_ack_sell(SimpleNamespace(
+            symbol="600001", price=10.2, shares=500, time=None), store)
+        assert rc == 0 and store.positions["open"] == []
+
+
+    def test_summary_data_trust_follows_semantic_gate_not_availability(self, tmp_path, monitor_env, monkeypatch):
+        store = fresh_store(tmp_path)
+        mon.run_cycle(store, active_cfg=monitor_env.active_cfg, spec=SPEC, state_dir=store.dir, now=NOW)
+        state = json.loads((store.dir / "state.json").read_text())
+        assert state["data_trust"] == "PASS"
+        monkeypatch.setattr(mon, "load_volume_semantics", lambda **k: {"status": "FAIL"})
+        mon.run_cycle(store, active_cfg=monitor_env.active_cfg, spec=SPEC, state_dir=store.dir, now=NOW)
+        state = json.loads((store.dir / "state.json").read_text())
+        assert state["data_trust"] == "FAIL"
+        # outside the session: nothing evaluated -> UNKNOWN, never a fake verdict
+        mon.run_cycle(store, active_cfg=monitor_env.active_cfg, spec=SPEC, state_dir=store.dir,
+                      now=datetime(2026, 9, 2, 16, 0, tzinfo=TZ_SH))
+        state = json.loads((store.dir / "state.json").read_text())
+        assert state["data_trust"] == "UNKNOWN" and state["system_unavailable"] is False
+
+
 # ---------------------------------------------------------------------------
 # fixture isolation
 # ---------------------------------------------------------------------------

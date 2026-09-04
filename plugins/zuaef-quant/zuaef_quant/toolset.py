@@ -1,4 +1,4 @@
-"""QuantToolset — the three model-visible deterministic tools.
+"""QuantToolset — the six model-visible deterministic tools.
 
 Boundary (spec pack 03 §4): the host owns validation, data, evaluator,
 market rules, costs and benchmark; the Agent owns interpretation and the
@@ -51,9 +51,14 @@ REPO_ROOT = resolve_repo_root()
 TOOLS_DIR = REPO_ROOT / "tools"
 QUANT_EVAL_SCRIPT = TOOLS_DIR / "quant_eval_qlib.py"
 QUANT_SCAN_SCRIPT = TOOLS_DIR / "quant_live_scan.py"
+QUANT_MONITOR_SCRIPT = TOOLS_DIR / "quant_trading_monitor.py"
+QUANT_RENDER_SCRIPT = TOOLS_DIR / "quant_render_business_dashboard.py"
 DEFAULT_BENCH_DIR = REPO_ROOT / "benchmarks" / "quant" / "gen1"
 EVAL_TIMEOUT_S = 1200
 SCAN_TIMEOUT_S = 300
+ACK_TIMEOUT_S = 120
+RENDER_TIMEOUT_S = 120
+GEN1_DIR = DEFAULT_BENCH_DIR
 
 #: Whitelisted StrategySpec keys (schema 1). Nothing else crosses the boundary.
 SPEC_KEYS = {
@@ -132,6 +137,29 @@ def render_spec_toml(data: dict[str, Any]) -> str:
 
 def _slug(name: str) -> str:
     return re.sub(r"[^a-z0-9_]", "_", name)
+
+
+def _read_json(path: Path, default):
+    """Tolerant canonical-artifact read: absent/corrupt -> the default, never
+    a fabricated business state."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return default
+
+
+def _read_jsonl_tail(path: Path, limit: int) -> list[dict]:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    rows = []
+    for line in lines[-limit:]:
+        try:
+            rows.append(json.loads(line))
+        except ValueError:
+            continue
+    return rows
 
 
 def _run(script: Path, args: list[str], quant_python: Path, timeout: int) -> str:
@@ -320,8 +348,14 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         executed_at: str,
         notes: str = "",
     ) -> str:
-        """Record one manually executed or paper trade outcome (file-native,
-        no broker action). venue must be 'paper' or 'real'.
+        """Record one human-completed or paper trade FACT into the canonical
+        trading state via the canonical ack host operation (LOCAL fact write;
+        no broker action is taken and none can be). action must be BUY or
+        SELL; venue must be 'paper' or 'real'; executed_at is the human
+        fact's own ISO time. BUY creates a Position; SELL closes the FULL
+        position only (shares must equal the open position's shares) and its
+        venue must match the position's venue — the canonical host rejects
+        anything else and this tool surfaces that rejection verbatim.
         """
         if action not in ("BUY", "SELL"):
             raise ValueError("action must be BUY or SELL")
@@ -329,20 +363,105 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             raise ValueError("venue must be 'paper' or 'real'")
         if shares <= 0 or price <= 0:
             raise ValueError("shares and price must be positive")
-        record = {
-            "recorded_at": _dt.datetime.now(_dt.UTC).isoformat(),
-            "symbol": symbol,
-            "action": action,
-            "shares": shares,
-            "price": price,
-            "venue": venue,
-            "executed_at": executed_at,
-            "notes": notes,
-        }
-        outcomes = workspace_root / "quant" / "outcomes.jsonl"
-        outcomes.parent.mkdir(parents=True, exist_ok=True)
-        with outcomes.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-        return json.dumps({"recorded": True, "file": str(outcomes)}, ensure_ascii=False)
+        args = [
+            "--state-dir", str(workspace_root / "artifacts" / "quant" / "trading"),
+            "ack-buy" if action == "BUY" else "ack-sell",
+            "--symbol", symbol.strip().upper(),
+            "--price", repr(float(price)),
+            "--shares", str(int(shares)),
+            "--venue", venue,
+            "--time", executed_at,
+        ]
+        if notes.strip():
+            args += ["--note", notes.strip()]
+        stdout = _run(QUANT_MONITOR_SCRIPT, args, quant_python, ACK_TIMEOUT_S)
+        ack = json.loads(stdout.strip() or "{}")
+        return json.dumps(
+            {
+                "recorded": True,
+                "canonical": "workspace/artifacts/quant/trading/",
+                "ack": ack,
+                "note": "human trade fact via canonical ack; no broker action",
+            },
+            ensure_ascii=False,
+        )
+
+    @toolset.tool_plain
+    def get_trading_context() -> str:
+        """Read the bounded CURRENT trading context from the canonical M1
+        artifacts (workspace/artifacts/quant/trading/). Read-only projection:
+        never recomputes the market and never re-derives triggers. Returns
+        system health, market/data-trust status, READY/NEAR lists, open
+        positions, exit alerts, recent durable material events, forward
+        summary and heartbeat/last-scan times. Base every trading answer on
+        this context instead of memory; a stale context is a fact to report,
+        not to refresh by re-scanning.
+        """
+        trading = workspace_root / "artifacts" / "quant" / "trading"
+        state = _read_json(trading / "state.json", {})
+        positions = _read_json(trading / "positions.json", {"open": [], "closed": []})
+        forward = _read_json(trading / "forward.json", {"observations": []})
+        soak = _read_jsonl_tail(trading / "soak.jsonl", 50)
+        alerts = _read_jsonl_tail(trading / "alerts.jsonl", 20)
+        observations = forward.get("observations") or []
+        events = [
+            {k: a.get(k) for k in ("ts", "type", "symbol", "what", "why", "price", "venue")}
+            for a in alerts
+        ]
+        return json.dumps(
+            {
+                "present": bool(state),
+                "as_of": state.get("as_of"),
+                "day": state.get("day"),
+                "status": state.get("status"),
+                "data_trust": state.get("data_trust") or "UNKNOWN",
+                "market_no_trade": state.get("market_no_trade"),
+                "system_unavailable": state.get("system_unavailable"),
+                "heartbeat_at": soak[-1].get("ts") if soak else None,
+                "last_scan_at": next(
+                    (r.get("ts") for r in reversed(soak) if (r.get("symbols") or 0) > 0), None
+                ),
+                "ready": state.get("ready") or [],
+                "near": state.get("near") or [],
+                "exit_alerts": state.get("exit_alerts") or [],
+                "positions": positions.get("open") or [],
+                "recent_material_events": events,
+                "forward": {
+                    "observations": len(observations),
+                    "settled": sum(1 for o in observations if o.get("d8") is not None),
+                },
+                "limitations": [
+                    "strategy profitability UNPROVEN (S3 frozen, PIT-contaminated universe)",
+                    "READY/NEAR are deterministic facts from the frozen scan rules, not orders",
+                ],
+            },
+            ensure_ascii=False,
+        )
+
+    @toolset.tool_plain
+    def render_quant_business_artifact() -> str:
+        """Deterministically render the current business dashboard HTML from
+        the canonical trading artifacts (runs the host renderer; the model
+        never assembles HTML itself). Returns the workspace-relative artifact
+        path under artifacts/quant/delivery/ plus the renderer's bounded OK
+        summary. The output is a single-file self-contained HTML suitable for
+        direct delivery as a document attachment.
+        """
+        stamp = _dt.datetime.now(_dt.UTC).strftime("%Y%m%d-%H%M")
+        delivery = workspace_root / "artifacts" / "quant" / "delivery"
+        delivery.mkdir(parents=True, exist_ok=True)
+        out = delivery / f"quant-business-{stamp}.html"
+        stdout = _run(
+            QUANT_RENDER_SCRIPT, ["--out", str(out)], quant_python, RENDER_TIMEOUT_S
+        )
+        summary = next((ln for ln in stdout.splitlines() if ln.startswith("OK ->")), stdout[-200:])
+        return json.dumps(
+            {
+                "artifact": str(out.relative_to(workspace_root)),
+                "summary": summary,
+                "note": "single-file self-contained HTML; opens offline",
+            },
+            ensure_ascii=False,
+        )
 
     return toolset

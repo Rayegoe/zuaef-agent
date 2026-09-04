@@ -54,12 +54,14 @@ generated:
 ```text
 ZUAEF Agent Core（业务域中立，零量化改动）
   └─ zuaef-quant Plugin（plugins/zuaef-quant，入口点 quant，allow_capabilities = true）
-       └─ QuantDecision Capability（10 条领域指令 + QuantToolset）
-            ├─ evaluate_strategy       ┐
-            ├─ get_live_signals        ┼─ subprocess 隔离（.venv-quant Python 3.12）
-            ├─ record_decision_brief   ┘
-            └─ record_trade_outcome（纯本地 JSONL）
-                 └─ 确定性工具：quant_core / quant_eval_qlib / quant_live_scan
+       └─ QuantDecision Capability（领域指令 + QuantToolset，6 个确定性工具）
+            ├─ evaluate_strategy                  ┐
+            ├─ get_live_signals                   ┼─ subprocess 隔离（.venv-quant Python 3.12）
+            ├─ record_decision_brief              │
+            ├─ record_trade_outcome               │（canonical ack：仅记录事实，不下单）
+            ├─ get_trading_context                ├─ 只读 canonical trading 上下文（artifacts/quant/trading/）
+            └─ render_quant_business_artifact     ┘─ 确定性渲染业务 HTML（artifacts/quant/delivery/）
+                 └─ 确定性工具：quant_core / quant_eval_qlib / quant_live_scan / quant_trading_monitor / quant_render_business_dashboard
                       └─ 数据面：akshare 1.18.94（腾讯历史/新浪快照/CSIndex 成分/qt.gtimg.cn 实时）
 ```
 

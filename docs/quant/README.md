@@ -97,10 +97,10 @@ Live Decision Product    FIRST PROOF PASS(交互式;watcher 有意未建)
 
 ### P3 — QuantDecision 接入 ZUAEF ✅
 
-- `plugins/zuaef-quant`(workspace 成员,`zuaef.plugins` 入口点 `quant`):轻量 `Capability(id="quant-decision")` + 10 条领域指令 + 三个确定性工具,**Core 零业务改动**。重活在侧环境 subprocess 执行,插件包自身不背 akshare/qlib。
-- 工具:`evaluate_strategy`(纯数值参数、白名单校验、返回有界证据)/ `get_live_signals`(确定性扫描,LLM 永不扫全市场)/ `record_trade_outcome`(文件原生 JSONL)。
+- `plugins/zuaef-quant`(workspace 成员,`zuaef.plugins` 入口点 `quant`):轻量 `Capability(id="quant-decision")` + 领域指令(证据层级/真相来源/报告语义/操作守则)+ 六个确定性工具,**Core 零业务改动**。重活在侧环境 subprocess 执行,插件包自身不背 akshare/qlib。
+- 工具(6 个):`evaluate_strategy`(纯数值参数、白名单校验、返回有界证据)/ `get_live_signals`(确定性扫描,LLM 永不扫全市场)/ `record_decision_brief`(六种 action 枚举,实测 signal→brief 延迟)/ `record_trade_outcome`(canonical ack,仅记录人类已成交事实、不下单;venue=paper/real;Phase 1 仅全仓平仓)/ `get_trading_context`(只读 canonical trading 上下文,不重算市况、不重推触发)/ `render_quant_business_artifact`(确定性渲染业务 HTML 到 `artifacts/quant/delivery/`)。
 - **真实失败③:首个版本让模型提交整段 TOML 字符串,弱模型不会调** → 改为普通数值参数(默认值即基线),一次工具调用即可完成 mutation。
-- Profile `profiles/quant-decision.toml`(`allow_capabilities = true`);12 个契约测试(白名单越界、侧环境缺失必须响亮失败、artifacts 落点等)。
+- Profile `profiles/quant-decision.toml`(`allow_capabilities = true`);22 个插件契约测试(白名单越界、canonical ack 路由与宿主拒绝原样透传、get_trading_context 只读投影、渲染落点等)。
 
 ### P4 — 三轮真实模型进化 ✅
 

@@ -106,29 +106,158 @@ class TestPluginFactory:
 
 
 class TestRecordOutcome:
-    def test_outcome_written_as_jsonl(self, tmp_path, monkeypatch):
+    def _toolset(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("ZUAEF_QUANT_PYTHON", raising=False)
+        monkeypatch.setenv("ZUAEF_QUANT_PYTHON", str(_fake_quant_python(tmp_path)))
+        env = _env(tmp_path)
+        bundle = create_plugin(env, {})
+        return bundle.capabilities[0].toolsets[0], env
+
+    def test_buy_routes_to_canonical_ack_with_venue_and_note(self, tmp_path, monkeypatch):
+        toolset, env = self._toolset(tmp_path, monkeypatch)
+        func = toolset.tools["record_trade_outcome"].function
+        captured = {}
+
+        def fake_run(script, args, quant_python, timeout):
+            captured["script"], captured["args"] = script, args
+            return json.dumps({"position": "p-0001", "symbol": "600519", "state": "HOLD", "venue": "paper"})
+
+        import zuaef_quant.toolset as toolset_mod
+        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        result = json.loads(func(
+            symbol="600519", action="BUY", shares=100, price=1297.4,
+            venue="paper", executed_at="2026-09-04T11:07:42+08:00", notes="paper entry",
+        ))
+        assert result["recorded"] is True
+        assert result["canonical"] == "workspace/artifacts/quant/trading/"
+        assert result["ack"]["position"] == "p-0001"
+        args = captured["args"]
+        assert "ack-buy" in args
+        assert args[args.index("--symbol") + 1] == "600519"
+        assert args[args.index("--shares") + 1] == "100"
+        assert args[args.index("--venue") + 1] == "paper"
+        assert args[args.index("--time") + 1] == "2026-09-04T11:07:42+08:00"
+        assert args[args.index("--note") + 1] == "paper entry"
+        assert args[args.index("--state-dir") + 1] == str(env.workspace_root / "artifacts" / "quant" / "trading")
+        # the legacy outcomes ledger is never written again
+        assert not (env.workspace_root / "quant" / "outcomes.jsonl").exists()
+        # a human-fact record is a LOCAL write: no approval requirement
+        assert not getattr(toolset.tools["record_trade_outcome"], "requires_approval", False)
+
+    def test_sell_routes_to_ack_sell_without_note_flag_when_empty(self, tmp_path, monkeypatch):
+        toolset, _ = self._toolset(tmp_path, monkeypatch)
+        func = toolset.tools["record_trade_outcome"].function
+        captured = {}
+
+        def fake_run(script, args, quant_python, timeout):
+            captured["args"] = args
+            return json.dumps({"closed": "p-0001", "pnl": 150.0, "venue": "real"})
+
+        import zuaef_quant.toolset as toolset_mod
+        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        result = json.loads(func(
+            symbol="600519", action="SELL", shares=100, price=1320.0,
+            venue="real", executed_at="2026-09-04T13:45:00+08:00",
+        ))
+        assert result["ack"]["closed"] == "p-0001"
+        assert "ack-sell" in captured["args"] and "--note" not in captured["args"]
+
+    def test_canonical_host_rejection_surfaces_verbatim(self, tmp_path, monkeypatch):
+        toolset, _ = self._toolset(tmp_path, monkeypatch)
+        func = toolset.tools["record_trade_outcome"].function
+
+        def rejecting_run(script, args, quant_python, timeout):
+            raise RuntimeError("canonical ack rejected the trade record: venue mismatch")
+
+        import zuaef_quant.toolset as toolset_mod
+        monkeypatch.setattr(toolset_mod, "_run", rejecting_run)
+        with pytest.raises(RuntimeError, match="venue mismatch"):
+            func(symbol="600519", action="SELL", shares=100, price=10.0,
+                 venue="real", executed_at="2026-09-04T13:45:00+08:00")
+
+    def test_invalid_action_rejected_before_side_env(self, tmp_path, monkeypatch):
+        toolset, _ = self._toolset(tmp_path, monkeypatch)
+        func = toolset.tools["record_trade_outcome"].function
+        with pytest.raises(ValueError, match="action"):
+            func(symbol="600519", action="BUY_NOW", shares=100, price=10.0,
+                 venue="paper", executed_at="2026-09-04T13:45:00+08:00")
+        with pytest.raises(ValueError, match="venue"):
+            func(symbol="600519", action="BUY", shares=100, price=10.0,
+                 venue="demo", executed_at="2026-09-04T13:45:00+08:00")
+
+
+class TestGetTradingContext:
+    def _toolset(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("ZUAEF_QUANT_PYTHON", raising=False)
+        monkeypatch.setenv("ZUAEF_QUANT_PYTHON", str(_fake_quant_python(tmp_path)))
+        env = _env(tmp_path)
+        bundle = create_plugin(env, {})
+        return bundle.capabilities[0].toolsets[0], env
+
+    def test_absent_artifacts_are_reported_not_fabricated(self, tmp_path, monkeypatch):
+        toolset, _ = self._toolset(tmp_path, monkeypatch)
+        data = json.loads(toolset.tools["get_trading_context"].function())
+        assert data["present"] is False
+        assert data["data_trust"] == "UNKNOWN"
+        assert data["ready"] == [] and data["positions"] == []
+        assert data["heartbeat_at"] is None and data["last_scan_at"] is None
+
+    def test_bounded_context_from_canonical_artifacts(self, tmp_path, monkeypatch):
+        toolset, env = self._toolset(tmp_path, monkeypatch)
+        trading = env.workspace_root / "artifacts" / "quant" / "trading"
+        trading.mkdir(parents=True)
+        (trading / "state.json").write_text(json.dumps({
+            "as_of": "2026-09-04T10:00:00+08:00", "day": "2026-09-04", "status": "ALERTS",
+            "data_trust": "PASS", "ready": ["601799"], "near": ["600015"], "exit_alerts": [],
+            "market_no_trade": False, "system_unavailable": False,
+        }), encoding="utf-8")
+        (trading / "positions.json").write_text(json.dumps({
+            "open": [{"id": "p-0001", "symbol": "601799", "venue": "paper", "shares": 100,
+                      "entry_price": 76.32, "state": "HOLD"}], "closed": [],
+        }), encoding="utf-8")
+        (trading / "forward.json").write_text(json.dumps({
+            "observations": [{"kind": "EXECUTED"}, {"kind": "SKIP", "d8": 0.01}],
+        }), encoding="utf-8")
+        (trading / "soak.jsonl").write_text(
+            '{"ts": "2026-09-04T09:31:00+08:00", "status": "MARKET_CLOSED", "symbols": 0}\n'
+            '{"ts": "2026-09-04T09:47:00+08:00", "status": "ALERTS", "symbols": 50}\n', encoding="utf-8")
+        (trading / "alerts.jsonl").write_text(
+            '{"ts": "2026-09-04T09:47:00+08:00", "type": "NEW_READY", "symbol": "601799", "what": "none -> READY"}\n',
+            encoding="utf-8")
+        data = json.loads(toolset.tools["get_trading_context"].function())
+        assert data["present"] is True and data["status"] == "ALERTS" and data["data_trust"] == "PASS"
+        assert data["ready"] == ["601799"] and data["near"] == ["600015"]
+        assert data["positions"][0]["venue"] == "paper"
+        # heartbeat != last successful scan
+        assert data["heartbeat_at"] == "2026-09-04T09:47:00+08:00"
+        assert data["last_scan_at"] == "2026-09-04T09:47:00+08:00"
+        assert data["forward"] == {"observations": 2, "settled": 1}
+        assert data["recent_material_events"][0]["type"] == "NEW_READY"
+        assert any("UNPROVEN" in l for l in data["limitations"])
+
+
+class TestRenderBusinessArtifact:
+    def test_renders_into_delivery_dir_with_bounded_summary(self, tmp_path, monkeypatch):
         monkeypatch.delenv("ZUAEF_QUANT_PYTHON", raising=False)
         monkeypatch.setenv("ZUAEF_QUANT_PYTHON", str(_fake_quant_python(tmp_path)))
         env = _env(tmp_path)
         bundle = create_plugin(env, {})
         toolset = bundle.capabilities[0].toolsets[0]
-        call = toolset.tools["record_trade_outcome"]
-        # direct function invocation via the tool object's function
-        func = call.function if hasattr(call, "function") else call
-        result = json.loads(func(
-            symbol="600519",
-            action="BUY",
-            shares=100,
-            price=1297.4,
-            venue="paper",
-            executed_at="2026-08-28T15:00:00+08:00",
-            notes="paper entry",
-        ))
-        assert result["recorded"] is True
-        outcomes = env.workspace_root / "quant" / "outcomes.jsonl"
-        lines = outcomes.read_text(encoding="utf-8").strip().splitlines()
-        assert len(lines) == 1
-        assert json.loads(lines[0])["symbol"] == "600519"
+        func = toolset.tools["render_quant_business_artifact"].function
+        captured = {}
+
+        def fake_run(script, args, quant_python, timeout):
+            captured["script"], captured["args"] = script, args
+            return "OK -> /tmp/x.html (90.2 KB, also y); decision=NO_TRADE real_records=5 m1=PARTIAL"
+
+        import zuaef_quant.toolset as toolset_mod
+        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        result = json.loads(func())
+        assert captured["script"].name == "quant_render_business_dashboard.py"
+        assert "--out" in captured["args"]
+        assert result["artifact"].startswith("artifacts/quant/delivery/quant-business-")
+        assert not result["artifact"].startswith(str(env.workspace_root))
+        assert "m1=PARTIAL" in result["summary"]
 
 
 class TestEvaluateStrategy:

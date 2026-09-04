@@ -34,7 +34,7 @@ platform). `--state-dir` isolates fixture/replay runs from real results.
 
     .venv/bin/python tools/quant_trading_monitor.py once
     .venv/bin/python tools/quant_trading_monitor.py session --interval 45
-    .venv/bin/python tools/quant_trading_monitor.py ack-buy --symbol 600000 --price 10.5 --shares 500
+    .venv/bin/python tools/quant_trading_monitor.py ack-buy --symbol 600000 --price 10.5 --shares 500 --venue paper
     .venv/bin/python tools/quant_trading_monitor.py ack-sell --symbol 600000 --price 10.9 --shares 500
     .venv/bin/python tools/quant_trading_monitor.py status
 """
@@ -82,6 +82,8 @@ EVENT_POSITION_OPENED = "POSITION_OPENED"
 EVENT_POSITION_CLOSED = "POSITION_CLOSED"
 EVENT_DATA_UNTRUSTED = "DATA_UNTRUSTED"
 EVENT_CONNECTION_LOST = "LIVE_CONNECTION_LOST"
+
+VENUES = ("paper", "real")
 
 ST_WATCH, ST_NEAR, ST_READY, ST_INVALIDATED, ST_EXECUTED = (
     "WATCH", "NEAR", "READY", "INVALIDATED", "EXECUTED",
@@ -233,7 +235,7 @@ class Store:
             {"kind": kind, "symbol": symbol, "day": day, "ref_price": ref_price, "ref_id": ref_id}
         )
 
-    def open_position(self, symbol: str, price: float, shares: int, when: str, strategy: str) -> dict:
+    def open_position(self, symbol: str, price: float, shares: int, when: str, strategy: str, venue: str = "paper") -> dict:
         pid = f"p-{self.positions['next_id']:04d}"
         self.positions["next_id"] += 1
         position = {
@@ -244,6 +246,7 @@ class Store:
             "entry_time": when,
             "entry_date": when[:10],
             "strategy": strategy,
+            "venue": venue,
             "state": "HOLD",
         }
         self.positions["open"].append(position)
@@ -297,7 +300,6 @@ def run_cycle(
         status = "MARKET_CLOSED"
         _write_summary(store, status, [], now, day_str, state_dir)
         return {"status": status, "events": [], "symbols": 0}
-
     resolved = resolve_universe(None, active_path=ACTIVE_SYMBOLS_PATH)
     symbols = list(resolved["symbols"])
     position_symbols = [p["symbol"] for p in store.positions["open"]]
@@ -309,6 +311,9 @@ def run_cycle(
             expected_symbols=symbols, universe_as_of=resolved["as_of"]
         )["status"]
     suppressed = volume_gate_suppresses(semantic_status)
+    # data trust = this cycle's semantic gate verdict, fail-closed; it is a
+    # data fact and deliberately separate from runtime availability
+    data_trust = "PASS" if semantic_status == "PASS" else "FAIL"
 
     events: list[dict] = []
 
@@ -341,7 +346,7 @@ def run_cycle(
                 },
             )
         status = "SYSTEM_UNAVAILABLE"
-        _write_summary(store, status, events, now, day_str, state_dir)
+        _write_summary(store, status, events, now, day_str, state_dir, data_trust="UNKNOWN")
         return {"status": status, "events": events, "symbols": len(quote_symbols)}
     if suppressed and store.alerts_today(day_str, {EVENT_DATA_UNTRUSTED}) == 0:
         emit(
@@ -498,13 +503,14 @@ def run_cycle(
     _write_summary(
         store, status, events, now, day_str, state_dir,
         attention=attention, symbols=len(quote_symbols), positions_live=positions_live,
+        data_trust=data_trust,
     )
-    return {"status": status, "events": events, "symbols": len(quote_symbols)}
+    return {"status": status, "events": events, "symbols": len(quote_symbols), "data_trust": data_trust}
 
 
 def _write_summary(store: Store, status: str, events: list, now: datetime, day: str,
                    state_dir: Path, attention: list[dict] | None = None, symbols: int = 0,
-                   positions_live: dict | None = None) -> None:
+                   positions_live: dict | None = None, data_trust: str = "UNKNOWN") -> None:
     ready = [s for s, o in store.opportunities.items() if o.get("state") == ST_READY]
     near = [s for s, o in store.opportunities.items() if o.get("state") == ST_NEAR]
     exit_alerts = [p["symbol"] for p in store.positions["open"] if p.get("state") == "EXIT_ALERT"]
@@ -519,13 +525,16 @@ def _write_summary(store: Store, status: str, events: list, now: datetime, day: 
         "watch": [s for s, o in store.opportunities.items() if o.get("state") == ST_WATCH],
         "positions": [
             {
-                **{k: p.get(k) for k in ("id", "symbol", "entry_price", "shares", "state", "exit_reason")},
+                **{k: p.get(k) for k in ("id", "symbol", "entry_price", "shares", "venue", "state", "exit_reason")},
                 **((positions_live or {}).get(p["symbol"], {})),
             }
             for p in store.positions["open"]
         ],
         "exit_alerts": exit_alerts,
         "events": events,
+        # data trust is a fact about the data gate, NOT runtime availability:
+        # PASS/FAIL only when semantics were evaluated this cycle, else UNKNOWN
+        "data_trust": data_trust,
         "market_no_trade": status == "NO_TRADE",
         "system_unavailable": status == "SYSTEM_UNAVAILABLE",
     })
@@ -570,8 +579,13 @@ def _ack_time(value: str | None) -> str:
 
 def cmd_ack_buy(args, store: Store) -> int:
     _cfg, spec = _load_strategy()
+    venue = getattr(args, "venue", None) or "paper"
+    note = getattr(args, "note", None) or ""
+    if venue not in VENUES:
+        print(json.dumps({"error": f"venue must be one of {list(VENUES)}"}), file=sys.stderr)
+        return 1
     when = _ack_time(args.time)
-    position = store.open_position(args.symbol.upper(), float(args.price), int(args.shares), when, spec.name)
+    position = store.open_position(args.symbol.upper(), float(args.price), int(args.shares), when, spec.name, venue=venue)
     opp = store.opportunities.get(position["symbol"])
     if opp and opp.get("state") in (ST_NEAR, ST_READY, ST_WATCH):
         opp["state"] = ST_EXECUTED
@@ -581,10 +595,11 @@ def cmd_ack_buy(args, store: Store) -> int:
         "day": when[:10], "type": EVENT_POSITION_OPENED, "symbol": position["symbol"],
         "price": float(args.price), "what": "user BUY acknowledged",
         "why": f"{position['id']} {args.shares} shares @ {args.price}",
+        "venue": venue, "note": note,
         "conditions": None, "invalidation": "close via ack-sell", "data_trust": "USER_CONFIRMED",
     })
     store.save()
-    print(json.dumps({"position": position["id"], "symbol": position["symbol"], "state": "HOLD"}, ensure_ascii=False))
+    print(json.dumps({"position": position["id"], "symbol": position["symbol"], "state": "HOLD", "venue": venue}, ensure_ascii=False))
     return 0
 
 
@@ -594,8 +609,26 @@ def cmd_ack_sell(args, store: Store) -> int:
     if not open_positions:
         print(json.dumps({"error": f"no open position for {symbol}"}), file=sys.stderr)
         return 1
+    position = open_positions[0]
+    # Phase 1: full close only — a partial share count would close the whole
+    # position while booking wrong P&L, so it is rejected, not silently shrunk
+    if int(args.shares) != int(position["shares"]):
+        print(json.dumps({
+            "error": f"Phase 1 closes the full position only: open {position['shares']} shares, got {args.shares}",
+        }), file=sys.stderr)
+        return 1
+    venue = getattr(args, "venue", None) or position.get("venue", "paper")
+    if venue not in VENUES:
+        print(json.dumps({"error": f"venue must be one of {list(VENUES)}"}), file=sys.stderr)
+        return 1
+    if venue != position.get("venue", "paper"):
+        print(json.dumps({
+            "error": f"venue mismatch: position opened as {position.get('venue')}, sell claimed {venue}",
+        }), file=sys.stderr)
+        return 1
+    note = getattr(args, "note", None) or ""
     when = _ack_time(args.time)
-    closed = store.close_position(open_positions[0], float(args.price), int(args.shares), when)
+    closed = store.close_position(position, float(args.price), int(args.shares), when)
     # the position is gone; the symbol's opportunity lifecycle resumes
     opp = store.opportunities.get(symbol)
     if opp and opp.get("state") == ST_EXECUTED:
@@ -605,10 +638,11 @@ def cmd_ack_sell(args, store: Store) -> int:
         "day": when[:10], "type": EVENT_POSITION_CLOSED, "symbol": symbol,
         "price": float(args.price), "what": "user SELL acknowledged",
         "why": f"{closed['id']} closed, pnl {closed['pnl']}",
+        "venue": venue, "note": note,
         "conditions": None, "invalidation": None, "data_trust": "USER_CONFIRMED",
     })
     store.save()
-    print(json.dumps({"closed": closed["id"], "pnl": closed["pnl"]}, ensure_ascii=False))
+    print(json.dumps({"closed": closed["id"], "pnl": closed["pnl"], "venue": venue}, ensure_ascii=False))
     return 0
 
 
@@ -673,11 +707,15 @@ def main() -> int:
     p_buy.add_argument("--symbol", required=True)
     p_buy.add_argument("--price", type=float, required=True)
     p_buy.add_argument("--shares", type=int, required=True)
+    p_buy.add_argument("--venue", choices=list(VENUES), default="paper", help="paper (default) or real")
+    p_buy.add_argument("--note", default="", help="free-text human note")
     p_buy.add_argument("--time", default=None, help="ISO time; default now (Asia/Shanghai)")
-    p_sell = sub.add_parser("ack-sell", help="user-confirmed SELL -> CLOSED")
+    p_sell = sub.add_parser("ack-sell", help="user-confirmed SELL -> CLOSED (full close only)")
     p_sell.add_argument("--symbol", required=True)
     p_sell.add_argument("--price", type=float, required=True)
-    p_sell.add_argument("--shares", type=int, required=True)
+    p_sell.add_argument("--shares", type=int, required=True, help="must equal the open position's shares")
+    p_sell.add_argument("--venue", choices=list(VENUES), default=None, help="must match the position's venue")
+    p_sell.add_argument("--note", default="", help="free-text human note")
     p_sell.add_argument("--time", default=None)
     sub.add_parser("status", help="print current monitor state")
     args = parser.parse_args()
