@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """render_business_dashboard.py — ZUAEF quant business dashboard (read-only).
 
-Renders docs/quant/business.html from existing artifacts: candidate snapshot
+Renders docs/quant/business.html from existing artifacts: the M1 trading-loop
+truth (workspace/artifacts/quant/trading/ — soak.jsonl / alerts.jsonl /
+forward.json / state.json), the candidate snapshot
 (tools/quant_build_candidates.py), last live-scan snapshot, Decision Briefs,
-the observation log, the frozen active strategy and baseline/S1/S2/S3
-evidence. Answers market questions — today's decision, top value/quality
-alternatives, live triggers, why each candidate ranks, red flags, data
-freshness, and why the strategy is still unproven. Engineering proof chain
-(U0–P5.5) stays on /engineering.
+the observation log (history only), the frozen active strategy and
+baseline/S1/S2/S3 evidence. Answers market questions — today's decision, top
+value/quality alternatives, live triggers, why each candidate ranks, red
+flags, data freshness, real-run evidence trend, and why the strategy is
+still unproven. Engineering proof chain (U0–P5.5) stays on /engineering.
+
+Current M1 trading truth comes only from workspace/artifacts/quant/trading/.
+The old workspace/quant/outcomes.jsonl is no longer read.
 
 Stdlib only: runs with plain python3, no quant dependency group needed.
 
@@ -24,6 +29,7 @@ import argparse
 import json
 import re
 from datetime import UTC, datetime
+from datetime import time as dtime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -39,8 +45,11 @@ OBS_LOG_PATH = GEN1 / "OBSERVATION_LOG.md"
 STATUS_PATH = GEN1 / "STATUS.md"
 ACTIVE_PATH = GEN1 / "active.toml"
 LEGACY_PATH = GEN1 / "legacy_watchlist.toml"
-OUTCOMES_PATH = REPO_ROOT / "workspace" / "quant" / "outcomes.jsonl"
 SEMANTIC_DIR = ART / "semantic"
+TRADING_DIR = ART / "trading"
+TRADING_DIAGNOSTIC_DIR = ART / "trading-diagnostic"
+DAILY_CACHE_DIR = REPO_ROOT / "data" / "quant-cache" / "daily"
+ACTIVE_SYMBOLS_PATH = REPO_ROOT / "data" / "quant-cache" / "candidates" / "active_symbols.json"
 DEFAULT_OUT = REPO_ROOT / "docs" / "quant" / "business.html"
 
 STRATEGY_WARNING = "历史 S3 证据薄弱;盈利能力仍未证明 (NOT YET)。"
@@ -222,9 +231,165 @@ def today_decision(briefs: list[dict]) -> dict:
     }
 
 
-def settled_trade_count(outcomes_path: Path) -> int:
-    rows = read_jsonl(outcomes_path)
-    return sum(1 for r in rows if r.get("action") == "SELL")
+# --------------------------------------------------------------------------
+# M1 real-run evidence (workspace/artifacts/quant/trading/ is the only
+# current trading truth; missing data stays missing, never coerced to 0)
+# --------------------------------------------------------------------------
+
+
+# soak statuses that prove an in-session pass actually scanned the universe
+SOAK_IN_SESSION_STATUSES = {"NO_TRADE", "ALERTS", "SCANNED"}
+
+DIAGNOSTIC_EVENT_KINDS = {"NEW_NEAR": "NEAR", "NEW_READY": "READY"}
+
+
+def _d1_from_daily(daily_dir: Path, symbol: str, ref_price: float, day: str) -> dict:
+    """Diagnostic D+1 from the first cached daily close strictly after `day`.
+
+    Real cached bars only. No future bar -> stays pending (no key), never a
+    fabricated 0.
+    """
+    lines = read_text(Path(daily_dir) / f"{symbol}_qfq.csv").splitlines()
+    for line in lines[1:]:  # skip header; ISO dates sort lexicographically
+        cells = line.split(",")
+        # columns: date,symbol,open,high,low,close,...
+        if len(cells) < 6 or cells[0] <= day:
+            continue
+        try:
+            close = float(cells[5])
+        except ValueError:
+            continue
+        if ref_price <= 0:
+            return {}
+        return {"d1_day": cells[0], "d1": round(close / ref_price - 1, 6)}
+    return {}
+
+
+def load_diagnostic_evidence(
+    diagnostic_dir: Path = TRADING_DIAGNOSTIC_DIR, daily_dir: Path = DAILY_CACHE_DIR
+) -> list[dict]:
+    """9/3-style isolated diagnostic NEAR/READY records + their D+1 outcome.
+
+    These are `diagnostic forward evidence` from a `--state-dir` isolated run:
+    never formal forward observations, never strategy return/win-rate.
+    """
+    rows = []
+    for a in read_jsonl(Path(diagnostic_dir) / "alerts.jsonl"):
+        kind = DIAGNOSTIC_EVENT_KINDS.get(str(a.get("type", "")))
+        if kind is None:
+            continue
+        symbol, ref, day = a.get("symbol"), a.get("price"), str(a.get("day") or "")
+        conditions = a.get("conditions") or {}
+        row = {
+            "kind": "diagnostic",
+            "symbol": symbol,
+            "day": day,
+            "state": kind,
+            "ref_price": ref,
+            "pullback_5d": conditions.get("pullback_5d"),
+            "volume_ratio_20d": conditions.get("volume_ratio_20d"),
+            "source": "trading-diagnostic/alerts.jsonl",
+        }
+        if isinstance(ref, (int, float)) and day:
+            row.update(_d1_from_daily(daily_dir, str(symbol), float(ref), day))
+        rows.append(row)
+    return rows
+
+
+def load_real_trend(
+    trading_dir: Path = TRADING_DIR,
+    *,
+    diagnostic_dir: Path = TRADING_DIAGNOSTIC_DIR,
+    daily_dir: Path = DAILY_CACHE_DIR,
+    active_symbols_path: Path = ACTIVE_SYMBOLS_PATH,
+    semantic_dir: Path = SEMANTIC_DIR,
+) -> dict:
+    """Real trading-loop records -> real_trend for the business page.
+
+    Points come verbatim from soak.jsonl (MARKET_CLOSED / SYSTEM_UNAVAILABLE
+    stay what they are; symbols=0 while closed is a real recorded zero, and a
+    genuinely missing field stays missing). No interpolation, no backfill,
+    duplicate real records counted once.
+    """
+    soak = read_jsonl(Path(trading_dir) / "soak.jsonl")
+    alerts_by_ts: dict[str, int] = {}
+    for a in read_jsonl(Path(trading_dir) / "alerts.jsonl"):
+        ts = str(a.get("ts"))
+        alerts_by_ts[ts] = alerts_by_ts.get(ts, 0) + 1
+    universe = read_json(active_symbols_path) or {}
+    universe_size = len(universe.get("symbols") or []) or None
+
+    points: list[dict] = []
+    seen: set = set()
+    for row in soak:
+        ts = str(row.get("ts") or "")
+        key = (ts, str(row.get("status")), row.get("events"), row.get("symbols"))
+        if not ts or key in seen:  # same real record never counts twice
+            continue
+        seen.add(key)
+        points.append(
+            {
+                "ts": ts,
+                "status": row.get("status"),
+                "symbols_scanned": row.get("symbols"),
+                "universe_size": universe_size,
+                # alerts.jsonl refines the per-cycle count when it has the ts
+                "events": alerts_by_ts.get(ts, row.get("events")),
+                "source": "trading/soak.jsonl",
+            }
+        )
+    points.sort(key=lambda p: p["ts"])
+
+    forward = read_json(Path(trading_dir) / "forward.json") or {}
+    observations = forward.get("observations") or []
+    settled = sum(1 for o in observations if o.get("d8") is not None)
+
+    proof = load_latest_semantic_proof(semantic_dir)
+    in_session = [
+        p
+        for p in points
+        if p["status"] in SOAK_IN_SESSION_STATUSES and (p["symbols_scanned"] or 0) > 0
+    ]
+    if proof:
+        market_ok = proof.get("status") == "PASS" and str(
+            (proof.get("same_date_cross_check") or {}).get("status")
+        ) == "PASS"
+        market_detail = f"最新 semantic proof {proof.get('as_of', '')} · {proof.get('reason', '')}"
+    else:
+        market_ok = False
+        market_detail = "尚无 semantic proof"
+    sample = proof.get("sample_size") or 0 if proof else 0
+    single_ok = sample > 0
+    single_detail = (
+        f"单次全宇宙报价核验 {sample}/{sample} ({proof.get('as_of', '')}) — 单次验证, 不是连续监控"
+        if single_ok
+        else "尚无单次全宇宙有效数据通过记录"
+    )
+    cont_detail = (
+        f"soak 真实记录 {len(points)} 条, 其中盘中有效扫描 {len(in_session)} 条"
+        + ("" if in_session else " — 连续实时监控未证明")
+    )
+    m1 = {
+        "market_data_valid": {"ok": market_ok, "detail": market_detail},
+        "single_scan_valid": {"ok": single_ok, "detail": single_detail},
+        "continuous_monitoring": {"ok": bool(in_session), "detail": cont_detail},
+        "formal_forward_count": len(observations),
+        "formal_forward_settled": settled,
+    }
+    oks = [market_ok, single_ok, bool(in_session)]
+    m1["verdict"] = (
+        "PASS" if all(oks) and len(observations) > 0
+        else "PARTIAL" if any(oks) or len(observations)
+        else "NO_REAL_EVIDENCE"
+    )
+    return {
+        "points": points,
+        "record_count": len(points),
+        "universe_size": universe_size,
+        "forward": {"present": bool(forward), "count": len(observations), "settled": settled},
+        "m1_evidence": m1,
+        "diagnostic_rows": load_diagnostic_evidence(diagnostic_dir, daily_dir),
+    }
 
 
 # --------------------------------------------------------------------------
@@ -488,9 +653,6 @@ def data_quality(
     }
 
 
-TRADING_DIR = ART / "trading"
-
-
 def load_trading_state(trading_dir: Path = TRADING_DIR) -> dict:
     """M1 trading-loop artifacts for the attention area (spec M1 §15).
 
@@ -520,6 +682,219 @@ def load_trading_state(trading_dir: Path = TRADING_DIR) -> dict:
     }
 
 
+# --------------------------------------------------------------------------
+# NOW: bounded projection of durable trading facts (single implementation,
+# shared by the static page and GET /api/quant/now via quant_serve)
+# --------------------------------------------------------------------------
+
+SESSION_AM = (dtime(9, 30), dtime(11, 30))
+SESSION_PM = (dtime(13, 0), dtime(15, 0))
+NOW_STALE_AFTER_S = 90  # only enforced while the session clock expects a live loop
+NOW_ALERT_TAIL = 200
+NOW_SOAK_TAIL = 200
+NOW_ATTENTION_CAP = 12
+NOW_RECENT_ALERTS = 10
+NOW_MATERIAL_EVENTS = {"NEW_READY", "POSITION_EXIT_ALERT", "LIVE_CONNECTION_LOST", "DATA_UNTRUSTED"}
+NOW_HUMAN_EVENTS = {"POSITION_OPENED", "POSITION_CLOSED", "HUMAN_SKIP"}
+
+
+def in_trading_session(now: datetime) -> bool:
+    """A-share session clock. A stdlib mirror of the monitor's rule: the
+    stdlib-only renderer/server must not import the pandas-loading monitor."""
+    if now.weekday() >= 5:
+        return False
+    t = now.time()
+    return SESSION_AM[0] <= t <= SESSION_AM[1] or SESSION_PM[0] <= t <= SESSION_PM[1]
+
+
+def _parse_ts(value) -> datetime | None:
+    try:
+        dt = datetime.fromisoformat(str(value))
+    except (ValueError, TypeError):
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=TZ_SHANGHAI)
+
+
+def _latest_events(alerts: list[dict], types: set[str]) -> dict:
+    """{(type, symbol): alert} keeping the newest ts per key (durable stream)."""
+    out: dict = {}
+    for a in alerts:
+        if str(a.get("type")) not in types:
+            continue
+        key = (str(a.get("type")), str(a.get("symbol")))
+        ts = _parse_ts(a.get("ts"))
+        prev = out.get(key)
+        if prev is None or (ts and _parse_ts(prev.get("ts")) is None) or (
+            ts and _parse_ts(prev.get("ts")) and ts >= _parse_ts(prev.get("ts"))
+        ):
+            out[key] = a
+    return out
+
+
+def _human_action(symbol: str, human_events: dict) -> dict | None:
+    for etype, label in (
+        ("POSITION_OPENED", "HOLD(ack-buy)"),
+        ("POSITION_CLOSED", "CLOSED(ack-sell)"),
+        ("HUMAN_SKIP", "SKIP"),
+    ):
+        a = human_events.get((etype, symbol))
+        if a:
+            return {
+                "action": label,
+                "ts": a.get("ts"),
+                "venue": a.get("venue"),
+                "note": a.get("note"),
+            }
+    return None
+
+
+def _agent_action(symbol: str, event_ts: str, briefs: list[dict]) -> dict | None:
+    """Event-matched brief: only a brief recorded at/after the material event
+    may answer it — an older judgement is never projected onto a newer fact."""
+    ev_dt = _parse_ts(event_ts)
+    if ev_dt is None:
+        return None
+    best = None
+    for b in briefs:
+        if str(b.get("symbol")) != symbol:
+            continue
+        b_dt = _parse_ts(b.get("recorded_at"))
+        if b_dt is None or b_dt < ev_dt:
+            continue
+        if best is None or _parse_ts(best.get("recorded_at")) < b_dt:
+            best = b
+    if best is None:
+        return None
+    return {
+        "action": best.get("action"),
+        "decision_id": best.get("decision_id"),
+        "recorded_at": best.get("recorded_at"),
+        "why": best.get("why"),
+        "invalidation": best.get("invalidation"),
+    }
+
+
+def now_snapshot(
+    trading_dir: Path = TRADING_DIR,
+    briefs_dir: Path = BRIEFS_DIR,
+    active_symbols_path: Path = ACTIVE_SYMBOLS_PATH,
+    now: datetime | None = None,
+) -> dict:
+    """NOW view (spec workbench §3.1/§21 + amendments): heartbeat comes from
+    the soak tail, last_scan_at only from records that really scanned
+    (symbols > 0), STALE only while the session clock expects a live loop,
+    and material events come from the durable alert stream, not the
+    last-cycle state.json.events."""
+    now = now or datetime.now(TZ_SHANGHAI)
+    state = read_json(Path(trading_dir) / "state.json") or {}
+    soak = read_jsonl(Path(trading_dir) / "soak.jsonl")[-NOW_SOAK_TAIL:]
+    alerts = read_jsonl(Path(trading_dir) / "alerts.jsonl")[-NOW_ALERT_TAIL:]
+    universe = read_json(active_symbols_path) or {}
+    universe_size = len(universe.get("symbols") or []) or None
+
+    heartbeat_at = soak[-1].get("ts") if soak else None
+    last_scan_at = next((r.get("ts") for r in reversed(soak) if (r.get("symbols") or 0) > 0), None)
+    hb_dt, scan_dt = _parse_ts(heartbeat_at), _parse_ts(last_scan_at)
+    now_dt = _parse_ts(now.isoformat()) or now
+    hb_age = int((now_dt - hb_dt).total_seconds()) if hb_dt else None
+    scan_age = int((now_dt - scan_dt).total_seconds()) if scan_dt else None
+    expected_live = in_trading_session(now_dt)
+    stale = bool(expected_live and hb_age is not None and hb_age > NOW_STALE_AFTER_S)
+    if not state:
+        runtime = "UNKNOWN"
+    elif stale:
+        runtime = "STALE"
+    else:
+        runtime = "HEALTHY"
+
+    briefs = load_briefs(briefs_dir)
+    material = _latest_events(alerts, NOW_MATERIAL_EVENTS)
+    human_events = _latest_events(alerts, NOW_HUMAN_EVENTS)
+
+    def agent_for(symbol: str, ts) -> dict | None:
+        return _agent_action(symbol, ts, briefs)
+
+    def human_for(symbol: str) -> dict | None:
+        return _human_action(symbol, human_events)
+
+    attention: list[dict] = []
+    for sym in state.get("ready") or []:
+        ev = material.get(("NEW_READY", sym)) or {}
+        ts = ev.get("ts") or state.get("as_of")
+        attention.append({
+            "kind": "READY", "symbol": sym, "ts": ts, "price": ev.get("price"),
+            "conditions": ev.get("conditions"),
+            "agent": agent_for(sym, ts), "human": human_for(sym),
+        })
+    for sym in state.get("exit_alerts") or []:
+        ev = material.get(("POSITION_EXIT_ALERT", sym)) or {}
+        ts = ev.get("ts") or state.get("as_of")
+        pos = next((p for p in state.get("positions") or [] if p.get("symbol") == sym), {})
+        attention.append({
+            "kind": "EXIT", "symbol": sym, "ts": ts, "price": pos.get("price") or ev.get("price"),
+            "why": ev.get("why"), "entry_price": pos.get("entry_price"),
+            "pnl": pos.get("pnl"), "venue": pos.get("venue"),
+            "agent": agent_for(sym, ts), "human": human_for(sym),
+        })
+    if state.get("system_unavailable"):
+        ev = material.get(("LIVE_CONNECTION_LOST", "None")) or {}
+        attention.append({
+            "kind": "SYSTEM_UNAVAILABLE", "symbol": None,
+            "ts": ev.get("ts") or state.get("as_of"), "why": ev.get("why"),
+            "price": None, "conditions": None,
+            "agent": None, "human": None,
+        })
+    if state.get("data_trust") == "FAIL":
+        ev = material.get(("DATA_UNTRUSTED", "None")) or {}
+        attention.append({
+            "kind": "DATA_UNTRUSTED", "symbol": None,
+            "ts": ev.get("ts") or state.get("as_of"), "why": ev.get("why"),
+            "price": None, "conditions": None,
+            "agent": None, "human": None,
+        })
+
+    return {
+        "generated_at": now.isoformat(timespec="seconds"),
+        "present": bool(state),
+        "as_of": state.get("as_of"),
+        "day": state.get("day"),
+        "status": state.get("status"),
+        "market": "OPEN" if expected_live else "CLOSED",
+        "expected_live": expected_live,
+        "runtime": runtime,
+        "stale": stale,
+        "heartbeat_at": heartbeat_at,
+        "heartbeat_age_seconds": hb_age,
+        "last_scan_at": last_scan_at,
+        "scan_age_seconds": scan_age,
+        "symbols_scanned": state.get("symbols_scanned"),
+        "universe_size": universe_size,
+        "data_trust": state.get("data_trust") or "UNKNOWN",
+        "ready": state.get("ready") or [],
+        "near": state.get("near") or [],
+        "exit_alerts": state.get("exit_alerts") or [],
+        "positions": state.get("positions") or [],
+        "attention": attention[:NOW_ATTENTION_CAP],
+        "recent_alerts": alerts[-NOW_RECENT_ALERTS:],
+    }
+
+
+def load_timeline(trading_dir: Path = TRADING_DIR, day: str | None = None, limit: int = 100) -> list[dict]:
+    """今日事件时间线: the durable alert stream in time order (one day when
+    known). Only real persisted events — no inferred MARKET_CLOSE/START rows."""
+    rows = []
+    for a in read_jsonl(Path(trading_dir) / "alerts.jsonl"):
+        if day and str(a.get("day") or "") != day:
+            continue
+        rows.append({
+            "ts": a.get("ts"), "type": a.get("type"), "symbol": a.get("symbol"),
+            "what": a.get("what"), "why": a.get("why"), "price": a.get("price"),
+            "venue": a.get("venue"),
+        })
+    rows.sort(key=lambda r: str(r.get("ts")))
+    return rows[-limit:]
+
+
 def build_data(
     snapshot_path: Path = SNAPSHOT_PATH,
     scan_path: Path = LAST_SCAN_PATH,
@@ -528,7 +903,11 @@ def build_data(
     status_path: Path = STATUS_PATH,
     active_path: Path = ACTIVE_PATH,
     legacy_path: Path = LEGACY_PATH,
-    outcomes_path: Path = OUTCOMES_PATH,
+    trading_dir: Path = TRADING_DIR,
+    diagnostic_dir: Path = TRADING_DIAGNOSTIC_DIR,
+    daily_dir: Path = DAILY_CACHE_DIR,
+    active_symbols_path: Path = ACTIVE_SYMBOLS_PATH,
+    semantic_dir: Path = SEMANTIC_DIR,
 ) -> dict:
     snapshot = read_json(snapshot_path)
     scan = read_json(scan_path)
@@ -536,12 +915,19 @@ def build_data(
     obs = parse_obs_log(obs_path)
     proofs = parse_proof_rows(status_path)
     legacy_symbols = load_legacy_symbols(legacy_path)
-    settled = settled_trade_count(outcomes_path)
-    forward_triggers = sum(
-        int(r.get("triggers") or 0)
-        for r in obs
-        if str(r.get("triggers", "")).strip().isdigit()
+    real_trend = load_real_trend(
+        trading_dir,
+        diagnostic_dir=diagnostic_dir,
+        daily_dir=daily_dir,
+        active_symbols_path=active_symbols_path,
+        semantic_dir=semantic_dir,
     )
+    now = now_snapshot(
+        trading_dir=trading_dir,
+        briefs_dir=briefs_dir,
+        active_symbols_path=active_symbols_path,
+    )
+    settled = real_trend["forward"]["settled"]
     results = harvest_strategy_results()
     best = best_strategy_row(results)
     decision = today_decision(briefs)
@@ -550,7 +936,10 @@ def build_data(
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         "warning": STRATEGY_WARNING,
         "not_a_buy_note": NOT_A_BUY_NOTE,
-        "trading": load_trading_state(),
+        "trading": load_trading_state(trading_dir),
+        "now": now,
+        "timeline": load_timeline(trading_dir, day=now.get("day")),
+        "real_trend": real_trend,
         "kpi": {
             "today_decision": decision["state"],
             "live_triggers": len((scan or {}).get("triggers") or []),
@@ -583,7 +972,7 @@ def build_data(
             "best_annualized_pct": (best or {}).get("annualized_pct"),
             "best_trades": (best or {}).get("trades"),
             "pit_bias": True,
-            "forward_triggers": forward_triggers,
+            "forward_observations": real_trend["forward"]["count"],
             "forward_settled": settled,
             "forward_hit_rate": "—" if settled < 10 else None,
             "results": results,
@@ -872,53 +1261,88 @@ TEMPLATE = """<!DOCTYPE html>
   <div class="banner-warn" id="strategy-warning"></div>
   <div class="banner-degraded" id="dq-banner" style="display:none"></div>
 
+  <div class="card" id="now-card">
+    <h2>NOW <span class="scope live">LIVE</span> <span class="cnt" id="now-meta"></span></h2>
+    <div class="nowgrid" id="now-grid"></div>
+    <div id="now-stale" class="banner-degraded" style="display:none;margin-top:10px"></div>
+  </div>
+
   <div class="card" id="attention-card">
-    <h2>现在需要我做什么？ <span class="cnt" id="att-meta">交易盯盘 · 30s 自动刷新</span></h2>
+    <h2>现在需要我做什么？ <span class="scope live">LIVE</span> <span class="cnt" id="att-meta">交易盯盘 · 30s 自动刷新</span></h2>
     <div id="att-status" style="font-weight:700;font-size:14px;margin-bottom:8px"></div>
+    <div id="att-actions"></div>
     <div id="att-items" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
     <div style="display:flex;gap:24px;flex-wrap:wrap">
       <div style="flex:1;min-width:260px">
-        <div class="mut" style="font-weight:600;margin-bottom:4px">今天盯什么（READY / NEAR）</div>
+        <div class="mut" style="font-weight:600;margin-bottom:4px">次级 Watch（NEAR — 未到行动级）</div>
         <div id="att-watch" class="mut"></div>
-      </div>
-      <div style="flex:1.4;min-width:300px">
-        <div class="mut" style="font-weight:600;margin-bottom:4px">我现在持有什么</div>
-        <div id="att-positions" class="mut"></div>
       </div>
     </div>
     <div id="att-alerts" style="margin-top:8px;font-size:12px"></div>
+  </div>
+
+  <div class="card" id="positions-card">
+    <h2>Open Positions <span class="scope live">LIVE</span> <span class="cnt">持仓生命周期独立于候选池 · 只由 ack 建立/关闭</span></h2>
+    <div id="att-positions-box"></div>
+  </div>
+
+  <div class="card" id="timeline-card">
+    <h2>今日事件时间线 <span class="scope live">LIVE</span> <span class="cnt" id="tl-meta">durable alerts · 只列真实持久化事件</span></h2>
+    <ul class="tl" id="tl-list"></ul>
+  </div>
+
+  <div class="card" id="real-trend-card">
+    <h2>真实运行数据趋势 <span class="scope live">LIVE · HISTORICAL</span> <span class="cnt" id="rt-meta">M1 trading artifacts · 缺失保持缺失, 不补曲线</span></h2>
+    <dl class="kv" id="m1-evidence" style="margin-bottom:10px"></dl>
+    <div id="rt-chart"></div>
+    <div id="rt-forward" style="margin-top:10px;font-size:13px"></div>
+    <div id="rt-diagnostic" style="margin-top:12px"></div>
+    <div class="mut" style="font-weight:600;margin:12px 0 4px;font-size:12px">真实 monitor 记录（trading/soak.jsonl · 一行 = 一次真实周期, 不去失真）</div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>时间</th><th>状态</th><th class="num-h">扫描数量</th><th class="num-h">universe size</th><th class="num-h">告警/事件数</th><th>来源</th></tr></thead>
+      <tbody id="rt-rows"></tbody>
+    </table></div>
   </div>
 
   <div class="kpi">
     <div class="k"><div class="v" id="kpi-decision">—</div><div class="l">今日决策</div></div>
     <div class="k"><div class="v" id="kpi-triggers">—</div><div class="l">实时触发</div></div>
     <div class="k"><div class="v" id="kpi-candidates">—</div><div class="l">活跃候选</div></div>
-    <div class="k"><div class="v" id="kpi-settled">—</div><div class="l">前向已结算交易</div></div>
+    <div class="k"><div class="v" id="kpi-settled">—</div><div class="l">前向已结算交易（正式）</div></div>
     <div class="k"><div class="v" id="kpi-evidence">—</div><div class="l">策略证据</div></div>
   </div>
 
   <div class="card">
-    <h2>今日动作候选 <span class="cnt" id="scan-meta"></span></h2>
+    <h2>今日动作候选 <span class="scope today">TODAY · LIVE</span> <span class="cnt" id="scan-meta"></span></h2>
     <div id="trigger-box"></div>
   </div>
 
   <div class="layout-board">
   <div class="card">
-    <h2>价值 · 质量机会板 <span class="cnt" id="board-meta"></span></h2>
+    <h2>价值 · 质量机会板 <span class="scope today">TODAY</span> <span class="cnt" id="board-meta"></span>
+      <button class="btn glossary-toggle" id="glossary-open" type="button" aria-expanded="false" aria-controls="glossary-drawer">查看指标备注</button>
+    </h2>
     <div style="overflow-x:auto"><table id="board">
       <thead><tr id="board-head"></tr></thead>
       <tbody id="board-rows"></tbody>
     </table></div>
     <div class="mut" style="font-size:11.5px;margin-top:8px" id="not-a-buy"></div>
   </div>
-  <aside class="card note-side">
-    <h2>指标备注 <span class="cnt">点击任一指标 / 单元格弹出详细说明</span></h2>
-    <div class="g-list" id="glossary-list"></div>
-  </aside>
   </div>
 
+  <div class="drawer-backdrop" id="glossary-backdrop" hidden></div>
+  <aside class="drawer" id="glossary-drawer" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="glossary-title">
+    <div class="drawer-head">
+      <h2 id="glossary-title">指标备注 <span class="cnt">点击任一指标 / 单元格弹出详细说明</span></h2>
+      <button class="modal-x" id="glossary-close" type="button" title="关闭" aria-label="关闭指标备注">×</button>
+    </div>
+    <div class="drawer-body">
+      <div class="g-list" id="glossary-list"></div>
+    </div>
+  </aside>
+
   <div class="card">
-    <h2>历史持仓 · 套牢仓位 <span class="cnt" id="legacy-count">自选/持仓名单 — 诊断位, 不是机会宇宙</span></h2>
+    <h2>历史持仓 · 套牢仓位 <span class="scope hist">HISTORICAL</span> <span class="cnt" id="legacy-count">自选/持仓名单 — 诊断位, 不是机会宇宙</span></h2>
     <div class="mut question" id="legacy-question"></div>
     <div style="overflow-x:auto"><table>
       <thead><tr><th>代码</th><th>名称</th><th>现价</th><th>综合分</th><th>价值</th><th>质量</th><th>Timing</th>
@@ -929,28 +1353,30 @@ TEMPLATE = """<!DOCTYPE html>
 
   <div class="grid two">
     <div class="card">
-      <h2>策略证据</h2>
+      <h2>策略证据 <span class="scope research">RESEARCH · frozen S3</span></h2>
       <div id="strategy-box"></div>
       <details style="margin-top:12px">
         <summary>策略实验历史 (基线 / S1 / S2 / S3)</summary>
-        <div class="body"><table>
+        <div class="body"><div style="overflow-x:auto"><table>
           <thead><tr><th>轮次</th><th style="text-align:right">年化 (重放)</th><th style="text-align:right">笔数</th><th style="text-align:right">最大回撤</th><th>结论</th></tr></thead>
           <tbody id="results-rows"></tbody>
-        </table></div>
+        </table></div></div>
       </details>
     </div>
     <div class="card">
-      <h2>前向证据 <span class="cnt">只有真实前向观察, 无合成占位</span></h2>
-      <table>
+      <h2>前向证据 <span class="scope research">RESEARCH · FORMAL</span> <span class="cnt">正式 = trading/forward.json · 无合成占位</span></h2>
+      <div id="formal-forward" style="font-size:13px;margin-bottom:10px"></div>
+      <div class="mut" style="font-weight:600;font-size:12px;margin-bottom:4px">历史每日扫描日志（旧每日链路口径 — 仅历史兼容, 非当前 M1 truth）</div>
+      <div style="overflow-x:auto"><table>
         <thead><tr><th>日期</th><th>时间</th><th style="text-align:right">扫描只数</th><th style="text-align:right">触发数</th><th>决策</th><th>备注</th></tr></thead>
         <tbody id="obs-rows"></tbody>
-      </table>
-      <div class="mut" style="font-size:11.5px;margin-top:8px">入场 / D+1 / D+3 / D+5 / D+8 价格路径与最大有利·不利偏移 (MFE/MAE) 在人工结算产生真实记录后展示; 当前结算笔数见 Forward Settled Trades。</div>
+      </table></div>
+      <div class="mut" style="font-size:11.5px;margin-top:8px">入场 / D+1 / D+3 / D+5 / D+8 价格路径与最大有利·不利偏移 (MFE/MAE) 在正式 forward observation 产生后展示；诊断性记录只出现在「真实运行数据趋势」卡并明确标记 diagnostic。</div>
     </div>
   </div>
 
   <div class="card">
-    <h2>数据质量</h2>
+    <h2>数据质量 <span class="scope today">TODAY</span></h2>
     <div id="dq-box"></div>
   </div>
 
@@ -959,6 +1385,21 @@ TEMPLATE = """<!DOCTYPE html>
     <br>历史回放数字受 PIT/成分偏差约束且在噪声内 (<b>盈利能力仍未证明</b>)。工程证据链 (重放 / 数据溯源 / 证明状态) 见
     <a href="/engineering">工程 / 审计 → /engineering</a>。
   </footer>
+</div>
+<div class="modal" id="trade-modal" hidden>
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-head"><h3 id="tm-title"></h3><button class="modal-x" id="tm-close" title="关闭">×</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>symbol</label><input id="tm-symbol" readonly></div>
+      <div class="form-row"><label>shares</label><input id="tm-shares" type="number" min="1" step="1"></div>
+      <div class="form-row"><label>price</label><input id="tm-price" type="number" min="0.0001" step="0.0001"></div>
+      <div class="form-row"><label>venue</label><select id="tm-venue"><option value="paper">paper</option><option value="real">real</option></select></div>
+      <div class="form-row"><label>executed_at</label><input id="tm-time"></div>
+      <div class="form-row"><label>note</label><input id="tm-note" placeholder="可选备注"></div>
+      <div class="form-msg" id="tm-msg"></div>
+      <div class="btnrow"><button class="btn primary" id="tm-submit">确认记录</button></div>
+    </div>
+  </div>
 </div>
 <div class="modal" id="metric-modal" hidden>
   <div class="modal-box">
@@ -981,6 +1422,7 @@ CSS = """\
   --acc:#4cc2ff; --green:#3fb950; --amber:#d29922; --red:#f85149;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+body{overflow-x:hidden}
 body{background:var(--bg);color:var(--tx);font:14px/1.55 -apple-system,"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;padding:24px 20px 60px}
 .wrap{max-width:1280px;margin:0 auto}
 a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
@@ -998,8 +1440,8 @@ h1{font-size:22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:16px}
 .card h2{font-size:14px;letter-spacing:.3px;color:#b7c2d4;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .card h2 .cnt{font-size:11px;color:var(--dim);font-weight:400}
-.grid.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:960px){.grid.two{grid-template-columns:1fr}}
+.grid.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media(max-width:960px){.grid.two{grid-template-columns:minmax(0,1fr)}}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{color:var(--mut);font-weight:600;text-align:left;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line2);white-space:nowrap;cursor:pointer}
 th.num-h{text-align:right}
@@ -1024,18 +1466,59 @@ tr:last-child td{border-bottom:none}
 .empty .t{font-size:16px;font-weight:700;color:var(--tx);letter-spacing:.5px}
 .empty .s{font-size:12.5px;color:var(--mut);margin-top:6px}
 .question{border-left:3px solid var(--acc);padding:6px 12px;margin-bottom:12px;font-size:13px;color:#b7c2d4}
-.layout-board{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;margin-top:16px;align-items:start}
+.scope{font-size:10px;font-weight:700;letter-spacing:.6px;padding:1px 8px;border-radius:10px;border:1px solid var(--line2);color:var(--dim)}
+.scope.live{color:var(--green);border-color:var(--green)}
+.scope.today{color:var(--acc);border-color:var(--acc)}
+.scope.hist{color:var(--amber);border-color:var(--amber)}
+.scope.research{color:var(--mut)}
+.nowgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.nowgrid .n{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.nowgrid .n .k{font-size:10.5px;color:var(--dim);letter-spacing:.4px}
+.nowgrid .n .v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.action-card{border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--panel2)}
+.action-card .ac-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.action-card .ac-kind{font-size:11px;font-weight:700;letter-spacing:.5px;padding:2px 9px;border-radius:12px}
+.ac-kind.READY{color:#163a22;background:var(--green)}
+.ac-kind.EXIT{color:#3b1110;background:var(--red)}
+.ac-kind.SYSTEM_UNAVAILABLE,.ac-kind.DATA_UNTRUSTED{color:#3b1110;background:var(--red)}
+.ac-kind.NEAR{color:#3a2c0d;background:var(--amber)}
+.threestate{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:12.5px;margin:8px 0}
+.threestate .st-k{color:var(--dim);letter-spacing:.4px;font-size:11px;padding-top:1px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.btn{font-size:12px;font-weight:600;padding:4px 12px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--tx);cursor:pointer}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#062a3d}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.tl{list-style:none;font-size:12.5px}
+.tl li{display:flex;gap:10px;padding:3px 0;border-bottom:1px dashed var(--line)}
+.tl li:last-child{border-bottom:none}
+.tl .ts{color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.form-row{display:flex;gap:10px;margin-bottom:8px;align-items:center}
+.form-row label{font-size:12px;color:var(--mut);min-width:90px}
+.form-row input,.form-row select{background:var(--panel2);border:1px solid var(--line2);border-radius:6px;color:var(--tx);padding:5px 8px;font-size:13px;flex:1}
+.form-msg{font-size:12.5px;margin-top:6px;min-height:16px}
+.layout-board{display:block;margin-top:16px}
 .layout-board .card{margin-top:0}
-.note-side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
-@media(max-width:1080px){.layout-board{grid-template-columns:1fr}.note-side{position:static;max-height:none}}
+.glossary-toggle{margin-left:auto;white-space:nowrap}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(3,6,10,.66);z-index:60;opacity:0;transition:opacity .2s ease}
+.drawer-backdrop[hidden]{display:none}
+.drawer-backdrop.is-open{opacity:1}
+.drawer{position:fixed;top:0;right:0;width:min(420px,100vw);max-width:100%;height:100vh;height:100dvh;overflow-y:auto;background:var(--panel);border-left:1px solid var(--line2);box-shadow:-18px 0 60px rgba(0,0,0,.45);z-index:61;transform:translateX(100%);transition:transform .2s ease;padding:18px}
+.drawer[hidden]{display:none}
+.drawer.is-open{transform:translateX(0)}
+.drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.drawer-head h2{font-size:14px;letter-spacing:.3px;color:#b7c2d4;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.drawer-head .cnt{font-size:11px;color:var(--dim);font-weight:400}
+.drawer-body{padding-top:14px}
+@media(max-width:480px){.drawer{width:100vw;padding:14px}}
+@media(prefers-reduced-motion:reduce){.drawer,.drawer-backdrop{transition:none}}
 .g-list{display:flex;flex-direction:column;gap:6px}
-.g-item{display:flex;align-items:baseline;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;background:var(--panel2)}
+.g-item{display:flex;align-items:baseline;gap:8px;width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;text-align:left;color:var(--tx);background:var(--panel2);cursor:pointer}
 .g-item:hover{border-color:var(--acc)}
 .g-item .gk{font-weight:700;color:var(--acc);white-space:nowrap}
-.g-item .g1{color:var(--mut);font-size:11.5px;line-height:1.45}
+.g-item .g1{min-width:0;color:var(--mut);font-size:11.5px;line-height:1.45;overflow-wrap:anywhere}
 [data-m]{cursor:help}
-.g-item{cursor:pointer}
-.modal{position:fixed;inset:0;background:rgba(3,6,10,.66);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:50;backdrop-filter:blur(2px)}
+.modal{position:fixed;inset:0;background:rgba(3,6,10,.66);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:70;backdrop-filter:blur(2px)}
 .modal[hidden]{display:none}
 .modal-box{background:var(--panel);border:1px solid var(--line2);border-radius:14px;max-width:640px;width:100%;max-height:82vh;overflow:auto;box-shadow:0 18px 60px rgba(0,0,0,.5)}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
@@ -1093,15 +1576,44 @@ function closeMetric(){
   $('metric-modal').hidden = true;
 }
 function renderGlossary(){
-  $('glossary-list').innerHTML = Object.entries(GLOSSARY).map(([k,g])=>`<div class="g-item" data-m="${esc(k)}" title="点击查看 ${esc(g.t)} 的详细说明"><span class="gk">${esc(g.t)}</span><span class="g1">${esc(g.h||'')}</span></div>`).join('');
+  $('glossary-list').innerHTML = Object.entries(GLOSSARY).map(([k,g])=>`<button type="button" class="g-item" data-m="${esc(k)}" title="点击查看 ${esc(g.t)} 的详细说明"><span class="gk">${esc(g.t)}</span><span class="g1">${esc(g.h||'')}</span></button>`).join('');
 }
+function setGlossaryOpen(open){
+  const trigger = $('glossary-open');
+  const drawer = $('glossary-drawer');
+  const backdrop = $('glossary-backdrop');
+  if(!trigger || !drawer || !backdrop) return;
+  trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+  if(open){
+    drawer.hidden = false;
+    backdrop.hidden = false;
+    drawer.classList.add('is-open');
+    backdrop.classList.add('is-open');
+    $('glossary-close').focus();
+  } else {
+    drawer.classList.remove('is-open');
+    backdrop.classList.remove('is-open');
+    drawer.hidden = true;
+    backdrop.hidden = true;
+    trigger.focus();
+  }
+}
+function openGlossary(){ setGlossaryOpen(true); }
+function closeGlossary(){ setGlossaryOpen(false); }
 document.addEventListener('click', (e)=>{
   const el = e.target.closest('[data-m]');
   if(el){ openMetric(el.dataset.m); return; }
+  if(e.target.id === 'glossary-open'){ openGlossary(); return; }
+  if(e.target.id === 'glossary-close' || e.target.id === 'glossary-backdrop'){ closeGlossary(); return; }
   if(e.target.id === 'mm-close'){ closeMetric(); return; }
   if(e.target.closest('#metric-modal') && !e.target.closest('.modal-box')){ closeMetric(); }
 });
-document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeMetric(); });
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape') return;
+  if(!$('metric-modal').hidden){ closeMetric(); return; }
+  if(!$('glossary-drawer').hidden){ closeGlossary(); return; }
+});
 
 function kpiColor(v){ return v==null ? 'var(--dim)' : 'var(--tx)'; }
 
@@ -1129,43 +1641,370 @@ function drawTriggers(trs, live){
       <td class="rf">${(t.red_flags&&t.red_flags.length)?esc(zhFlags(t.red_flags)):'无候选红旗记录'}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
-function renderTrading(t){
-  const st = $('att-status'), items = $('att-items'), watch = $('att-watch'), pos = $('att-positions'), al = $('att-alerts');
-  if(!t || !t.present){
-    st.textContent = '盯盘监控未运行 — 启动: python tools/quant_trading_monitor.py session';
-    st.style.color = 'var(--amber)'; items.innerHTML=''; watch.textContent='—'; pos.textContent='无持仓记录'; al.innerHTML=''; return;
+/* ---- NOW / Action Queue / Positions: single fact = /api/quant/now ---- */
+const fmtAge = (s) => s==null ? '—' : (s < 90 ? s+'s' : Math.floor(s/60)+'m'+(s%60)+'s');
+const nowTs = (v) => v ? String(v).slice(11,19) : '—';
+let lastNow = null;
+
+function renderNow(n){
+  lastNow = n || lastNow;
+  n = n || {};
+  const grid = $('now-grid'), st = $('now-stale');
+  $('now-meta').textContent = n.present
+    ? `as_of ${nowTs(n.as_of)} · generated ${nowTs(n.generated_at)}`
+    : 'monitor 尚未运行 — 无 NOW 事实';
+  if(!n.present){
+    grid.innerHTML = '<div class="n"><div class="k">Runtime</div><div class="v" style="color:var(--amber)">UNKNOWN</div></div>' +
+      '<div class="n"><div class="k">说明</div><div class="v" style="font-size:12px">启动: python tools/quant_trading_monitor.py session</div></div>';
+    st.style.display = 'none';
+    renderAttention(n);
+    return;
   }
-  const s = t.state || {};
-  if (s.system_unavailable){ st.textContent = 'SYSTEM_UNAVAILABLE — 系统不可用/数据不可信（这不是 NO_TRADE）'; st.style.color = 'var(--red)'; }
-  else if (s.market_no_trade){ st.textContent = `有效 NO_TRADE — 市场已扫描 ${(s.symbols_scanned??0)} 只，当前无 READY 机会`; st.style.color = 'var(--acc)'; }
-  else if (s.status === 'MARKET_CLOSED'){ st.textContent = '已收盘 — 监控待下一交易时段（无合成活动）'; st.style.color = 'var(--mut)'; }
-  else if (s.status === 'ALERTS'){ st.textContent = `需要行动 — READY ${(s.ready||[]).length} · EXIT_ALERT ${(s.exit_alerts||[]).length}`; st.style.color = 'var(--amber)'; }
-  else { st.textContent = '监控运行中 — ' + (s.status||'?'); st.style.color = 'var(--acc)'; }
-  const chips = [];
-  (s.ready||[]).forEach(sym=>chips.push(`<span class="chip B">READY ${esc(sym)}</span>`));
-  (s.exit_alerts||[]).forEach(sym=>chips.push(`<span class="chip S">EXIT_ALERT ${esc(sym)}</span>`));
-  (s.near||[]).forEach(sym=>chips.push(`<span class="chip gray">NEAR ${esc(sym)}</span>`));
-  items.innerHTML = chips.join('') || '<span class="dim">当前无 attention 项</span>';
-  const watchList = [...(s.ready||[]), ...(s.near||[])];
-  watch.textContent = watchList.length ? watchList.join(', ') : '当前无 READY/NEAR — 快层持续扫描活跃宇宙';
-  const ps = t.open_positions || [];
-  pos.innerHTML = ps.length ? ps.map(p=>`<div><code>${esc(p.symbol)}</code> ${p.shares}股 @${p.entry_price}` +
-    (p.price!=null?` → 现价 ${p.price}`:'') + (p.pnl!=null?` · 盈亏 ${p.pnl}`:'') +
-    ` · <b>${esc(p.state||'HOLD')}</b>${p.exit_reason?` · ${esc(p.exit_reason)}`:''}</div>`).join('') : '无持仓';
-  al.innerHTML = (t.alerts||[]).slice(0,5).map(a=>
-    `<div>· <b>${esc(a.type||'')}</b> ${a.symbol?esc(a.symbol)+' — ':''}${esc(a.what||'')}${a.why?` · ${esc(a.why)}`:''}</div>`).join('');
+  const cov = (n.symbols_scanned!=null && n.universe_size) ? `${n.symbols_scanned}/${n.universe_size}`
+            : (n.universe_size ? `—/${n.universe_size}` : '—');
+  const cells = [
+    ['市场', n.market, n.market==='OPEN'?'var(--green)':'var(--mut)'],
+    ['Runtime', n.runtime, n.runtime==='HEALTHY'?'var(--green)':(n.runtime==='STALE'?'var(--red)':'var(--amber)')],
+    ['交易时段', n.expected_live?'ACTIVE':'CLOSED', n.expected_live?'var(--green)':'var(--mut)'],
+    ['最后心跳', `${nowTs(n.heartbeat_at)} · age ${fmtAge(n.heartbeat_age_seconds)}`],
+    ['最后成功扫描', n.last_scan_at ? `${nowTs(n.last_scan_at)} · age ${fmtAge(n.scan_age_seconds)}` : '无真实扫描记录'],
+    ['扫描覆盖', cov],
+    ['Data trust', n.data_trust, n.data_trust==='PASS'?'var(--green)':(n.data_trust==='FAIL'?'var(--red)':'var(--amber)')],
+    ['READY', (n.ready||[]).length, (n.ready||[]).length?'var(--green)':null],
+    ['NEAR', (n.near||[]).length, null],
+    ['EXIT', (n.exit_alerts||[]).length, (n.exit_alerts||[]).length?'var(--red)':null],
+    ['Open positions', (n.positions||[]).length, null],
+  ];
+  grid.innerHTML = cells.map(([k,v,c])=>
+    `<div class="n"><div class="k">${esc(k)}</div><div class="v"${c?` style="color:${c}"`:''}>${esc(String(v??'—'))}</div></div>`).join('');
+  // STALE fires only while the session clock expects a live loop (server-side rule)
+  if(n.stale){
+    st.className = 'banner-degraded'; st.style.display = 'block';
+    st.textContent = `RUNTIME STALE — 交易时段内心跳超龄 (>90s) · Last success ${nowTs(n.heartbeat_at)} · Age ${fmtAge(n.heartbeat_age_seconds)}`;
+  } else if(!n.expected_live){
+    st.className = ''; st.style.display = 'block';
+    st.style.cssText = 'display:block;margin-top:10px;color:var(--dim);font-size:12px';
+    st.textContent = '非交易时段 — 显示最后心跳 / 最后成功扫描，不按心跳 age 报故障';
+  } else {
+    st.style.display = 'none';
+  }
+  renderAttention(n);
 }
-async function pollAttention(){
+
+function renderAttention(n){
+  const statusEl = $('att-status');
+  const state = n || {};
+  if(!state.present){
+    statusEl.textContent = '盯盘监控未运行 — 启动: python tools/quant_trading_monitor.py session';
+    statusEl.style.color = 'var(--amber)';
+  } else if(state.status === 'SYSTEM_UNAVAILABLE'){
+    statusEl.textContent = 'SYSTEM_UNAVAILABLE — 系统不可用/数据不可信（这不是 NO_TRADE）';
+    statusEl.style.color = 'var(--red)';
+  } else if(state.data_trust === 'FAIL'){
+    statusEl.textContent = 'DATA_UNTRUSTED — semantic gate fail-closed，触发条件被抑制（这与系统失联是两回事）';
+    statusEl.style.color = 'var(--red)';
+  } else if((state.ready||[]).length || (state.exit_alerts||[]).length){
+    statusEl.textContent = `需要行动 — READY ${(state.ready||[]).length} · EXIT ${(state.exit_alerts||[]).length}`;
+    statusEl.style.color = 'var(--amber)';
+  } else if(state.status === 'MARKET_CLOSED'){
+    statusEl.textContent = '已收盘 — 监控待下一交易时段（无合成活动）';
+    statusEl.style.color = 'var(--mut)';
+  } else {
+    statusEl.textContent = '有效扫描 · 无机会 — 市场已扫描，当前无 READY/EXIT';
+    statusEl.style.color = 'var(--acc)';
+  }
+  const items = state.attention || [];
+  $('att-actions').innerHTML = items.length ? items.map(actionCardHTML).join('')
+    : '<div class="mut" style="font-size:12.5px;margin-bottom:8px">当前无需要行动的事项（无 READY / EXIT / 系统事件）</div>';
+  const near = state.near || [];
+  $('att-watch').textContent = near.length ? near.join(', ') : '当前无 NEAR';
+  const alerts = state.recent_alerts || [];
+  $('att-alerts').innerHTML = alerts.length ? alerts.slice().reverse().slice(0,5).map(a=>
+    `<div>· <b>${esc(a.type||'')}</b> ${a.symbol?esc(a.symbol)+' — ':''}${esc(a.what||'')}${a.why?` · ${esc(a.why)}`:''}</div>`).join('') : '';
+}
+
+const agentState = (a) => a
+  ? `<span class="chip B">${esc(a.action||'?')}</span> <span class="dim">${esc(a.decision_id||'')}</span>${a.why?`<div class="mut" style="font-size:12px">为什么: ${esc(a.why)}</div>`:''}${a.invalidation?`<div class="mut" style="font-size:12px">失效: ${esc(a.invalidation)}</div>`:''}`
+  : '<span class="chip gray">尚未复核</span> <span class="dim">没有晚于本事件的 Agent brief</span>';
+const humanState = (h) => h
+  ? `<span class="chip NEAR">${esc(h.action||'?')}</span>${h.venue?` <span class="dim">venue ${esc(h.venue)}</span>`:''}${h.note?` <span class="dim">· ${esc(h.note)}</span>`:''} <span class="dim">${nowTs(h.ts)}</span>`
+  : '<span class="dim">NO ACTION YET</span>';
+
+function actionCardHTML(it){
+  const head = `<div class="ac-head">
+    <span class="ac-kind ${esc(it.kind)}">${esc(it.kind)}</span>
+    ${it.symbol?`<code>${esc(it.symbol)}</code>`:''}
+    ${it.price!=null?`<span class="num">${fmt(it.price)}</span>`:''}
+    <span class="dim">${nowTs(it.ts)}</span>
+    ${it.entry_price!=null?`<span class="dim">entry ${fmt(it.entry_price)}</span>`:''}
+    ${it.pnl!=null?`<span class="num">P&L ${fmt(it.pnl)}</span>`:''}
+    ${it.venue?`<span class="chip gray">${esc(it.venue)}</span>`:''}
+  </div>`;
+  let runtime = '', btns = '';
+  if(it.kind === 'READY'){
+    const c = it.conditions || {};
+    runtime = `<div class="mut" style="font-size:12.5px">Deterministic: pullback ${fmt(c.pullback_5d!=null?c.pullback_5d*100:null,2)}% · 量比 ${fmt(c.volume_ratio_20d)} · 1d strength ${fmt(c.strength_1d)} — 冻结入场条件全部成立</div>`;
+    btns = [['ack-buy','Paper Buy','paper','primary'],['ack-buy','Record Real Buy','real','danger'],['skip','Skip',null,''],
+            ['ask','Ask Agent',null,''],['keep','Keep Watching',null,'']];
+  } else if(it.kind === 'EXIT'){
+    runtime = `<div class="mut" style="font-size:12.5px">触发: ${esc(it.why||'冻结退出规则')}</div>`;
+    btns = [['ack-sell','Paper Sell','paper','primary'],['ack-sell','Record Real Sell','real','danger'],['ask','Ask Agent',null,'']];
+  } else {
+    runtime = `<div class="mut" style="font-size:12.5px">${esc(it.why||'系统级事件 — 需要人知晓')}</div>`;
+  }
+  const btnHTML = btns.map(([k,label,venue,cls]) =>
+    `<button class="btn ${cls}" data-act="${k}" data-symbol="${esc(it.symbol||'')}" ${venue?`data-venue="${venue}"`:''}
+      data-shares="${esc((lastNow&&((lastNow.positions||[]).find(p=>p.symbol===it.symbol))||{}).shares??'')}"
+      data-price="${esc(it.price??'')}">${esc(label)}</button>`).join('');
+  return `<div class="action-card" data-kind="${esc(it.kind)}" data-symbol="${esc(it.symbol||'')}">${head}
+    ${runtime}
+    <div class="threestate">
+      <span class="st-k">RUNTIME</span><span>${esc(it.kind)}</span>
+      <span class="st-k">AGENT</span><span>${agentState(it.agent)}</span>
+      <span class="st-k">HUMAN</span><span>${humanState(it.human)}</span>
+    </div>
+    <div class="btnrow">${btnHTML}</div>
+  </div>`;
+}
+
+/* ---- Open Positions ---- */
+function renderPositions(positions){
+  const box = $('att-positions-box');
+  if(!positions || !positions.length){
+    box.innerHTML = '<div class="mut" style="font-size:12.5px">无持仓记录 — Position 只由用户 ack-buy 建立</div>';
+    return;
+  }
+  box.innerHTML = positions.map(p=>{
+    const days = p.entry_date ? Math.max(0, Math.floor((Date.now() - Date.parse(p.entry_date)) / 86400000)) : null;
+    return `<div class="action-card"><div class="ac-head">
+      <code>${esc(p.symbol)}</code><span class="chip gray">${esc(p.venue||'paper')}</span>
+      <span class="num">${fmt(p.shares,0)}股</span>
+      <span class="dim">entry ${fmt(p.entry_price)}</span>
+      ${p.price!=null?`<span class="num">现价 ${fmt(p.price)}</span>`:''}
+      ${p.pnl!=null?`<span class="num" style="color:${p.pnl>=0?'var(--green)':'var(--red)'}">P&L ${fmt(p.pnl)}</span>`:''}
+      ${days!=null?`<span class="dim">Holding D+${days}</span>`:''}
+      <span class="chip ${p.state==='EXIT_ALERT'?'EXIT':'gray'}">${esc(p.state||'?')}</span>
+    </div>
+    ${p.exit_reason?`<div class="rf">exit_rule: ${esc(p.exit_reason)}</div>`:''}
+    <div class="btnrow">
+      <button class="btn primary" data-act="ack-sell" data-symbol="${esc(p.symbol)}" data-venue="${esc(p.venue||'paper')}" data-shares="${esc(p.shares)}" data-price="${esc(p.price??'')}">Paper Sell</button>
+      <button class="btn danger" data-act="ack-sell" data-symbol="${esc(p.symbol)}" data-venue="real" data-shares="${esc(p.shares)}" data-price="${esc(p.price??'')}">Record Real Sell</button>
+      <button class="btn" data-act="ask" data-symbol="${esc(p.symbol)}">Ask Agent</button>
+    </div></div>`;
+  }).join('');
+}
+
+/* ---- trade modal (canonical ack POST; the server never invents fields) ---- */
+let tmKind = 'ack-buy';
+function openTrade(kind, symbol, venue, shares, price){
+  tmKind = kind;
+  $('tm-title').textContent = kind === 'skip' ? '记录 SKIP 决定' : (kind === 'ack-buy' ? `记录买入 — ${symbol||''}` : `记录卖出（全仓平仓）— ${symbol||''}`);
+  $('tm-symbol').value = symbol || '';
+  $('tm-shares').value = shares || '';
+  $('tm-shares').parentElement.style.display = kind === 'skip' ? 'none' : '';
+  $('tm-price').value = price || '';
+  if(venue) $('tm-venue').value = venue;
+  $('tm-venue').parentElement.style.display = kind === 'skip' ? 'none' : '';
+  $('tm-time').value = new Date().toISOString();
+  $('tm-note').value = '';
+  $('tm-msg').textContent = '';
+  $('tm-msg').style.color = '';
+  $('trade-modal').hidden = false;
+}
+async function submitTrade(){
+  const payload = {
+    symbol: $('tm-symbol').value.trim(),
+    executed_at: $('tm-time').value.trim(),
+    note: $('tm-note').value.trim(),
+  };
+  if(tmKind === 'skip'){
+    payload.price = parseFloat($('tm-price').value);
+  } else {
+    payload.shares = parseInt($('tm-shares').value, 10);
+    payload.price = parseFloat($('tm-price').value);
+    payload.venue = $('tm-venue').value;
+  }
+  const msg = $('tm-msg');
+  msg.textContent = '记录中…'; msg.style.color = 'var(--mut)';
   try{
-    const r = await fetch('/api/attention', {cache:'no-store'});
-    const j = await r.json();
-    renderTrading({present: !!j.as_of, state: j, open_positions: j.positions || [], alerts: j.events || []});
-  }catch(e){ /* keep the last good render */ }
+    const r = await fetch('/api/quant/' + tmKind, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const j = await r.json().catch(()=>({}));
+    if(r.ok){
+      msg.style.color = 'var(--green)';
+      msg.textContent = '已记录到 canonical trading state: ' + JSON.stringify(j);
+      pollNow();
+    } else {
+      msg.style.color = 'var(--red)';
+      msg.textContent = '拒绝: ' + (j.error || ('http ' + r.status)) + '（canonical host 规则原样返回，未被 API 覆盖）';
+    }
+  }catch(e){
+    msg.style.color = 'var(--red)';
+    msg.textContent = '无法连接 quant_serve — 记录交易需运行: python3 tools/quant_serve.py（静态文件模式不产生任何写入）';
+  }
 }
-setInterval(pollAttention, 30000);
+
+/* ---- 今日事件时间线: durable alerts only ---- */
+function renderTimeline(rows){
+  rows = rows || [];
+  $('tl-meta').textContent = `durable alerts · ${rows.length} 条真实持久化事件`;
+  $('tl-list').innerHTML = rows.length ? rows.map(r=>
+    `<li><span class="ts">${esc(String(r.ts||'').slice(5,19))}</span><span><b>${esc(r.type||'')}</b>` +
+    (r.symbol?` <code>${esc(r.symbol)}</code>`:'') + ` ${esc(r.what||'')}` +
+    (r.price!=null?` · @${esc(r.price)}`:'') + (r.venue?` · ${esc(r.venue)}`:'') +
+    (r.why?` <span class="mut">— ${esc(r.why)}</span>`:'') + '</span></li>').join('')
+    : '<li class="mut">当日无持久化事件 — 无事件只是没有 material change，不是无活动</li>';
+}
+
+async function pollNow(){
+  try{
+    const r = await fetch('/api/quant/now', {cache:'no-store'});
+    const j = await r.json();
+    renderNow(j);
+    renderPositions(j.positions || []);
+    $('now-meta').textContent += ' · 实时已连接';
+  }catch(e){
+    /* keep the embedded render-time snapshot; degrade visually, never fake live */
+    renderNow(D.now || {});
+    renderPositions((D.now||{}).positions || []);
+    $('now-meta').textContent += ' · server 未连接 — 显示生成时快照';
+  }
+}
+
+/* button wiring: action cards + position cards share data-act buttons */
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-act]');
+  if(!btn) return;
+  const act = btn.dataset.act;
+  if(act === 'ask'){
+    const sym = btn.dataset.symbol || '当前标的';
+    const promptText = `分析${sym}：先调用 get_trading_context 读取 canonical trading 事实，再解释当前 deterministic 状态（触发条件、风险、失效条件），区分 Runtime/Agent/Human 三态；不要宣称盈利能力，不要把 SYSTEM_UNAVAILABLE 说成 NO_TRADE。`;
+    (navigator.clipboard?.writeText(promptText) || Promise.reject()).then(
+      ()=>{ btn.textContent = '已复制提示词'; setTimeout(()=>{btn.textContent='Ask Agent';}, 1500); },
+      ()=>{ window.prompt('复制以下提示词发给 Agent:', promptText); });
+    return;
+  }
+  if(act === 'keep'){
+    const card = btn.closest('.action-card');
+    if(card){ card.style.opacity = '.45'; btn.disabled = true; btn.textContent = 'Watching'; }
+    return;
+  }
+  openTrade(act, btn.dataset.symbol, btn.dataset.venue,
+            btn.dataset.shares || '', btn.dataset.price || '');
+});
+document.addEventListener('click', (e)=>{
+  if(e.target.id === 'tm-close'){ $('trade-modal').hidden = true; return; }
+  if(e.target.id === 'tm-submit'){ submitTrade(); return; }
+  if(e.target.closest('#trade-modal') && !e.target.closest('.modal-box')){ $('trade-modal').hidden = true; }
+});
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') $('trade-modal').hidden = true; });
+setInterval(pollNow, 30000);
+
+/* ---- 真实运行数据趋势: trading artifacts 的忠实投影, 不补曲线不填 0 ---- */
+const RT_STATUS_ZH = {
+  SCANNED: '已扫描', NO_TRADE: '有效扫描 · 无机会', ALERTS: '需要行动',
+  MARKET_CLOSED: '已收盘（无扫描）', SYSTEM_UNAVAILABLE: '系统不可用（≠ NO_TRADE）',
+};
+const RT_STATUS_COLOR = {
+  SCANNED: 'var(--green)', NO_TRADE: 'var(--acc)', ALERTS: 'var(--amber)',
+  MARKET_CLOSED: '#8b96a8', SYSTEM_UNAVAILABLE: 'var(--red)',
+};
+const rtChip = (st) => `<span class="chip" style="color:${RT_STATUS_COLOR[st] || 'var(--mut)'};background:var(--panel2);border:1px solid var(--line2)" title="${esc(st)}">${esc(RT_STATUS_ZH[st] || st || '—')}</span>`;
+
+function renderM1Evidence(m1){
+  const box = $('m1-evidence');
+  const line = (label, ok, detail, forceText) => {
+    const v = forceText ?? (ok ? '有' : '未证明');
+    const color = forceText ? 'var(--amber)' : (ok ? 'var(--green)' : 'var(--amber)');
+    return `<dt style="min-width:150px">${esc(label)}</dt><dd style="color:${color};font-weight:700">${esc(v)}<span class="dim" style="font-weight:400"> — ${esc(detail||'')}</span></dd>`;
+  };
+  const fwd = m1.formal_forward_count ?? 0;
+  box.innerHTML = [
+    line('有效市场数据', !!(m1.market_data_valid||{}).ok, (m1.market_data_valid||{}).detail),
+    line('有效单次扫描', !!(m1.single_scan_valid||{}).ok, (m1.single_scan_valid||{}).detail),
+    line('连续实时监控', !!(m1.continuous_monitoring||{}).ok, (m1.continuous_monitoring||{}).detail),
+    line('正式 forward evidence', null, '正式 forward observation 计数 (trading/forward.json)', String(fwd)),
+    `<dt style="min-width:150px">M1 production evidence</dt><dd style="color:var(--amber);font-weight:700">${esc(m1.verdict || 'NO_REAL_EVIDENCE')} <span class="dim" style="font-weight:400">— 按 artifacts 真实状态投影, 不包装成 M1 PASS</span></dd>`,
+  ].join('');
+}
+
+function renderRealTrendChart(pts){
+  const box = $('rt-chart');
+  if (!pts.length){
+    box.innerHTML = '<div class="empty"><div class="t">无真实运行记录</div><div class="s">trading/soak.jsonl 尚不存在 — monitor 从未运行, 不画任何合成曲线</div></div>';
+    return;
+  }
+  const W=1000, H=210, L=46, R=16, T=14, B=30;
+  const X = (i) => pts.length === 1 ? (L + (W-L-R)/2) : L + i*(W-L-R)/(pts.length-1);
+  const Y = (v) => T + (1-v)*(H-T-B);           // v = scanned/universe, 0..1
+  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`;
+  for (let g=0; g<=2; g++){                     // 0% / 50% / 100% grid
+    const v=g/2, y=Y(v);
+    svg += `<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="#1f2733" stroke-width="1"/>`+
+           `<text x="${L-6}" y="${y+4}" fill="#5c6678" font-size="10.5" text-anchor="end">${v*100}%</text>`;
+  }
+  const scanRatio = (p) => (p.symbols_scanned==null || !p.universe_size) ? null : p.symbols_scanned/p.universe_size;
+  // connect only consecutive points where a real scan happened on both sides;
+  // MARKET_CLOSED / SYSTEM_UNAVAILABLE gaps stay visually separate, no interpolation
+  for (let i=0; i+1<pts.length; i++){
+    const a=scanRatio(pts[i]), b=scanRatio(pts[i+1]);
+    if (a==null || b==null || pts[i].symbols_scanned<=0 || pts[i+1].symbols_scanned<=0) continue;
+    svg += `<line x1="${X(i)}" y1="${Y(a)}" x2="${X(i+1)}" y2="${Y(b)}" stroke="#4cc2ff" stroke-width="1.6" opacity=".85"/>`;
+  }
+  pts.forEach((p,i)=>{
+    const r = scanRatio(p);
+    const color = RT_STATUS_COLOR[p.status] || 'var(--mut)';
+    const tip = `${p.ts} · ${p.status}\n扫描 ${p.symbols_scanned ?? '缺失'}/${p.universe_size ?? '缺失'} · 事件 ${p.events ?? '缺失'}\n${p.source}`;
+    if (r == null){ return; }                   // missing stays missing: no fabricated point
+    svg += `<circle cx="${X(i)}" cy="${Y(r)}" r="${(p.events>0)?6:4.5}" fill="${color}" ${p.events>0?`stroke="var(--amber)" stroke-width="2" fill-opacity=".55"`:''}><title>${esc(tip)}</title></circle>`;
+    svg += `<text x="${X(i)}" y="${H-10}" fill="#5c6678" font-size="10" text-anchor="middle">${esc(String(p.ts).slice(5,16))}</text>`;
+  });
+  svg += '</svg>';
+  box.innerHTML = `<div class="chart-box">${svg}
+    <div class="legend" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-size:12px;color:var(--mut)">
+      ${Object.keys(RT_STATUS_ZH).filter(s=>pts.some(p=>p.status===s)).map(s=>`<span style="display:flex;align-items:center;gap:6px"><i style="width:10px;height:10px;border-radius:50%;display:inline-block;background:${RT_STATUS_COLOR[s]}"></i>${esc(RT_STATUS_ZH[s])}</span>`).join('')}
+      <span class="dim">折线只连接相邻两个真实扫描点；MARKET_CLOSED = 收盘无扫描, 不是扫描失败</span>
+    </div></div>`;
+}
+
+function renderRealTrend(){
+  const rt = D.real_trend || {};
+  const pts = rt.points || [];
+  $('rt-meta').textContent = `真实记录 ${rt.record_count ?? pts.length} 条 · universe ${rt.universe_size ?? '—'} 只 · M1 trading artifacts`;
+  renderM1Evidence(rt.m1_evidence || {});
+  renderRealTrendChart(pts);
+  const fwd = rt.forward || {};
+  $('rt-forward').innerHTML = fwd.count
+    ? `<b style="color:var(--green)">正式 forward observation：${fwd.count}</b>（已结算 ${fwd.settled ?? 0}）<span class="dim"> — trading/forward.json</span>`
+    : `<b style="color:var(--amber)">尚无正式 forward evidence</b><span class="dim"> — 正式 forward observation 0 条 (trading/forward.json)；不显示 0% 胜率, 不以诊断记录代替</span>`;
+  const diag = rt.diagnostic_rows || [];
+  $('rt-diagnostic').innerHTML = diag.length ? `
+    <div class="question" style="margin-bottom:6px;border-left-color:var(--amber)">以下为 <b>diagnostic forward evidence</b> — 来自隔离诊断运行（--state-dir 隔离, trading-diagnostic/），不是正式 forward observation, 不计入策略收益、胜率或已成交记录。</div>
+    <div style="overflow-x:auto"><table><thead><tr><th>日期</th><th>代码</th><th>事件</th><th class="num-h">参考价</th><th class="num-h">5日回撤</th><th class="num-h">20日量比</th><th class="num-h">D+1（诊断）</th><th>标记</th></tr></thead><tbody>
+    ${diag.map(r=>`<tr>
+      <td class="num">${esc(r.day)}</td><td><code>${esc(r.symbol)}</code></td><td><span class="chip gray">${esc(r.state)}</span></td>
+      <td class="num">${fmt(r.ref_price)}</td>
+      <td class="num">${fmt(r.pullback_5d!=null?r.pullback_5d*100:null,2)}%</td>
+      <td class="num">${fmt(r.volume_ratio_20d)}</td>
+      <td class="num" style="color:var(--acc)">${r.d1!=null?`${r.d1>=0?'+':''}${(r.d1*100).toFixed(4)}% <span class="dim">(${esc(r.d1_day||'')})</span>`:'<span class="dim">待结算 — 缓存尚无后续日线</span>'}</td>
+      <td><span class="chip NEAR">diagnostic</span></td></tr>`).join('')}
+    </tbody></table></div>` : '';
+  $('rt-rows').innerHTML = pts.length ? pts.map(p=>`<tr>
+    <td class="num">${esc(p.ts)}</td><td>${rtChip(p.status)}</td>
+    <td class="num">${p.symbols_scanned ?? '—'}</td><td class="num">${p.universe_size ?? '—'}</td>
+    <td class="num">${p.events ?? '—'}</td><td class="mut"><code>${esc(p.source||'')}</code></td></tr>`).join('')
+    : '<tr><td colspan="6" class="mut">无真实记录 — 运行 python tools/quant_trading_monitor.py session 开始积累</td></tr>';
+}
+
 
 function renderStatic(){
-  pollAttention();
+  renderNow(D.now || {});
+  renderPositions((D.now||{}).positions || []);
+  renderTimeline(D.timeline || []);
+  pollNow();
+  renderRealTrend();
   $('gen-time').textContent = D.generated_at;
   $('strategy-warning').textContent = '⚠ ' + D.warning;
   $('not-a-buy').textContent = D.not_a_buy_note;
@@ -1264,8 +2103,8 @@ function renderStatic(){
     <dt>历史最佳年化</dt><dd>${fmt(s.best_annualized_pct,2)}% <span class="dim">(重放, 噪声内, 非已证明优势)</span></dd>
     <dt>历史交易笔数</dt><dd>${fmt(s.best_trades,0)}</dd>
     <dt>PIT / 成分偏差</dt><dd>存在 <span class="dim">(今日成员回看历史; 任何盈利声明的前置门)</span></dd>
-    <dt>前向触发累计</dt><dd>${fmt(s.forward_triggers,0)}</dd>
-    <dt>前向已结算交易</dt><dd>${fmt(s.forward_settled,0)}</dd>
+    <dt>前向观察（正式）</dt><dd>${fmt(s.forward_observations,0)} <span class="dim">(trading/forward.json)</span></dd>
+    <dt>前向已结算交易（正式）</dt><dd>${fmt(s.forward_settled,0)}</dd>
     <dt>前向胜率</dt><dd>${s.forward_hit_rate ? '积累足够结算笔数后再计算' : fmt(s.forward_hit_rate,3)}</dd>
   </dl>`;
   $('results-rows').innerHTML = (s.results||[]).map(r=>`<tr>
@@ -1273,8 +2112,11 @@ function renderStatic(){
     <td class="num">${fmt(r.trades,0)}</td><td class="num">${fmt(r.max_drawdown_pct,2)}%</td>
     <td class="mut">${esc(r.verdict)}</td></tr>`).join('') || '<tr><td colspan="5" class="mut">无评估工件</td></tr>';
 
-  // forward evidence
-  $('obs-rows').innerHTML = (D.obs_rows||[]).length ? D.obs_rows.slice().reverse().map(r=>`<tr>
+  // forward evidence: formal observations (trading/forward.json) + history log
+  const f = (D.real_trend||{}).forward || {};
+  $('formal-forward').innerHTML = f.count
+    ? `<b style="color:var(--green)">正式 forward observation：${f.count}</b>（已结算 ${f.settled??0}）— 明细随正式记录产生后在此展开`
+    : `<b style="color:var(--amber)">尚无正式 forward observation</b>（trading/forward.json 为 0 条）— 不显示 0% 胜率, 不以历史日志或诊断记录代替`;  $('obs-rows').innerHTML = (D.obs_rows||[]).length ? D.obs_rows.slice().reverse().map(r=>`<tr>
     <td class="num">${esc(r.date)}</td><td class="num">${esc(r.time)}</td>
     <td class="num">${esc(r.scanned)}</td>
     <td class="num" style="color:${r.triggers&&r.triggers!=='0'?'var(--red)':'var(--dim)'}">${esc(r.triggers)}</td>
@@ -1371,12 +2213,15 @@ def main() -> int:
     BUSINESS_ART.mkdir(parents=True, exist_ok=True)
     workspace_copy.write_text(html, encoding="utf-8")
     kpi = data["kpi"]
+    rt = data["real_trend"]
     dims = data["data_quality"].get("dimensions") or {}
     dim_summary = " ".join(f"{k}={v['status']}" for k, v in dims.items())
     print(
         f"OK -> {out} ({out.stat().st_size / 1024:.1f} KB, also {workspace_copy}); "
         f"decision={kpi['today_decision']} triggers={kpi['live_triggers']} "
         f"candidates={kpi['active_candidates']} evidence={kpi['strategy_evidence']} "
+        f"real_records={rt['record_count']} forward={rt['forward']['count']} "
+        f"m1={rt['m1_evidence']['verdict']} "
         f"dq_status={data['data_quality']['status']} ({dim_summary})"
     )
     return 0

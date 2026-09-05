@@ -1,0 +1,18 @@
+[Unit]
+Description=Quant Telegram event bridge — one oneshot consumption tick
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/barry/zuaef-agent
+# api.telegram.org is unreachable directly from this network; the plugin
+# client honors standard http(s) proxy variables (never socks ALL_PROXY).
+Environment=HTTPS_PROXY=http://127.0.0.1:7897
+Environment=HTTP_PROXY=http://127.0.0.1:7897
+# Credentials (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID) come from the repo
+# .env, loaded by AgentSettings.from_env() — never inline here.
+ExecStart=/home/barry/zuaef-agent/.venv/bin/python /home/barry/zuaef-agent/tools/quant_telegram_bridge.py
+# one tick may include up to one Agent run; a hung run must not wedge the
+# timer schedule forever
+TimeoutStartSec=900

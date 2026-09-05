@@ -36,6 +36,7 @@ platform). `--state-dir` isolates fixture/replay runs from real results.
     .venv/bin/python tools/quant_trading_monitor.py session --interval 45
     .venv/bin/python tools/quant_trading_monitor.py ack-buy --symbol 600000 --price 10.5 --shares 500 --venue paper
     .venv/bin/python tools/quant_trading_monitor.py ack-sell --symbol 600000 --price 10.9 --shares 500
+    .venv/bin/python tools/quant_trading_monitor.py skip --symbol 600000 --price 10.5 --note "too extended"
     .venv/bin/python tools/quant_trading_monitor.py status
 """
 
@@ -80,6 +81,7 @@ EVENT_POSITION_EXIT_ALERT = "POSITION_EXIT_ALERT"
 EVENT_POSITION_EXIT_CLEARED = "POSITION_EXIT_CLEARED"
 EVENT_POSITION_OPENED = "POSITION_OPENED"
 EVENT_POSITION_CLOSED = "POSITION_CLOSED"
+EVENT_HUMAN_SKIP = "HUMAN_SKIP"
 EVENT_DATA_UNTRUSTED = "DATA_UNTRUSTED"
 EVENT_CONNECTION_LOST = "LIVE_CONNECTION_LOST"
 
@@ -592,7 +594,7 @@ def cmd_ack_buy(args, store: Store) -> int:
         opp["since"] = when[:10]
     store.record_forward("EXECUTED", position["symbol"], when[:10], float(args.price), position["id"])
     store.append_alert({
-        "day": when[:10], "type": EVENT_POSITION_OPENED, "symbol": position["symbol"],
+        "ts": when, "day": when[:10], "type": EVENT_POSITION_OPENED, "symbol": position["symbol"],
         "price": float(args.price), "what": "user BUY acknowledged",
         "why": f"{position['id']} {args.shares} shares @ {args.price}",
         "venue": venue, "note": note,
@@ -635,7 +637,7 @@ def cmd_ack_sell(args, store: Store) -> int:
         store.opportunities[symbol] = {**opp, "state": ST_WATCH, "since": when[:10]}
     store.record_forward("CLOSED", symbol, when[:10], float(args.price), closed["id"])
     store.append_alert({
-        "day": when[:10], "type": EVENT_POSITION_CLOSED, "symbol": symbol,
+        "ts": when, "day": when[:10], "type": EVENT_POSITION_CLOSED, "symbol": symbol,
         "price": float(args.price), "what": "user SELL acknowledged",
         "why": f"{closed['id']} closed, pnl {closed['pnl']}",
         "venue": venue, "note": note,
@@ -643,6 +645,31 @@ def cmd_ack_sell(args, store: Store) -> int:
     })
     store.save()
     print(json.dumps({"closed": closed["id"], "pnl": closed["pnl"], "venue": venue}, ensure_ascii=False))
+    return 0
+
+
+def cmd_skip(args, store: Store) -> int:
+    """Record a human SKIP decision on a live opportunity as a real fact:
+    one HUMAN_SKIP alert plus a SKIP forward observation (settles D+1/3/5/8
+    through the existing settle path, feeding future override-value research).
+    The opportunity state machine is intentionally untouched."""
+    symbol = args.symbol.upper()
+    price = float(args.price)
+    if price <= 0:
+        print(json.dumps({"error": "price must be positive"}), file=sys.stderr)
+        return 1
+    when = _ack_time(args.time)
+    note = getattr(args, "note", None) or ""
+    store.record_forward("SKIP", symbol, when[:10], price)
+    store.append_alert({
+        "ts": when, "day": when[:10], "type": EVENT_HUMAN_SKIP, "symbol": symbol,
+        "price": price, "what": "user skipped the opportunity",
+        "why": note or "human decided not to act",
+        "venue": None, "note": note,
+        "conditions": None, "invalidation": None, "data_trust": "USER_CONFIRMED",
+    })
+    store.save()
+    print(json.dumps({"skipped": symbol, "day": when[:10]}, ensure_ascii=False))
     return 0
 
 
@@ -717,6 +744,11 @@ def main() -> int:
     p_sell.add_argument("--venue", choices=list(VENUES), default=None, help="must match the position's venue")
     p_sell.add_argument("--note", default="", help="free-text human note")
     p_sell.add_argument("--time", default=None)
+    p_skip = sub.add_parser("skip", help="record a human SKIP on an opportunity (no position change)")
+    p_skip.add_argument("--symbol", required=True)
+    p_skip.add_argument("--price", type=float, required=True, help="reference price for forward settlement")
+    p_skip.add_argument("--note", default="", help="why the opportunity was skipped")
+    p_skip.add_argument("--time", default=None)
     sub.add_parser("status", help="print current monitor state")
     args = parser.parse_args()
 
@@ -726,6 +758,7 @@ def main() -> int:
         "session": cmd_session,
         "ack-buy": cmd_ack_buy,
         "ack-sell": cmd_ack_sell,
+        "skip": cmd_skip,
         "status": cmd_status,
     }
     return handlers[args.cmd](args, store)

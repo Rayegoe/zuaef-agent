@@ -26,6 +26,43 @@ C Qlib 局限/D-E bug/F 无法解释),**任何 UNEXPLAINED 残留 = P0.5 失败*
 另:评估/审计工具(quant_core/live_scan/anti_leakage/pit_audit/eval_qlib/validate_semantics)随冻结期
 修订同步更新;business/dashboard 快照刷新。日常操作索引见 `workspace/knowledge/concepts/quant-live-ops.md`。
 
+**2026-09-04 增补 · Trading Workbench v0.1 Phase 2(主动实时助理 + 工件投递,T1–T12):**
+从 Pull(用户主动问)升级为 Push(Runtime 主动报),架构不变:Runtime 发现事实 → Agent 解释事实 →
+Telegram 送给人。新增 host 侧 oneshot Event Bridge `tools/quant_telegram_bridge.py`(systemd timer
+每 45s 一次,读 `trading/alerts.jsonl`,字节游标 + 独立 delivered_ids,源文件 truncate/rotate 安全)。
+分发契约:E1 NEW_READY / E2 POSITION_EXIT_ALERT → 每事件一次 `quant-decision` Agent run
+(interpretation-only:prompt 硬约束 + receipt tool_effect_facts 守卫,bridge 是唯一投递权威);
+E3 LIVE_CONNECTION_LOST(= SYSTEM_UNAVAILABLE 的 durable 代理,≠ NO_TRADE 文案硬保证)/
+E4 DATA_UNTRUSTED / E5 POSITION_OPENED/CLOSED → 确定性固定文案,零模型调用;
+SYSTEM_RECOVERED 仅在确定性证据(in-session + system_unavailable=false + 心跳≤90s,沿用 M1
+契约)下发一次;T10 收盘后日报一次,continuity verdict 复用 Dashboard 同一
+`load_real_trend()` 实现(单一真相)。失败语义:Agent 失败 → 降级确定性文案(事件仍有效);
+Telegram 失败 → 游标不推进,逐行 checkpoint-after-delivery 原地重试。
+`zuaef-telegram` 插件新增 `send_document`(multipart)与模型工具
+`send_artifact_to_supervisor`(operator self-delivery:host 固定收件人=TELEGRAM_CHAT_ID、
+仅 `artifacts/quant/delivery/` 内、扩展名白名单、≤20MB、无 approval——客户外发审批边界不动);
+`quant-decision` profile 组合 quant+telegram 双插件。Monitor CLI ack 告警补 `ts`(事件契约)。
+验收 A–E 对应单测全绿;**§25 仍为 IMPLEMENTED:T12(下一真实交易时段用户零发起收到主动通知)
+跑通前不宣称 PROVEN**——事件驱动的人机决策助理,不是自动交易系统。
+
+**2026-09-04 增补 · Trading Workbench v0.1 Phase 1(Dashboard 层,T1–T6):**
+`docs/quant/business.html` 升级为 Human-Agent Trading Workbench 第一阶段。① **truth 收敛**:
+`record_trade_outcome`(zuaef-quant toolset)停止写 `workspace/quant/outcomes.jsonl`,改走 canonical
+`quant_trading_monitor.py ack-buy/ack-sell`(LOCAL fact write,无 approval——记录人的既成事实,不下单);
+ack 增加 `--venue`(paper/real,落 position 与 alert)/`--note`;sell 仅全仓平仓(shares 不等于持仓即拒),
+且 venue 必须与持仓一致;新增 `skip` 子命令(HUMAN_SKIP alert + SKIP forward 观察,走既有 settle,
+机会状态机不动)。② **NOW 层**:页面顶部唯一当前事实卡,由 `now_snapshot()`(renderer 内单实现,serve
+经 `/api/quant/now` 共用)投影 durable artifacts——`heartbeat_at`(soak 尾行)与 `last_scan_at`(symbols>0
+的真实扫描)分离;`data_trust`(PASS/FAIL/UNKNOWN,随周期写 state.json)与 `system_unavailable`
+(runtime availability)是两个字段;**STALE 仅在交易时段内、心跳 >90s 时触发**,非时段不按 age 报故障;
+Action Queue 只收 READY/EXIT/SYSTEM_UNAVAILABLE/DATA_UNTRUSTED,每卡区分 RUNTIME/AGENT/HUMAN
+三态,Agent brief 仅当 `recorded_at ≥ 该 symbol 最新 material event` 才匹配,否则显示"尚未复核"。
+③ **Human Action API**:serve 新增 POST `/api/quant/ack-buy|ack-sell|skip`(canonical CLI 薄 adapter,
+缺字段 400,canonical 拒绝原样透传),**写接口 loopback-only**(`--host` 非回环地址即 403)。
+④ Timeline(今日事件时间线)只列 durable alerts;Open Positions 卡含 venue/P&L/Holding D+n;
+页面按 LIVE/TODAY/HISTORICAL/RESEARCH 标注口径。新增工具 `get_trading_context`(只读 canonical
+context)与 `render_quant_business_artifact`(确定性渲染到 `artifacts/quant/delivery/`)。
+Telegram 层(T7–T10)延后
 ---
 
 ## 目录

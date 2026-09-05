@@ -1,0 +1,23 @@
+{
+  "experiment_id": "EXP-TRIGGER-SENSITIVITY-001",
+  "hypothesis": "A modestly lower timing threshold may increase valid triggers without materially worsening after-cost expectancy or drawdown.",
+  "baseline_strategy_version": "CURRENT_PRODUCTION_TO_VERIFY",
+  "change": {
+    "one_variable_only": true,
+    "example": "volume_ratio threshold: production value -> experimental lower value"
+  },
+  "state": "PROPOSED",
+  "mode": "replay",
+  "primary_metrics": [
+    "after_cost_expectancy",
+    "settled_trigger_count"
+  ],
+  "guardrail_metrics": [
+    "max_drawdown",
+    "MAE",
+    "regime_stability",
+    "PIT_block_rate"
+  ],
+  "run_ids": [],
+  "result": null
+}

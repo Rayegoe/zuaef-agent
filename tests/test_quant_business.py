@@ -350,7 +350,11 @@ def biz_env(tmp_path):
         "status": tmp_path / "STATUS.md",
         "active": tmp_path / "active.toml",
         "legacy": tmp_path / "legacy_watchlist.toml",
-        "outcomes": tmp_path / "outcomes.jsonl",
+        "trading": tmp_path / "trading",
+        "diagnostic": tmp_path / "diagnostic",
+        "daily": tmp_path / "daily",
+        "active_symbols": tmp_path / "active_symbols.json",
+        "semantic": tmp_path / "semantic",
     }
 
 
@@ -360,6 +364,41 @@ class TestBusinessRenderer:
         assert "</script><script>alert(1)" not in html
         assert "\\u003c/script\\u003e" in html
 
+    def test_indicator_notes_default_to_hidden_full_width_board(self):
+        html = biz.render_html({})
+        assert 'id="glossary-open"' in html
+        assert 'aria-expanded="false" aria-controls="glossary-drawer"' in html
+        assert 'id="glossary-backdrop" hidden' in html
+        assert 'id="glossary-drawer" hidden' in html
+        assert 'class="card note-side"' not in html
+        assert 'layout-board{display:block' in html
+        assert 'grid-template-columns:minmax(0,1fr) 330px' not in html
+        assert 'width:min(420px,100vw)' in html
+
+    def test_indicator_notes_drawer_hooks_manage_open_close_and_focus(self):
+        html = biz.render_html({})
+        for hook in (
+            "function openGlossary(){ setGlossaryOpen(true); }",
+            "function closeGlossary(){ setGlossaryOpen(false); }",
+            "drawer.classList.add('is-open')",
+            "backdrop.classList.add('is-open')",
+            "e.target.id === 'glossary-close' || e.target.id === 'glossary-backdrop'",
+            "if(!$('metric-modal').hidden){ closeMetric(); return; }",
+            "if(!$('glossary-drawer').hidden){ closeGlossary(); return; }",
+            "$('glossary-close').focus()",
+            "trigger.focus()",
+        ):
+            assert hook in html
+
+    def test_indicator_notes_keep_single_glossary_metric_modal_path(self):
+        html = biz.render_html({})
+        assert html.count('id="glossary-list"') == 1
+        assert html.count("const GLOSSARY = ") == 1
+        assert '<button type="button" class="g-item" data-m="${esc(k)}"' in html
+        assert "if(!g) return;" in html
+        for label in ("定义", "口径 / 计算", "怎么用", "局限", "数据来源"):
+            assert label in html
+
     def test_zero_triggers_shows_no_action_candidate(self, biz_env):
         write_snapshot(biz_env["snapshot"], [cand("600000")])
         write_scan(biz_env["scan"], [])
@@ -368,7 +407,7 @@ class TestBusinessRenderer:
         data = biz.build_data(
             snapshot_path=biz_env["snapshot"], scan_path=biz_env["scan"],
             briefs_dir=biz_env["briefs"], obs_path=biz_env["obs"], status_path=biz_env["status"],
-            active_path=biz_env["active"], legacy_path=biz_env["legacy"], outcomes_path=biz_env["outcomes"],
+            active_path=biz_env["active"], legacy_path=biz_env["legacy"],
         )
         html = biz.render_html(data)
         assert "无今日动作候选" in html
@@ -395,7 +434,7 @@ class TestBusinessRenderer:
         data = biz.build_data(
             snapshot_path=biz_env["snapshot"], scan_path=biz_env["scan"],
             briefs_dir=biz_env["briefs"], obs_path=biz_env["obs"], status_path=biz_env["status"],
-            active_path=biz_env["active"], legacy_path=biz_env["legacy"], outcomes_path=biz_env["outcomes"],
+            active_path=biz_env["active"], legacy_path=biz_env["legacy"],
         )
         html = biz.render_html(data)
         assert data["kpi"]["live_triggers"] == 2
@@ -417,7 +456,7 @@ class TestBusinessRenderer:
         data = biz.build_data(
             snapshot_path=biz_env["snapshot"], scan_path=biz_env["scan"],
             briefs_dir=biz_env["briefs"], obs_path=biz_env["obs"], status_path=biz_env["status"],
-            active_path=biz_env["active"], legacy_path=biz_env["legacy"], outcomes_path=biz_env["outcomes"],
+            active_path=biz_env["active"], legacy_path=biz_env["legacy"],
         )
         html = biz.render_html(data)
         assert "DATA DEGRADED" in html
@@ -429,7 +468,7 @@ class TestBusinessRenderer:
         data = biz.build_data(
             snapshot_path=biz_env["snapshot"], scan_path=biz_env["scan"],
             briefs_dir=biz_env["briefs"], obs_path=biz_env["obs"], status_path=biz_env["status"],
-            active_path=biz_env["active"], legacy_path=biz_env["legacy"], outcomes_path=biz_env["outcomes"],
+            active_path=biz_env["active"], legacy_path=biz_env["legacy"],
         )
         html = biz.render_html(data)
         assert data["data_quality"]["status"] == "MISSING"
@@ -447,7 +486,7 @@ class TestBusinessRenderer:
         data = biz.build_data(
             snapshot_path=biz_env["snapshot"], scan_path=biz_env["scan"],
             briefs_dir=biz_env["briefs"], obs_path=biz_env["obs"], status_path=biz_env["status"],
-            active_path=biz_env["active"], legacy_path=biz_env["legacy"], outcomes_path=biz_env["outcomes"],
+            active_path=biz_env["active"], legacy_path=biz_env["legacy"],
         )
         html = biz.render_html(data)
         # engineering proof-chain stage identifiers must not lead the page
@@ -468,9 +507,158 @@ class TestBusinessRenderer:
         data = biz.build_data(
             snapshot_path=biz_env["snapshot"], scan_path=biz_env["scan"],
             briefs_dir=briefs, obs_path=biz_env["obs"], status_path=biz_env["status"],
-            active_path=biz_env["active"], legacy_path=biz_env["legacy"], outcomes_path=biz_env["outcomes"],
+            active_path=biz_env["active"], legacy_path=biz_env["legacy"],
         )
         assert data["kpi"]["today_decision"] == "NOT_RUN_TODAY"
+
+
+# ---------------------------------------------------------------------------
+# M1 real-run evidence trend: workspace/artifacts/quant/trading/ is the only
+# current trading truth; missing data stays missing, MARKET_CLOSED and
+# SYSTEM_UNAVAILABLE keep their real meanings
+# ---------------------------------------------------------------------------
+
+
+CLOSED_POINT = {"ts": "2026-09-04T19:10:35+08:00", "status": "MARKET_CLOSED", "events": 0, "symbols": 0, "ms": 0}
+
+
+def write_trading(env, soak, forward='{"observations": []}', alerts=None):
+    env["trading"].mkdir(parents=True, exist_ok=True)
+    (env["trading"] / "soak.jsonl").write_text(
+        "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in soak), encoding="utf-8"
+    )
+    (env["trading"] / "forward.json").write_text(forward, encoding="utf-8")
+    if alerts is not None:
+        (env["trading"] / "alerts.jsonl").write_text(
+            "".join(json.dumps(a, ensure_ascii=False) + "\n" for a in alerts), encoding="utf-8"
+        )
+
+
+def build_with_rt(env):
+    return biz.build_data(
+        snapshot_path=env["snapshot"], scan_path=env["scan"],
+        briefs_dir=env["briefs"], obs_path=env["obs"], status_path=env["status"],
+        active_path=env["active"], legacy_path=env["legacy"],
+        trading_dir=env["trading"], diagnostic_dir=env["diagnostic"],
+        daily_dir=env["daily"], active_symbols_path=env["active_symbols"],
+        semantic_dir=env["semantic"],
+    )
+
+
+class TestRealTrend:
+    def test_single_closed_point_is_one_real_point_not_a_curve(self, biz_env):
+        write_trading(biz_env, [CLOSED_POINT])
+        data = build_with_rt(biz_env)
+        rt = data["real_trend"]
+        assert rt["record_count"] == 1 and len(rt["points"]) == 1
+        p = rt["points"][0]
+        assert p["status"] == "MARKET_CLOSED"  # verbatim artifact status
+        assert p["symbols_scanned"] == 0  # real recorded zero, not missing
+        assert p["source"] == "trading/soak.jsonl"
+        html = biz.render_html(data)
+        assert "真实运行数据趋势" in html
+        assert "已收盘（无扫描）" in html
+        assert "不是扫描失败" in html
+
+    def test_duplicate_real_record_counts_once(self, biz_env):
+        write_trading(biz_env, [CLOSED_POINT, CLOSED_POINT])
+        rt = build_with_rt(biz_env)["real_trend"]
+        assert rt["record_count"] == 1
+
+    def test_missing_field_stays_missing_never_zero(self, biz_env):
+        row = {"ts": "2026-09-04T19:10:35+08:00", "status": "MARKET_CLOSED", "events": 0, "ms": 0}
+        write_trading(biz_env, [row])
+        p = build_with_rt(biz_env)["real_trend"]["points"][0]
+        assert p["symbols_scanned"] is None  # not coerced to 0
+
+    def test_events_refine_from_alerts_stream(self, biz_env):
+        alert = {"ts": CLOSED_POINT["ts"], "type": "NEW_READY", "symbol": "600000", "day": "2026-09-04"}
+        write_trading(biz_env, [CLOSED_POINT], alerts=[alert])
+        p = build_with_rt(biz_env)["real_trend"]["points"][0]
+        assert p["events"] == 1
+
+    def test_zero_observations_show_no_forward_evidence_never_zero_winrate(self, biz_env):
+        write_trading(biz_env, [CLOSED_POINT])
+        data = build_with_rt(biz_env)
+        assert data["real_trend"]["forward"]["count"] == 0
+        assert data["kpi"]["forward_settled_trades"] == 0
+        html = biz.render_html(data)
+        assert "尚无正式 forward observation" in html
+        assert "尚无正式 forward evidence" in html
+
+    def test_m1_verdict_partial_with_single_scan_but_no_continuous_monitor(self, biz_env):
+        write_trading(biz_env, [CLOSED_POINT])
+        biz_env["semantic"].mkdir(parents=True)
+        (biz_env["semantic"] / "semantic_proof_20260904T110935Z.json").write_text(json.dumps({
+            "status": "PASS", "reason": "50 consistent", "sample_size": 50,
+            "as_of": "2026-09-04T19:09:35+08:00",
+            "same_date_cross_check": {"status": "PASS"},
+        }))
+        data = build_with_rt(biz_env)
+        m1 = data["real_trend"]["m1_evidence"]
+        assert m1["market_data_valid"]["ok"] is True
+        assert m1["single_scan_valid"]["ok"] is True
+        assert m1["continuous_monitoring"]["ok"] is False
+        assert m1["formal_forward_count"] == 0
+        assert m1["verdict"] == "PARTIAL"
+        html = biz.render_html(data)
+        assert "M1 production evidence" in html and "PARTIAL" in html
+        assert "连续实时监控" in html and "未证明" in html
+
+    def test_system_unavailable_is_never_no_trade_and_scan_is_distinct(self, biz_env):
+        soak = [
+            {"ts": "2026-09-04T10:00:00+08:00", "status": "SYSTEM_UNAVAILABLE", "events": 1, "symbols": 50, "ms": 10},
+            {"ts": "2026-09-04T10:01:00+08:00", "status": "NO_TRADE", "events": 0, "symbols": 50, "ms": 10},
+            CLOSED_POINT,
+        ]
+        write_trading(biz_env, soak)
+        html = biz.render_html(build_with_rt(biz_env))
+        assert "系统不可用（≠ NO_TRADE）" in html
+        assert "有效扫描 · 无机会" in html
+        assert "已收盘（无扫描）" in html
+        # an in-session scanned point exists -> continuous monitoring has evidence
+        m1 = build_with_rt(biz_env)["real_trend"]["m1_evidence"]
+        assert m1["continuous_monitoring"]["ok"] is True
+
+    def test_diagnostic_d1_from_real_cache_and_pending_stays_pending(self, biz_env):
+        biz_env["diagnostic"].mkdir(parents=True)
+        alerts = [
+            {"ts": "2026-09-03T14:00:00+08:00", "type": "NEW_NEAR", "symbol": "600015", "day": "2026-09-03",
+             "price": 6.27, "conditions": {"pullback_5d": -0.0529, "volume_ratio_20d": 1.462}},
+            {"ts": "2026-09-03T14:00:00+08:00", "type": "NEW_NEAR", "symbol": "601799", "day": "2026-09-03",
+             "price": 74.88, "conditions": {"pullback_5d": -0.0853, "volume_ratio_20d": 2.204}},
+        ]
+        (biz_env["diagnostic"] / "alerts.jsonl").write_text(
+            "".join(json.dumps(a) + "\n" for a in alerts), encoding="utf-8"
+        )
+        header = "date,symbol,open,high,low,close,volume,amount,turnover\n"
+        biz_env["daily"].mkdir(parents=True)
+        (biz_env["daily"] / "600015_qfq.csv").write_text(
+            header + "2026-09-03,600015,6.22,6.33,6.22,6.27,1,1,0\n"
+            + "2026-09-04,600015,6.26,6.35,6.25,6.32,1,1,0\n", encoding="utf-8"
+        )
+        (biz_env["daily"] / "601799_qfq.csv").write_text(
+            header + "2026-09-03,601799,79.0,79.0,74.18,74.88,1,1,0\n", encoding="utf-8"
+        )
+        data = build_with_rt(biz_env)
+        diag = data["real_trend"]["diagnostic_rows"]
+        by_sym = {r["symbol"]: r for r in diag}
+        assert by_sym["600015"]["d1"] == 0.007974 and by_sym["600015"]["d1_day"] == "2026-09-04"
+        assert "d1" not in by_sym["601799"]  # no future bar -> pending, not 0
+        # diagnostic records never become formal forward observations
+        assert data["real_trend"]["forward"]["count"] == 0
+        html = biz.render_html(data)
+        assert "diagnostic forward evidence" in html
+        assert "不计入策略收益" in html
+
+    def test_old_outcomes_file_no_longer_drives_current_truth(self, biz_env, tmp_path):
+        write_trading(biz_env, [CLOSED_POINT])
+        stale = tmp_path / "outcomes.jsonl"
+        stale.write_text('{"action": "SELL"}\n{"action": "SELL"}\n', encoding="utf-8")
+        data = build_with_rt(biz_env)
+        html = biz.render_html(data)
+        assert data["kpi"]["forward_settled_trades"] == 0  # truth = forward.json, not outcomes
+        assert "outcomes" not in html
 
 
 # ---------------------------------------------------------------------------
@@ -958,3 +1146,252 @@ class TestAntiLeakage:
         assert leak.scoped_verdict([{"status": "LOOKAHEAD_FAIL"}], {"status": "PASS"}) == "P0_4_FAIL"
         assert leak.scoped_verdict([], {"status": "PASS"}) == "P0_4_UNKNOWN"
         assert leak.scoped_verdict([{"status": "UNKNOWN"}], {"status": "PASS"}) == "P0_4_UNKNOWN"
+
+# ---------------------------------------------------------------------------
+# NOW projection (now_snapshot): heartbeat != last successful scan,
+# session-aware stale, event-matched agent brief, durable attention
+# ---------------------------------------------------------------------------
+
+
+IN_SESSION = datetime(2026, 9, 4, 11, 10, tzinfo=biz.TZ_SHANGHAI)   # Friday
+AFTER_CLOSE = datetime(2026, 9, 4, 19, 47, tzinfo=biz.TZ_SHANGHAI)
+
+NOW_STATE = {
+    "as_of": "2026-09-04T11:07:42+08:00", "day": "2026-09-04", "status": "ALERTS",
+    "symbols_scanned": 50, "data_trust": "PASS", "ready": [], "near": [],
+    "exit_alerts": [], "positions": [], "market_no_trade": False, "system_unavailable": False,
+}
+
+
+def write_now_env(env, *, alerts=None, soak=None, state=None):
+    env["trading"].mkdir(parents=True, exist_ok=True)
+    (env["trading"] / "state.json").write_text(json.dumps(state if state is not None else NOW_STATE), encoding="utf-8")
+    for name, rows in (("soak.jsonl", soak), ("alerts.jsonl", alerts)):
+        if rows is not None:
+            (env["trading"] / name).write_text(
+                "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+
+
+def write_brief(env, decision_id, *, symbol, recorded_at, action="WATCH"):
+    env["briefs"].mkdir(parents=True, exist_ok=True)
+    (env["briefs"] / f"{decision_id}.json").write_text(json.dumps({
+        "decision_id": decision_id, "symbol": symbol, "action": action,
+        "recorded_at": recorded_at, "why": "w", "invalidation": "i",
+    }), encoding="utf-8")
+
+
+class TestNowSnapshot:
+    def _snap(self, env, now):
+        return biz.now_snapshot(
+            trading_dir=env["trading"], briefs_dir=env["briefs"],
+            active_symbols_path=env["active_symbols"], now=now,
+        )
+
+    def test_heartbeat_and_last_scan_split(self, biz_env):
+        write_now_env(biz_env, soak=[
+            {"ts": "2026-09-04T09:31:00+08:00", "status": "MARKET_CLOSED", "symbols": 0},
+            {"ts": "2026-09-04T11:07:00+08:00", "status": "NO_TRADE", "symbols": 50},
+        ])
+        biz_env["active_symbols"].write_text(json.dumps({"symbols": ["600000", "600001"]}))
+        n = self._snap(biz_env, IN_SESSION)
+        assert n["heartbeat_at"] == "2026-09-04T11:07:00+08:00"
+        assert n["last_scan_at"] == "2026-09-04T11:07:00+08:00"
+        assert n["universe_size"] == 2 and n["market"] == "OPEN" and n["data_trust"] == "PASS"
+        # a closing-only soak never becomes a fake scan
+        write_now_env(biz_env, soak=[
+            {"ts": "2026-09-04T19:10:35+08:00", "status": "MARKET_CLOSED", "symbols": 0},
+        ], state={**NOW_STATE, "status": "MARKET_CLOSED", "symbols_scanned": 0})
+        n2 = self._snap(biz_env, AFTER_CLOSE)
+        assert n2["heartbeat_at"] == "2026-09-04T19:10:35+08:00" and n2["last_scan_at"] is None
+        assert n2["market"] == "CLOSED" and n2["stale"] is False
+
+    def test_stale_only_when_session_expects_a_live_loop(self, biz_env):
+        write_now_env(biz_env, soak=[
+            {"ts": "2026-09-04T11:07:00+08:00", "status": "NO_TRADE", "symbols": 50},
+        ])
+        n = self._snap(biz_env, IN_SESSION)  # heartbeat age 180s in-session
+        assert n["stale"] is True and n["runtime"] == "STALE"
+        n2 = self._snap(biz_env, AFTER_CLOSE)  # same age after close: not a fault
+        assert n2["stale"] is False and n2["runtime"] == "HEALTHY"
+
+    def test_ready_attention_with_event_matched_brief(self, biz_env):
+        write_now_env(biz_env, alerts=[
+            {"ts": "2026-09-04T11:07:42+08:00", "type": "NEW_READY", "symbol": "601799",
+             "price": 76.32, "what": "none -> READY", "why": "frozen entry conditions met"},
+        ], state={**NOW_STATE, "ready": ["601799"]})
+        # an older judgement must never answer a newer material event
+        write_brief(biz_env, "brief-20260903-601799", symbol="601799",
+                    recorded_at="2026-09-03T18:28:00+08:00", action="WATCH")
+        n = self._snap(biz_env, IN_SESSION)
+        item = n["attention"][0]
+        assert item["kind"] == "READY" and item["price"] == 76.32 and item["agent"] is None
+        write_brief(biz_env, "brief-20260904-601799", symbol="601799",
+                    recorded_at="2026-09-04T11:09:00+08:00", action="WATCH")
+        n2 = self._snap(biz_env, IN_SESSION)
+        assert n2["attention"][0]["agent"]["decision_id"] == "brief-20260904-601799"
+
+    def test_exit_attention_carries_position_and_human_fact(self, biz_env):
+        write_now_env(biz_env, alerts=[
+            {"ts": "2026-09-04T10:00:00+08:00", "type": "POSITION_OPENED", "symbol": "601799",
+             "price": 74.88, "venue": "paper", "note": "entry"},
+            {"ts": "2026-09-04T14:17:00+08:00", "type": "POSITION_EXIT_ALERT", "symbol": "601799",
+             "what": "HOLD -> EXIT_ALERT", "why": "close_below_ma5"},
+        ], state={**NOW_STATE, "exit_alerts": ["601799"], "data_trust": "FAIL",
+                  "positions": [{"symbol": "601799", "entry_price": 74.88, "price": 77.2,
+                                 "pnl": 232.0, "shares": 100, "venue": "paper", "state": "EXIT_ALERT"}]})
+        n = self._snap(biz_env, IN_SESSION)
+        kinds = {i["kind"] for i in n["attention"]}
+        assert {"EXIT", "DATA_UNTRUSTED"} <= kinds
+        exit_item = next(i for i in n["attention"] if i["kind"] == "EXIT")
+        assert exit_item["why"] == "close_below_ma5" and exit_item["entry_price"] == 74.88
+        assert exit_item["venue"] == "paper"
+        assert exit_item["human"]["action"].startswith("HOLD")
+
+    def test_system_unavailable_surfaces_as_attention(self, biz_env):
+        write_now_env(biz_env, state={**NOW_STATE, "status": "SYSTEM_UNAVAILABLE",
+                                      "system_unavailable": True, "data_trust": "UNKNOWN"})
+        n = self._snap(biz_env, IN_SESSION)
+        assert any(i["kind"] == "SYSTEM_UNAVAILABLE" for i in n["attention"])
+
+    def test_timeline_lists_only_state_day_events(self, biz_env):
+        write_now_env(biz_env, alerts=[
+            {"ts": "2026-09-03T14:00:00+08:00", "day": "2026-09-03", "type": "NEW_NEAR", "symbol": "600015", "what": "none -> NEAR"},
+            {"ts": "2026-09-04T11:07:42+08:00", "day": "2026-09-04", "type": "NEW_READY", "symbol": "601799", "what": "none -> READY"},
+        ])
+        rows = biz.load_timeline(biz_env["trading"], day="2026-09-04")
+        assert [r["type"] for r in rows] == ["NEW_READY"]
+
+    def test_build_data_embeds_now_and_timeline(self, biz_env):
+        write_trading(biz_env, [CLOSED_POINT])
+        (biz_env["trading"] / "state.json").write_text(json.dumps({
+            "as_of": CLOSED_POINT["ts"], "day": "2026-09-04",
+            "status": "MARKET_CLOSED", "data_trust": "UNKNOWN",
+        }), encoding="utf-8")
+        data = build_with_rt(biz_env)
+        assert data["now"]["present"] is True
+        assert data["now"]["runtime"] in ("HEALTHY", "STALE", "UNKNOWN")
+        assert isinstance(data["timeline"], list)
+        html = biz.render_html(data)
+        assert 'id="now-card"' in html and "今日事件时间线" in html
+        assert "尚未复核" in html  # agent three-state exists even without briefs
+
+
+class TestAckCommandBuilder:
+    def test_buy_builds_canonical_argv(self):
+        cmd = serve.ack_command_for("ack-buy", {
+            "symbol": "601799", "shares": 100, "price": 76.32, "venue": "paper",
+            "executed_at": "2026-09-04T11:07:42+08:00", "note": "n",
+        })
+        assert "tools/quant_trading_monitor.py" in cmd and "ack-buy" in cmd
+        assert cmd[cmd.index("--state-dir") + 1] == "workspace/artifacts/quant/trading"
+        assert cmd[cmd.index("--venue") + 1] == "paper"
+        assert cmd[cmd.index("--shares") + 1] == "100"
+        assert cmd[cmd.index("--note") + 1] == "n"
+
+    def test_skip_needs_no_venue_or_shares(self):
+        cmd = serve.ack_command_for("skip", {
+            "symbol": "601799", "price": 76.32,
+            "executed_at": "2026-09-04T11:07:42+08:00",
+        })
+        assert "skip" in cmd and "--venue" not in cmd and "--shares" not in cmd
+
+    @pytest.mark.parametrize("kind,payload,match", [
+        ("ack-buy", {"shares": 1, "price": 1, "venue": "paper", "executed_at": "t"}, "symbol"),
+        ("ack-buy", {"symbol": "X", "price": 1, "venue": "paper", "executed_at": "t"}, "shares"),
+        ("ack-buy", {"symbol": "X", "shares": 1, "venue": "paper"}, "executed_at"),
+        ("ack-buy", {"symbol": "X", "shares": 1, "venue": "paper", "executed_at": "t"}, "price"),
+        ("ack-buy", {"symbol": "X", "shares": 1, "price": 1, "executed_at": "t"}, "venue"),
+        ("ack-buy", {"symbol": "X", "shares": 1, "price": 1, "venue": "demo", "executed_at": "t"}, "venue"),
+        ("ack-buy", {"symbol": "X", "shares": 1.5, "price": 1, "venue": "paper", "executed_at": "t"}, "shares"),
+        ("skip", {"symbol": "X", "executed_at": "t"}, "price"),
+        ("nope", {"symbol": "X"}, "unknown ack kind"),
+    ])
+    def test_missing_or_invalid_fields_rejected(self, kind, payload, match):
+        with pytest.raises(ValueError, match=match):
+            serve.ack_command_for(kind, payload)
+
+    def test_writes_are_loopback_only(self):
+        assert all(serve.writes_enabled_for_host(h) for h in ("127.0.0.1", "localhost", "::1"))
+        assert not any(serve.writes_enabled_for_host(h) for h in ("0.0.0.0", "192.168.1.5", "example.com"))
+
+
+class TestQuantHttpApi:
+    import threading
+    import urllib.error
+    import urllib.request
+
+    def _server(self):
+        srv = serve.ThreadingHTTPServer(("127.0.0.1", 0), serve.Handler)
+        thread = self.threading.Thread(target=srv.serve_forever, daemon=True)
+        thread.start()
+        return srv
+
+    def _post(self, port, path, payload):
+        req = self.urllib.request.Request(
+            f"http://127.0.0.1:{port}{path}",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        return self.urllib.request.urlopen(req, timeout=5)
+
+    def test_post_ack_invokes_canonical_command(self, monkeypatch):
+        captured = {}
+
+        def fake_run(cmd, **kwargs):
+            captured["cmd"] = cmd
+            return type("R", (), {"returncode": 0, "stdout": '{"position": "p-0001"}', "stderr": ""})()
+
+        monkeypatch.setattr(serve.subprocess, "run", fake_run)
+        srv = self._server()
+        try:
+            with self._post(srv.server_address[1], "/api/quant/ack-buy", {
+                "symbol": "601799", "shares": 100, "price": 76.32,
+                "venue": "paper", "executed_at": "2026-09-04T11:07:42+08:00",
+            }) as resp:
+                body = json.loads(resp.read())
+            assert body["position"] == "p-0001"
+            assert "ack-buy" in captured["cmd"]
+            assert captured["cmd"][captured["cmd"].index("--venue") + 1] == "paper"
+        finally:
+            srv.shutdown()
+
+    def test_post_canonical_rejection_is_400_verbatim(self, monkeypatch):
+        def rejecting_run(cmd, **kwargs):
+            return type("R", (), {"returncode": 1, "stdout": "",
+                                  "stderr": '{"error": "venue mismatch: position opened as paper"}'})()
+
+        monkeypatch.setattr(serve.subprocess, "run", rejecting_run)
+        srv = self._server()
+        try:
+            with pytest.raises(self.urllib.error.HTTPError) as err:
+                self._post(srv.server_address[1], "/api/quant/ack-sell", {
+                    "symbol": "601799", "shares": 100, "price": 77.2,
+                    "venue": "real", "executed_at": "2026-09-04T14:17:00+08:00",
+                })
+            assert err.value.code == 400
+            assert "venue mismatch" in err.value.read().decode()
+        finally:
+            srv.shutdown()
+
+    def test_post_validation_error_is_400(self):
+        srv = self._server()
+        try:
+            with pytest.raises(self.urllib.error.HTTPError) as err:
+                self._post(srv.server_address[1], "/api/quant/ack-buy",
+                           {"symbol": "601799", "shares": 100, "price": 76.32})
+            assert err.value.code == 400
+        finally:
+            srv.shutdown()
+
+    def test_post_disabled_on_non_loopback_host(self):
+        srv = self._server()
+        serve.Handler.writes_enabled = False
+        try:
+            with pytest.raises(self.urllib.error.HTTPError) as err:
+                self._post(srv.server_address[1], "/api/quant/ack-buy", {
+                    "symbol": "601799", "shares": 100, "price": 76.32,
+                    "venue": "paper", "executed_at": "t",
+                })
+            assert err.value.code == 403
+        finally:
+            srv.shutdown()
+            serve.Handler.writes_enabled = True

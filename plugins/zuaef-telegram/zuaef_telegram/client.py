@@ -24,6 +24,7 @@ from typing import Any
 import httpx
 
 SEND_MESSAGE_URL = "https://api.telegram.org/bot{token}/sendMessage"
+SEND_DOCUMENT_URL = "https://api.telegram.org/bot{token}/sendDocument"
 
 _BOT_TOKEN_IN_URL = re.compile(r"/bot[0-9A-Za-z:_-]+/")
 
@@ -104,4 +105,49 @@ class TelegramClient:
             "ok": True,
             "message_id": result.get("message_id"),
             "date": result.get("date"),
+        }
+
+    def send_document(self, path, *, caption: str | None = None) -> dict[str, Any]:
+        """Upload one local file as a Telegram document (multipart) and
+        return a bounded delivery fact. The caller owns path validation —
+        this transport only opens the exact path it was handed."""
+        from pathlib import Path
+
+        path = Path(path)
+        payload: dict[str, str] = {"chat_id": self._chat_id}
+        if caption:
+            payload["caption"] = caption
+        url = SEND_DOCUMENT_URL.format(token=self._token)
+        try:
+            with path.open("rb") as handle:
+                response = self._client.post(
+                    url, data=payload, files={"document": (path.name, handle)}
+                )
+            response.raise_for_status()
+        except httpx.TimeoutException:
+            raise TelegramError("telegram sendDocument timed out") from None
+        except httpx.HTTPStatusError as exc:
+            raise TelegramError(
+                f"telegram sendDocument failed: HTTP {exc.response.status_code}"
+            ) from None
+        except httpx.HTTPError as exc:
+            raise TelegramError(
+                redact_token(f"telegram sendDocument failed: {exc}")
+            ) from None
+        try:
+            data = response.json()
+        except ValueError:
+            raise TelegramError(
+                "telegram sendDocument returned non-JSON response"
+            ) from None
+        if not data.get("ok"):
+            raise TelegramError(
+                redact_token(f"telegram sendDocument failed: {data}")
+            ) from None
+        result = data.get("result", {})
+        return {
+            "ok": True,
+            "message_id": result.get("message_id"),
+            "date": result.get("date"),
+            "file": path.name,
         }

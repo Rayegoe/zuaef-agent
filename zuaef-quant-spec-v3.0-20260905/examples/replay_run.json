@@ -1,0 +1,17 @@
+{
+  "replay_run_id": "replay-example-10d",
+  "strategy_version": "CURRENT_PRODUCTION_TO_VERIFY",
+  "start_date": "RECENT_TRADING_DAY_MINUS_9",
+  "end_date": "RECENT_TRADING_DAY",
+  "cadence": [
+    "USE_PRODUCTION_CADENCE"
+  ],
+  "state": "PLANNED",
+  "evidence_namespace": "replay",
+  "trading_days": 10,
+  "trigger_count": 0,
+  "settled_count": 0,
+  "pit_block_count": 0,
+  "pipeline_failure_count": 0,
+  "notes": "Example contract only. Replay output must never increment live_forward_observations."
+}

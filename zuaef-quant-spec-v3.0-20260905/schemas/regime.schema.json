@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MarketRegime",
+  "type": "object",
+  "required": [
+    "as_of",
+    "regime",
+    "reason_codes",
+    "mode",
+    "rule_version"
+  ],
+  "properties": {
+    "as_of": {
+      "type": "string"
+    },
+    "regime": {
+      "enum": [
+        "DO_NOT_PARTICIPATE",
+        "SELECTIVE",
+        "NORMAL",
+        "AGGRESSIVE"
+      ]
+    },
+    "confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "input_snapshot_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rule_version": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "shadow",
+        "production",
+        "replay"
+      ]
+    }
+  }
+}

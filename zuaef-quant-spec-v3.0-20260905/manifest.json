@@ -1,0 +1,33 @@
+{
+  "name": "zuaef-quant-spec-v3.0-20260905",
+  "version": "3.0",
+  "generated_date": "2026-09-05",
+  "purpose": "Current-runtime-aware Codex implementation spec for Live Decision + PIT-Safe Replay + Agent Experiment System",
+  "authority_precedence": [
+    "CURRENTLY_OBSERVED conversation/runtime facts",
+    "local runtime artifacts/logs",
+    "GitHub baseline",
+    "older specs/docs"
+  ],
+  "current_runtime": {
+    "report": "quant-business-20260904-1647.html",
+    "telegram_message_id": 107,
+    "run_prefix": "a97d4047…",
+    "decision": "NOT_RUN_TODAY",
+    "candidate_count": 50,
+    "trigger_count": 0,
+    "data_trust": "FAIL",
+    "pit": "CONTAMINATED",
+    "profitability": "UNPROVEN",
+    "live_forward_observations": 0,
+    "host_health": "HEALTHY"
+  },
+  "target_capabilities": [
+    "PIT-safe 10-day replay",
+    "Agent action surface",
+    "Market Regime shadow gate",
+    "Evidence Retrieval v1",
+    "S0/S1/S2 experiment loop"
+  ],
+  "production_rule": "Preserve working runtime; new experimental features do not mutate production until explicit promotion."
+}

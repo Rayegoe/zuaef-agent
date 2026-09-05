@@ -106,7 +106,7 @@ P2 独立执行重放 → P3 能力接入 → P4 三轮模型进化 → P5 实�
 实现状态（STATUS.md，冻结 2026-09-02）：
 
 | Proof | State |
-|---|---|
+| --- | --- |
 | Research Engine Proof | **PASS**（P0 真实数据 + P1 Qlib 评估 + P2 一致性） |
 | Self-learning Loop Proof | **PASS**（P4：S1→S2 被否决→S3，一轮一个 mutation） |
 | Profitability Proof | **NOT YET**（最好子策略 ≈ +0.37% 年化/29 笔，噪声内，有意停止 in-sample 追寻） |

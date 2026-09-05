@@ -97,7 +97,7 @@ signal timestamp、strategy name、why/invalidation/expected_holding、raw trigg
 ```
 
 同策略+同 intents（重生成 intents 元素级比对证明可复现）→ Qlib 向量面（qfq、market_truth OFF）
-+ 独立重放（raw、market_truth ON）→ 逐笔对账+聚合对比。差异归因 A–F（市场规则差/不支持对等/
+- 独立重放（raw、market_truth ON）→ 逐笔对账+聚合对比。差异归因 A–F（市场规则差/不支持对等/
 Qlib 局限/引擎 bug/无法解释）；任何无法解释的残留 = P0.5 失败。详见 quant-execution-truth。
 
 ## 快速看盘（不起 Agent）
@@ -124,6 +124,7 @@ brief JSON 自带完整字段，日志行仅供肉眼巡检；**无 DB**。
 SpendLimits、broker。唯一例外：PIT universe 仅在"准备做任何盈利声明"时作为前置门解冻。
 
 **重启开发的准入**（强规则：没有来自真实市场的新问题，不开新 feature）：
+
 - A. **≥10 个真实 trigger** → 人工结算复盘 → 决定 A/B 实验/是否自动化；
 - B. **观察期足够长仍 0 trigger** → "策略密度不足"成立 → 重启的是策略/宇宙研究（不是框架）。
 
@@ -136,7 +137,7 @@ B=Agent 有权 WATCH/NO_TRADE；比较期望值、回撤、坏交易剔除率、
 ## 故障速查（README §7.2 节选）
 
 | 症状 | 处置 |
-|---|---|
+| --- | --- |
 | EastMoney / SSL EOF | 正常（本网络被拒）；数据面已走腾讯/新浪/CSIndex |
 | 历史抓取偶发失败 | 腾讯限流；引擎内已有界重试，重跑即可 |
 | side environment missing | 确认 `.venv-quant/bin/python` 存在或设 `ZUAEF_QUANT_PYTHON` |

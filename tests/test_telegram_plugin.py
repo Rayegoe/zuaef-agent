@@ -18,8 +18,13 @@ from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from zuaef_telegram import create_plugin
 from zuaef_telegram import notify as tg_notify
+from zuaef_telegram import toolset as tg_toolset
 from zuaef_telegram.client import TelegramClient, TelegramError, redact_token
-from zuaef_telegram.toolset import make_toolset
+from zuaef_telegram.toolset import (
+    ArtifactPathError,
+    make_toolset,
+    resolve_delivery_artifact,
+)
 
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.core import build_agent
@@ -136,7 +141,9 @@ def _has_tool_return(messages) -> bool:
 def _run_with(fake: FakeTelegram, tmp_path: Path, args: dict):
     settings = _settings(tmp_path)
     agent = build_agent(
-        settings, run_id="tg", extra_toolsets=[make_toolset(_client(fake))]
+        settings,
+        run_id="tg",
+        extra_toolsets=[make_toolset(_client(fake), workspace_root=settings.workspace_root)],
     )
     deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id="tg")
 
@@ -155,7 +162,7 @@ def _run_with(fake: FakeTelegram, tmp_path: Path, args: dict):
 def test_factory_returns_bundle_with_exact_tool_and_skill(tmp_path: Path, monkeypatch):
     _env(monkeypatch)
     bundle = create_plugin(_plugin_env(tmp_path), {})
-    assert _tool_names(bundle) == {"report_to_telegram"}
+    assert _tool_names(bundle) == {"report_to_telegram", "send_artifact_to_supervisor"}
     assert all(Path(d).is_dir() for d in bundle.skill_dirs), "bundled skill must exist"
     # the bundle returns the skill LIBRARY root (Skills capability contract:
     # immediate children are skill packages); the package is
@@ -261,7 +268,9 @@ def test_send_after_approval_executes_and_settles(tmp_path: Path, monkeypatch):
     client = _client(fake)
 
     def fixture_factory(env, config):
-        return PluginBundle(toolsets=[make_toolset(client)])
+        return PluginBundle(
+            toolsets=[make_toolset(client, workspace_root=tmp_path / "workspace")]
+        )
 
     monkeypatch.setattr(zuaef_telegram, "create_plugin", fixture_factory)
 
@@ -376,3 +385,106 @@ def test_notify_cli_missing_credentials_exit_one(monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "not configured" in err
     assert TOKEN not in err
+
+
+# ── document transport (Phase 2 T8) ─────────────────────────────────────────
+
+
+def test_send_document_multipart_upload_and_bounded_response(tmp_path: Path):
+    target = tmp_path / "quant-business-20260904T150000Z.html"
+    target.write_text("<html>quant report</html>", encoding="utf-8")
+    fake = FakeTelegram([_send_ok(61)])
+    result = _client(fake).send_document(target, caption="report")
+    req = fake.requests[0]
+    assert req.method == "POST"
+    assert req.url.path == f"/bot{TOKEN}/sendDocument"
+    body = req.content.decode("utf-8", errors="replace")
+    assert f'name="document"; filename="{target.name}"' in body
+    assert "quant report" in body
+    assert result == {"ok": True, "message_id": 61, "date": 1735689600, "file": target.name}
+
+
+def test_send_document_ok_false_fails_loud_without_leaking_token(tmp_path: Path):
+    target = tmp_path / "report.html"
+    target.write_text("x", encoding="utf-8")
+
+    def _bad(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"ok": False, "description": "file too big"})
+
+    with pytest.raises(TelegramError, match="file too big") as err:
+        _client(FakeTelegram([_bad])).send_document(target)
+    assert TOKEN not in str(err.value)
+
+
+# ── self-delivery path safety chain (Phase 2 §14, amendment chain) ─────────
+
+
+def _delivery_env(tmp_path: Path) -> tuple[Path, Path]:
+    workspace = tmp_path / "workspace"
+    delivery = workspace / "artifacts" / "quant" / "delivery"
+    delivery.mkdir(parents=True, exist_ok=True)
+    return workspace, delivery
+
+
+def test_resolve_accepts_file_inside_delivery_scope(tmp_path: Path):
+    workspace, delivery = _delivery_env(tmp_path)
+    report = delivery / "quant-business-x.html"
+    report.write_text("<html/>", encoding="utf-8")
+    resolved = resolve_delivery_artifact("artifacts/quant/delivery/quant-business-x.html", workspace)
+    assert resolved == report.resolve()
+
+
+def test_resolve_rejects_absolute_parent_and_outside_scope(tmp_path: Path):
+    workspace, _ = _delivery_env(tmp_path)
+    for bad in ("/etc/passwd", "artifacts/quant/../../secrets.html", "../x.html", ""):
+        with pytest.raises(ArtifactPathError):
+            resolve_delivery_artifact(bad, workspace)
+    outside = tmp_path / "elsewhere.html"
+    outside.write_text("x", encoding="utf-8")
+    with pytest.raises(ArtifactPathError):
+        resolve_delivery_artifact("artifacts/quant/delivery/../../elsewhere.html", workspace)
+
+
+def test_resolve_rejects_symlink_escape(tmp_path: Path):
+    workspace, delivery = _delivery_env(tmp_path)
+    secret = tmp_path / "secret.txt"
+    secret.write_text("token", encoding="utf-8")
+    (delivery / "innocent.html").symlink_to(secret)
+    with pytest.raises(ArtifactPathError, match="delivery"):
+        resolve_delivery_artifact("artifacts/quant/delivery/innocent.html", workspace)
+
+
+def test_resolve_rejects_bad_extension_missing_and_oversized(tmp_path: Path, monkeypatch):
+    workspace, delivery = _delivery_env(tmp_path)
+    (delivery / "binary.exe").write_text("MZ", encoding="utf-8")
+    with pytest.raises(ArtifactPathError, match="extension"):
+        resolve_delivery_artifact("artifacts/quant/delivery/binary.exe", workspace)
+    with pytest.raises(ArtifactPathError, match="regular file"):
+        resolve_delivery_artifact("artifacts/quant/delivery/missing.html", workspace)
+    big = delivery / "big.html"
+    big.write_text("x" * 100, encoding="utf-8")
+    monkeypatch.setattr(tg_toolset, "MAX_ARTIFACT_BYTES", 10)
+    with pytest.raises(ArtifactPathError, match="too large"):
+        resolve_delivery_artifact("artifacts/quant/delivery/big.html", workspace)
+
+
+def test_send_artifact_tool_sends_within_scope_and_rejects_outside(tmp_path: Path):
+    workspace, delivery = _delivery_env(tmp_path)
+    report = delivery / "quant-business-x.html"
+    report.write_text("<html/>", encoding="utf-8")
+    fake = FakeTelegram([_send_ok(71)])
+    toolset = make_toolset(_client(fake), workspace_root=workspace)
+    send_tool = toolset.tools["send_artifact_to_supervisor"].function
+    assert not getattr(
+        toolset.tools["send_artifact_to_supervisor"], "requires_approval", False
+    ), "self-delivery is host-scoped and must not carry an approval gate"
+    out = json.loads(send_tool(path="artifacts/quant/delivery/quant-business-x.html"))
+    assert out["sent"] is True and out["file"] == report.name
+    assert len(fake.requests) == 1 and fake.requests[0].url.path.endswith("/sendDocument")
+
+    out2 = json.loads(send_tool(path="/etc/passwd"))
+    assert out2 == {
+        "sent": False,
+        "rejected": "path must be a workspace-relative path without '..'",
+    }
+    assert len(fake.requests) == 1, "rejected path must not reach the transport"

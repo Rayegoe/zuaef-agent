@@ -1,7 +1,10 @@
-# Quant-decision profile (ZUAEF-ASHARE-001 Z005): the zuaef-quant plugin
-# alone, capabilities allowed (the QuantDecision Capability is the domain
-# surface). Non-secret config only; the side-environment python is resolved
-# from ZUAEF_QUANT_PYTHON or the repo default .venv-quant.
+# Quant-decision profile (ZUAEF-ASHARE-001 Z005 / Phase 2 v0.1): the
+# zuaef-quant plugin (QuantDecision Capability domain surface) plus the
+# zuaef-telegram plugin (report_to_telegram approval-gated;
+# send_artifact_to_supervisor host-scoped operator self-delivery).
+# Non-secret config only; the side-environment python is resolved from
+# ZUAEF_QUANT_PYTHON or the repo default .venv-quant; telegram credentials
+# come from TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID in the local environment.
 # Install: cp profiles/quant-decision.toml ~/.config/zuaef/profiles/
 schema = 1
 name = "quant-decision"
@@ -9,3 +12,6 @@ name = "quant-decision"
 [[plugins]]
 id = "quant"
 allow_capabilities = true
+
+[[plugins]]
+id = "telegram"

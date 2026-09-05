@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QuantStatus",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "mode",
+    "as_of",
+    "status",
+    "host_health",
+    "candidate_count",
+    "trigger_count",
+    "data_trust",
+    "profitability"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "production",
+        "shadow",
+        "replay",
+        "scratch"
+      ]
+    },
+    "as_of": {
+      "type": "string"
+    },
+    "strategy_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "type": "string"
+    },
+    "host_health": {
+      "enum": [
+        "HEALTHY",
+        "DEGRADED",
+        "DOWN",
+        "UNKNOWN"
+      ]
+    },
+    "decision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "candidate_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "trigger_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "data_trust": {
+      "$ref": "#/$defs/trust"
+    },
+    "profitability": {
+      "enum": [
+        "UNPROVEN",
+        "PROMISING",
+        "PROVEN_WITH_SCOPE",
+        "DEGRADED",
+        "UNKNOWN"
+      ]
+    },
+    "live_forward_observations": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "replay_observations": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "trust": {
+      "type": "object",
+      "required": [
+        "overall"
+      ],
+      "properties": {
+        "overall": {
+          "enum": [
+            "PASS",
+            "WARN",
+            "FAIL",
+            "UNKNOWN"
+          ]
+        },
+        "pit": {
+          "type": "string"
+        },
+        "coverage": {
+          "type": "string"
+        },
+        "freshness": {
+          "type": "string"
+        },
+        "semantic": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "timing": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

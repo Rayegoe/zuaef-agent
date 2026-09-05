@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Experiment",
+  "type": "object",
+  "required": [
+    "experiment_id",
+    "hypothesis",
+    "baseline_strategy_version",
+    "change",
+    "state",
+    "mode"
+  ],
+  "properties": {
+    "experiment_id": {
+      "type": "string"
+    },
+    "hypothesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "baseline_strategy_version": {
+      "type": "string"
+    },
+    "change": {
+      "type": "object"
+    },
+    "state": {
+      "enum": [
+        "PROPOSED",
+        "RUNNING",
+        "REJECTED",
+        "REPLAY_PASS",
+        "SHADOW",
+        "FORWARD_EVALUATION",
+        "PROMOTED"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "scratch",
+        "replay",
+        "shadow"
+      ]
+    },
+    "primary_metrics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "guardrail_metrics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "run_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

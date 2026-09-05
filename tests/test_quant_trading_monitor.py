@@ -266,6 +266,9 @@ class TestAckVenueNoteSkip:
         alerts = [json.loads(l) for l in (store.dir / "alerts.jsonl").read_text().splitlines()]
         opened = next(a for a in alerts if a["type"] == mon.EVENT_POSITION_OPENED)
         assert opened["venue"] == "real" and opened["note"] == "my entry"
+        # CLI ack alerts carry the same event contract as cycle alerts (Phase 2 §T2)
+        assert opened["ts"], "CLI ack alert must carry a ts"
+        assert opened["day"] == opened["ts"][:10]
 
     def test_sell_rejects_partial_close(self, tmp_path, monitor_env):
         store = fresh_store(tmp_path)
@@ -289,6 +292,19 @@ class TestAckVenueNoteSkip:
             symbol="600001", price=10.2, shares=500, time=None), store)
         assert rc == 0 and store.positions["open"] == []
 
+    def test_skip_records_human_fact_without_touching_lifecycle(self, tmp_path, monitor_env):
+        store = fresh_store(tmp_path)
+        store.opportunities["600001"] = {"state": "READY", "since": "2026-09-02"}
+        rc = mon.cmd_skip(SimpleNamespace(
+            symbol="600001", price=9.95, time=None, note="too extended"), store)
+        assert rc == 0
+        assert store.opportunities["600001"]["state"] == "READY"  # state machine untouched
+        assert store.forward["observations"][-1]["kind"] == "SKIP"
+        assert store.forward["observations"][-1]["ref_price"] == 9.95
+        alerts = [json.loads(l) for l in (store.dir / "alerts.jsonl").read_text().splitlines()]
+        skip = next(a for a in alerts if a["type"] == mon.EVENT_HUMAN_SKIP)
+        assert skip["symbol"] == "600001" and skip["note"] == "too extended"
+        assert skip["data_trust"] == "USER_CONFIRMED"
 
     def test_summary_data_trust_follows_semantic_gate_not_availability(self, tmp_path, monitor_env, monkeypatch):
         store = fresh_store(tmp_path)

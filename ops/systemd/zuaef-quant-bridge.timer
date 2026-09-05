@@ -1,0 +1,10 @@
+[Unit]
+Description=Tick the Quant Telegram event bridge every 45 seconds
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=45s
+Unit=zuaef-quant-bridge.service
+
+[Install]
+WantedBy=timers.target

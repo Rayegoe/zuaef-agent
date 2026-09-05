@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "source_status": "CURRENTLY_OBSERVED",
+  "report": "quant-business-20260904-1647.html",
+  "report_size_display": "109.5 KB",
+  "telegram_message_id": 107,
+  "run_id_prefix": "a97d4047…",
+  "mode": "production",
+  "as_of": "20260904-1647 (report label; timezone to verify from runtime)",
+  "status": "OK",
+  "host_health": "HEALTHY",
+  "decision": "NOT_RUN_TODAY",
+  "candidate_count": 50,
+  "trigger_count": 0,
+  "data_trust": {
+    "overall": "FAIL",
+    "pit": "CONTAMINATED",
+    "coverage": "PASS",
+    "freshness": "WARN",
+    "semantic": "PASS",
+    "source": "PASS",
+    "timing": "TO_VERIFY_RUNTIME"
+  },
+  "profitability": "UNPROVEN",
+  "s3": "FROZEN",
+  "true_trade_records": 5,
+  "live_forward_observations": 0,
+  "m1_evidence": "PARTIAL",
+  "reason_codes": [
+    "NO_TRIGGER",
+    "PIT_CONTAMINATION",
+    "FORWARD_EVIDENCE_INSUFFICIENT"
+  ]
+}

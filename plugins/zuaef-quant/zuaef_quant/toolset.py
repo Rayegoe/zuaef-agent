@@ -29,15 +29,23 @@ TOOLS_DIR_ENV_MARKERS = ("tools/quant_eval_qlib.py", "benchmarks/quant/gen1/quan
 def resolve_repo_root() -> Path:
     """Locate the repository holding the quant side-env scripts.
 
-    ZUAEF_QUANT_REPO_ROOT wins; otherwise the current directory must carry
-    the quant tool markers (agent runs from the repo root). Loud failure
-    otherwise — never guess.
+    Resolution order: ``ZUAEF_QUANT_REPO_ROOT`` wins (explicit), then the
+    package position derives the repo root from ``__file__`` (editable
+    layouts: ``<repo>/plugins/zuaef-quant/zuaef_quant/``), then the current
+    directory must carry the quant tool markers. Loud failure otherwise —
+    never guess. The package-derived step makes plugin composition
+    independent of the process cwd (workers, worktrees, systemd services).
     """
     import os
 
     configured = os.getenv(REPO_ROOT_ENV)
     if configured:
         return Path(configured).expanduser().resolve()
+    package = Path(__file__).resolve()
+    # editable: <repo>/plugins/zuaef-quant/zuaef_quant/toolset.py
+    candidate = package.parents[3]
+    if all((candidate / marker).exists() for marker in TOOLS_DIR_ENV_MARKERS):
+        return candidate
     candidate = Path.cwd().resolve()
     if all((candidate / marker).exists() for marker in TOOLS_DIR_ENV_MARKERS):
         return candidate
