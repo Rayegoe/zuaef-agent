@@ -14,10 +14,11 @@ dependencies = [
   "python-dotenv>=1.0",
   "pyyaml>=6.0",
   "playwright>=1.61,<2",
-  "pydantic-ai>=2.35.3,<3",
-  # Minor-bound after U0 validation (ZUAEF-ASHARE-001 U006): 0.x Harness
-  # releases may break API between minors, so the pin stays within 0.27.x.
-  "pydantic-ai-harness[skills,code-mode]>=0.27,<0.28",
+  "pydantic-ai>=2.38,<3",
+  # Minor-bound (ZUAEF-ASHARE-001 U006; harness-alignment v0.1 H013
+  # PROMOTE_0_29): 0.x Harness may break API between minors; each bump runs
+  # the compatibility lane gates before promotion.
+  "pydantic-ai-harness[skills,code-mode]>=0.29,<0.30",
   # Agent Console (src/zuaef_agent/web): already in the closure via pydantic-ai's
   # mcp extra; declared because the console imports them directly (precedent:
   # pydantic-ai-slim's `web` extra = httpx/starlette/uvicorn).

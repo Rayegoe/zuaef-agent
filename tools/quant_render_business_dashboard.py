@@ -49,6 +49,7 @@ SEMANTIC_DIR = ART / "semantic"
 TRADING_DIR = ART / "trading"
 TRADING_DIAGNOSTIC_DIR = ART / "trading-diagnostic"
 DAILY_CACHE_DIR = REPO_ROOT / "data" / "quant-cache" / "daily"
+V31_ART = ART / "v31"
 ACTIVE_SYMBOLS_PATH = REPO_ROOT / "data" / "quant-cache" / "candidates" / "active_symbols.json"
 DEFAULT_OUT = REPO_ROOT / "docs" / "quant" / "business.html"
 
@@ -72,6 +73,8 @@ def read_text(p: Path) -> str:
 
 
 def read_json(p: Path):
+    if p is None:
+        return None
     try:
         return json.loads(read_text(p))
     except (ValueError, TypeError):
@@ -303,6 +306,7 @@ def load_real_trend(
     daily_dir: Path = DAILY_CACHE_DIR,
     active_symbols_path: Path = ACTIVE_SYMBOLS_PATH,
     semantic_dir: Path = SEMANTIC_DIR,
+    v31_dir: Path = V31_ART,
 ) -> dict:
     """Real trading-loop records -> real_trend for the business page.
 
@@ -342,6 +346,8 @@ def load_real_trend(
 
     forward = read_json(Path(trading_dir) / "forward.json") or {}
     observations = forward.get("observations") or []
+
+    replay = load_latest_v31_replay(v31_dir)
     settled = sum(1 for o in observations if o.get("d8") is not None)
 
     proof = load_latest_semantic_proof(semantic_dir)
@@ -389,6 +395,31 @@ def load_real_trend(
         "forward": {"present": bool(forward), "count": len(observations), "settled": settled},
         "m1_evidence": m1,
         "diagnostic_rows": load_diagnostic_evidence(diagnostic_dir, daily_dir),
+        "v31_replay": replay,
+    }
+
+
+def load_latest_v31_replay(v31_dir: Path = V31_ART) -> dict | None:
+    """Latest v3.1 replay report; never relabel it as live-forward evidence."""
+    reports = sorted((Path(v31_dir) / "replay").glob("*/report.json"))
+    if not reports:
+        return None
+    report = read_json(reports[-1])
+    if not report or report.get("namespace") != "replay":
+        return None
+    payload = report.get("payload") or {}
+    days = payload.get("days") or []
+    reasons = sorted({r for day in days for r in day.get("blocked_reasons") or []})
+    return {
+        "run_id": reports[-1].parent.name,
+        "as_of": report.get("as_of"),
+        "status": payload.get("status"),
+        "day_count": len(days),
+        "blocked_day_count": sum(1 for day in days if day.get("status") == "blocked"),
+        "observation_count": sum(day.get("observation_count") or 0 for day in days),
+        "live_forward_increment": payload.get("live_forward_increment"),
+        "intraday_equivalence": payload.get("intraday_equivalence"),
+        "reasons": reasons,
     }
 
 
@@ -908,6 +939,7 @@ def build_data(
     daily_dir: Path = DAILY_CACHE_DIR,
     active_symbols_path: Path = ACTIVE_SYMBOLS_PATH,
     semantic_dir: Path = SEMANTIC_DIR,
+    v31_dir: Path = V31_ART,
 ) -> dict:
     snapshot = read_json(snapshot_path)
     scan = read_json(scan_path)
@@ -921,6 +953,7 @@ def build_data(
         daily_dir=daily_dir,
         active_symbols_path=active_symbols_path,
         semantic_dir=semantic_dir,
+        v31_dir=v31_dir,
     )
     now = now_snapshot(
         trading_dir=trading_dir,
@@ -979,6 +1012,7 @@ def build_data(
         },
         "obs_rows": obs,
         "data_quality": dq,
+        "v31": load_v31_summary(v31_dir),
         "anti_leakage": {"verdict": (load_latest_anti_leakage() or {}).get("verdict")},
         "active_params": _parse_active(active_path),
     }
@@ -993,6 +1027,38 @@ def _parse_active(path: Path) -> dict:
         k, _, v = s.partition("=")
         out[k.strip()] = v.strip().strip('"')
     return out
+
+
+def load_v31_summary(v31_dir: Path = V31_ART) -> dict:
+    """Build the v3.1 governance projection with strict namespace honesty."""
+    replay = load_latest_v31_replay(v31_dir)
+    shadow_report = read_json(_latest_v31_file(v31_dir, "shadow"))
+    s0_report = read_json(_latest_v31_file(v31_dir, "research/s0-*"))
+    experiment_dir = _latest_v31_experiment(v31_dir)
+    proposal = read_json(experiment_dir / "proposal.json") if experiment_dir else None
+    decision = read_json(experiment_dir / "decision.json") if experiment_dir else None
+    return {
+        "available": bool(replay or shadow_report or proposal),
+        "replay": replay,
+        "regime_shadow": (shadow_report or {}).get("payload"),
+        "s0": s0_report,
+        "experiment": proposal,
+        "promotion": decision,
+        "promotion_state": (decision or {}).get("state", "NOT_APPLICABLE"),
+    }
+
+
+def _latest_v31_file(v31_dir: Path, pattern: str) -> Path | None:
+    files = sorted((Path(v31_dir) / pattern).glob("report.json"))
+    return files[-1] if files else None
+
+
+def _latest_v31_experiment(v31_dir: Path) -> Path | None:
+    dirs = sorted(
+        (p for p in (Path(v31_dir) / "research").iterdir() if p.is_dir() and (p / "decision.json").exists()),
+        key=lambda p: p.name,
+    )
+    return dirs[-1] if dirs else None
 
 
 GLOSSARY = {
@@ -1310,6 +1376,11 @@ TEMPLATE = """<!DOCTYPE html>
     <div class="k"><div class="v" id="kpi-candidates">—</div><div class="l">活跃候选</div></div>
     <div class="k"><div class="v" id="kpi-settled">—</div><div class="l">前向已结算交易（正式）</div></div>
     <div class="k"><div class="v" id="kpi-evidence">—</div><div class="l">策略证据</div></div>
+  </div>
+
+  <div class="card" id="v31-governance-card">
+    <h2>v3.1 证据与影子治理 <span class="scope research">V3.1 · SHADOW ONLY</span> <span class="cnt">research / replay / shadow 严格分离，不计入 live-forward</span></h2>
+    <div id="v31-summary"></div>
   </div>
 
   <div class="card">
@@ -2020,6 +2091,42 @@ function renderStatic(){
   const ev = $('kpi-evidence');
   ev.textContent = zh(EV_ZH, k.strategy_evidence);
   ev.style.color = 'var(--amber)';
+
+  // v3.1 evidence governance
+  const v31 = D.v31 || {};
+  const rp = (v31.replay || {});
+  const shadow = ((v31.regime_shadow || {}).regime || {});
+  const s0 = ((v31.s0 || {}).payload || {});
+  const skip = s0.skip_analysis || {};
+  const position = s0.position_audit || {};
+  const regimeColor = {NORMAL:'var(--green)', SELECTIVE:'var(--amber)', DO_NOT_PARTICIPATE:'var(--red)'}[shadow.regime] || 'var(--dim)';
+  const stateColor = {BLOCKED:'var(--red)', REJECTED:'var(--red)'}[v31.promotion_state] || 'var(--amber)';
+  const replayReasons = (rp.reasons||[]).length ? (rp.reasons||[]).map(x=>`<span class="rf">${esc(x)}</span>`).join(' ') : '—';
+  $('v31-summary').innerHTML = `<dl class="kv">
+    <dt>严格 PIT 回放</dt><dd>
+      <b>${esc(rp.status || 'UNAVAILABLE')}</b> · ${esc(rp.day_count ?? 0)} 天，其中 ${esc(rp.blocked_day_count ?? 0)} 天 blocked ·
+      观察 ${esc(rp.observation_count ?? 0)} · live-forward 增量 ${esc(rp.live_forward_increment ?? 0)} ·
+      盘中等价 ${rp.intraday_equivalence === true ? '已证明' : '未证明'}
+      <div class="dim" style="margin-top:5px">${replayReasons}</div>
+    </dd>
+    <dt>Market Regime</dt><dd>
+      <b style="color:${regimeColor}">${esc(shadow.regime || 'BLOCKED')}</b>
+      · participation=${esc(shadow.participation_permission || '—')} · rule=${esc(shadow.regime_rule_version || '—')}
+      · as_of=${esc(shadow.regime_as_of || '—')}
+      <div class="dim" style="margin-top:5px">${esc((shadow.regime_reason_codes||[]).join('; ') || '缺失所有 PIT 市场特征')}</div>
+    </dd>
+    <dt>S0 / SKIP 研究</dt><dd>
+      positions=${esc(position.positions ?? 0)} (${esc(position.conclusion || 'INSUFFICIENT_EVIDENCE')}) ·
+      human observations=${esc(skip.total ?? 0)} · synthetic fills=${esc(skip.synthetic_fills ?? 0)} ·
+      conclusion=${esc(skip.conclusion || 'INSUFFICIENT_EVIDENCE')}
+    </dd>
+    <dt>Experiment</dt><dd>
+      id=${esc((v31.experiment||{}).experiment_id || '—')} · variable=${esc(Object.keys((v31.experiment||{}).variable_changes||{})[0] || '—')} ·
+      promotion=<b style="color:${stateColor}">${esc(v31.promotion_state)}</b> · production config 不变
+      <div class="dim" style="margin-top:5px">${esc(((v31.promotion||{}).reasons||[]).join('; ') || '尚无 promotion decision')}</div>
+    </dd>
+    <dt>证据边界</dt><dd>replay/shadow/experiment 全部隔离于 production；本卡不显示也不计入 live-forward 收益。</dd>
+  </dl>`;
   if (D.data_quality.status !== 'PASS' && D.data_quality.banner){
     $('dq-banner').textContent = 'DATA DEGRADED / 交易可信度受限 — ' + D.data_quality.banner;
     $('dq-banner').style.display = 'block';

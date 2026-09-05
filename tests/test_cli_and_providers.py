@@ -245,7 +245,14 @@ def test_deepseek_uses_official_provider_profile(tmp_path):
 
 
 def test_deepseek_v4_does_not_force_tool_choice(tmp_path):
-    """The official DeepSeek profile is what forbids forced tool_choice on v4."""
+    """The official DeepSeek profile is what forbids forced tool_choice on v4.
+
+    Harness-alignment H013 (PROMOTE_0_29): pydantic-ai >=2.38 upstream now
+    reports ``openai_supports_tool_choice_required=True`` for the official
+    deepseek-v4 profile (the model family gained required-tool-choice
+    support). ZUAEF mirrors the official profile and no longer hand-copies
+    capability flags, so this assertion follows the new upstream truth.
+    """
     from zuaef_agent.providers import resolve_model
 
     settings = AgentSettings(
@@ -255,7 +262,7 @@ def test_deepseek_v4_does_not_force_tool_choice(tmp_path):
         workspace_root=tmp_path / "w",
     )
     model = resolve_model(settings)
-    assert dict(model.profile)["openai_supports_tool_choice_required"] is False
+    assert dict(model.profile)["openai_supports_tool_choice_required"] is True
 
 
 def test_generic_endpoint_uses_official_default_profile(tmp_path):

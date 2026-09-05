@@ -1098,13 +1098,13 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 3572,
-      "sha256": "6386e61ff5738ca4361a872529a8a461e3b863b311f4613f0ff6082f02f17272"
+      "bytes": 3617,
+      "sha256": "e09b831091f4e46702b49833dfbe3088206c1aadeb0ffe4e924379ea05e6507f"
     },
     {
       "path": "uv.lock",
-      "bytes": 624706,
-      "sha256": "b4c08dba465dda7091eef0b8981792bd5d4e03dc686bb449053bf8d5c2caf343"
+      "bytes": 624661,
+      "sha256": "f90f503574b6fbb815bc5adb1b46c7678e9c2cb81d516515b9231b02652cc2c4"
     },
     {
       "path": "spec/SPEC.md",
@@ -1353,8 +1353,8 @@
     },
     {
       "path": "tests/test_cli_and_providers.py",
-      "bytes": 9669,
-      "sha256": "428b613658619f73f76481ee09821fcec7fdec7d5d4be59f2ed80b18dd079816"
+      "bytes": 10041,
+      "sha256": "da947548ce024d92ccc5c1e3900a618fc96eec9cd2b56a91a628d41ee76c0350"
     },
     {
       "path": "tests/test_cli_resume.py",
@@ -1625,6 +1625,11 @@
       "path": "tests/test_quant_trading_monitor.py",
       "bytes": 19260,
       "sha256": "29ccc368873e718e22fc47304667c71ce949bea4a61dbc9051fe18203c73b3c4"
+    },
+    {
+      "path": "tests/test_quant_v31.py",
+      "bytes": 13294,
+      "sha256": "1936eebddd5f7389916d399b690045d34ebd5e758e9de50431c3bbec938f792c"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -1938,8 +1943,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
-      "bytes": 19156,
-      "sha256": "f7db0bc36d265f66df0d232c691bf02fd6ec42fa0dec230a91bbc3ab487c1b0d"
+      "bytes": 19660,
+      "sha256": "d42ccaad12e21ec8f0e10c30ca0fe6cf426dd8ccf0109b4e153f920d21a74e1e"
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/__init__.py",
@@ -2238,8 +2243,13 @@
     },
     {
       "path": "tools/quant_trading_monitor.py",
-      "bytes": 33887,
-      "sha256": "ab6f50a036e54bbbdc8b8d8d871590f012d8fe48ba72aa7b1bd33e91ca282ac4"
+      "bytes": 34253,
+      "sha256": "0ae5293f7c366040adf35bf7202c5b254760f9a092d6863cbd040e048a9e6982"
+    },
+    {
+      "path": "tools/quant_v31.py",
+      "bytes": 32214,
+      "sha256": "9ed9a5a41c3fdda1343b164ef7f7bbb1e4481f8db7a1d7c494cf08aaf3ca4daa"
     },
     {
       "path": "tools/quant_validate_semantics.py",

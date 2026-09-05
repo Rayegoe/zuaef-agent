@@ -364,6 +364,37 @@ class TestBusinessRenderer:
         assert "</script><script>alert(1)" not in html
         assert "\\u003c/script\\u003e" in html
 
+    def test_v31_governance_is_shadow_only_and_namespace_honest(self):
+        html = biz.render_html({})
+        assert 'id="v31-governance-card"' in html
+        assert "V3.1 · SHADOW ONLY" in html
+        assert "research / replay / shadow 严格分离" in html
+        assert "live-forward 增量" in html
+        assert "盘中等价" in html
+        assert "synthetic fills" in html
+        assert "production config 不变" in html
+        assert "本卡不显示也不计入 live-forward 收益" in html
+
+    def test_v31_replay_reasons_are_projected_not_invented(self, tmp_path):
+        replay_dir = tmp_path / "replay" / "test-run"
+        replay_dir.mkdir(parents=True)
+        report = {
+            "namespace": "replay", "as_of": "2026-09-05T19:10:00+08:00",
+            "payload": {"status": "blocked", "live_forward_increment": 0,
+                        "intraday_equivalence": False, "days": [
+                            {"status": "blocked", "observation_count": 0,
+                             "blocked_reasons": ["HISTORICAL_QUOTE_ARCHIVE_UNAVAILABLE"]},
+                            {"status": "blocked", "observation_count": 0,
+                             "blocked_reasons": ["HISTORICAL_CANDIDATE_UNAVAILABLE"]}]},
+        }
+        (replay_dir / "report.json").write_text(json.dumps(report), encoding="utf-8")
+        result = biz.load_latest_v31_replay(tmp_path)
+        assert result["status"] == "blocked"
+        assert result["day_count"] == 2 and result["blocked_day_count"] == 2
+        assert result["live_forward_increment"] == 0
+        assert set(result["reasons"]) == {
+            "HISTORICAL_QUOTE_ARCHIVE_UNAVAILABLE", "HISTORICAL_CANDIDATE_UNAVAILABLE"}
+
     def test_indicator_notes_default_to_hidden_full_width_board(self):
         html = biz.render_html({})
         assert 'id="glossary-open"' in html
