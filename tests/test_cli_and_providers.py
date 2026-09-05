@@ -5,6 +5,8 @@ import sys
 from datetime import UTC
 
 import pytest
+from pydantic_ai import DeferredToolRequests
+from pydantic_ai.models import Model
 
 from zuaef_agent import cli
 from zuaef_agent import config as config_module
@@ -42,7 +44,12 @@ def test_exit_code_mapping(tmp_path, monkeypatch):
         started_at=now,
         finished_at=now,
     )
-    paused = PausedRun(requests=None, message_history=[], conversation_id="c", pause_receipt=pause)
+    paused = PausedRun(
+        requests=DeferredToolRequests(),
+        message_history=[],
+        conversation_id="c",
+        pause_receipt=pause,
+    )
     assert cli._outcome_exit_code(paused) == cli.EXIT_PAUSED
     assert cli.EXIT_PAUSED not in (cli.EXIT_COMPLETED, cli.EXIT_PARTIAL, cli.EXIT_BLOCKED)
 
@@ -234,6 +241,7 @@ def test_deepseek_uses_official_provider_profile(tmp_path):
         workspace_root=tmp_path / "w",
     )
     model = resolve_model(settings)
+    assert isinstance(model, Model)  # openai_base_url set -> concrete Model
 
     assert model.system == "deepseek"  # official DeepSeekProvider
     profile = dict(model.profile)
@@ -262,6 +270,7 @@ def test_deepseek_v4_does_not_force_tool_choice(tmp_path):
         workspace_root=tmp_path / "w",
     )
     model = resolve_model(settings)
+    assert isinstance(model, Model)
     assert dict(model.profile)["openai_supports_tool_choice_required"] is True
 
 
