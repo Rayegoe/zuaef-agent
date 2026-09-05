@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QuantEvidenceRecord",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "namespace",
+    "created_at",
+    "as_of",
+    "kind",
+    "source"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "namespace": {
+      "enum": [
+        "research",
+        "replay",
+        "shadow",
+        "live_forward"
+      ]
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "as_of": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
+    "available_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "pit_status": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "UNKNOWN",
+        "NON_PIT",
+        "CONTAMINATED"
+      ]
+    },
+    "strategy_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "run_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

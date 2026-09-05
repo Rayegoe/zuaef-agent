@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ExperimentRecordV31",
+  "type": "object",
+  "required": [
+    "experiment_id",
+    "hypothesis",
+    "baseline_version",
+    "change",
+    "state",
+    "evidence_namespace"
+  ],
+  "properties": {
+    "experiment_id": {
+      "type": "string"
+    },
+    "hypothesis": {
+      "type": "string"
+    },
+    "baseline_version": {
+      "type": "string"
+    },
+    "change": {
+      "type": "string"
+    },
+    "mechanism": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "state": {
+      "enum": [
+        "PROPOSED",
+        "S0_DIAGNOSIS",
+        "RESEARCH_EVAL",
+        "S1_REPLAY",
+        "REPLAY_PASS",
+        "S2_SHADOW",
+        "LIVE_FORWARD_EVAL",
+        "PROMOTED",
+        "REJECTED",
+        "BLOCKED"
+      ]
+    },
+    "evidence_namespace": {
+      "enum": [
+        "research",
+        "replay",
+        "shadow",
+        "live_forward"
+      ]
+    },
+    "primary_metric": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "risk_metric": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "run_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}

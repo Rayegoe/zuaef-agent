@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ForwardObservationV31",
+  "type": "object",
+  "required": [
+    "observation_id",
+    "namespace",
+    "decision_time",
+    "symbol",
+    "state"
+  ],
+  "properties": {
+    "observation_id": {
+      "type": "string"
+    },
+    "namespace": {
+      "enum": [
+        "replay",
+        "shadow",
+        "live_forward"
+      ]
+    },
+    "decision_time": {
+      "type": "string"
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "human_action": {
+      "enum": [
+        "EXECUTED",
+        "SKIPPED",
+        "NONE",
+        "UNKNOWN"
+      ]
+    },
+    "d1": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "d3": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "d5": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "d8": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "mfe": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "mae": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "settlement_state": {
+      "enum": [
+        "PENDING",
+        "PARTIAL",
+        "SETTLED"
+      ]
+    },
+    "strategy_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "run_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

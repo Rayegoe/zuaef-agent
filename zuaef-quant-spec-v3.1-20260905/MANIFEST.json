@@ -1,0 +1,130 @@
+{
+  "pack": "zuaef-quant-spec-v3.1-20260905",
+  "baseline": "GitHub main as reviewed on 2026-09-05 17:20 +08; latest push at 2026-09-05 15:43 +08: `feat(quant): add quant-to-Telegram event bridge, v3.0 spec pack, and ops wiring`",
+  "files": [
+    {
+      "path": "00_SOURCE_OF_TRUTH.md",
+      "bytes": 1714
+    },
+    {
+      "path": "01_CURRENT_IMPLEMENTATION_CONTRACT.md",
+      "bytes": 1988
+    },
+    {
+      "path": "02_PRD.md",
+      "bytes": 1105
+    },
+    {
+      "path": "03_ARCHITECTURE.md",
+      "bytes": 1285
+    },
+    {
+      "path": "04_DECISION_PIPELINE.md",
+      "bytes": 618
+    },
+    {
+      "path": "05_AGENT_SURFACE.md",
+      "bytes": 897
+    },
+    {
+      "path": "06_DATA_AND_PIT.md",
+      "bytes": 875
+    },
+    {
+      "path": "07_EVIDENCE_NAMESPACES.md",
+      "bytes": 485
+    },
+    {
+      "path": "08_HUMAN_OVERRIDE_EVIDENCE.md",
+      "bytes": 627
+    },
+    {
+      "path": "09_PIT_SAFE_REPLAY.md",
+      "bytes": 1339
+    },
+    {
+      "path": "10_MARKET_REGIME.md",
+      "bytes": 689
+    },
+    {
+      "path": "11_EVIDENCE_RETRIEVAL.md",
+      "bytes": 600
+    },
+    {
+      "path": "12_EXPERIMENT_SYSTEM.md",
+      "bytes": 963
+    },
+    {
+      "path": "13_FORWARD_EVIDENCE.md",
+      "bytes": 787
+    },
+    {
+      "path": "14_OBSERVABILITY_TELEGRAM.md",
+      "bytes": 905
+    },
+    {
+      "path": "15_TASKS.md",
+      "bytes": 2266
+    },
+    {
+      "path": "16_ACCEPTANCE.md",
+      "bytes": 811
+    },
+    {
+      "path": "17_SECURITY_AND_INVARIANTS.md",
+      "bytes": 920
+    },
+    {
+      "path": "18_CODEX_MASTER_PROMPT.md",
+      "bytes": 2466
+    },
+    {
+      "path": "19_MIGRATION.md",
+      "bytes": 630
+    },
+    {
+      "path": "20_WORK_PACKETS.md",
+      "bytes": 847
+    },
+    {
+      "path": "21_CHANGELOG.md",
+      "bytes": 881
+    },
+    {
+      "path": "CODEX_IMPLEMENTATION_BRIEF.md",
+      "bytes": 932
+    },
+    {
+      "path": "GIT_BASELINE_NOTES.md",
+      "bytes": 883
+    },
+    {
+      "path": "PLAN.md",
+      "bytes": 690
+    },
+    {
+      "path": "README.md",
+      "bytes": 968
+    },
+    {
+      "path": "SPEC.md",
+      "bytes": 999
+    },
+    {
+      "path": "schemas/evidence_record.schema.json",
+      "bytes": 1124
+    },
+    {
+      "path": "schemas/experiment_record.schema.json",
+      "bytes": 1372
+    },
+    {
+      "path": "schemas/forward_observation.schema.json",
+      "bytes": 1455
+    },
+    {
+      "path": "schemas/market_regime.schema.json",
+      "bytes": 792
+    }
+  ]
+}

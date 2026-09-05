@@ -293,6 +293,7 @@ def run_cycle(
     state_dir: Path = STATE_DIR,
     now: datetime | None = None,
     semantic_status: str | None = None,
+    data_adapter=None,
 ) -> dict:
     """Single fast-layer pass. Deterministic: same quotes+state -> same events."""
     now = now or now_sh()
@@ -302,11 +303,15 @@ def run_cycle(
         status = "MARKET_CLOSED"
         _write_summary(store, status, [], now, day_str, state_dir)
         return {"status": status, "events": [], "symbols": 0}
-    resolved = resolve_universe(None, active_path=ACTIVE_SYMBOLS_PATH)
+    # Host-only replay seam. The default live data path stays unchanged.
+    resolved = (data_adapter.resolve_universe() if data_adapter is not None
+                else resolve_universe(None, active_path=ACTIVE_SYMBOLS_PATH))
     symbols = list(resolved["symbols"])
     position_symbols = [p["symbol"] for p in store.positions["open"]]
     quote_symbols = sorted(set(symbols) | set(position_symbols))
-    quotes = fetch_batch_quotes(quote_symbols)
+    quotes = (data_adapter.fetch_batch_quotes(quote_symbols) if data_adapter is not None
+              else fetch_batch_quotes(quote_symbols))
+    history_read = data_adapter.read_cache if data_adapter is not None else read_cache
 
     if semantic_status is None:
         semantic_status = load_volume_semantics(
@@ -372,7 +377,7 @@ def run_cycle(
         quote = quotes.get(symbol)
         if quote is None or quote.get("price", 0) <= 0:
             continue
-        hist, meta = read_cache("daily", f"{symbol}_qfq")
+        hist, meta = history_read("daily", f"{symbol}_qfq")
         if hist is None or meta is None:
             continue
         timing = timing_from_quote_hist(quote, hist)
@@ -445,7 +450,7 @@ def run_cycle(
         if quote is None or quote.get("price", 0) <= 0:
             continue
         price = float(quote["price"])
-        hist, _meta = read_cache("daily", f"{symbol}_qfq")
+        hist, _meta = history_read("daily", f"{symbol}_qfq")
         hist_close = (
             pd.to_numeric(hist.sort_values("date")["close"], errors="coerce").dropna()
             if hist is not None
