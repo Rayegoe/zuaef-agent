@@ -110,6 +110,7 @@ class FeishuAdapter:
             self._channel = self._build_channel()
         self._channel.on("message", self._on_message)
         self._channel.on("cardAction", self._on_card_action)
+        self._channel.on("reject", self._on_reject)
         self._channel.on("error", self._on_error)
 
     # ── transport lifecycle ─────────────────────────────────────────────────
@@ -342,6 +343,17 @@ class FeishuAdapter:
 
     def _on_error(self, error: Any) -> None:
         logger.error("feishu transport error: %s", error)
+
+    def _on_reject(self, event: Any) -> None:
+        """SDK safety/policy rejections (T073): unallowed sender/chat, missing
+        mention, stale window, duplicate. Logged with the raw ids — this is
+        also how the operator bootstraps allowlist ids from real traffic."""
+        logger.info(
+            "feishu event rejected by surface policy: sender=%s chat=%s reason=%s",
+            getattr(event, "sender_id", "?"),
+            getattr(event, "chat_id", "?"),
+            getattr(event, "reason", "?"),
+        )
 
     # ── outbound ────────────────────────────────────────────────────────────
 

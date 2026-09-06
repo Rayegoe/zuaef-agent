@@ -315,6 +315,23 @@ def test_transport_thread_death_raises_from_poll():
         adapter.poll_once(timeout_seconds=0)
 
 
+def test_policy_rejection_is_logged_and_never_enqueued():
+    """SDK policy rejections (unallowed sender/chat, missing mention) must
+    surface in the operator log with the raw ids (T073) and never reach the
+    dispatch queue."""
+    channel = FakeChannel()
+    adapter = _adapter(channel)
+    channel.handlers["reject"](
+        SimpleNamespace(
+            message_id="om_1",
+            chat_id="oc_group_1",
+            sender_id="ou_999",
+            reason="sender_not_allowed",
+        )
+    )
+    assert adapter.poll_once(timeout_seconds=0) == []
+
+
 def test_send_text_uses_sdk_send():
     channel = FakeChannel()
     adapter = _adapter(channel)
