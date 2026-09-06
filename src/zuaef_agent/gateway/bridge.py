@@ -153,7 +153,9 @@ def start_profile_run(
     # tail. Case background is NOT projected here — the composed Case plugin
     # capability contributes it as dynamic instructions (v1.2 T005).
     blocks: list[str] = []
-    interaction = project_interaction_context(surface, actor_role, case_id=case_id)
+    interaction = project_interaction_context(
+        surface, actor_role, case_id=case_id, active_profile=profile
+    )
     if interaction:
         blocks.append(interaction)
     blocks.append(prompt)

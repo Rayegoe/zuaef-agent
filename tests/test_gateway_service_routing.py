@@ -313,6 +313,72 @@ def test_group_default_applies_when_no_binding_exists(tmp_path: Path, monkeypatc
     assert seen["profiles"] == ["writing"]
 
 
+# ── projection of the effective profile (Feishu v0.1 live finding) ──────────
+
+
+def test_projection_shows_explicit_thread_binding(tmp_path: Path, monkeypatch):
+    """Explicit thread/profile binding: the model-visible block states the
+    ACTUAL composed profile, so the model can answer truthfully about itself."""
+    seen: dict = {}
+    surface = FakeSurface()
+    service = _service(
+        tmp_path, monkeypatch, surface, _recording_fn(seen), seen=seen
+    )
+
+    service.handle(_envelope("/profile research", n=1, thread_id="th_1"))
+    service.handle(_envelope("who are you", n=2, thread_id="th_1"))
+
+    assert seen["profiles"] == ["research"]
+    assert "active composition profile: research" in seen["last_prompt"]
+
+
+def test_projection_shows_group_default_while_session_profile_is_none(
+    tmp_path: Path, monkeypatch
+):
+    """Group default: session.profile stays None (config resolved at use
+    time), yet the projection must show the EFFECTIVE profile — never a
+    misleading 'none'."""
+    seen: dict = {}
+    surface = FakeSurface()
+    service = _service(
+        tmp_path,
+        monkeypatch,
+        surface,
+        _recording_fn(seen),
+        RoutingPolicy(group_defaults={"oc_group_1": "writing"}),
+        seen=seen,
+    )
+
+    service.handle(_envelope("who are you", n=1))
+
+    assert _session(service).profile is None
+    assert "active composition profile: writing" in seen["last_prompt"]
+
+
+def test_projection_states_core_agent_and_keeps_actor_role_distinct(
+    tmp_path: Path, monkeypatch
+):
+    """No binding anywhere: the block says core-agent composition, and the
+    supervisor actor role stays a speaker fact — never readable as the
+    agent's own profile (the live conflation that motivated this fix)."""
+    seen: dict = {}
+    surface = FakeSurface()
+    service = _service(
+        tmp_path, monkeypatch, surface, _recording_fn(seen), seen=seen
+    )
+
+    service.handle(_envelope("who are you", n=1, actor_role="supervisor"))
+
+    assert (
+        "active composition profile: (none — core agent composition"
+        in seen["last_prompt"]
+    )
+    assert (
+        "current actor role: supervisor (the speaker's role, not this agent's profile)"
+        in seen["last_prompt"]
+    )
+
+
 def test_group_default_respects_access_policy(tmp_path: Path, monkeypatch):
     """A group default pointing at a restricted profile in a disallowed group
     is denied at run time, never executed."""

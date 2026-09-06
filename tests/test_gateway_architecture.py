@@ -25,6 +25,7 @@ GATEWAY_SOURCES = {
     "src/zuaef_agent/gateway/feishu.py",
     "src/zuaef_agent/gateway/routing.py",
     "src/zuaef_agent/gateway/bridge.py",
+    "src/zuaef_agent/gateway/interaction_projection.py",
     "src/zuaef_agent/gateway/renderer.py",
     "src/zuaef_agent/gateway/service.py",
     "src/zuaef_agent/gateway/runner.py",

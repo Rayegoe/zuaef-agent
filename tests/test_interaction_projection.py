@@ -61,6 +61,36 @@ def test_no_host_facts_projects_nothing():
     assert project_interaction_context(None, None) is None
 
 
+# ── active composition profile vs actor role (Feishu v0.1 live finding) ──────
+
+
+def test_profile_is_stated_adjacent_to_actor_role_not_conflated():
+    block = project_interaction_context(
+        "feishu", "supervisor", active_profile="quant-decision"
+    )
+    assert block is not None
+    assert "- active composition profile: quant-decision" in block
+    assert "- current actor role: supervisor (the speaker's role, not this agent's profile)" in block
+    # both facts present and distinct
+    assert block.index("current actor role") < block.index("active composition profile")
+
+
+def test_core_agent_composition_stated_when_no_profile_bound():
+    block = project_interaction_context("feishu", "supervisor", active_profile=None)
+    assert block is not None
+    assert (
+        "- active composition profile: (none — core agent composition, "
+        "no business profile)" in block
+    )
+
+
+def test_profile_alone_is_enough_to_project_a_block():
+    block = project_interaction_context(None, None, active_profile="research")
+    assert block is not None
+    assert "- active composition profile: research" in block
+    assert "- current actor role: unknown" in block
+
+
 def test_telegram_adapter_grounds_authorized_operators_as_supervisor(tmp_path):
     """The Telegram console's allowlist IS the supervisor roster (T002):
     every normalized inbound from an authorized user carries actor_role=

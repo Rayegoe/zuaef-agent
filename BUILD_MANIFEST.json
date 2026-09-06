@@ -1218,8 +1218,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/bridge.py",
-      "bytes": 6608,
-      "sha256": "708be1dbd9077f6a3fcb35839d35e7042a04d9750c69781d167ff91bb00e5174"
+      "bytes": 6646,
+      "sha256": "5f5696e109153cc86a1a2cb7174f1c44c219104946b37b68b6d835871930b09c"
     },
     {
       "path": "src/zuaef_agent/gateway/feishu.py",
@@ -1228,8 +1228,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/interaction_projection.py",
-      "bytes": 3365,
-      "sha256": "2e8a28f0041902c82cb8517e1805126c186d193fb4e31976dffdcf13b49a90c8"
+      "bytes": 4491,
+      "sha256": "3cb5092dfb77d7c4431e62bdb52e0a12db17fd4654e9fcc42a2b2f7453fb3644"
     },
     {
       "path": "src/zuaef_agent/gateway/models.py",
@@ -1468,8 +1468,8 @@
     },
     {
       "path": "tests/test_gateway_architecture.py",
-      "bytes": 4422,
-      "sha256": "50934dfe1878fab69f5f13161a147728935ca0c507db031b3c56e009e01e3167"
+      "bytes": 4479,
+      "sha256": "b5a79f198eae336c7293ed281b7a6ba5b8cbcca168b975f1f0131b948f8722f7"
     },
     {
       "path": "tests/test_gateway_bridge.py",
@@ -1518,8 +1518,8 @@
     },
     {
       "path": "tests/test_gateway_service_routing.py",
-      "bytes": 12095,
-      "sha256": "8220e7405c5888d852134ef1e864f5eee33f4eac16e425bf83af3c5fb872ec77"
+      "bytes": 14358,
+      "sha256": "d7794a37fbae432b1e1b966d6019eebca237d8a8d1584f5ccf82ce1548671802"
     },
     {
       "path": "tests/test_gateway_store.py",
@@ -1548,8 +1548,8 @@
     },
     {
       "path": "tests/test_interaction_projection.py",
-      "bytes": 9406,
-      "sha256": "794289897f35c29d972091fc311da03925a83c2e19b7b564429ae36d41c88c77"
+      "bytes": 10601,
+      "sha256": "7224ece321b7d4c2fe4a9df41f080997d4d475d02b5c5fb828626b67d11ebd65"
     },
     {
       "path": "tests/test_knowledge_invariants.py",
