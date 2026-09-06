@@ -1,0 +1,27 @@
+# ZUAEF Feishu Surface Gateway — Feishu Surface v0.1
+# Generic multi-profile Feishu surface (spec pack:
+# zuaef-feishu-surface-spec-pack-v0.1). WebSocket long connection, ONE worker
+# per Feishu app — never run a second instance (manual or systemd) against the
+# same app. Credentials come ONLY from the mode-600 EnvironmentFile
+# (~/.config/zuaef/feishu.env) — never inline here. Profile routing (aliases,
+# group defaults, per-profile access policy) is env JSON in that same file:
+# ZUAEF_GATEWAY_PROFILE_ALIASES / ZUAEF_GATEWAY_GROUP_DEFAULTS /
+# ZUAEF_GATEWAY_PROFILE_ACCESS — see ops/systemd/README.md.
+[Unit]
+Description=ZUAEF Feishu Gateway (surface feishu, generic multi-profile)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/zuaef-agent
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+# Fails closed: the unit refuses to start without the credential file.
+EnvironmentFile=%h/.config/zuaef/feishu.env
+ExecStart=%h/zuaef-agent/.venv/bin/zuaef-agent gateway start --surface feishu
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

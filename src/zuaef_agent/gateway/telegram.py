@@ -166,6 +166,7 @@ class TelegramAdapter:
             user_id=user_id,
             channel_id=channel_id,
             thread_id=None,
+            chat_type=str(chat.get("type") or "private"),
             message_id=str(message.get("message_id", "")),
             text=message.get("text") or message.get("caption") or "",
             # This console's allowlist IS the supervisor roster (P3B-3 T002):

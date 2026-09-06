@@ -207,9 +207,33 @@ def test_gateway_start_fails_when_probe_fails(tmp_path: Path):
         )
 
 
-def test_gateway_start_rejects_non_telegram_surface(tmp_path: Path):
-    config = _config(tmp_path, surface="feishu")
-    with pytest.raises(ValueError, match="telegram only"):
+def test_gateway_start_rejects_unsupported_surface(tmp_path: Path):
+    config = _config(tmp_path, surface="slack")
+    with pytest.raises(ValueError, match="unsupported surface"):
+        run_gateway(config=config, settings=_settings(tmp_path))
+
+
+def test_gateway_start_feishu_fails_closed_without_credentials(tmp_path: Path):
+    config = _config(
+        tmp_path,
+        surface="feishu",
+        feishu_app_id=None,
+        feishu_app_secret=None,
+        feishu_user_allowlist=frozenset({"ou_1"}),
+    )
+    with pytest.raises(ValueError, match="FEISHU_APP_ID"):
+        run_gateway(config=config, settings=_settings(tmp_path))
+
+
+def test_gateway_start_feishu_fails_closed_without_user_allowlist(tmp_path: Path):
+    config = _config(
+        tmp_path,
+        surface="feishu",
+        feishu_app_id="cli_x",
+        feishu_app_secret="sec",
+        feishu_user_allowlist=frozenset(),
+    )
+    with pytest.raises(ValueError, match="FEISHU_USER_ALLOWLIST"):
         run_gateway(config=config, settings=_settings(tmp_path))
 
 

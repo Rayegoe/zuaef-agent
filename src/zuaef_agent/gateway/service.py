@@ -49,6 +49,7 @@ from .renderer import (
     render_status,
     render_terminal,
 )
+from .routing import RoutingPolicy
 from .store import ApprovalTokenError, GatewayStore
 from .surface import SurfaceAdapter
 
@@ -120,6 +121,7 @@ class GatewayService:
         approval_ttl_seconds: int = 86400,
         max_artifact_bytes: int = 10 * 1024 * 1024,
         allowed_user_ids: set[str] | None = None,
+        routing_policy: RoutingPolicy | None = None,
     ):
         self.settings = settings
         self.store = store
@@ -129,6 +131,7 @@ class GatewayService:
         self.approval_ttl_seconds = approval_ttl_seconds
         self.max_artifact_bytes = max_artifact_bytes
         self.allowed_user_ids = allowed_user_ids
+        self.routing = routing_policy or RoutingPolicy()
         self.receipts = ReceiptStore(settings.state_root)
 
     # ── dispatch ────────────────────────────────────────────────────────────
@@ -142,20 +145,24 @@ class GatewayService:
                 "service rejected inbound from unauthorized user %s", envelope.user_id
             )
             return
+        # Thread sessions are created WITHOUT a profile so they inherit the
+        # chat-level binding dynamically (spec pack 03 §2 precedence:
+        # thread binding > chat binding > group default > gateway default);
+        # chat-level sessions keep the gateway default at creation.
         session = self.store.get_or_create_session(
             surface=envelope.surface,
             tenant_id=envelope.tenant_id,
             user_id=envelope.user_id,
             channel_id=envelope.channel_id,
             thread_id=envelope.thread_id,
-            default_profile=self.default_profile,
+            default_profile=None if envelope.thread_id else self.default_profile,
         )
         if envelope.callback_action is not None:
             self._handle_callback(envelope, session)
             return
         text = envelope.text.strip()
         if text.startswith("/"):
-            self._handle_command(text, session)
+            self._handle_command(envelope, session)
             return
         if session.paused_run_id:
             self._send_text(session, WAITING_FOR_APPROVAL)
@@ -166,9 +173,46 @@ class GatewayService:
         for chunk in chunk_text(text):
             self.surface.send_text(session.channel_id, chunk)
 
+    def _effective_profile(
+        self, envelope: InboundEnvelope, session: SessionBinding
+    ) -> str | None:
+        """Binding precedence (spec pack 03 §2): explicit session binding >
+        chat binding > configured group default > gateway default. A thread
+        session inherits its chat's binding until it binds its own profile
+        via ``/profile`` in the thread."""
+        if session.profile is not None:
+            return session.profile
+        if envelope.thread_id:
+            chat_session = self.store.get_session(
+                surface=envelope.surface,
+                tenant_id=envelope.tenant_id,
+                user_id=envelope.user_id,
+                channel_id=envelope.channel_id,
+                thread_id=None,
+            )
+            if chat_session is not None and chat_session.profile is not None:
+                return chat_session.profile
+        return (
+            self.routing.group_defaults.get(envelope.channel_id)
+            or self.default_profile
+        )
+
     # ── run start ───────────────────────────────────────────────────────────
 
     def _start_run(self, envelope: InboundEnvelope, session: SessionBinding) -> None:
+        profile = self._effective_profile(envelope, session)
+        # Profile admission happens BEFORE any run state is written and
+        # before the agent executes (spec pack 00 §3) — a DM quant attempt
+        # never reaches the runtime.
+        denial = self.routing.access_error(
+            profile,
+            surface=envelope.surface,
+            chat_type=envelope.chat_type,
+            channel_id=envelope.channel_id,
+        )
+        if denial is not None:
+            self._send_text(session, render_error(denial))
+            return
         run_id = uuid4().hex
         session = session.model_copy(update={"active_run_id": run_id})
         self.store.save_session(session)
@@ -188,7 +232,7 @@ class GatewayService:
         try:
             outcome = bridge.start_profile_run(
                 settings=self.settings,
-                profile=session.profile,
+                profile=profile,
                 prompt=bridge.project_prompt(envelope),
                 conversation_id=session.conversation_id,
                 config_root=self.config_root,
@@ -407,8 +451,10 @@ class GatewayService:
 
     # ── commands ────────────────────────────────────────────────────────────
 
-    def _handle_command(self, text: str, session: SessionBinding) -> None:
-        command, _, argument = text.partition(" ")
+    def _handle_command(
+        self, envelope: InboundEnvelope, session: SessionBinding
+    ) -> None:
+        command, _, argument = envelope.text.strip().partition(" ")
         command = command.removeprefix("/").lower().strip()
         argument = argument.strip()
         if command == "help":
@@ -423,7 +469,7 @@ class GatewayService:
         elif command == "unbind":
             self._cmd_unbind(session)
         elif command == "profile":
-            self._cmd_profile(argument, session)
+            self._cmd_profile(argument, session, chat_type=envelope.chat_type)
         elif command == "status":
             self._cmd_status(session)
         elif command == "approve" or command == "deny":
@@ -431,7 +477,28 @@ class GatewayService:
         elif command == "artifacts":
             self._cmd_artifacts(session)
         else:
+            self._handle_alias_command(envelope, session, command, argument)
+
+    def _handle_alias_command(
+        self,
+        envelope: InboundEnvelope,
+        session: SessionBinding,
+        command: str,
+        argument: str,
+    ) -> None:
+        """Profile alias from the routing configuration (e.g. ``/quant``):
+        switch the session profile through the exact same ``/profile`` gate,
+        then run the remaining text under it. Aliases are router data — the
+        surface adapter never sees them."""
+        alias_profile = self.routing.resolve_alias(command)
+        if alias_profile is None:
             self._send_text(session, render_error(f"unknown command: /{command}"))
+            return
+        updated = self._cmd_profile(
+            alias_profile, session, chat_type=envelope.chat_type
+        )
+        if updated is not None and argument:
+            self._start_run(envelope.model_copy(update={"text": argument}), updated)
 
     # ── supervisor case control (deterministic, never the model) ────────────
 
@@ -583,7 +650,13 @@ class GatewayService:
         logger.info("supervisor bound session to case %s (button)", case_id)
         self._send_case_card(updated)
 
-    def _cmd_profile(self, argument: str, session: SessionBinding) -> None:
+    def _cmd_profile(
+        self,
+        argument: str,
+        session: SessionBinding,
+        *,
+        chat_type: str | None = None,
+    ) -> SessionBinding | None:
         if not argument:
             self._send_text(
                 session,
@@ -592,17 +665,29 @@ class GatewayService:
                     available=list_profiles(self.config_root),
                 ),
             )
-            return
+            return None
         if session.paused_run_id:
             self._send_text(session, render_error(PROFILE_BLOCKED_BY_PAUSE))
-            return
+            return None
         try:
             bridge.validate_profile(
                 argument, self.settings, config_root=self.config_root
             )
         except CompositionError as exc:
             self._send_text(session, render_error(str(exc)))
-            return
+            return None
+        # Profile admission (spec pack 00 §3): a restricted profile may not
+        # even be BOUND on a disallowed surface/chat type/channel — the DM
+        # quant attempt dies here, before any agent execution.
+        denial = self.routing.access_error(
+            argument,
+            surface=session.surface,
+            chat_type=chat_type,
+            channel_id=session.channel_id,
+        )
+        if denial is not None:
+            self._send_text(session, render_error(denial))
+            return None
         session = session.model_copy(update={"profile": argument})
         self.store.save_session(session)
         self._send_text(
@@ -611,6 +696,7 @@ class GatewayService:
                 current=session.profile, available=list_profiles(self.config_root)
             ),
         )
+        return session
 
     def _cmd_status(self, session: SessionBinding) -> None:
         # Fully host-grounded: receipts only, never the model.

@@ -114,9 +114,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     gateway_sub = gateway.add_subparsers(dest="gateway_command", required=True)
     gateway_start = gateway_sub.add_parser(
-        "start", help="foreground blocking gateway process (Stage A: telegram)"
+        "start",
+        help="foreground blocking gateway process (telegram long-poll, "
+        "feishu websocket)",
     )
-    gateway_start.add_argument("--surface", required=True, choices=["telegram"])
+    gateway_start.add_argument("--surface", required=True, choices=["telegram", "feishu"])
     gateway_start.add_argument("--profile")
     gateway_start.add_argument("--workspace", type=Path)
     gateway_start.add_argument("--model")

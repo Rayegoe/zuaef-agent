@@ -162,7 +162,10 @@ class GatewayStore:
                 created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (surface, tenant_id, channel_id, thread_key) DO UPDATE SET
-                user_id = excluded.user_id,
+                -- First writer owns the session: the binding creator stays the
+                -- approval-token owner even when colleagues speak in the same
+                -- group afterwards (Feishu groups are multi-operator).
+                user_id = session_bindings.user_id,
                 conversation_id = excluded.conversation_id,
                 profile = excluded.profile,
                 case_id = excluded.case_id,

@@ -1,9 +1,10 @@
 """Gateway process runner — SPEC v0.3 §59–§66.
 
 Startup validation (fail closed, in spec order), foreground blocking
-Telegram long-polling, cursor persistence, restart recovery and graceful
-KeyboardInterrupt shutdown. Stage A: single process, single dispatcher,
-serial agent execution — no daemon, no PID manager.
+surface poll (Telegram long-polling, Feishu WebSocket queue), cursor
+persistence, restart recovery and graceful KeyboardInterrupt shutdown.
+Stage A + Feishu Surface v0.1: single process, single dispatcher, serial
+agent execution — no daemon, no PID manager, one worker per surface app.
 """
 
 from __future__ import annotations
@@ -19,8 +20,10 @@ import httpx
 
 from ..config import AgentSettings
 from . import bridge
+from .routing import RoutingPolicy, parse_access_policy, parse_json_mapping
 from .service import GatewayService
 from .store import GatewayStore
+from .surface import SurfaceAdapter
 from .telegram import TelegramAdapter
 
 logger = logging.getLogger(__name__)
@@ -29,6 +32,9 @@ DEFAULT_POLL_TIMEOUT = 30
 DEFAULT_APPROVAL_TTL = 86400
 DEFAULT_MAX_UPLOAD_BYTES = 20971520
 DEFAULT_MAX_ARTIFACT_BYTES = 10485760
+DEFAULT_FEISHU_CONNECT_TIMEOUT = 30
+
+SUPPORTED_SURFACES = ("telegram", "feishu")
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,20 @@ class GatewayConfig:
     approval_ttl_seconds: int = DEFAULT_APPROVAL_TTL
     max_upload_bytes: int = DEFAULT_MAX_UPLOAD_BYTES
     max_artifact_bytes: int = DEFAULT_MAX_ARTIFACT_BYTES
+    # Feishu surface (v0.1). Secrets are environment-only.
+    feishu_app_id: str | None = None
+    feishu_app_secret: str | None = None
+    feishu_user_allowlist: frozenset[str] = field(default_factory=frozenset)
+    feishu_group_allowlist: frozenset[str] = field(default_factory=frozenset)
+    feishu_require_mention: bool = True
+    feishu_security_mode: str = "audit"
+    feishu_domain: str | None = None
+    feishu_connect_timeout: int = DEFAULT_FEISHU_CONNECT_TIMEOUT
+    # Generic profile routing (spec pack 03): aliases, chat-level default
+    # profiles and per-profile access policy — configuration, never code.
+    profile_aliases: dict[str, str] = field(default_factory=dict)
+    group_defaults: dict[str, str] = field(default_factory=dict)
+    profile_access: dict[str, Any] = field(default_factory=dict)
 
 
 def _env_int(name: str, default: int) -> int:
@@ -50,14 +70,22 @@ def _env_int(name: str, default: int) -> int:
     return int(raw) if raw else default
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _env_list(name: str) -> frozenset[str]:
+    return frozenset(
+        item.strip() for item in os.getenv(name, "").split(",") if item.strip()
+    )
+
+
 def load_gateway_config(args: Any) -> GatewayConfig:
     """Merge environment and CLI flags; no validation of presence happens
     here — that is the startup sequence's job (fail closed)."""
-    allowed = frozenset(
-        user.strip()
-        for user in os.getenv("ZUAEF_TELEGRAM_ALLOWED_USERS", "").split(",")
-        if user.strip()
-    )
     return GatewayConfig(
         surface=getattr(args, "surface", "telegram"),
         profile=getattr(args, "profile", None)
@@ -65,7 +93,7 @@ def load_gateway_config(args: Any) -> GatewayConfig:
         config_root=getattr(args, "config_root", None),
         telegram_token=os.getenv("ZUAEF_TELEGRAM_BOT_TOKEN")
         or os.getenv("TELEGRAM_BOT_TOKEN"),
-        allowed_user_ids=allowed,
+        allowed_user_ids=_env_list("ZUAEF_TELEGRAM_ALLOWED_USERS"),
         poll_timeout=_env_int("ZUAEF_TELEGRAM_POLL_TIMEOUT", DEFAULT_POLL_TIMEOUT),
         approval_ttl_seconds=_env_int("ZUAEF_GATEWAY_APPROVAL_TTL", DEFAULT_APPROVAL_TTL),
         max_upload_bytes=_env_int(
@@ -74,10 +102,41 @@ def load_gateway_config(args: Any) -> GatewayConfig:
         max_artifact_bytes=_env_int(
             "ZUAEF_GATEWAY_MAX_ARTIFACT_BYTES", DEFAULT_MAX_ARTIFACT_BYTES
         ),
+        feishu_app_id=os.getenv("FEISHU_APP_ID"),
+        feishu_app_secret=os.getenv("FEISHU_APP_SECRET"),
+        feishu_user_allowlist=_env_list("FEISHU_USER_ALLOWLIST"),
+        feishu_group_allowlist=_env_list("FEISHU_GROUP_ALLOWLIST"),
+        feishu_require_mention=_env_bool("FEISHU_REQUIRE_MENTION", True),
+        feishu_security_mode=os.getenv("FEISHU_SECURITY_MODE", "audit"),
+        feishu_domain=os.getenv("FEISHU_DOMAIN"),
+        feishu_connect_timeout=_env_int(
+            "ZUAEF_FEISHU_CONNECT_TIMEOUT", DEFAULT_FEISHU_CONNECT_TIMEOUT
+        ),
+        profile_aliases=parse_json_mapping(
+            os.getenv("ZUAEF_GATEWAY_PROFILE_ALIASES")
+        ),
+        group_defaults=parse_json_mapping(os.getenv("ZUAEF_GATEWAY_GROUP_DEFAULTS")),
+        profile_access=parse_access_policy(os.getenv("ZUAEF_GATEWAY_PROFILE_ACCESS")),
     )
 
 
-def default_adapter(config: GatewayConfig, settings: AgentSettings) -> TelegramAdapter:
+def default_adapter(config: GatewayConfig, settings: AgentSettings) -> SurfaceAdapter:
+    if config.surface == "feishu":
+        assert config.feishu_app_id is not None
+        assert config.feishu_app_secret is not None
+        from .feishu import FeishuAdapter
+
+        return FeishuAdapter(
+            app_id=config.feishu_app_id,
+            app_secret=config.feishu_app_secret,
+            allowed_user_ids=set(config.feishu_user_allowlist),
+            allowed_chat_ids=set(config.feishu_group_allowlist),
+            require_mention=config.feishu_require_mention,
+            security_mode=config.feishu_security_mode,
+            domain=config.feishu_domain,
+            connect_timeout=float(config.feishu_connect_timeout),
+            workspace_root=settings.workspace_root.resolve(),
+        )
     assert config.telegram_token is not None
     return TelegramAdapter(
         token=config.telegram_token,
@@ -85,6 +144,14 @@ def default_adapter(config: GatewayConfig, settings: AgentSettings) -> TelegramA
         workspace_root=settings.workspace_root.resolve(),
         poll_timeout=config.poll_timeout,
         max_upload_bytes=config.max_upload_bytes,
+    )
+
+
+def _routing_policy(config: GatewayConfig) -> RoutingPolicy:
+    return RoutingPolicy(
+        profile_aliases=dict(config.profile_aliases),
+        group_defaults=dict(config.group_defaults),
+        profile_access=dict(config.profile_access),
     )
 
 
@@ -96,8 +163,8 @@ def run_gateway(
 ) -> int:
     """Foreground gateway process. Startup validation order (SPEC §61):
 
-    settings validation → gateway DB init → profile resolve → Telegram token
-    present → allowed users present → Telegram getMe probe.
+    settings validation → gateway DB init → profile resolve → surface
+    credentials present → allowed users present → surface probe.
 
     Any failure raises before polling starts; the CLI turns that into a
     non-zero exit.
@@ -122,19 +189,33 @@ def run_gateway(
             config.profile, settings, config_root=config.config_root
         )
 
-    # 4 + 5. Fail closed: no token, no empty allowlist.
-    if not config.telegram_token:
-        raise ValueError("ZUAEF_TELEGRAM_BOT_TOKEN is required to start the gateway")
-    if not config.allowed_user_ids:
+    # 4 + 5. Fail closed: per-surface credentials and a non-empty user
+    # allowlist (no allow-all default on any surface).
+    if config.surface == "telegram":
+        if not config.telegram_token:
+            raise ValueError(
+                "ZUAEF_TELEGRAM_BOT_TOKEN is required to start the gateway"
+            )
+        if not config.allowed_user_ids:
+            raise ValueError(
+                "ZUAEF_TELEGRAM_ALLOWED_USERS must list at least one user id "
+                "(gateway fails closed; there is no allow-all default)"
+            )
+    elif config.surface == "feishu":
+        if not config.feishu_app_id or not config.feishu_app_secret:
+            raise ValueError(
+                "FEISHU_APP_ID and FEISHU_APP_SECRET are required to start "
+                "the gateway on the feishu surface"
+            )
+        if not config.feishu_user_allowlist:
+            raise ValueError(
+                "FEISHU_USER_ALLOWLIST must list at least one open id "
+                "(gateway fails closed; there is no allow-all default)"
+            )
+    else:
         raise ValueError(
-            "ZUAEF_TELEGRAM_ALLOWED_USERS must list at least one user id "
-            "(gateway fails closed; there is no allow-all default)"
-        )
-
-    # Surface selection (Stage A: Telegram only).
-    if config.surface != "telegram":
-        raise ValueError(
-            f"unsupported surface {config.surface!r}: Stage A supports telegram only"
+            f"unsupported surface {config.surface!r}: "
+            f"supported surfaces are {', '.join(SUPPORTED_SURFACES)}"
         )
 
     adapter = (
@@ -155,19 +236,27 @@ def run_gateway(
         config_root=config.config_root,
         approval_ttl_seconds=config.approval_ttl_seconds,
         max_artifact_bytes=config.max_artifact_bytes,
-        allowed_user_ids=set(config.allowed_user_ids),
+        allowed_user_ids=set(
+            config.allowed_user_ids
+            if config.surface == "telegram"
+            else config.feishu_user_allowlist
+        ),
+        routing_policy=_routing_policy(config),
     )
 
     # Restart recovery: reconcile routing state against the ReceiptStore.
     for warning in service.recover_sessions():
         logger.warning("%s", warning)
 
-    cursor = store.get_cursor(config.surface)
-    if cursor is not None:
-        try:
-            adapter.set_offset(int(cursor))
-        except ValueError:
-            logger.warning("ignoring invalid stored cursor %r", cursor)
+    if config.surface == "telegram":
+        # Offset cursors are a Telegram long-poll concept; the Feishu
+        # WebSocket transport has none (SDK dedup covers reconnect backfill).
+        cursor = store.get_cursor(config.surface)
+        if cursor is not None:
+            try:
+                adapter.set_offset(int(cursor))
+            except ValueError:
+                logger.warning("ignoring invalid stored cursor %r", cursor)
 
     logger.info("gateway started: surface=%s profile=%s", config.surface, config.profile)
     try:

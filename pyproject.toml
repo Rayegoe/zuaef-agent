@@ -37,6 +37,7 @@ dependencies = [
   "zuaef-competitive-intelligence",
   "zuaef-telegram",
   "zuaef-quant",
+  "lark-channel-sdk==1.4.0",
 ]
 
 [project.scripts]
@@ -81,10 +82,11 @@ pythonpath = [
 [tool.ruff]
 # `ruff check .` gates P2-7. These are committed trees outside the zuaef-agent
 # delivery scope (installed third-party skill scripts, bmad workspace config,
-# the separate editorial-control package overlay, and the vendored qlib
-# dump_bin ingestion script) — their lint health is owned upstream, so the
-# product gate scans the delivery tree only.
-exclude = [".agents", "_bmad", "zuaef-editorial-control-v0.1", "tools/quant/upstream"]
+# the separate editorial-control package overlay, the vendored qlib
+# dump_bin ingestion script, and the feishu spec-pack reference material) —
+# their lint health is owned upstream, so the product gate scans the delivery
+# tree only.
+exclude = [".agents", "_bmad", "zuaef-editorial-control-v0.1", "tools/quant/upstream", "zuaef-feishu-surface-spec-pack-v0.1"]
 
 [tool.ruff.lint.per-file-ignores]
 # E402: deliberate sys.path bootstrapping before importing the editable plugins

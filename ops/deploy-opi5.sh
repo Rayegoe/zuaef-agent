@@ -23,6 +23,13 @@ systemctl --user restart \
   zuaef-gateway.service \
   zuaef-console.service \
   zuaef-quant-dashboard.service
+# Feishu surface (v0.1): restart only when the unit is installed; older nodes
+# without it must not fail the deploy.
+if systemctl --user list-unit-files zuaef-feishu-gateway.service --no-legend 2>/dev/null | grep -q feishu; then
+  systemctl --user restart zuaef-feishu-gateway.service
+else
+  echo "  (zuaef-feishu-gateway not installed, skipping)"
+fi
 
 sleep 6
 
@@ -30,5 +37,8 @@ echo "== status =="
 for s in zuaef-gateway.service zuaef-console.service zuaef-quant-dashboard.service; do
   printf "  %-30s %s\n" "$s" "$(systemctl --user is-active "$s")"
 done
+if systemctl --user list-unit-files zuaef-feishu-gateway.service --no-legend 2>/dev/null | grep -q feishu; then
+  printf "  %-30s %s\n" "zuaef-feishu-gateway.service" "$(systemctl --user is-active zuaef-feishu-gateway.service)"
+fi
 echo "== git head =="
 git log --oneline -1

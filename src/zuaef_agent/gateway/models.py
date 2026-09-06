@@ -47,6 +47,10 @@ class InboundEnvelope(BaseModel):
     channel_id: str
     thread_id: str | None = None
 
+    # Generic chat-type fact (telegram "private", feishu "group"/"p2p"),
+    # consumed by the routing access policy — never by transport logic.
+    chat_type: str | None = None
+
     message_id: str
     text: str = ""
 

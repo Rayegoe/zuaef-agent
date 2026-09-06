@@ -22,6 +22,8 @@ GATEWAY_SOURCES = {
     "src/zuaef_agent/gateway/store.py",
     "src/zuaef_agent/gateway/surface.py",
     "src/zuaef_agent/gateway/telegram.py",
+    "src/zuaef_agent/gateway/feishu.py",
+    "src/zuaef_agent/gateway/routing.py",
     "src/zuaef_agent/gateway/bridge.py",
     "src/zuaef_agent/gateway/renderer.py",
     "src/zuaef_agent/gateway/service.py",
@@ -65,6 +67,39 @@ def test_gateway_never_imports_business_toolsets():
         assert "zuaef_ace_writing" not in source
     core = _read("src/zuaef_agent/core.py")
     assert "zuaef_wordpress" not in core
+
+
+def test_feishu_surface_has_no_business_coupling():
+    """Spec pack 07 A2: the Feishu adapter carries no business vocabulary —
+    it is a generic surface, profiles (including quant-decision) are data."""
+    source = _read("src/zuaef_agent/gateway/feishu.py")
+    forbidden = (
+        "BUY",
+        "WATCH",
+        "HOLD",
+        "PIT",
+        "T+1",
+        "T+3",
+        "T+5",
+        "ticker",
+        "position",
+        "market_data",
+        "quant",
+    )
+    for token in forbidden:
+        assert token not in source, f"feishu adapter must not contain {token!r}"
+
+
+def test_gateway_routing_policy_is_data_not_code():
+    """Aliases and access policy are runtime configuration: the gateway
+    source never names a business profile id."""
+    for path in (
+        "src/zuaef_agent/gateway/service.py",
+        "src/zuaef_agent/gateway/routing.py",
+        "src/zuaef_agent/gateway/runner.py",
+    ):
+        source = _read(path)
+        assert "quant-decision" not in source, f"{path} names a business profile"
 
 
 def test_wordpress_uses_entry_point_not_direct_import():
