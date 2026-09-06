@@ -22,6 +22,8 @@ from pydantic_ai.toolsets import AbstractToolset
 from zuaef_agent.models import CoreDeps
 from zuaef_agent.plugin_api import CompositionError
 
+from .freshness import derive_freshness, market_date_of, now_market
+
 REPO_ROOT_ENV = "ZUAEF_QUANT_REPO_ROOT"
 TOOLS_DIR_ENV_MARKERS = ("tools/quant_eval_qlib.py", "benchmarks/quant/gen1/quant.toml")
 
@@ -401,9 +403,13 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         never recomputes the market and never re-derives triggers. Returns
         system health, market/data-trust status, READY/NEAR lists, open
         positions, exit alerts, recent durable material events, forward
-        summary and heartbeat/last-scan times. Base every trading answer on
-        this context instead of memory; a stale context is a fact to report,
-        not to refresh by re-scanning.
+        summary and heartbeat/last-scan times. Freshness is a HOST-derived
+        fact (freshness_status/freshness_reason plus the requested/data/scan
+        dates): never infer data freshness from dates yourself and never
+        interpret READY/NEAR as a current-day result unless
+        freshness_status is FRESH. Base every trading answer on this context
+        instead of memory; a stale context is a fact to report, not to
+        refresh by re-scanning.
         """
         trading = workspace_root / "artifacts" / "quant" / "trading"
         state = _read_json(trading / "state.json", {})
@@ -416,6 +422,15 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             {k: a.get(k) for k in ("ts", "type", "symbol", "what", "why", "price", "venue")}
             for a in alerts
         ]
+        last_scan_at = next(
+            (r.get("ts") for r in reversed(soak) if (r.get("symbols") or 0) > 0), None
+        )
+        now = now_market()
+        freshness = derive_freshness(
+            now=now,
+            latest_market_data_date=state.get("day"),
+            last_scan_at=last_scan_at,
+        )
         return json.dumps(
             {
                 "present": bool(state),
@@ -426,9 +441,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                 "market_no_trade": state.get("market_no_trade"),
                 "system_unavailable": state.get("system_unavailable"),
                 "heartbeat_at": soak[-1].get("ts") if soak else None,
-                "last_scan_at": next(
-                    (r.get("ts") for r in reversed(soak) if (r.get("symbols") or 0) > 0), None
-                ),
+                "last_scan_at": last_scan_at,
                 "ready": state.get("ready") or [],
                 "near": state.get("near") or [],
                 "exit_alerts": state.get("exit_alerts") or [],
@@ -438,9 +451,24 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                     "observations": len(observations),
                     "settled": sum(1 for o in observations if o.get("d8") is not None),
                 },
+                # Freshness contract (Freshness Spec v0.1 §3): host-derived
+                # facts the model must read before any "today" claim.
+                "requested_at": now.isoformat(),
+                "requested_market_date": freshness["requested_market_date"],
+                "data_as_of": state.get("as_of"),
+                "latest_market_data_date": state.get("day"),
+                "last_scan_market_date": (
+                    market_date_of(last_scan_at).isoformat()
+                    if market_date_of(last_scan_at) is not None
+                    else None
+                ),
+                "market_state": state.get("status"),
+                "freshness_status": freshness["freshness_status"],
+                "freshness_reason": freshness["freshness_reason"],
                 "limitations": [
                     "strategy profitability UNPROVEN (S3 frozen, PIT-contaminated universe)",
                     "READY/NEAR are deterministic facts from the frozen scan rules, not orders",
+                    "READY/NEAR are current-day results only when freshness_status is FRESH",
                 ],
             },
             ensure_ascii=False,
