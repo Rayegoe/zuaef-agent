@@ -135,6 +135,46 @@ def test_naive_timestamps_are_read_as_market_local():
     assert result["freshness_status"] == FRESH
 
 
+def test_stale_does_not_require_scan_visibility():
+    """Spec §4.3: STALE is decided by the data day alone. An invisible scan
+    record (bounded context) must NOT upgrade the verdict to
+    INSUFFICIENT_EVIDENCE, and the reason must never claim "no scan ever
+    happened" — this is the live 09-07 scene (data 09-04, scan record
+    outside the readable window)."""
+    result = _derive(
+        _market_dt(WED, 14, 0),
+        _dt.date(2026, 9, 8).isoformat(),
+        None,
+    )
+    assert result["freshness_status"] == STALE
+    assert "not visible in the current artifact context" in result["freshness_reason"]
+
+
+def test_pre_open_trading_day_is_market_not_open_not_insufficient():
+    """The live 09-07 grading: Monday small hours, data through last Friday,
+    no scan visible — that is the NORMAL pre-open state (MARKET_NOT_OPEN),
+    never an evidence failure."""
+    monday = _dt.date(2026, 9, 7)
+    result = _derive(
+        _dt.datetime(2026, 9, 7, 1, 50, tzinfo=MARKET_TZ),
+        "2026-09-04",
+        None,
+    )
+    assert result["requested_market_date"] == monday.isoformat()
+    assert result["freshness_status"] == MARKET_NOT_OPEN
+
+
+def test_after_scan_window_stale_data_is_stale():
+    """Once the day's scan window has passed, data stuck on the previous
+    trading day is genuinely STALE — the strategy should have scanned."""
+    result = _derive(
+        _dt.datetime(2026, 9, 7, 20, 0, tzinfo=MARKET_TZ),
+        "2026-09-04",
+        None,
+    )
+    assert result["freshness_status"] == STALE
+
+
 # ── get_trading_context carries the freshness contract ──────────────────────
 
 
@@ -167,7 +207,13 @@ def _toolset(tmp_path: Path, monkeypatch, now: _dt.datetime):
     return toolset
 
 
-def _write_trading_artifacts(workspace: Path, *, day: str, scan_ts: str | None):
+def _write_trading_artifacts(
+    workspace: Path,
+    *,
+    day: str,
+    scan_ts: str | None,
+    business_scan_ts: str | None = None,
+):
     trading = workspace / "artifacts" / "quant" / "trading"
     trading.mkdir(parents=True, exist_ok=True)
     (trading / "state.json").write_text(
@@ -193,6 +239,13 @@ def _write_trading_artifacts(workspace: Path, *, day: str, scan_ts: str | None):
         )
     if soak_lines:
         (trading / "soak.jsonl").write_text("\n".join(soak_lines) + "\n", encoding="utf-8")
+    if business_scan_ts is not None:
+        business = workspace / "artifacts" / "quant" / "business"
+        business.mkdir(parents=True, exist_ok=True)
+        (business / "last_scan.json").write_text(
+            json.dumps({"as_of": business_scan_ts, "quotes_fetched": 50}),
+            encoding="utf-8",
+        )
 
 
 def test_context_reports_stale_zero_with_full_freshness_facts(
@@ -226,6 +279,40 @@ def test_context_without_artifacts_fails_closed(tmp_path: Path, monkeypatch):
     data = json.loads(toolset.tools["get_trading_context"].function())
     assert data["freshness_status"] == INSUFFICIENT_EVIDENCE
     assert data["last_scan_market_date"] is None
+
+
+def test_context_scan_source_prefers_business_artifact(tmp_path: Path, monkeypatch):
+    """``business/last_scan.json`` is the canonical scan metadata (the
+    monitor soak log only carries session-side scan records); the newer of
+    the two visible sources wins."""
+    toolset = _toolset(tmp_path, monkeypatch, _market_dt(WED, 14, 0))
+    _write_trading_artifacts(
+        tmp_path / "workspace",
+        day="2026-09-04",
+        scan_ts="2026-09-02T09:35:00+08:00",
+        business_scan_ts="2026-09-03T18:28:01+08:00",
+    )
+    data = json.loads(toolset.tools["get_trading_context"].function())
+    assert data["last_scan_at"] == "2026-09-03T18:28:01+08:00"
+    assert data["last_scan_market_date"] == "2026-09-03"
+    assert data["freshness_status"] == STALE
+
+
+def test_context_live_scene_stale_even_without_visible_scan(
+    tmp_path: Path, monkeypatch
+):
+    """The real 09-07 deployment state: data through 09-04 and NO scan
+    record visible anywhere in the read window — the verdict is STALE with
+    an honest reason, never INSUFFICIENT and never 'no scan ever'."""
+    toolset = _toolset(tmp_path, monkeypatch, _market_dt(WED, 14, 0))
+    _write_trading_artifacts(tmp_path / "workspace", day="2026-09-04", scan_ts=None)
+
+    data = json.loads(toolset.tools["get_trading_context"].function())
+
+    assert data["last_scan_at"] is None
+    assert data["last_scan_market_date"] is None
+    assert data["freshness_status"] == STALE
+    assert "not visible in the current artifact context" in data["freshness_reason"]
 
 
 def test_context_fresh_zero(tmp_path: Path, monkeypatch):
