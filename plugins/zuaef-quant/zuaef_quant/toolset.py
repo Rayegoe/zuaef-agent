@@ -172,6 +172,27 @@ def _read_jsonl_tail(path: Path, limit: int) -> list[dict]:
     return rows
 
 
+def _resolve_last_scan_at(business_last_scan: Path, soak: list[dict]) -> str | None:
+    """Timestamp of the last completed scan, from canonical artifacts.
+
+    ``business/last_scan.json`` is the business scan pipeline's own metadata
+    record; soak records that actually scanned symbols are the monitor's
+    session-side evidence. Both writers use ``+08:00`` ISO stamps, so the
+    newer one is the lexicographic max. ``None`` means no scan evidence is
+    visible — freshness treats that honestly (STALE does not depend on it),
+    never as "no scan ever happened".
+    """
+    candidates = []
+    business = _read_json(business_last_scan, {})
+    if isinstance(business.get("as_of"), str):
+        candidates.append(business["as_of"])
+    for record in reversed(soak):
+        if (record.get("symbols") or 0) > 0 and isinstance(record.get("ts"), str):
+            candidates.append(record["ts"])
+            break
+    return max(candidates) if candidates else None
+
+
 def _run(script: Path, args: list[str], quant_python: Path, timeout: int) -> str:
     proc = subprocess.run(
         [str(quant_python), str(script), *args],
@@ -422,8 +443,9 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             {k: a.get(k) for k in ("ts", "type", "symbol", "what", "why", "price", "venue")}
             for a in alerts
         ]
-        last_scan_at = next(
-            (r.get("ts") for r in reversed(soak) if (r.get("symbols") or 0) > 0), None
+        last_scan_at = _resolve_last_scan_at(
+            workspace_root / "artifacts" / "quant" / "business" / "last_scan.json",
+            soak,
         )
         now = now_market()
         freshness = derive_freshness(

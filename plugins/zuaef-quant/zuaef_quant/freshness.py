@@ -110,26 +110,24 @@ def derive_freshness(
             "freshness_reason": reason,
         }
 
-    if latest is None or scanned is None:
+    if latest is None:
         return result(
             INSUFFICIENT_EVIDENCE,
-            "the data day or the last completed scan cannot be determined "
-            "from the canonical artifacts; READY/NEAR must not be read as a "
+            "the latest market-data day cannot be determined from the "
+            "canonical artifacts; READY/NEAR must not be read as a "
             "current-day result",
         )
-    if latest > requested or scanned > requested:
+    if latest > requested or (scanned is not None and scanned > requested):
         return result(
             INSUFFICIENT_EVIDENCE,
             "artifact dates are ahead of the request date and contradict it; "
             "these artifacts cannot describe the requested day",
         )
-    if latest == requested and scanned == requested:
-        return result(
-            FRESH,
-            "latest market data and the last completed scan are both from "
-            "today; READY/NEAR are today's scan results",
-        )
     if latest < requested:
+        # STALE is decided by the data day alone (spec §4.3): the last scan
+        # being unknown does not block the verdict — it only shapes the
+        # reason, which must never claim "no scan ever happened" just
+        # because the scan record is not visible in the bounded context.
         if (
             now.astimezone(MARKET_TZ).time() < SCAN_WINDOW_START
             and _is_weekday(requested)
@@ -139,11 +137,30 @@ def derive_freshness(
                 "today has not reached the strategy's first scan window, so "
                 "no same-day scan result can exist yet",
             )
+        scan_note = (
+            f" (last completed scan: {scanned.isoformat()})"
+            if scanned is not None
+            else " (the last completed scan is not visible in the current "
+            "artifact context)"
+        )
         return result(
             STALE,
             f"latest market data is from {latest.isoformat()}, before the "
             "requested day; the current READY/NEAR records are not today's "
-            f"scan results (last completed scan: {scanned.isoformat()})",
+            f"scan results{scan_note}",
+        )
+    if scanned is None:
+        return result(
+            INSUFFICIENT_EVIDENCE,
+            "today's market data is available, but the last completed scan "
+            "cannot be determined; today's candidate state is not yet "
+            "determined",
+        )
+    if scanned == requested:
+        return result(
+            FRESH,
+            "latest market data and the last completed scan are both from "
+            "today; READY/NEAR are today's scan results",
         )
     return result(
         NOT_SCANNED,
