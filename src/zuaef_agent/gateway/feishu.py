@@ -92,6 +92,8 @@ class FeishuAdapter:
         self.allowed_user_ids = set(allowed_user_ids)
         self.allowed_chat_ids = set(allowed_chat_ids or ())
         self.require_mention = require_mention
+        self.security_mode = security_mode
+        self.domain = domain
         self.workspace_root = workspace_root
         self.connect_timeout = connect_timeout
         self._events: queue.Queue[InboundEnvelope] = queue.Queue()

@@ -378,3 +378,22 @@ def test_probe_starts_transport_and_reports_ready():
     assert channel.started
     adapter.close()
     assert channel.stopped
+
+
+def test_real_channel_construction_wires_policy_and_security():
+    """No injected channel: the adapter must build a real offline
+    ``FeishuChannel`` (constructor does no network) with the admission
+    policy and security mode actually applied. Regression: __init__ once
+    failed to store security_mode/domain, which only the real construction
+    path touched — the injected-channel tests never saw it."""
+    from lark_channel import FeishuChannel
+
+    adapter = _adapter(None)  # type: ignore[arg-type]
+
+    assert isinstance(adapter._channel, FeishuChannel)
+    policy = adapter._channel.get_policy()
+    assert policy.dm_policy == "allowlist"
+    assert policy.group_policy == "allowlist"
+    assert policy.allow_from == ["ou_1"]
+    assert policy.group_allowlist == ["oc_group_1"]
+    assert policy.require_mention is True

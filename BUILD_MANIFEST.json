@@ -1223,8 +1223,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/feishu.py",
-      "bytes": 17570,
-      "sha256": "6a2d15f8f5a0f9bc92d2f5fc3219c442e81f4abbf4257ff1bbe3f57957a5e037"
+      "bytes": 17642,
+      "sha256": "b8481567ace5dd16858e8f2681dcb64e71a48e4f36a8290f7c2cc8681140d43c"
     },
     {
       "path": "src/zuaef_agent/gateway/interaction_projection.py",
@@ -1493,8 +1493,8 @@
     },
     {
       "path": "tests/test_gateway_feishu.py",
-      "bytes": 11988,
-      "sha256": "a78c6e11c65d603aa45610ac0ad5af2767753b4903d8e191cfb0d96dc5562694"
+      "bytes": 12826,
+      "sha256": "ec2ead36dddaec75d010bce08a00b4183382babe7507140db230688fd34a0a2a"
     },
     {
       "path": "tests/test_gateway_models.py",
