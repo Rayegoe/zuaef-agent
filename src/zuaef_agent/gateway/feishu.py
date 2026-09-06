@@ -13,17 +13,21 @@ aliases and per-profile access policy live in the gateway routing policy
 (``routing.py``), enforced by the service before any run.
 
 Threading model: the SDK runs its own background loop on a daemon thread.
-``probe()`` starts the blocking ``channel.start()`` on a dedicated thread and
-waits for readiness (fail closed); SDK event handlers run on the SDK loop and
-push normalized envelopes into a thread-safe queue; the gateway runner's sync
-serial loop drains it via ``poll_once`` (blocking wait, no API polling).
-Outbound helpers submit SDK coroutines through the public ``channel.schedule``
-and wait bounded — they log failures instead of raising so a transport error
+``probe()`` starts a dedicated thread that awaits the SDK's public
+``connect_until_ready()`` (whose readiness includes the WebSocket connection
+being established — the raw ``is_ready`` flag only flips AFTER the blocking
+``start()`` returns, i.e. never while the transport runs) and then keeps
+that loop alive for the process lifetime; SDK event handlers push normalized
+envelopes into a thread-safe queue and the gateway runner's sync serial loop
+drains it via ``poll_once`` (blocking wait, no API polling). Outbound
+helpers submit SDK coroutines through the public ``channel.schedule`` and
+wait bounded — they log failures instead of raising so a transport error
 cannot kill the gateway dispatch loop.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import queue
 import threading
@@ -99,6 +103,7 @@ class FeishuAdapter:
         self._events: queue.Queue[InboundEnvelope] = queue.Queue()
         self._thread: threading.Thread | None = None
         self._thread_error: BaseException | None = None
+        self._ready = threading.Event()
         if channel is not None:
             self._channel = channel
         else:
@@ -131,8 +136,10 @@ class FeishuAdapter:
         return FeishuChannel(**kwargs)
 
     def probe(self) -> dict[str, Any]:
-        """Start the WebSocket transport and wait until ready; raise (fail
-        closed) when the connection does not come up in time."""
+        """Start the WebSocket transport and wait until the connection is
+        established; raise (fail closed) when it does not come up in time.
+        A failed handshake raises inside the transport thread and surfaces
+        here immediately; a hung one hits the connect timeout."""
         if self._thread is None:
             self._thread = threading.Thread(
                 target=self._run_channel, name="zuaef-feishu-channel", daemon=True
@@ -144,7 +151,7 @@ class FeishuAdapter:
                 raise RuntimeError(
                     f"feishu transport failed to start: {self._thread_error}"
                 ) from self._thread_error
-            if self._channel.is_ready:
+            if self._ready.is_set():
                 return {"ready": True}
             time.sleep(_CONNECT_POLL_INTERVAL)
         raise RuntimeError(
@@ -153,13 +160,27 @@ class FeishuAdapter:
 
     def _run_channel(self) -> None:
         try:
-            # Blocking: returns when stop() is called; keeps the WS connection
-            # (and the SDK's internal reconnect) alive for the process.
-            self._channel.start()
+            asyncio.run(self._channel_session())
         except BaseException as exc:  # noqa: BLE001 — thread boundary: record
             # any death (including KeyboardInterrupt) for probe()/poll_once().
             self._thread_error = exc
             logger.error("feishu channel thread died: %s", exc)
+
+    async def _channel_session(self) -> None:
+        # connect_until_ready returns as soon as the WebSocket connection
+        # exists (its readiness includes the live connection, unlike the
+        # raw is_ready flag). Afterwards keep this loop alive forever — the
+        # SDK's blocking start() runs on this loop's executor thread and the
+        # SDK's own auto-reconnect owns the connection from here on.
+        try:
+            await self._channel.connect_until_ready(timeout=self.connect_timeout)
+        except TimeoutError as exc:
+            raise RuntimeError(
+                f"feishu transport not ready within {self.connect_timeout:.0f}s"
+            ) from exc
+        self._ready.set()
+        logger.info("feishu transport ready; connection owned by the SDK")
+        await asyncio.Event().wait()
 
     def _assert_transport_alive(self) -> None:
         if self._thread is not None and (

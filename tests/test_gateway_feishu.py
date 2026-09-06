@@ -28,8 +28,10 @@ class FakeChannel:
         self.handlers: dict[str, Any] = {}
         self.sent: list[tuple[str, dict, dict | None]] = []
         self.fail_next_send = False
-        self.started = False
+        self.connected = False
         self.stopped = False
+        # When set, connect_until_ready hangs past any probe deadline.
+        self.connect_hangs = False
 
     def on(self, name: str, handler) -> None:
         self.handlers[name] = handler
@@ -41,6 +43,12 @@ class FakeChannel:
             raise RuntimeError("feishu transport down")
         return SimpleNamespace(success=True, message_id="om_card_1", error=None)
 
+    async def connect_until_ready(self, *, timeout=None):
+        # Mirrors the real semantic: returns once the WS connection exists.
+        if self.connect_hangs:
+            await asyncio.sleep(30)
+        self.connected = True
+
     def schedule(self, coro):
         future: concurrent.futures.Future = concurrent.futures.Future()
         try:
@@ -50,10 +58,8 @@ class FakeChannel:
             future.set_exception(exc)
         return future
 
-    is_ready = True
-
     def start(self) -> None:
-        self.started = True
+        self.connected = True
 
     def stop(self) -> None:
         self.stopped = True
@@ -363,9 +369,9 @@ def test_send_failure_is_logged_not_raised():
     adapter.send_text("oc_group_1", "will fail")  # must not raise
 
 
-def test_probe_raises_when_channel_never_becomes_ready():
+def test_probe_raises_when_channel_never_connects():
     channel = FakeChannel()
-    channel.is_ready = False
+    channel.connect_hangs = True
     adapter = _adapter(channel, connect_timeout=0.2)
     with pytest.raises(RuntimeError, match="not ready"):
         adapter.probe()
@@ -375,7 +381,7 @@ def test_probe_starts_transport_and_reports_ready():
     channel = FakeChannel()
     adapter = _adapter(channel)
     assert adapter.probe() == {"ready": True}
-    assert channel.started
+    assert channel.connected
     adapter.close()
     assert channel.stopped
 
