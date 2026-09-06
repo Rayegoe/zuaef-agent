@@ -17,3 +17,6 @@ workspace/knowledge/
 # texts are local-only; committed assets carry bounded excerpts + hashes.
 data/
 .venv-quant/
+# ARM64 wheel the Orange Pi installer builds (ops/install_orangepi_node.sh);
+# rebuildable on any RK3588 board, never versioned as a binary.
+.arm-wheels/

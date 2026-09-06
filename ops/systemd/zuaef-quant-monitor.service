@@ -1,0 +1,25 @@
+# M1 Quant Live Trading Monitor — one A-share session run.
+# Started by zuaef-quant-monitor.timer at 09:30 and 13:00; --exit-on-close
+# makes it stop at market close (and it exits immediately if it finds the
+# market closed). Agent is NOT inside this loop: material changes land in
+# workspace/artifacts/quant/trading/ for the bridge to deliver.
+# Restart=no: the timer owns rescheduling.
+[Unit]
+Description=ZUAEF Quant Live Trading Monitor (A-share session)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/zuaef-agent
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=4
+Environment=OPENBLAS_NUM_THREADS=4
+Environment=NUMEXPR_NUM_THREADS=4
+ExecStart=%h/zuaef-agent/.venv/bin/python %h/zuaef-agent/tools/quant_trading_monitor.py session --interval 45 --minutes 150 --exit-on-close
+Restart=no
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

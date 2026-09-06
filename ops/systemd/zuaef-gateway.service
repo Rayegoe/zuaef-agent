@@ -1,0 +1,23 @@
+# ZUAEF Telegram Gateway — Orange Pi Production Node v1
+# Surface is the real `gateway start` CLI (choices=["telegram"]), profile is the
+# real quant-decision profile. Credentials come from repo .env via
+# AgentSettings.from_env() (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID /
+# ZUAEF_TELEGRAM_ALLOWED_USERS) — never inline here.
+# If api.telegram.org is unreachable directly, set ZUAEF_PROXY when running the
+# installer: it writes a proxy.conf drop-in for this unit.
+[Unit]
+Description=ZUAEF Telegram Gateway (surface telegram, profile quant-decision)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/zuaef-agent
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/zuaef-agent/.venv/bin/zuaef-agent gateway start --surface telegram --profile quant-decision
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

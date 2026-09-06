@@ -1,9 +1,11 @@
+# Tick the Quant Telegram event bridge every 45 seconds.
 [Unit]
 Description=Tick the Quant Telegram event bridge every 45 seconds
 
 [Timer]
-OnBootSec=90s
+OnBootSec=30s
 OnUnitActiveSec=45s
+AccuracySec=1s
 Unit=zuaef-quant-bridge.service
 
 [Install]

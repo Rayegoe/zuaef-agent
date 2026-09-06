@@ -1,0 +1,16 @@
+# Start the M1 monitor for each A-share half-session.
+# 09:30 opens the morning session, 13:00 the afternoon session. Not 09:25:
+# the monitor itself exits with MARKET_CLOSED when outside the session, so the
+# timer fires at the boundary instead of pre-spawning.
+[Unit]
+Description=Start ZUAEF Quant Monitor for A-share sessions
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 09:30:00
+OnCalendar=Mon..Fri *-*-* 13:00:00
+Persistent=true
+AccuracySec=2s
+Unit=zuaef-quant-monitor.service
+
+[Install]
+WantedBy=timers.target

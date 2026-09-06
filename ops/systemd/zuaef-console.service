@@ -1,0 +1,18 @@
+# ZUAEF Agent Console — Orange Pi Production Node v1
+# loopback only; reach it via ssh -L 8765:127.0.0.1:8765 (or Tailscale).
+[Unit]
+Description=ZUAEF Agent Console (loopback :8765)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/zuaef-agent
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/zuaef-agent/.venv/bin/zuaef-agent web --host 127.0.0.1 --port 8765 --no-open
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

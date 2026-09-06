@@ -1,0 +1,20 @@
+# ZUAEF Quant Trading Workbench — Orange Pi Production Node v1
+# Serves /, /engineering, /api/scan, /api/watchlist, /api/attention,
+# /api/quant/now and POSTs /api/quant/{ack-buy,ack-sell,skip} — all on
+# loopback; keep it that way (POSTs are loopback-enforced by the server).
+[Unit]
+Description=ZUAEF Quant Trading Workbench (loopback :8787)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/zuaef-agent
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/zuaef-agent/.venv/bin/python %h/zuaef-agent/tools/quant_serve.py --host 127.0.0.1 --port 8787
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
