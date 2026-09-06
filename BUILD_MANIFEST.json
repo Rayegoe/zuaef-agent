@@ -1633,8 +1633,8 @@
     },
     {
       "path": "tests/test_quant_freshness.py",
-      "bytes": 10930,
-      "sha256": "c0bde72c1d747ebe801e3d46ca79a431457f9082f398f6dda06945d071b55899"
+      "bytes": 13465,
+      "sha256": "8a52f9b5725755ebdf1dcf14d9b04cd4f5d50c23c9f8675d7c9208c96ed1d216"
     },
     {
       "path": "tests/test_quant_plugin.py",
@@ -1968,8 +1968,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/freshness.py",
-      "bytes": 5377,
-      "sha256": "5512b731b19b765e6693814805ffac3ae0518b15d363632de95c6ab0b60ab85f"
+      "bytes": 6110,
+      "sha256": "aad046b030b3cce8b07de9796c6f8f678a78d42776067207426e0a79aebada2c"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/plugin.py",
@@ -1978,8 +1978,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
-      "bytes": 21093,
-      "sha256": "5027e51eaea6d884c8d6d268aac0aa0926633a8b676ea3de2499ce5b0400caf4"
+      "bytes": 22099,
+      "sha256": "884fbc34fbbdd624d909dbbe7de8e705c9c15acaed1056def2c917cf1eff7c0b"
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/__init__.py",
