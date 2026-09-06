@@ -1653,8 +1653,8 @@
     },
     {
       "path": "tests/test_quant_trading_monitor.py",
-      "bytes": 19260,
-      "sha256": "29ccc368873e718e22fc47304667c71ce949bea4a61dbc9051fe18203c73b3c4"
+      "bytes": 22169,
+      "sha256": "a018f3b867693d66691293b82cc4b41919c13fb7188f4d795bc25b26ac6266f2"
     },
     {
       "path": "tests/test_quant_v31.py",
@@ -2283,8 +2283,8 @@
     },
     {
       "path": "tools/quant_trading_monitor.py",
-      "bytes": 34253,
-      "sha256": "0ae5293f7c366040adf35bf7202c5b254760f9a092d6863cbd040e048a9e6982"
+      "bytes": 37127,
+      "sha256": "a34ed3c6bf1bb7d2746a70cc7c12ce361cf0259b37df10f319f34f3875d30ae7"
     },
     {
       "path": "tools/quant_v31.py",

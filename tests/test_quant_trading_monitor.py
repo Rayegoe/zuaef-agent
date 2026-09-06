@@ -231,6 +231,7 @@ class TestAckBoundary:
     def test_buy_creates_position_executes_opportunity_and_sell_closes(self, tmp_path, monitor_env):
         store = fresh_store(tmp_path)
         store.opportunities["600001"] = {"state": "READY", "since": "2026-09-02"}
+        store.save()  # materialize seeds: transactions reload from disk
         rc = mon.cmd_ack_buy(SimpleNamespace(symbol="600001", price=9.9, shares=500, time=None), store)
         assert rc == 0 and len(store.positions["open"]) == 1
         assert store.opportunities["600001"]["state"] == "EXECUTED"
@@ -273,6 +274,7 @@ class TestAckVenueNoteSkip:
     def test_sell_rejects_partial_close(self, tmp_path, monitor_env):
         store = fresh_store(tmp_path)
         store.open_position("600001", 9.9, 500, "2026-09-02T10:00:00", SPEC.name)
+        store.save()  # materialize seeds: transactions reload from disk
         rc = mon.cmd_ack_sell(SimpleNamespace(
             symbol="600001", price=10.2, shares=100, time=None, venue="real"), store)
         assert rc == 1 and len(store.positions["open"]) == 1
@@ -280,6 +282,7 @@ class TestAckVenueNoteSkip:
     def test_sell_rejects_venue_mismatch(self, tmp_path, monitor_env):
         store = fresh_store(tmp_path)
         store.open_position("600001", 9.9, 500, "2026-09-02T10:00:00", SPEC.name, venue="paper")
+        store.save()  # materialize seeds: transactions reload from disk
         rc = mon.cmd_ack_sell(SimpleNamespace(
             symbol="600001", price=10.2, shares=500, time=None, venue="real"), store)
         assert rc == 1 and len(store.positions["open"]) == 1
@@ -287,6 +290,7 @@ class TestAckVenueNoteSkip:
     def test_sell_defaults_to_position_venue_and_closes(self, tmp_path, monitor_env):
         store = fresh_store(tmp_path)
         store.open_position("600001", 9.9, 500, "2026-09-02T10:00:00", SPEC.name, venue="real")
+        store.save()  # materialize seeds: transactions reload from disk
         # args without a venue attr (older CLI callers) inherit the position venue
         rc = mon.cmd_ack_sell(SimpleNamespace(
             symbol="600001", price=10.2, shares=500, time=None), store)
@@ -295,6 +299,7 @@ class TestAckVenueNoteSkip:
     def test_skip_records_human_fact_without_touching_lifecycle(self, tmp_path, monitor_env):
         store = fresh_store(tmp_path)
         store.opportunities["600001"] = {"state": "READY", "since": "2026-09-02"}
+        store.save()  # materialize seeds: transactions reload from disk
         rc = mon.cmd_skip(SimpleNamespace(
             symbol="600001", price=9.95, time=None, note="too extended"), store)
         assert rc == 0
@@ -343,3 +348,66 @@ class TestFixtureIsolation:
         state = json.loads((store.dir / "state.json").read_text())
         assert state["market_no_trade"] is (ok["status"] == "NO_TRADE")
         assert state["system_unavailable"] is False
+
+
+# ── ledger transaction lock (concurrent ack safety) ─────────────────────────
+
+
+def _ack_args(state_dir: Path, symbol: str, day: str) -> list[str]:
+    """A real ack-buy CLI invocation (subprocess), like the gateway tool runs."""
+    return [
+        sys.executable,
+        str(Path(mon.__file__)),
+        "--state-dir", str(state_dir),
+        "ack-buy", "--symbol", symbol, "--price", "10.0", "--shares", "100",
+        "--venue", "paper", "--time", f"{day}T10:00:00+08:00",
+    ]
+
+
+def test_parallel_ack_buys_preserve_every_position(tmp_path):
+    """pydantic-ai runs same-response tool calls concurrently, so the three
+    record_trade_outcome calls behind one user message are three parallel
+    ack-buy processes. The unlocked read-modify-write lost a position live
+    (2026-09-07: two BUYs both got p-0001); with the ledger lock every
+    position must land with a distinct id."""
+    import subprocess
+
+    procs = [
+        subprocess.Popen(
+            _ack_args(tmp_path, symbol, day),
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        for symbol, day in (
+            ("600519", "2026-09-01"), ("601799", "2026-09-02"), ("000807", "2026-09-03")
+        )
+    ]
+    for proc in procs:
+        _, stderr = proc.communicate(timeout=120)
+        assert proc.returncode == 0, stderr.decode()
+
+    positions = json.loads((tmp_path / "positions.json").read_text())
+    assert sorted(p["symbol"] for p in positions["open"]) == ["000807", "600519", "601799"]
+    assert len({p["id"] for p in positions["open"]}) == 3
+    assert positions["next_id"] == 4
+
+
+def test_ack_buy_blocks_while_ledger_lock_is_held(tmp_path):
+    """The transaction lock must actually engage: a writer holding the lock
+    blocks ack-buy until release; the ack then completes correctly."""
+    import fcntl
+    import subprocess
+    import time
+
+    lock_path = tmp_path / ".ledger.lock"
+    with open(lock_path, "a+") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        proc = subprocess.Popen(
+            _ack_args(tmp_path, "600519", "2026-09-01"),
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        time.sleep(2.0)
+        assert proc.poll() is None, "ack-buy must block while the ledger lock is held"
+        fcntl.flock(fh, fcntl.LOCK_UN)
+    assert proc.wait(timeout=120) == 0
+    positions = json.loads((tmp_path / "positions.json").read_text())
+    assert len(positions["open"]) == 1 and positions["open"][0]["symbol"] == "600519"

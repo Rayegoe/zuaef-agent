@@ -43,9 +43,11 @@ platform). `--state-dir` isolates fixture/replay runs from real results.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import sys
 import time
+from contextlib import contextmanager
 from datetime import date, datetime
 from datetime import time as dtime
 from pathlib import Path
@@ -213,6 +215,35 @@ class Store:
         self._alerts_path.parent.mkdir(parents=True, exist_ok=True)
         with self._alerts_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(alert, ensure_ascii=False, default=str) + "\n")
+
+    def reload(self) -> None:
+        """Re-read the canonical files, discarding stale in-memory state."""
+        self.opportunities = _read_json(self.dir / "opportunities.json", {})
+        self.positions = _read_json(self.dir / "positions.json", {"open": [], "closed": [], "next_id": 1})
+        self.forward = _read_json(self.dir / "forward.json", {"observations": []})
+
+    @contextmanager
+    def transaction(self):
+        """Serialize one read-modify-write transaction on the canonical ledger.
+
+        Concurrent writers are real (reproduced live 2026-09-07: pydantic-ai
+        runs same-response tool calls concurrently, so parallel ack-buys both
+        read ``next_id=1`` and last-writer-wins silently lost a position).
+        The lock is per TRANSACTION, not per process: long-running loops
+        (``session``) re-enter per cycle, so an ack from another process
+        waits at most one cycle instead of being locked out for the session.
+        Every mutating command must hold this lock across its reload →
+        mutate → save span; ``save()`` inside the lock publishes exactly the
+        state it mutated.
+        """
+        self.dir.mkdir(parents=True, exist_ok=True)
+        with (self.dir / ".ledger.lock").open("a+") as lock_fh:
+            fcntl.flock(lock_fh, fcntl.LOCK_EX)
+            try:
+                self.reload()
+                yield
+            finally:
+                fcntl.flock(lock_fh, fcntl.LOCK_UN)
 
     def alerts_today(self, today: str, kinds: set[str]) -> int:
         if not self._alerts_path.exists():
@@ -592,20 +623,21 @@ def cmd_ack_buy(args, store: Store) -> int:
         print(json.dumps({"error": f"venue must be one of {list(VENUES)}"}), file=sys.stderr)
         return 1
     when = _ack_time(args.time)
-    position = store.open_position(args.symbol.upper(), float(args.price), int(args.shares), when, spec.name, venue=venue)
-    opp = store.opportunities.get(position["symbol"])
-    if opp and opp.get("state") in (ST_NEAR, ST_READY, ST_WATCH):
-        opp["state"] = ST_EXECUTED
-        opp["since"] = when[:10]
-    store.record_forward("EXECUTED", position["symbol"], when[:10], float(args.price), position["id"])
-    store.append_alert({
-        "ts": when, "day": when[:10], "type": EVENT_POSITION_OPENED, "symbol": position["symbol"],
-        "price": float(args.price), "what": "user BUY acknowledged",
-        "why": f"{position['id']} {args.shares} shares @ {args.price}",
-        "venue": venue, "note": note,
-        "conditions": None, "invalidation": "close via ack-sell", "data_trust": "USER_CONFIRMED",
-    })
-    store.save()
+    with store.transaction():
+        position = store.open_position(args.symbol.upper(), float(args.price), int(args.shares), when, spec.name, venue=venue)
+        opp = store.opportunities.get(position["symbol"])
+        if opp and opp.get("state") in (ST_NEAR, ST_READY, ST_WATCH):
+            opp["state"] = ST_EXECUTED
+            opp["since"] = when[:10]
+        store.record_forward("EXECUTED", position["symbol"], when[:10], float(args.price), position["id"])
+        store.append_alert({
+            "ts": when, "day": when[:10], "type": EVENT_POSITION_OPENED, "symbol": position["symbol"],
+            "price": float(args.price), "what": "user BUY acknowledged",
+            "why": f"{position['id']} {args.shares} shares @ {args.price}",
+            "venue": venue, "note": note,
+            "conditions": None, "invalidation": "close via ack-sell", "data_trust": "USER_CONFIRMED",
+        })
+        store.save()
     print(json.dumps({"position": position["id"], "symbol": position["symbol"], "state": "HOLD", "venue": venue}, ensure_ascii=False))
     return 0
 
@@ -635,20 +667,33 @@ def cmd_ack_sell(args, store: Store) -> int:
         return 1
     note = getattr(args, "note", None) or ""
     when = _ack_time(args.time)
-    closed = store.close_position(position, float(args.price), int(args.shares), when)
-    # the position is gone; the symbol's opportunity lifecycle resumes
-    opp = store.opportunities.get(symbol)
-    if opp and opp.get("state") == ST_EXECUTED:
-        store.opportunities[symbol] = {**opp, "state": ST_WATCH, "since": when[:10]}
-    store.record_forward("CLOSED", symbol, when[:10], float(args.price), closed["id"])
-    store.append_alert({
-        "ts": when, "day": when[:10], "type": EVENT_POSITION_CLOSED, "symbol": symbol,
-        "price": float(args.price), "what": "user SELL acknowledged",
-        "why": f"{closed['id']} closed, pnl {closed['pnl']}",
-        "venue": venue, "note": note,
-        "conditions": None, "invalidation": None, "data_trust": "USER_CONFIRMED",
-    })
-    store.save()
+    with store.transaction():
+        # Re-resolve the position inside the lock: a concurrent writer may
+        # have closed it between the pre-check above and this transaction.
+        open_positions = [p for p in store.positions["open"] if p["symbol"] == symbol]
+        if not open_positions:
+            print(json.dumps({"error": f"no open position for {symbol}"}), file=sys.stderr)
+            return 1
+        position = open_positions[0]
+        if int(args.shares) != int(position["shares"]):
+            print(json.dumps({
+                "error": f"Phase 1 closes the full position only: open {position['shares']} shares, got {args.shares}",
+            }), file=sys.stderr)
+            return 1
+        closed = store.close_position(position, float(args.price), int(args.shares), when)
+        # the position is gone; the symbol's opportunity lifecycle resumes
+        opp = store.opportunities.get(symbol)
+        if opp and opp.get("state") == ST_EXECUTED:
+            store.opportunities[symbol] = {**opp, "state": ST_WATCH, "since": when[:10]}
+        store.record_forward("CLOSED", symbol, when[:10], float(args.price), closed["id"])
+        store.append_alert({
+            "ts": when, "day": when[:10], "type": EVENT_POSITION_CLOSED, "symbol": symbol,
+            "price": float(args.price), "what": "user SELL acknowledged",
+            "why": f"{closed['id']} closed, pnl {closed['pnl']}",
+            "venue": venue, "note": note,
+            "conditions": None, "invalidation": None, "data_trust": "USER_CONFIRMED",
+        })
+        store.save()
     print(json.dumps({"closed": closed["id"], "pnl": closed["pnl"], "venue": venue}, ensure_ascii=False))
     return 0
 
@@ -665,23 +710,27 @@ def cmd_skip(args, store: Store) -> int:
         return 1
     when = _ack_time(args.time)
     note = getattr(args, "note", None) or ""
-    store.record_forward("SKIP", symbol, when[:10], price)
-    store.append_alert({
-        "ts": when, "day": when[:10], "type": EVENT_HUMAN_SKIP, "symbol": symbol,
-        "price": price, "what": "user skipped the opportunity",
-        "why": note or "human decided not to act",
-        "venue": None, "note": note,
-        "conditions": None, "invalidation": None, "data_trust": "USER_CONFIRMED",
-    })
-    store.save()
+    with store.transaction():
+        store.record_forward("SKIP", symbol, when[:10], price)
+        store.append_alert({
+            "ts": when, "day": when[:10], "type": EVENT_HUMAN_SKIP, "symbol": symbol,
+            "price": price, "what": "user skipped the opportunity",
+            "why": note or "human decided not to act",
+            "venue": None, "note": note,
+            "conditions": None, "invalidation": None, "data_trust": "USER_CONFIRMED",
+        })
+        store.save()
     print(json.dumps({"skipped": symbol, "day": when[:10]}, ensure_ascii=False))
     return 0
 
 
 def cmd_cycle(args, store: Store) -> int:
     cfg, spec = _load_strategy()
-    result = run_cycle(store, active_cfg=cfg, spec=spec, state_dir=store.dir)
-    settle_forward(store)
+    # One cycle = one transaction: the scan runs under the lock, so a
+    # concurrent ack waits at most one scan instead of racing the ledger.
+    with store.transaction():
+        result = run_cycle(store, active_cfg=cfg, spec=spec, state_dir=store.dir)
+        settle_forward(store)
     print(json.dumps(result, ensure_ascii=False, default=str))
     return 0 if result["status"] in ("NO_TRADE", "ALERTS", "MARKET_CLOSED") else 3
 
@@ -695,8 +744,12 @@ def cmd_session(args, store: Store) -> int:
     while time.monotonic() < deadline:
         started = time.perf_counter()
         try:
-            result = run_cycle(store, active_cfg=cfg, spec=spec, state_dir=store.dir)
-            settle_forward(store)
+            # Per-cycle transaction: each cycle reloads the canonical files,
+            # so acks written by other processes between cycles are picked
+            # up instead of being overwritten by a stale in-memory copy.
+            with store.transaction():
+                result = run_cycle(store, active_cfg=cfg, spec=spec, state_dir=store.dir)
+                settle_forward(store)
         except Exception as exc:  # noqa: BLE001 — the loop must survive a bad cycle
             result = {"status": "SYSTEM_UNAVAILABLE", "events": [], "error": repr(exc)}
         cycles += 1
