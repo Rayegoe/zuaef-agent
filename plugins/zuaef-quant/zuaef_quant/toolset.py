@@ -573,11 +573,15 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         evidence and scan freshness. Use this instead of refusing to analyze
         an off-pool symbol: not being in the candidate pool only means it
         cannot produce READY/NEAR, never that it cannot be researched."""
-        args = ["symbol-context", "--symbol", str(symbol)]
+        # ``--state-dir`` is a top-level monitor option: it MUST precede the
+        # subcommand for argparse.
+        args = [
+            "--state-dir", str(workspace_root / "artifacts" / "quant" / "trading"),
+            "symbol-context", "--symbol", str(symbol),
+        ]
         scope = _analysis_scope(ctx)
         if scope:
             args += ["--scope", scope]
-        args += ["--state-dir", str(workspace_root / "artifacts" / "quant" / "trading")]
         try:
             stdout = _run(QUANT_MONITOR_SCRIPT, args, quant_python, SYMBOL_CONTEXT_TIMEOUT_S)
         except subprocess.TimeoutExpired:

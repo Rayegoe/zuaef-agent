@@ -296,12 +296,30 @@ class TestWatchlistTools:
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
         json.loads(toolset.tools["get_symbol_context"].function(ctx, "600460"))
-        assert calls[0][0] == "symbol-context"
+        # argparse contract: top-level --state-dir precedes the subcommand
+        assert calls[0][0] == "--state-dir"
+        assert "symbol-context" in calls[0][:3]
         assert "--scope" in calls[0] and calls[0][calls[0].index("--scope") + 1] == "oc_group_a"
-        assert "--state-dir" in calls[0]
         # scope-less run still works: membership simply omits the scope read
         json.loads(toolset.tools["get_symbol_context"].function(_deps(tmp_path, {}), "600460"))
         assert "--scope" not in calls[1]
+
+
+def test_monitor_parser_accepts_the_tool_argv(tmp_path: Path):
+    """End-to-end argv contract: the exact arguments the toolset builds are
+    accepted by the REAL monitor argparse (run 5936e0ed passed tool facts
+    but died at the parser because --state-dir trailed the subcommand)."""
+    import subprocess
+
+    repo = Path(__file__).parents[1]
+    argv = [
+        sys.executable, str(repo / "tools" / "quant_trading_monitor.py"),
+        "--state-dir", str(tmp_path / "trading"),
+        "symbol-context", "--symbol", "ABC",  # invalid code: stops pre-network
+    ]
+    proc = subprocess.run(argv, capture_output=True, text=True, cwd=repo)
+    assert proc.returncode == 2, proc.stderr[-400:]
+    assert "6 digits" in proc.stdout
 
 
 # ---------------------------------------------------------------------------
