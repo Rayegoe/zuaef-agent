@@ -61,6 +61,7 @@ class RunReceipt(BaseModel):
     outcome: str
     usage: dict[str, Any] = Field(default_factory=dict)
     usage_complete: bool = False
+    usage_limits: dict[str, int | None] = Field(default_factory=dict)
     artifact_facts: list[ArtifactFact] = Field(default_factory=list)
     tool_effect_facts: list[ToolEffectFact] = Field(default_factory=list)
     knowledge_updates: list[str] = Field(default_factory=list)
@@ -93,6 +94,7 @@ class PauseReceipt(BaseModel):
     knowledge_updates: list[str] = Field(default_factory=list)
     usage: dict[str, Any] = Field(default_factory=dict)
     usage_complete: bool = False
+    usage_limits: dict[str, int | None] = Field(default_factory=dict)
     step_store: str | None = None
     tool_result_store: str | None = None
     composition: CompositionSnapshot | None = None

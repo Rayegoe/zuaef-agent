@@ -288,3 +288,61 @@ def test_validate_profile_accepts_and_rejects(tmp_path: Path):
             discover=dict,
             version_for=_vf,
         )
+
+
+# ---------------------------------------------------------------------------
+# M2 T003: the receipt freezes the usage boundaries that were configured when
+# the run was accepted — a limit_reached post-mortem never guesses them.
+# ---------------------------------------------------------------------------
+
+
+def test_limit_reached_receipt_freezes_configured_usage_limits(
+    tmp_path: Path, monkeypatch
+):
+    _write_profile(tmp_path, "writing")
+
+    def two_requests(messages, info):
+        has_return = any(
+            getattr(part, "part_kind", None) == "tool-return"
+            for message in messages
+            for part in getattr(message, "parts", [])
+        )
+        if not has_return:
+            return ModelResponse(parts=[ToolCallPart("list_materials", {"query": "x"})])
+        return _final()
+
+    _use_model(monkeypatch, two_requests)
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(exist_ok=True)
+    settings = AgentSettings(
+        model="test",
+        workspace_root=workspace,
+        runtime_state_root=tmp_path / ".zuaef-state",
+        enable_planning=False,
+        enable_skills=False,
+        request_limit=1,
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.build_profile_agent",
+        lambda settings, run_id=None, profile=None, **kw: _build_with_discover(
+            settings, run_id=run_id, profile=profile, **kw
+        ),
+    )
+
+    outcome = start_profile_run(
+        settings=settings,
+        profile="writing",
+        prompt="list materials then answer",
+        conversation_id="conv-limit-1",
+        config_root=_config_root(tmp_path),
+    )
+
+    assert isinstance(outcome, TerminalRun)
+    assert outcome.receipt.execution_state == "limit_reached"
+    # frozen at acceptance, exactly as configured for this run
+    assert outcome.receipt.usage_limits == {
+        "request_limit": settings.request_limit,
+        "tool_calls_limit": settings.tool_calls_limit,
+        "total_tokens_limit": settings.total_tokens_limit,
+    }
+    assert "request_limit" in (outcome.receipt.error or "")

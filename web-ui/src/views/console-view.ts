@@ -121,6 +121,8 @@ export class ZuaefConsole extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    const runId = new URLSearchParams(window.location.search).get("run");
+    if (runId) this.selectRun(runId);
     void this.reloadRuns();
   }
 
@@ -256,7 +258,12 @@ export class ZuaefConsole extends LitElement {
     try {
       const projection = await api.getRun(runId);
       if (!isCurrent()) return;
+      const firstTerminal = this.projection?.run.run_id !== runId ||
+        this.projection.run.status !== projection.run.status;
       this.projection = projection;
+      if (firstTerminal && ["failed", "limit_reached"].includes(projection.run.status)) {
+        this.selectInspectorView("inspection");
+      }
       this.projectionError = "";
       document.title =
         `${this.projection.run.display_label} — ZUAEF Console`;

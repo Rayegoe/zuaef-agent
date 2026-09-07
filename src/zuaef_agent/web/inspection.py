@@ -331,6 +331,11 @@ def inspect_run(
         "input_tokens": usage_input,
         "output_tokens": usage_output,
         "usage_source": usage_source,
+        "usage_complete": run.get("usage_complete"),
+        "usage_limits": dict(_mapping(run.get("usage_limits"))),
+        "runtime_reason": _text(run.get("error"), limit=1200),
+        "limit_boundary": run.get("limit_boundary", "UNKNOWN"),
+        "activity": run.get("activity", "UNKNOWN"),
     }
 
     return {
@@ -479,6 +484,11 @@ def render_inspection_markdown(
             ("Input tokens", summary.get("input_tokens")),
             ("Output tokens", summary.get("output_tokens")),
             ("Usage source", summary.get("usage_source")),
+            ("Usage complete", summary.get("usage_complete")),
+            ("Configured limits", summary.get("usage_limits") or "UNKNOWN"),
+            ("Runtime reason", summary.get("runtime_reason")),
+            ("Limit boundary", summary.get("limit_boundary")),
+            ("Activity", summary.get("activity")),
         )
         lines.extend(
             f"{label}: {_markdown_value(value)}" for label, value in summary_rows

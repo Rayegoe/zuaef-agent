@@ -729,13 +729,27 @@ NOW_MATERIAL_EVENTS = {"NEW_READY", "POSITION_EXIT_ALERT", "LIVE_CONNECTION_LOST
 NOW_HUMAN_EVENTS = {"POSITION_OPENED", "POSITION_CLOSED", "HUMAN_SKIP"}
 
 
-def in_trading_session(now: datetime) -> bool:
+def market_phase(now: datetime) -> str:
     """A-share session clock. A stdlib mirror of the monitor's rule: the
     stdlib-only renderer/server must not import the pandas-loading monitor."""
+    if now.tzinfo is not None:
+        now = now.astimezone(TZ_SHANGHAI)
     if now.weekday() >= 5:
-        return False
+        return "MARKET_CLOSED"
     t = now.time()
-    return SESSION_AM[0] <= t <= SESSION_AM[1] or SESSION_PM[0] <= t <= SESSION_PM[1]
+    if t < SESSION_AM[0]:
+        return "PRE_OPEN"
+    if t < SESSION_AM[1]:
+        return "OPEN_AM"
+    if t < SESSION_PM[0]:
+        return "LUNCH_BREAK"
+    if t < SESSION_PM[1]:
+        return "OPEN_PM"
+    return "MARKET_CLOSED"
+
+
+def in_trading_session(now: datetime) -> bool:
+    return market_phase(now) in {"OPEN_AM", "OPEN_PM"}
 
 
 def _parse_ts(value) -> datetime | None:
@@ -823,20 +837,23 @@ def now_snapshot(
     universe = read_json(active_symbols_path) or {}
     universe_size = len(universe.get("symbols") or []) or None
 
-    heartbeat_at = soak[-1].get("ts") if soak else None
-    last_scan_at = next((r.get("ts") for r in reversed(soak) if (r.get("symbols") or 0) > 0), None)
+    heartbeat_at = state.get("heartbeat_at") or (soak[-1].get("ts") if soak else None)
+    last_scan_at = state.get("last_scan_at") or next((r.get("ts") for r in reversed(soak) if (r.get("symbols") or 0) > 0), None)
     hb_dt, scan_dt = _parse_ts(heartbeat_at), _parse_ts(last_scan_at)
     now_dt = _parse_ts(now.isoformat()) or now
     hb_age = int((now_dt - hb_dt).total_seconds()) if hb_dt else None
     scan_age = int((now_dt - scan_dt).total_seconds()) if scan_dt else None
     expected_live = in_trading_session(now_dt)
     stale = bool(expected_live and hb_age is not None and hb_age > NOW_STALE_AFTER_S)
-    if not state:
+    if not state or (expected_live and hb_dt is None):
         runtime = "UNKNOWN"
     elif stale:
         runtime = "STALE"
     else:
         runtime = "HEALTHY"
+    tick_dt = _parse_ts(state.get("market_tick_at"))
+    tick_age = int((now_dt - tick_dt).total_seconds()) if tick_dt else None
+    freshness = "UNKNOWN" if tick_age is None else ("STALE" if expected_live and tick_age > NOW_STALE_AFTER_S else "CURRENT" if expected_live else "LAST_OBSERVED")
 
     briefs = load_briefs(briefs_dir)
     material = _latest_events(alerts, NOW_MATERIAL_EVENTS)
@@ -865,6 +882,8 @@ def now_snapshot(
             "kind": "EXIT", "symbol": sym, "ts": ts, "price": pos.get("price") or ev.get("price"),
             "why": ev.get("why"), "entry_price": pos.get("entry_price"),
             "pnl": pos.get("pnl"), "venue": pos.get("venue"),
+            "trigger_close_evidence": pos.get("exit_evidence"),
+            "latest_close_evidence": pos.get("latest_close_evidence"),
             "agent": agent_for(sym, ts), "human": human_for(sym),
         })
     if state.get("system_unavailable"):
@@ -888,9 +907,14 @@ def now_snapshot(
         "generated_at": now.isoformat(timespec="seconds"),
         "present": bool(state),
         "as_of": state.get("as_of"),
+        "cycle_at": state.get("cycle_at"),
+        "market_tick_at": state.get("market_tick_at"),
+        "market_tick_age_seconds": tick_age,
+        "freshness": freshness,
         "day": state.get("day"),
         "status": state.get("status"),
         "market": "OPEN" if expected_live else "CLOSED",
+        "market_phase": market_phase(now_dt),
         "expected_live": expected_live,
         "runtime": runtime,
         "stale": stale,
@@ -1736,7 +1760,10 @@ function renderNow(n){
   const cells = [
     ['市场', n.market, n.market==='OPEN'?'var(--green)':'var(--mut)'],
     ['Runtime', n.runtime, n.runtime==='HEALTHY'?'var(--green)':(n.runtime==='STALE'?'var(--red)':'var(--amber)')],
-    ['交易时段', n.expected_live?'ACTIVE':'CLOSED', n.expected_live?'var(--green)':'var(--mut)'],
+    ['交易时段', n.market_phase || 'UNKNOWN', n.expected_live?'var(--green)':'var(--mut)'],
+    ['周期时间', nowTs(n.cycle_at)],
+    ['行情 tick', n.market_tick_at ? `${nowTs(n.market_tick_at)} · age ${fmtAge(n.market_tick_age_seconds)}` : 'UNKNOWN'],
+    ['行情新鲜度', n.freshness || 'UNKNOWN'],
     ['最后心跳', `${nowTs(n.heartbeat_at)} · age ${fmtAge(n.heartbeat_age_seconds)}`],
     ['最后成功扫描', n.last_scan_at ? `${nowTs(n.last_scan_at)} · age ${fmtAge(n.scan_age_seconds)}` : '无真实扫描记录'],
     ['扫描覆盖', cov],
@@ -1819,6 +1846,8 @@ function actionCardHTML(it){
             ['ask','Ask Agent',null,''],['keep','Keep Watching',null,'']];
   } else if(it.kind === 'EXIT'){
     runtime = `<div class="mut" style="font-size:12.5px">触发: ${esc(it.why||'冻结退出规则')}</div>`;
+    const evidence = (label, e) => `<div class="mut" style="font-size:12px">${label}: close ${esc(String(e?.close_value??'UNKNOWN'))} · close_date ${esc(e?.close_date??'UNKNOWN')} · MA5 ${esc(String(e?.ma5_value??'UNKNOWN'))} · source ${esc(e?.bar_source??'UNKNOWN')}</div>`;
+    runtime += evidence('原始触发证据', it.trigger_close_evidence) + evidence('最新日线观察（不回填历史触发）', it.latest_close_evidence);
     btns = [['ack-sell','Paper Sell','paper','primary'],['ack-sell','Record Real Sell','real','danger'],['ask','Ask Agent',null,'']];
   } else {
     runtime = `<div class="mut" style="font-size:12.5px">${esc(it.why||'系统级事件 — 需要人知晓')}</div>`;

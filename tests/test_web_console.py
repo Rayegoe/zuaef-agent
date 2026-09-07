@@ -535,7 +535,7 @@ def test_inspection_incomplete_request_is_not_running(tmp_path: Path) -> None:
     assert data["unknown_facts"]["incomplete_requests"] == [
         {"request": "model-request-0", "step": 1}
     ]
-    assert "running" not in render_run_markdown(
+    assert "activity: running_model" in render_run_markdown(
         "r-incomplete-inspection", settings=settings
     ).lower()
 
@@ -1083,7 +1083,7 @@ def test_analysis_observed_facts_render_known_empty_collections() -> None:
 
     assert "- Execution state: unknown" in rendered
     assert "- Model: unknown" in rendered
-    assert "- Tools (0 total, 0 shown, 0 omitted):\n  - none" in rendered
+    assert "- Tools (unknown total, 0 shown, unknown omitted):\n  - unknown" in rendered
     assert "- Artifacts (0 total, 0 shown, 0 omitted):\n  - none" in rendered
     assert analysis_store._observed_value("") == "unknown"
 
@@ -1479,3 +1479,60 @@ def test_api_events_route_rejects_unknown_and_invalid(tmp_path: Path) -> None:
         invalid = client.get("/api/runs/bad%20id/events")
         assert invalid.status_code == 400
         assert invalid.json()["error"]["code"] == "INVALID_RUN_ID"
+
+
+# ---------------------------------------------------------------------------
+# M2 T004: LIMIT_REACHED is a first-class projection — configured limits,
+# observed usage, runtime reason; unknown boundary stays UNKNOWN.
+# ---------------------------------------------------------------------------
+
+
+def test_limit_reached_receipt_projects_limits_and_reason(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _seed_sync(tmp_path, settings, "r-limit", COMPLETED_RUN)
+    _write_receipt(settings, "r-limit", _terminal_receipt(
+        "r-limit",
+        execution_state="limit_reached",
+        outcome="",
+        usage={"requests": 12, "tool_calls": 25, "input_tokens": 746586, "output_tokens": 20928},
+        usage_complete=True,
+        usage_limits={"request_limit": 12, "tool_calls_limit": 40, "total_tokens_limit": None},
+        error="The next request would exceed the request_limit of 12",
+    ))
+    projection = project_run(_load(settings, "r-limit"))
+    run = projection["run"]
+    assert run["status"] == "limit_reached"
+    assert run["activity"] == "LIMIT_REACHED"
+    assert run["request_count"] == 12  # receipt-only counting, not event-derived
+    assert run["tool_call_count"] == 25
+    assert run["usage_complete"] is True
+    assert run["usage_limits"]["request_limit"] == 12
+    assert run["limit_boundary"] == "UNKNOWN"  # never guessed from token counts
+    assert run["error"].startswith("The next request would exceed")
+
+    data = render_run_json("r-limit", settings=settings)
+    assert data["summary"]["usage_source"] == "receipt_aggregate"
+    assert data["summary"]["requests"] == 12
+    assert data["summary"]["tool_calls"] == 25
+    assert data["summary"]["usage_complete"] is True
+    assert data["summary"]["usage_limits"] == {
+        "request_limit": 12, "tool_calls_limit": 40, "total_tokens_limit": None,
+    }
+    assert data["summary"]["runtime_reason"] == "The next request would exceed the request_limit of 12"
+    markdown = render_run_markdown("r-limit", settings=settings)
+    assert "Status: limit_reached" in markdown
+    assert "Runtime reason: The next request would exceed" in markdown
+    assert "Limit boundary: UNKNOWN" in markdown
+
+
+def test_old_receipt_without_limits_projects_unknown_not_zero(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _write_receipt(settings, "r-legacy-limit", _terminal_receipt(
+        "r-legacy-limit", execution_state="limit_reached",
+        usage={"input_tokens": 100, "output_tokens": 10},
+    ))
+    run = project_run(_load(settings, "r-legacy-limit"))["run"]
+    assert run["usage_limits"] == {}
+    # no receipt aggregate requests and no step events: unknown stays unknown
+    assert run["request_count"] is None
+    assert run["usage_complete"] is False

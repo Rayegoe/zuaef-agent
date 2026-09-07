@@ -224,6 +224,18 @@ export class ZuaefTrajectoryView extends LitElement {
           : ""}
         ${run && run.model ? html`<span class="model">${run.model}</span>` : ""}
       </header>
+      ${run ? html`<div class="diag">
+        ${run.activity ?? "UNKNOWN"} · Profile: ${run.profile ?? "UNKNOWN"} · Model: ${run.model ?? "UNKNOWN"}<br />
+        Run: ${run.run_id}<br />
+        Started: ${run.started_at ?? "UNKNOWN"} · Finished: ${run.finished_at ?? "UNKNOWN"}<br />
+        Elapsed: ${formatDuration(run.duration_ms) || "UNKNOWN"} · Requests: ${run.request_count ?? "UNKNOWN"} · Tools: ${run.tool_call_count ?? "UNKNOWN"}<br />
+        Tokens in/out: ${this.projection?.usage?.input_tokens ?? "UNKNOWN"} / ${this.projection?.usage?.output_tokens ?? "UNKNOWN"}
+        · Usage complete: ${run.usage_complete === undefined || run.usage_complete === null ? "UNKNOWN" : String(run.usage_complete)}<br />
+        Limits: ${Object.keys(run.usage_limits ?? {}).length ? JSON.stringify(run.usage_limits) : "UNKNOWN"}
+        · Boundary: ${run.limit_boundary ?? "UNKNOWN"}<br />
+        Artifacts: ${this.projection?.artifacts.length ?? 0} · Unresolved effects: ${this.projection?.unresolved_effects.length ?? 0}
+        ${run.error ? html`<br />Runtime reason: ${run.error}` : ""}
+      </div>` : ""}
       ${this.projection?.diagnostics?.length
         ? this.projection.diagnostics.map(
             (line) => html`<div class="diag">${line}</div>`,

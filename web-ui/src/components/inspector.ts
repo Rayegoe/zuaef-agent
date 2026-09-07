@@ -338,6 +338,10 @@ export class ZuaefInspector extends LitElement {
           <dt>Input tokens</dt><dd>${formatTokens(summary.input_tokens ?? undefined) || "Unknown"}</dd>
           <dt>Output tokens</dt><dd>${formatTokens(summary.output_tokens ?? undefined) || "Unknown"}</dd>
           <dt>Usage basis</dt><dd>${summary.usage_source ?? "Unknown"}</dd>
+          <dt>Usage complete</dt><dd>${summary.usage_complete == null ? "UNKNOWN" : String(summary.usage_complete)}</dd>
+          <dt>Configured limits</dt><dd>${Object.keys(summary.usage_limits ?? {}).length ? JSON.stringify(summary.usage_limits) : "UNKNOWN"}</dd>
+          <dt>Runtime reason</dt><dd>${summary.runtime_reason ?? "UNKNOWN"}</dd>
+          <dt>Limit boundary</dt><dd>${summary.limit_boundary ?? "UNKNOWN"}</dd>
         </dl>
 
         ${this.renderRequestRanking("Slowest requests", inspection.rankings.slowest_requests)}
@@ -378,7 +382,7 @@ export class ZuaefInspector extends LitElement {
       return html`<div class="scroll">
         <h3>Run Analysis</h3>
         <p class="inspection-note">
-          The Agent receives only bounded deterministic inspection facts. It does not browse, use a shell, or modify the subject run.
+          Optional model analysis consumes its own usage budget and can fail. Inspection above is deterministic and makes no model call.
         </p>
         <button class="analysis-action" ?disabled=${this.analysisLoading} @click=${() => this.createAnalysis()}>
           ${this.analysisLoading ? "Starting…" : "Create analysis.md"}

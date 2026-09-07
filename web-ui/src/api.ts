@@ -14,8 +14,13 @@ export interface RunView {
   started_at: string | null;
   finished_at: string | null;
   duration_ms: number | null;
-  request_count: number;
-  tool_call_count: number;
+  request_count: number | null;
+  tool_call_count: number | null;
+  activity?: string;
+  usage_complete?: boolean | null;
+  usage_limits?: Record<string, number | null>;
+  error?: string | null;
+  limit_boundary?: string;
 }
 
 export interface UsageView {
@@ -126,6 +131,10 @@ export interface RunInspection {
     input_tokens: number | null;
     output_tokens: number | null;
     usage_source: string | null;
+    usage_complete?: boolean | null;
+    usage_limits?: Record<string, number | null>;
+    runtime_reason?: string | null;
+    limit_boundary?: string;
   };
   rankings: {
     slowest_requests: InspectionRequestFact[];

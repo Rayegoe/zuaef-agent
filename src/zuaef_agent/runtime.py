@@ -244,6 +244,7 @@ def finalize_terminal(
     error: str | None = None,
     composition: CompositionSnapshot | None = None,
     bindings: dict[str, str] | None = None,
+    usage_limits: dict[str, int | None] | None = None,
 ) -> TerminalRun:
     """Host settlement boundary: record operational execution facts only.
 
@@ -284,6 +285,7 @@ def finalize_terminal(
         outcome=outcome,
         usage=usage,
         usage_complete=_usage_complete(usage),
+        usage_limits=usage_limits or {},
         artifact_facts=artifact_facts,
         tool_effect_facts=tool_effect_facts,
         knowledge_updates=knowledge_updates,
@@ -364,6 +366,7 @@ def _build_paused(
     snapshot: dict[str, str],
     composition: CompositionSnapshot | None = None,
     bindings: dict[str, str] | None = None,
+    usage_limits: dict[str, int | None] | None = None,
 ) -> PausedRun:
     workspace = settings.workspace_root.resolve()
     artifact_facts = _changed_artifact_facts(workspace, snapshot)
@@ -382,6 +385,7 @@ def _build_paused(
         knowledge_updates=KnowledgeStore(workspace).list_generated_by_run(run_id),
         usage=usage,
         usage_complete=_usage_complete(usage),
+        usage_limits=usage_limits or {},
         step_store=str(settings.step_store_dir)
         if settings.enable_step_persistence
         else None,
@@ -465,6 +469,11 @@ def execute_run(
     )
 
     usage_tracker = RunUsage()
+    frozen_limits = {
+        "request_limit": limits.request_limit,
+        "tool_calls_limit": limits.tool_calls_limit,
+        "total_tokens_limit": limits.total_tokens_limit,
+    }
 
     def _settle(
         execution_state: ExecutionState,
@@ -492,6 +501,7 @@ def execute_run(
             error=error,
             composition=composition,
             bindings=bindings,
+            usage_limits=frozen_limits,
         )
 
     try:
@@ -548,6 +558,7 @@ def execute_run(
             snapshot=snapshot,
             composition=composition,
             bindings=bindings,
+            usage_limits=frozen_limits,
         )
     # Natural terminal: the model returned plain text. The host settles the
     # receipt from operational facts (artifact byte diff, effect ledger,

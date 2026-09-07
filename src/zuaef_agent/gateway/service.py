@@ -15,6 +15,7 @@ output is ever interpreted as approval.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -48,6 +49,7 @@ from .renderer import (
     render_profile,
     render_status,
     render_terminal,
+    render_run_accepted,
 )
 from .routing import RoutingPolicy
 from .store import ApprovalTokenError, GatewayStore
@@ -67,6 +69,7 @@ Commands:
 /unbind
 /profile [name]
 /status
+/inspect
 /approve
 /deny
 /artifacts
@@ -133,6 +136,7 @@ class GatewayService:
         self.allowed_user_ids = allowed_user_ids
         self.routing = routing_policy or RoutingPolicy()
         self.receipts = ReceiptStore(settings.state_root)
+        self.console_public_base_url = os.getenv("ZUAEF_CONSOLE_PUBLIC_BASE_URL")
 
     # ── dispatch ────────────────────────────────────────────────────────────
 
@@ -216,6 +220,9 @@ class GatewayService:
         run_id = uuid4().hex
         session = session.model_copy(update={"active_run_id": run_id})
         self.store.save_session(session)
+        self._send_text(session, render_run_accepted(
+            run_id=run_id, profile=profile, public_base_url=self.console_public_base_url,
+        ))
         # Normal-turn continuity (SPEC §15 / T010): a follow-up message in the
         # same conversation resumes the prior terminal run's real history from
         # public persistence — a fresh run_id, the same conversation_id.
@@ -472,6 +479,8 @@ class GatewayService:
             self._cmd_profile(argument, session, chat_type=envelope.chat_type)
         elif command == "status":
             self._cmd_status(session)
+        elif command == "inspect":
+            self._cmd_inspect(session)
         elif command == "approve" or command == "deny":
             self._cmd_resume(session, decision=command)
         elif command == "artifacts":
@@ -697,6 +706,19 @@ class GatewayService:
             ),
         )
         return session
+
+    def _cmd_inspect(self, session: SessionBinding) -> None:
+        from ..web.inspection import render_inspection_markdown, render_run_json
+
+        if not session.last_terminal_run_id:
+            self._send_text(session, "No terminal run in this session to inspect.")
+            return
+        try:
+            inspection = render_run_json(session.last_terminal_run_id, settings=self.settings)
+            text = render_inspection_markdown(inspection, max_chars=7500)
+        except (LookupError, OSError, ValueError) as exc:
+            text = render_error(f"Inspection unavailable: {str(exc)[:300]}")
+        self._send_text(session, text)
 
     def _cmd_status(self, session: SessionBinding) -> None:
         # Fully host-grounded: receipts only, never the model.

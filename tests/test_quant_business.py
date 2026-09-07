@@ -1426,3 +1426,79 @@ class TestQuantHttpApi:
         finally:
             srv.shutdown()
             serve.Handler.writes_enabled = True
+
+
+# ---------------------------------------------------------------------------
+# T001/T007/T008: dashboard phase mirror, host-derived phase, time semantics
+# ---------------------------------------------------------------------------
+
+
+class TestMarketPhaseMirror:
+    @pytest.mark.parametrize("moment,expected", [
+        (datetime(2026, 9, 2, 9, 29, 59), "PRE_OPEN"),
+        (datetime(2026, 9, 2, 9, 30, 0), "OPEN_AM"),
+        (datetime(2026, 9, 2, 12, 18, 0), "LUNCH_BREAK"),
+        (datetime(2026, 9, 2, 13, 0, 0), "OPEN_PM"),
+        (datetime(2026, 9, 2, 15, 0, 0), "MARKET_CLOSED"),
+        (datetime(2026, 9, 5, 10, 0, 0), "MARKET_CLOSED"),  # Saturday
+    ])
+    def test_renderer_mirror_matches_monitor_rule(self, moment, expected):
+        # naive datetimes are market-local; the stdlib mirror must agree with
+        # the pandas-loading monitor it deliberately does not import
+        import quant_trading_monitor as mon
+        assert biz.market_phase(moment) == expected
+        assert biz.market_phase(moment) == mon.market_phase(moment)
+
+    def test_aware_utc_input_is_converted_to_market_local(self):
+        from datetime import timezone
+        utc_noon = datetime(2026, 9, 2, 4, 18, tzinfo=timezone.utc)  # 12:18 Shanghai
+        assert biz.market_phase(utc_noon) == "LUNCH_BREAK"
+
+
+class TestNowSnapshotTimeSemantics:
+    def _snap(self, env, now):
+        return biz.now_snapshot(
+            trading_dir=env["trading"], briefs_dir=env["briefs"],
+            active_symbols_path=env["active_symbols"], now=now,
+        )
+
+    def test_now_exposes_phase_cycle_tick_and_freshness(self, biz_env):
+        write_now_env(biz_env, state={**NOW_STATE,
+            "cycle_at": "2026-09-04T11:07:42+08:00",
+            "heartbeat_at": "2026-09-04T11:07:42+08:00",
+            "last_scan_at": "2026-09-04T11:07:40+08:00",
+            "market_tick_at": "2026-09-04T11:09:30+08:00",
+            "market_phase": "OPEN_AM",
+        })
+        n = self._snap(biz_env, IN_SESSION)
+        assert n["market_phase"] == "OPEN_AM"
+        assert n["cycle_at"] == "2026-09-04T11:07:42+08:00"
+        assert n["market_tick_at"] == "2026-09-04T11:09:30+08:00"
+        assert n["freshness"] == "CURRENT"
+        # state.json facts win over soak-derived reconstruction
+        assert n["heartbeat_at"] == "2026-09-04T11:07:42+08:00"
+        assert n["last_scan_at"] == "2026-09-04T11:07:40+08:00"
+
+    def test_missing_tick_stays_unknown_never_zero_or_faked(self, biz_env):
+        write_now_env(biz_env, state={**NOW_STATE, "heartbeat_at": "2026-09-04T11:07:42+08:00"})
+        n = self._snap(biz_env, IN_SESSION)
+        assert n["market_tick_at"] is None
+        assert n["freshness"] == "UNKNOWN"
+
+    def test_in_session_without_heartbeat_is_unknown_not_healthy(self, biz_env):
+        write_now_env(biz_env, state={**NOW_STATE})  # no heartbeat_at, empty soak
+        n = self._snap(biz_env, IN_SESSION)
+        assert n["runtime"] == "UNKNOWN"
+
+    def test_market_phase_is_host_clock_not_state_echo(self, biz_env):
+        write_now_env(biz_env, state={**NOW_STATE,
+            "market_phase": "OPEN_AM", "heartbeat_at": "2026-09-04T11:07:42+08:00"})
+        n = self._snap(biz_env, AFTER_CLOSE)
+        assert n["market_phase"] == "MARKET_CLOSED" and n["expected_live"] is False
+
+    def test_stale_tick_freshness_inside_session(self, biz_env):
+        write_now_env(biz_env, state={**NOW_STATE,
+            "heartbeat_at": "2026-09-04T11:07:42+08:00",
+            "market_tick_at": "2026-09-04T11:05:00+08:00"})  # 162s old > 90s window
+        n = self._snap(biz_env, IN_SESSION)
+        assert n["freshness"] == "STALE"

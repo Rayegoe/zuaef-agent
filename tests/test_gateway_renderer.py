@@ -14,6 +14,7 @@ from zuaef_agent.gateway.renderer import (
     render_new_conversation,
     render_pause,
     render_profile,
+    render_run_accepted,
     render_status,
     render_terminal,
 )
@@ -216,3 +217,49 @@ def test_chunk_text_respects_max():
     assert all(len(chunk) <= CHUNK_MAX for chunk in chunks)
     assert "".join(chunks).replace("\n", "") == text.replace("\n", "")
     assert chunk_text("short") == ["short"]
+
+
+# ---------------------------------------------------------------------------
+# M2 T002/T004/T015: deterministic acceptance card, first-class limit card
+# ---------------------------------------------------------------------------
+
+
+def test_render_run_accepted_is_deterministic_host_text():
+    assert render_run_accepted(run_id="abc123def", profile="quant-decision") == (
+        "ACCEPTED · RUNNING\nRun: abc123def\nProfile: quant-decision"
+    )
+
+
+def test_render_run_accepted_console_link_only_when_valid_and_configured():
+    ok = render_run_accepted(run_id="r1", profile="p", public_base_url="https://console.example.net")
+    assert "Console: https://console.example.net/?run=r1" in ok
+    # never guess or leak: credentials, foreign schemes, queries, spaces, garbage
+    for bad in ("http://u:p@host/", "ftp://host/", "https://host/?q=1",
+                "not a url", "https://host/a b", ""):
+        assert "Console:" not in render_run_accepted(run_id="r1", profile=None, public_base_url=bad)
+
+
+def test_render_terminal_limit_reached_is_a_first_class_card():
+    now = datetime.now(UTC)
+    receipt = RunReceipt(
+        run_id="run-limit-1",
+        model="m",
+        started_at=now,
+        finished_at=now,
+        execution_state="limit_reached",  # type: ignore[arg-type]
+        outcome="",
+        usage={"requests": 12, "tool_calls": 25, "input_tokens": 746586, "output_tokens": 20928},
+        usage_complete=True,
+        usage_limits={"request_limit": 12, "tool_calls_limit": 20, "total_tokens_limit": None},
+        error="The next request would exceed the request_limit of 12",
+        artifact_facts=[ArtifactFact(path="a.md", size=1, sha256="x" * 64, change="created")],
+    )
+    text = render_terminal(TerminalRun(presentation="must not leak", receipt=receipt))
+    assert "LIMIT_REACHED" in text
+    assert "Requests: 12 · Tool calls: 25" in text
+    assert "Configured limits: {'request_limit': 12, 'tool_calls_limit': 20, 'total_tokens_limit': None}" in text
+    assert "Limit boundary: UNKNOWN" in text  # never guessed from token counts
+    assert "Runtime reason: The next request would exceed the request_limit of 12" in text
+    assert "Artifacts: 1 · Unresolved effects: 0" in text
+    assert "/inspect" in text
+    assert "must not leak" not in text  # presentation is never a limit diagnosis

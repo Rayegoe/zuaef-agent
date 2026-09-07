@@ -411,3 +411,43 @@ def test_ack_buy_blocks_while_ledger_lock_is_held(tmp_path):
     assert proc.wait(timeout=120) == 0
     positions = json.loads((tmp_path / "positions.json").read_text())
     assert len(positions["open"]) == 1 and positions["open"][0]["symbol"] == "600519"
+
+
+# ---------------------------------------------------------------------------
+# T001: pure host-derived market phase — 12:18 is LUNCH_BREAK, never MARKET_CLOSED
+# ---------------------------------------------------------------------------
+
+
+class TestMarketPhase:
+    @pytest.mark.parametrize("moment,expected", [
+        (datetime(2026, 9, 2, 8, 0, 0, tzinfo=TZ_SH), "PRE_OPEN"),
+        (datetime(2026, 9, 2, 9, 29, 59, tzinfo=TZ_SH), "PRE_OPEN"),
+        (datetime(2026, 9, 2, 9, 30, 0, tzinfo=TZ_SH), "OPEN_AM"),
+        (datetime(2026, 9, 2, 11, 29, 59, tzinfo=TZ_SH), "OPEN_AM"),
+        (datetime(2026, 9, 2, 11, 30, 0, tzinfo=TZ_SH), "LUNCH_BREAK"),
+        (datetime(2026, 9, 2, 12, 18, 0, tzinfo=TZ_SH), "LUNCH_BREAK"),
+        (datetime(2026, 9, 2, 12, 59, 59, tzinfo=TZ_SH), "LUNCH_BREAK"),
+        (datetime(2026, 9, 2, 13, 0, 0, tzinfo=TZ_SH), "OPEN_PM"),
+        (datetime(2026, 9, 2, 14, 59, 59, tzinfo=TZ_SH), "OPEN_PM"),
+        (datetime(2026, 9, 2, 15, 0, 0, tzinfo=TZ_SH), "MARKET_CLOSED"),
+        (datetime(2026, 9, 5, 10, 0, 0, tzinfo=TZ_SH), "MARKET_CLOSED"),  # Saturday
+        (datetime(2026, 9, 6, 14, 0, 0, tzinfo=TZ_SH), "MARKET_CLOSED"),  # Sunday
+        (datetime(2026, 9, 2, 4, 18, 0, tzinfo=ZoneInfo("UTC")), "LUNCH_BREAK"),  # 12:18 SH
+    ])
+    def test_phase_boundaries_are_pinned(self, moment, expected):
+        assert mon.market_phase(moment) == expected
+
+    def test_in_session_is_open_am_pm_only(self):
+        assert mon.in_session(datetime(2026, 9, 2, 12, 18, tzinfo=TZ_SH)) is False
+        assert mon.in_session(datetime(2026, 9, 2, 10, 0, tzinfo=TZ_SH)) is True
+
+    def test_incident_replay_12_18_is_lunch_break_not_market_closed(self, tmp_path, monitor_env, monkeypatch):
+        def boom(*a, **k):
+            raise AssertionError("lunch break must not scan")
+        monkeypatch.setattr(mon, "fetch_batch_quotes", boom)
+        store = fresh_store(tmp_path)
+        result = mon.run_cycle(store, active_cfg=monitor_env.active_cfg, spec=SPEC,
+                               state_dir=store.dir, now=datetime(2026, 9, 2, 12, 18, tzinfo=TZ_SH))
+        assert result["status"] == "LUNCH_BREAK" and result["events"] == []
+        state = json.loads((store.dir / "state.json").read_text())
+        assert state["market_phase"] == "LUNCH_BREAK"

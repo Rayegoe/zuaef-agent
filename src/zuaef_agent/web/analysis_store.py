@@ -122,9 +122,9 @@ def render_observed_facts(facts: RunFacts) -> str:
 
     tools = bounded_projection["tool_sequence"]["sequence"]
     tool_total = run["tool_call_count"]
-    tools_omitted = max(tool_total - len(tools), 0)
+    tools_omitted = max(tool_total - len(tools), 0) if tool_total is not None else "unknown"
     outgoing.append(
-        f"- Tools ({tool_total} total, {len(tools)} shown, "
+        f"- Tools ({_observed_value(tool_total)} total, {len(tools)} shown, "
         f"{tools_omitted} omitted):"
     )
     if tools:
@@ -136,7 +136,7 @@ def render_observed_facts(facts: RunFacts) -> str:
                 f"status={_observed_value(row.get('status'))})"
             )
     else:
-        outgoing.append("  - none")
+        outgoing.append("  - none" if tool_total is not None else "  - unknown")
 
     artifacts = bounded_projection["artifacts"]
     artifact_total = len(projection["artifacts"])

@@ -901,7 +901,8 @@ def test_authoring_task_presents_deliverable_without_approval(
     service.handle(_envelope("改写这篇文章", n=1))
 
     assert surface.approvals == []
-    text = surface.last_text()
+    assert surface.texts[0][1].startswith("ACCEPTED")
+    text = surface.texts[-1][1]
     assert text.startswith(article)
     assert "✅ Completed" in text
     assert "Verified artifacts" not in text  # audit counts are Console-only
@@ -1099,3 +1100,82 @@ def test_gateway_delivery_failure_is_operator_visible_and_truth_preserved(
     combined = "".join(text for _, text in surface.texts)
     assert "✅ Completed" in combined  # the run result is still delivered
     assert "Durable delivery failed for run" in combined  # failure is separate/visible
+
+
+# ---------------------------------------------------------------------------
+# M2 T002/T005: deterministic ACCEPTED before any execution; /inspect is a
+# host-only post-mortem that never starts an agent.
+# ---------------------------------------------------------------------------
+
+
+def test_accepted_is_sent_even_when_the_model_never_responds(tmp_path: Path, monkeypatch):
+    def boom(messages, info):
+        raise RuntimeError("provider down")
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, boom)
+
+    service.handle(_envelope("hello"))
+
+    assert surface.texts[0][1].startswith("ACCEPTED")  # host text, model-independent
+    assert any("Failed" in text for _, text in surface.texts[1:])
+    assert _session(service).last_terminal_run_id
+
+
+def test_inspect_without_terminal_run_never_starts_an_agent(tmp_path: Path, monkeypatch):
+    calls = {"n": 0}
+
+    def fn(messages, info):
+        calls["n"] += 1
+        return _final(outcome="must not run")
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, fn)
+
+    service.handle(_envelope("/inspect"))
+
+    assert "No terminal run in this session to inspect." in surface.last_text()
+    assert calls["n"] == 0
+    session = _session(service)
+    assert session.active_run_id is None and session.last_terminal_run_id is None
+
+
+def test_inspect_renders_deterministic_post_mortem_without_model(tmp_path: Path, monkeypatch):
+    calls = {"n": 0}
+
+    def fn(messages, info):
+        calls["n"] += 1
+        return _final(outcome="checked")
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, fn)
+    service.handle(_envelope("check the post"))
+    assert calls["n"] == 1
+
+    now = datetime.now(UTC)
+    inspected = "run-inspect-1"
+    service.receipts.write(RunReceipt(
+        run_id=inspected,
+        conversation_id=_session(service).conversation_id,
+        model="test",
+        started_at=now,
+        finished_at=now,
+        execution_state="limit_reached",
+        outcome="",
+        usage={"requests": 12, "tool_calls": 25, "input_tokens": 746586, "output_tokens": 20928},
+        usage_complete=True,
+        usage_limits={"request_limit": 12, "tool_calls_limit": 20, "total_tokens_limit": None},
+        error="The next request would exceed the request_limit of 12",
+    ))
+    session = _session(service)
+    service.store.save_session(session.model_copy(update={"last_terminal_run_id": inspected}))
+
+    before = len(surface.texts)
+    service.handle(_envelope("/inspect"))
+    assert len(surface.texts) == before + 1
+    assert calls["n"] == 1  # no additional model call for the inspection
+    text = surface.texts[-1][1]
+    assert f"# Run {inspected}" in text
+    assert "Status: limit_reached" in text
+    assert "Configured limits" in text and "request_limit" in text
+    assert "Runtime reason: The next request would exceed the request_limit of 12" in text
+    assert "Usage complete: True" in text

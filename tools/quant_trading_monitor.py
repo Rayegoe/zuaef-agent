@@ -303,12 +303,39 @@ def now_sh() -> datetime:
     return datetime.now(TZ_SH)
 
 
-def in_session(now: datetime | None = None) -> bool:
+def market_phase(now: datetime | None = None) -> str:
     now = now or now_sh()
+    if now.tzinfo is not None:
+        now = now.astimezone(TZ_SH)
     if now.weekday() >= 5:
-        return False
+        return "MARKET_CLOSED"
     t = now.time()
-    return SESSION_AM[0] <= t <= SESSION_AM[1] or SESSION_PM[0] <= t <= SESSION_PM[1]
+    if t < SESSION_AM[0]:
+        return "PRE_OPEN"
+    if t < SESSION_AM[1]:
+        return "OPEN_AM"
+    if t < SESSION_PM[0]:
+        return "LUNCH_BREAK"
+    if t < SESSION_PM[1]:
+        return "OPEN_PM"
+    return "MARKET_CLOSED"
+
+
+def in_session(now: datetime | None = None) -> bool:
+    return market_phase(now) in {"OPEN_AM", "OPEN_PM"}
+
+
+def market_tick_at(quotes: dict) -> str | None:
+    stamps = []
+    for quote in quotes.values():
+        if not quote or not quote.get("date") or not quote.get("time"):
+            continue
+        try:
+            stamp = datetime.fromisoformat(f"{quote['date']}T{quote['time']}")
+            stamps.append(stamp.replace(tzinfo=TZ_SH) if stamp.tzinfo is None else stamp.astimezone(TZ_SH))
+        except ValueError:
+            continue
+    return max(stamps).isoformat() if stamps else None
 
 
 # ---------------------------------------------------------------------------
@@ -331,7 +358,7 @@ def run_cycle(
     today = now.date()
     day_str = today.isoformat()
     if not in_session(now):
-        status = "MARKET_CLOSED"
+        status = market_phase(now)
         _write_summary(store, status, [], now, day_str, state_dir)
         return {"status": status, "events": [], "symbols": 0}
     # Host-only replay seam. The default live data path stays unchanged.
@@ -483,7 +510,7 @@ def run_cycle(
         price = float(quote["price"])
         hist, _meta = history_read("daily", f"{symbol}_qfq")
         hist_close = (
-            pd.to_numeric(hist.sort_values("date")["close"], errors="coerce").dropna()
+            pd.to_numeric((hist.sort_values("date") if "date" in hist else hist)["close"], errors="coerce").dropna()
             if hist is not None
             else None
         )
@@ -492,9 +519,21 @@ def run_cycle(
             "pnl": round((price - float(position["entry_price"])) * position["shares"], 2),
         }
         state, reason = evaluate_exit(position, price, hist_close, spec, today)
+        close_evidence = {"close_value": None, "close_date": None, "ma5_value": None, "bar_source": None}
+        if hist_close is not None and len(hist_close) >= 5:
+            close_evidence["close_value"] = float(hist_close.iloc[-1])
+            close_evidence["ma5_value"] = float(hist_close.iloc[-5:].mean())
+            raw_date = hist.loc[hist_close.index[-1], "date"] if "date" in hist else None
+            parsed_date = pd.to_datetime(raw_date, errors="coerce")
+            close_evidence["close_date"] = parsed_date.date().isoformat() if not pd.isna(parsed_date) else None
+            close_evidence["bar_source"] = (_meta or {}).get("source")
+        positions_live[symbol]["latest_close_evidence"] = close_evidence
+        if reason and reason.startswith("close_below_ma5") and close_evidence["close_date"] and close_evidence["close_date"] < day_str:
+            reason = reason.replace("close_below_ma5", "latest_confirmed_close_below_ma5", 1)
         if state != position["state"]:
             position["state"] = state
             position["exit_reason"] = reason
+            position["exit_evidence"] = close_evidence if reason and "close_below_ma5" in reason else None
             if state == "EXIT_ALERT":
                 emit(
                     EVENT_POSITION_EXIT_ALERT,
@@ -508,6 +547,7 @@ def run_cycle(
                             "shares": position["shares"],
                             "pnl": round((price - float(position["entry_price"])) * position["shares"], 2),
                             "holding_days": (today - date.fromisoformat(position["entry_date"])).days,
+                            **close_evidence,
                         },
                         "invalidation": "cleared only by user SELL acknowledgement",
                         "data_trust": semantic_status,
@@ -542,18 +582,26 @@ def run_cycle(
         store, status, events, now, day_str, state_dir,
         attention=attention, symbols=len(quote_symbols), positions_live=positions_live,
         data_trust=data_trust,
+        tick_at=market_tick_at(quotes),
     )
     return {"status": status, "events": events, "symbols": len(quote_symbols), "data_trust": data_trust}
 
 
 def _write_summary(store: Store, status: str, events: list, now: datetime, day: str,
                    state_dir: Path, attention: list[dict] | None = None, symbols: int = 0,
-                   positions_live: dict | None = None, data_trust: str = "UNKNOWN") -> None:
+                   positions_live: dict | None = None, data_trust: str = "UNKNOWN",
+                   tick_at: str | None = None) -> None:
     ready = [s for s, o in store.opportunities.items() if o.get("state") == ST_READY]
     near = [s for s, o in store.opportunities.items() if o.get("state") == ST_NEAR]
     exit_alerts = [p["symbol"] for p in store.positions["open"] if p.get("state") == "EXIT_ALERT"]
+    previous = _read_json(Path(state_dir) / "state.json", {})
     _write_json(Path(state_dir) / "state.json", {
         "as_of": now.isoformat(),
+        "cycle_at": now.isoformat(),
+        "heartbeat_at": now.isoformat(),
+        "last_scan_at": now.isoformat() if symbols > 0 else previous.get("last_scan_at"),
+        "market_tick_at": tick_at,
+        "market_phase": market_phase(now),
         "day": day,
         "status": status,
         "symbols_scanned": symbols,
@@ -563,7 +611,7 @@ def _write_summary(store: Store, status: str, events: list, now: datetime, day: 
         "watch": [s for s, o in store.opportunities.items() if o.get("state") == ST_WATCH],
         "positions": [
             {
-                **{k: p.get(k) for k in ("id", "symbol", "entry_price", "shares", "venue", "state", "exit_reason")},
+                **{k: p.get(k) for k in ("id", "symbol", "entry_price", "shares", "venue", "state", "exit_reason", "exit_evidence")},
                 **((positions_live or {}).get(p["symbol"], {})),
             }
             for p in store.positions["open"]
@@ -732,7 +780,7 @@ def cmd_cycle(args, store: Store) -> int:
         result = run_cycle(store, active_cfg=cfg, spec=spec, state_dir=store.dir)
         settle_forward(store)
     print(json.dumps(result, ensure_ascii=False, default=str))
-    return 0 if result["status"] in ("NO_TRADE", "ALERTS", "MARKET_CLOSED") else 3
+    return 0 if result["status"] in ("NO_TRADE", "ALERTS", "MARKET_CLOSED", "PRE_OPEN", "LUNCH_BREAK") else 3
 
 
 def cmd_session(args, store: Store) -> int:
@@ -760,7 +808,7 @@ def cmd_session(args, store: Store) -> int:
                 "ms": int((time.perf_counter() - started) * 1000),
             }) + "\n")
         print(json.dumps(result, ensure_ascii=False, default=str), flush=True)
-        if not in_session() and result["status"] == "MARKET_CLOSED" and args.exit_on_close:
+        if result["status"] in {"MARKET_CLOSED", "LUNCH_BREAK"} and args.exit_on_close:
             break
         time.sleep(max(0.0, interval - (time.perf_counter() - started)))
     print(json.dumps({"session_cycles": cycles}), flush=True)

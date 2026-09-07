@@ -9,6 +9,7 @@ long messages chunk below the Telegram hard limit.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from urllib.parse import quote, urlsplit, urlunsplit
 
 from zuaef_agent.runtime import PausedRun, TerminalRun
 
@@ -49,6 +50,20 @@ def _short(run_id: str) -> str:
     return run_id[:8] + "…"
 
 
+def render_run_accepted(*, run_id: str, profile: str | None, public_base_url: str | None = None) -> str:
+    lines = ["ACCEPTED · RUNNING", f"Run: {run_id}", f"Profile: {profile or 'UNKNOWN'}"]
+    if public_base_url:
+        try:
+            url = urlsplit(public_base_url)
+            if (url.scheme in {"http", "https"} and url.hostname and url.port != 0
+                    and not url.username and not url.password and not url.query
+                    and not url.fragment and not any(c.isspace() for c in public_base_url)):
+                lines.append("Console: " + urlunsplit((url.scheme, url.netloc, url.path or "/", "run=" + quote(run_id, safe=""), "")))
+        except ValueError:
+            pass
+    return "\n".join(lines)
+
+
 def render_terminal(outcome: TerminalRun) -> str:
     """Terminal card (SPEC §41). The presentation IS the reply (outcome-first);
     audit counts stay in /status and the receipt. When the presentation is
@@ -60,6 +75,20 @@ def render_terminal(outcome: TerminalRun) -> str:
         "limit_reached": "⏹ Limit reached",
     }[receipt.execution_state]
     presentation = outcome.presentation.strip()
+    if receipt.execution_state != "completed":
+        usage = receipt.usage
+        lines = [f"{emoji} · {receipt.execution_state.upper()}", f"Run: {receipt.run_id}",
+                 f"Elapsed: {(receipt.finished_at - receipt.started_at).total_seconds():.3f}s",
+                 f"Requests: {usage.get('requests', 'UNKNOWN')} · Tool calls: {usage.get('tool_calls', 'UNKNOWN')}",
+                 f"Input tokens: {usage.get('input_tokens', 'UNKNOWN')} · Output tokens: {usage.get('output_tokens', 'UNKNOWN')}",
+                 f"Usage complete: {receipt.usage_complete}",
+                 f"Configured limits: {receipt.usage_limits or 'UNKNOWN'}",
+                 "Limit boundary: UNKNOWN",
+                 f"Runtime reason: {(receipt.error or 'UNKNOWN')[:1200]}",
+                 f"Artifacts: {len(receipt.artifact_facts)} · Unresolved effects: {len(receipt.unresolved_effects)}"]
+        lines.extend(f"- {fact.path[:240]}" for fact in receipt.artifact_facts[:10])
+        lines.append("/inspect — persisted operational facts, no model call")
+        return "\n".join(lines)
     if presentation:
         return "\n".join(
             [

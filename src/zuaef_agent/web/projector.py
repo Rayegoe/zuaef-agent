@@ -255,7 +255,8 @@ def _pair_requests_and_responses(
     return [
         {
             "usage": _response_usage(message),
-            "parts": [_part_dict(p) for p in getattr(message, "parts", [])],
+            "parts": [_part_dict(p) for p in getattr(message, "parts", [])
+                      if getattr(p, "part_kind", None) != "thinking"],
         }
         for message in responses
     ]
@@ -468,6 +469,12 @@ def usage_summary(facts: RunFacts, timeline: list[TimelineRow]) -> dict[str, Any
 
     Aggregate receipt usage is never divided across requests (SPEC §6).
     """
+    receipt = facts.receipt
+    if isinstance(receipt, (RunReceipt, PauseReceipt)) and receipt.usage:
+        usage = {**receipt.usage, "source": "receipt_aggregate"}
+        if "requests" not in usage and facts.events:
+            usage["requests"] = sum(row.kind == "model_request" for row in timeline)
+        return usage
     per_response = [row.usage for row in timeline if row.kind == "model_request"]
     if per_response and all(u is not None for u in per_response):
         return {
@@ -476,13 +483,20 @@ def usage_summary(facts: RunFacts, timeline: list[TimelineRow]) -> dict[str, Any
             "requests": len(per_response),
             "source": "per_response",
         }
-    receipt = facts.receipt
-    if isinstance(receipt, (RunReceipt, PauseReceipt)) and receipt.usage:
-        usage = dict(receipt.usage)
-        usage["requests"] = len(per_response)
-        usage["source"] = "receipt_aggregate"
-        return usage
     return None
+
+
+def activity_view(facts: RunFacts) -> str:
+    if facts.receipt is not None:
+        return derive_run_status(facts.receipt, facts.events).upper()
+    timeline = build_timeline(facts)
+    if any(e.kind in {"run_completed", "run_failed"} for e in facts.events):
+        return "SETTLING"
+    if any(row.kind == "tool_call" and row.status == "started" for row in timeline):
+        return "RUNNING_TOOL"
+    if any(row.kind == "model_request" and row.finished_at is None for row in timeline):
+        return "RUNNING_MODEL"
+    return "UNKNOWN"
 
 
 def run_view(facts: RunFacts) -> dict[str, Any]:
@@ -490,6 +504,9 @@ def run_view(facts: RunFacts) -> dict[str, Any]:
     composition = getattr(receipt, "composition", None)
     request_count = sum(1 for e in facts.events if e.kind == "model_request_started")
     tool_call_count = len({e.tool_call_id for e in facts.events if e.tool_call_id})
+    usage = getattr(receipt, "usage", {})
+    request_count = usage.get("requests", request_count if facts.events else None)
+    tool_call_count = usage.get("tool_calls", tool_call_count if facts.events else None)
     return {
         "run_id": facts.run_id,
         "conversation_id": getattr(facts.record, "conversation_id", None)
@@ -497,6 +514,11 @@ def run_view(facts: RunFacts) -> dict[str, Any]:
         "parent_run_id": getattr(facts.record, "parent_run_id", None),
         "continued_from_run_id": getattr(receipt, "continued_from_run_id", None),
         "status": derive_run_status(facts.receipt, facts.events),
+        "activity": activity_view(facts),
+        "usage_complete": getattr(receipt, "usage_complete", None),
+        "usage_limits": getattr(receipt, "usage_limits", {}),
+        "error": (getattr(receipt, "error", None) or "")[:1200] or None,
+        "limit_boundary": "UNKNOWN",
         "model": getattr(receipt, "model", None),
         "profile": getattr(composition, "profile", None),
         "agent_name": getattr(facts.record, "agent_name", None),
