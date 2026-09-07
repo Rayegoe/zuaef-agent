@@ -1,10 +1,11 @@
 """Method Kernel v0.1 tests (T001/T003/T005/T006/T007) — all offline, no model.
 
-The spec's hard constraints are what these tests protect: the kernel is a
-short soft-principle block (not a workflow), the reviewer generalizes without
-becoming a taxonomy, promotion becomes intervention-neutral while staying
-human-gated, and the ablation runner records machine facts without ever
-producing a scalar score or automatic verdict.
+The spec's hard constraints are what these tests protect. Final state after
+the 2026-09-08 human decision (MK-ABLATION-1): the six principles are NOT a
+resident core prompt block (retired after a real ablation showed no marginal
+value); the durable outcomes are the generalized independent reviewer,
+intervention-neutral human-gated promotion, and the minimal ablation runner
+that can retire ineffective scaffolding.
 """
 
 from __future__ import annotations
@@ -26,7 +27,13 @@ def _load_tool(name: str):
     return mod
 
 
-# --- T001: the Core Method Kernel ---------------------------------------------
+# --- T001 executed: the resident Method Kernel block was RETIRED (2026-09-08) --
+#
+# Human decision (MK-ABLATION-1 real ablation: no measurable quality gain,
+# measurably more requests/tool calls/tokens): remove the 803-char resident
+# block from CORE_INSTRUCTIONS; keep the original principles that were already
+# there, and keep the mechanisms (generalized reviewer, ablate.py,
+# intervention-neutral promotion). See learning/comparisons/MK-ABLATION-1/.
 
 
 def _flat(text: str) -> str:
@@ -34,38 +41,37 @@ def _flat(text: str) -> str:
     return " ".join(text.split())
 
 
-def test_core_instructions_contain_the_six_principles():
+def test_core_instructions_keep_original_principles():
     from zuaef_agent.core import CORE_INSTRUCTIONS
 
     flat = _flat(CORE_INSTRUCTIONS)
     for phrase in (
-        "Reconstruct reality before proposing change",
-        "Evidence outranks explanation",
-        "smallest intervention that can prove the outcome",
-        "uncertainty explicit",
-        "falsify important conclusions",
-        "Recommend durable additions only when evidence",
+        "Own the user's real outcome",
+        "tools are capabilities, not a required workflow",
+        "do not create process for its own sake",
+        "Distinguish observed facts from assumptions",
+        "name unknowns instead of guessing",
     ):
-        assert phrase in flat, f"missing kernel principle: {phrase}"
+        assert phrase in flat, f"missing original core principle: {phrase}"
 
 
-def test_method_kernel_is_short_soft_and_domain_free():
+def test_resident_method_kernel_block_is_retired():
+    from zuaef_agent.core import CORE_INSTRUCTIONS
+
+    # The block must NOT come back without a new ablation proving its value.
+    assert "Method Kernel" not in CORE_INSTRUCTIONS
+    assert "Reconstruct reality" not in CORE_INSTRUCTIONS
+    assert "simple tasks just get done" not in CORE_INSTRUCTIONS
+
+
+def test_core_instructions_have_no_domain_leak():
     from zuaef_agent.core import CORE_INSTRUCTIONS
 
     flat = _flat(CORE_INSTRUCTIONS)
-    # Soft, not a state machine / mandatory checklist.
-    assert "not a mandatory workflow" in flat
-    assert "simple tasks just get done" in flat
-    # No domain names leaked into the core instructions ("writing" names a
-    # generic activity in the pre-existing text, not a business domain).
+    # "writing" names a generic activity in the core text, not a business
+    # domain; the actual domain names must stay out.
     for domain in ("quant", "stillevo", "feishu", "wordpress"):
         assert domain not in flat, f"domain leak: {domain}"
-    # The kernel block stays within the spec's ~150-250 token budget
-    # (guarded here as a character bound: ~6.5 chars/token).
-    start = CORE_INSTRUCTIONS.index("Method Kernel")
-    end = CORE_INSTRUCTIONS.index("For normal analysis")
-    kernel = _flat(CORE_INSTRUCTIONS[start:end])
-    assert len(kernel) < 250 * 7, f"kernel block too long: {len(kernel)} chars"
 
 
 # --- T003: generalized independent reviewer ------------------------------------

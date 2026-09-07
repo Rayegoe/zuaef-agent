@@ -1,0 +1,4 @@
+- 任务提示（两侧逐字相同）：learning/comparisons/MK-ABLATION-1/task.md
+- 消融 runner：tools/ablate.py（共享 execute_run seam，隔离工作区）
+- 事故的权威记录：src/zuaef_agent/core.py 中 RetrySettledStepPersistence docstring（注意：该修复是本 case 之后由人类工程落地，两侧提案先于阅读该实现）
+- 运行事实：learning/comparisons/MK-ABLATION-1/trial2/{baseline,candidate}/record.json

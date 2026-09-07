@@ -1,0 +1,22 @@
+{
+  "side": "baseline",
+  "run_id": "ablate-MK-ABLATION-1-baseline-060b437d",
+  "status": "completed",
+  "model_requests": 4,
+  "input_tokens": 34075,
+  "output_tokens": 8144,
+  "total_tokens": null,
+  "tool_calls": 6,
+  "tool_names": [
+    "search_knowledge",
+    "search_knowledge",
+    "search_conversation_history",
+    "list_knowledge",
+    "search_memory",
+    "list_directory"
+  ],
+  "latency_ms": 81108.112,
+  "error": null,
+  "paused": false,
+  "captured_at": "2026-09-07T15:10:02+00:00"
+}

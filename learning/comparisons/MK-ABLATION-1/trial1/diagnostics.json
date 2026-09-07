@@ -1,0 +1,55 @@
+{
+  "case_id": "MK-ABLATION-1",
+  "axis": {
+    "baseline_append": null,
+    "candidate_append": "learning/comparisons/MK-ABLATION-1/kernel-block.txt"
+  },
+  "order": [
+    "baseline",
+    "candidate"
+  ],
+  "baseline": {
+    "side": "baseline",
+    "run_id": "ablate-MK-ABLATION-1-baseline-060b437d",
+    "status": "completed",
+    "model_requests": 4,
+    "input_tokens": 34075,
+    "output_tokens": 8144,
+    "total_tokens": null,
+    "tool_calls": 6,
+    "tool_names": [
+      "search_knowledge",
+      "search_knowledge",
+      "search_conversation_history",
+      "list_knowledge",
+      "search_memory",
+      "list_directory"
+    ],
+    "latency_ms": 81108.112,
+    "error": null,
+    "paused": false,
+    "captured_at": "2026-09-07T15:10:02+00:00"
+  },
+  "candidate": {
+    "side": "candidate",
+    "run_id": "ablate-MK-ABLATION-1-candidate-b51366e5",
+    "status": "failed",
+    "model_requests": 2,
+    "input_tokens": 16973,
+    "output_tokens": 425,
+    "total_tokens": null,
+    "tool_calls": 5,
+    "tool_names": [
+      "list_directory",
+      "search_knowledge",
+      "search_memory",
+      "search_conversation_history",
+      "search_conversation_history"
+    ],
+    "latency_ms": 325505.216,
+    "error": "JSONDecodeError: Expecting value: line 201 column 1 (char 1100)",
+    "paused": false,
+    "captured_at": "2026-09-07T15:15:27+00:00"
+  },
+  "note": "machine diagnostics only — never a quality verdict"
+}

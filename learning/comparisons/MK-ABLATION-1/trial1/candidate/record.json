@@ -1,0 +1,21 @@
+{
+  "side": "candidate",
+  "run_id": "ablate-MK-ABLATION-1-candidate-b51366e5",
+  "status": "failed",
+  "model_requests": 2,
+  "input_tokens": 16973,
+  "output_tokens": 425,
+  "total_tokens": null,
+  "tool_calls": 5,
+  "tool_names": [
+    "list_directory",
+    "search_knowledge",
+    "search_memory",
+    "search_conversation_history",
+    "search_conversation_history"
+  ],
+  "latency_ms": 325505.216,
+  "error": "JSONDecodeError: Expecting value: line 201 column 1 (char 1100)",
+  "paused": false,
+  "captured_at": "2026-09-07T15:15:27+00:00"
+}

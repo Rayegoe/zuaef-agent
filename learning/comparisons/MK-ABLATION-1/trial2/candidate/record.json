@@ -1,0 +1,24 @@
+{
+  "side": "candidate",
+  "run_id": "ablate-MK-ABLATION-1-candidate-a56dcde2",
+  "status": "completed",
+  "model_requests": 4,
+  "input_tokens": 38915,
+  "output_tokens": 8472,
+  "total_tokens": null,
+  "tool_calls": 8,
+  "tool_names": [
+    "search_knowledge",
+    "load_capability",
+    "search_knowledge",
+    "search_memory",
+    "search_memory",
+    "list_directory",
+    "list_knowledge",
+    "list_directory"
+  ],
+  "latency_ms": 167173.141,
+  "error": null,
+  "paused": false,
+  "captured_at": "2026-09-07T15:26:06+00:00"
+}

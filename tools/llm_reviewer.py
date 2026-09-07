@@ -1,15 +1,25 @@
-"""LLM reviewer for a document-first learning case packet (v1.2 T010).
+"""Independent LLM reviewer for one deliverable packet (v1.2 T010, MK v0.1 T003).
 
-Reads one case directory under ``learning/cases/<case-id>/`` and writes
-``llm-review.md``: a prose review answering the QUALITY_LOOP.md §4 review
-contract, with an explicit option for "no reusable lesson".
+Reads one packet directory (``learning/cases/<case-id>/`` for learning cases;
+any packet dir following the same manifest-addressing shape for other kinds)
+and writes ``llm-review.md``: a prose review, with an explicit option for
+"no reusable lesson".
+
+Generalized (Method Kernel v0.1 T003) to review any deliverable kind —
+documents, implementation, research, architecture, business artifacts — by
+accepting either the original learning-case manifest keys
+(``request/context/output/sources/revised``) or the kind-neutral keys
+(``task/context/result/validation/sources``). ``manifest["kind"]`` optionally
+narrows the reviewer's role sentence. The review output stays PROSE, never a
+fixed classification; no score enum or label taxonomy is introduced.
 
 Usage (real model credentials required):
 
     uv run python tools/llm_reviewer.py --case learning/cases/summer-nail-rewrite-20260819
+    uv run python tools/llm_reviewer.py --case learning/comparisons/MK-ABLATION-1
 
-The reviewer produces PROSE, not a fixed classification. It never writes a
-mandatory label/taxonomy (no trigger_signal/action/weight/approved_by).
+The reviewer is INDEPENDENT: it never receives the human's opinion or the
+main agent's self-explanation as authority.
 """
 
 from __future__ import annotations
@@ -23,27 +33,37 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "src"))
 
-# The review contract from QUALITY_LOOP.md §4 — fixed prose questions, no
-# fixed answer schema.
+# The review contract (QUALITY_LOOP.md §4, generalized by MK v0.1 §Review):
+# fixed prose questions, no fixed answer schema. Questions cover what was
+# accomplished, what is proven vs merely claimed, missed requirements, source
+# checking, weak reasoning/design, counterexamples and simpler alternatives,
+# what to change, what to preserve, and what generalizes.
 REVIEW_PROMPT = """\
-You are an independent LLM reviewer for one learning case from this project's
-document-first quality loop. You have been given: the original request, the
-relevant context/material, the model output, and the source/resource pointers.
+You are an independent LLM reviewer for one deliverable packet from this
+project — a learning case, an implementation, a research result, an
+architecture proposal, or a business deliverable. You have been given: the
+original task/request, the relevant context/evidence, the produced result,
+any validation evidence, and the source/resource pointers.
 
-Write a prose review in Chinese (the working language of this case) as
+Write a prose review in the packet's working language (default Chinese) as
 `llm-review.md`, answering these questions directly. Do NOT produce a fixed
 label schema, a score table, or an enum. Quote the passages you mean.
 
 1. What did the output actually accomplish?
-2. What important requirement did it miss?
-3. Which factual claims (if any) need source checking?
-4. For each important cited claim, does the cited source appear to support
-   it? (State clearly when the material is private customer material with no
-   public URL — that is a legitimate different case from research.)
-5. What is weak in reasoning, writing, structure, tone, or business judgment?
-6. Which passages should change, and why? (Be specific; quote before/after.)
-7. What should be preserved?
-8. What generalizable lesson, if any, can be proposed?
+2. What is actually proven by the evidence, and what is merely claimed?
+3. What important requirement did it miss?
+4. Which factual claims (if any) need source checking?
+5. For each important cited claim, does the cited source appear to support
+   it? (State clearly when the material is private material with no public
+   URL — that is a legitimate different case from research.)
+6. What is weak in reasoning, writing, structure, design, tone, or business
+   judgment?
+7. What counterexample could break the conclusion? Is there a simpler
+   explanation or a smaller implementation that would do?
+8. Which passages or elements should change, and why? (Be specific; quote
+   before/after where applicable.)
+9. What should be preserved?
+10. What generalizable lesson, if any, can be proposed?
 
 End with one of these two explicit lines:
 
@@ -54,6 +74,17 @@ You will not receive the human's opinion; produce your own independent
 review. Do not invent facts or sources that are not in the packet.
 """
 
+# Manifest section keys, in render order: the original learning-case names
+# and the kind-neutral aliases they map to. A manifest may use either set.
+SECTIONS: list[tuple[str, str, tuple[str, ...]]] = [
+    # (canonical key, section header, accepted manifest aliases)
+    ("task", "Task / request", ("request", "task")),
+    ("context", "Context / material / evidence", ("context", "evidence")),
+    ("result", "Result (the evaluated output)", ("output", "result")),
+    ("validation", "Validation evidence / preferred variant", ("revised", "validation")),
+    ("sources", "Sources / resource pointers", ("sources",)),
+]
+
 
 def load_packet(case_dir: Path) -> dict:
     manifest_path = case_dir / "manifest.json"
@@ -63,33 +94,38 @@ def load_packet(case_dir: Path) -> dict:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         raise SystemExit(f"manifest.json unreadable in {case_dir}: {exc}") from exc
-    packet = {"manifest": manifest, "case_dir": case_dir}
-    for key in ("request", "context", "output", "sources", "revised"):
-        rel = manifest.get(key)
-        if rel:
-            f = case_dir / rel
-            packet[key] = f.read_text(encoding="utf-8") if f.is_file() else "<missing>"
+    packet: dict = {"manifest": manifest, "case_dir": case_dir}
+    for _canonical, _header, aliases in SECTIONS:
+        for key in aliases:
+            rel = manifest.get(key)
+            if rel:
+                f = case_dir / rel
+                packet[key] = f.read_text(encoding="utf-8") if f.is_file() else "<missing>"
+                break
     return packet
 
 
 def render_prompt(packet: dict) -> str:
     m = packet["manifest"]
-    return f"""# Learning case: {m["case_id"]}
+    kind = m.get("kind")
+    role = (
+        f"Deliverable kind: {kind}"
+        if kind
+        else "Deliverable kind: not declared — judge it from the material."
+    )
+    sections = []
+    for _canonical, header, aliases in SECTIONS:
+        body = "<missing>"
+        for key in aliases:
+            if key in packet:
+                body = packet[key]
+                break
+        sections.append(f"## {header}\n{body}")
+    return f"""# Review packet: {m["case_id"]}
 
-## Request
-{packet.get("request", "<missing>")}
+{role}
 
-## Context / material
-{packet.get("context", "<missing>")}
-
-## Model output (the evaluated version)
-{packet.get("output", "<missing>")}
-
-## Sources / resource pointers
-{packet.get("sources", "<missing>")}
-
-## Revised / preferred text (may be absent for the reviewed output)
-{packet.get("revised", "<missing>")}
+""" + "\n\n".join(sections) + f"""
 
 ---
 {REVIEW_PROMPT}"""
@@ -98,7 +134,7 @@ def render_prompt(packet: dict) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
-        "--case", required=True, type=Path, help="case directory under learning/cases/"
+        "--case", required=True, type=Path, help="packet directory (e.g. learning/cases/<id>)"
     )
     ap.add_argument(
         "--prompt-only",
@@ -109,7 +145,7 @@ def main() -> int:
 
     case_dir = args.case.resolve()
     if not case_dir.is_dir():
-        raise SystemExit(f"case directory not found: {case_dir}")
+        raise SystemExit(f"packet directory not found: {case_dir}")
     packet = load_packet(case_dir)
     prompt = render_prompt(packet)
 

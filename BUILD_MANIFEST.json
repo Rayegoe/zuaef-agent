@@ -1753,8 +1753,8 @@
     },
     {
       "path": "src/zuaef_agent/core.py",
-      "bytes": 15197,
-      "sha256": "6d6897a63d536230e1d49a0053313323d1134e24f0f31968b3448cac6a826bef"
+      "bytes": 14391,
+      "sha256": "aca1eee558c8332426497608fa1405bf4501547fff95255b8df5ef959770a3fc"
     },
     {
       "path": "src/zuaef_agent/effects.py",
@@ -2258,8 +2258,8 @@
     },
     {
       "path": "tests/test_method_kernel.py",
-      "bytes": 9273,
-      "sha256": "71ea9788682e1fe5c9194d0c5429ec7dda2cf6534cb47918ff0ba458c526e11d"
+      "bytes": 9500,
+      "sha256": "8fb512c77a048522a1dda57c5deedc612b0cbed2a0b670a05e2ca0dab72e5917"
     },
     {
       "path": "tests/test_normalize_wcase_metrics.py",
