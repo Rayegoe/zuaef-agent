@@ -357,6 +357,60 @@ def test_unresolved_started_effect_is_failed_execution(tmp_path: Path):
     assert outcome.receipt.unresolved_effects[0].tool_call_id == "call_x"
 
 
+def test_model_retry_tool_call_settles_and_run_completes(tmp_path: Path):
+    """Regression for the 2026-09-07 600550 incident.
+
+    A tool that ends in ``ModelRetry`` (CodeMode's run_code surfacing a
+    sandbox error) must not leave its effect record at ``started``: the run
+    recovers and completes, so settlement must keep ``completed`` with the
+    retrying call settled as a failed effect — never "unresolved tool
+    call(s)".
+    """
+    from pydantic_ai import FunctionToolset
+    from pydantic_ai.exceptions import ModelRetry
+
+    settings = _settings(tmp_path)
+    run_id = uuid4().hex
+    toolset: FunctionToolset[CoreDeps] = FunctionToolset()
+
+    @toolset.tool_plain
+    def run_code(code: str) -> str:
+        """Sandbox stand-in: raises ModelRetry exactly like CodeMode does
+        when the snippet fails at runtime."""
+        raise ModelRetry(f"Runtime error:\n{code}")
+
+    agent = build_agent(settings, run_id=run_id, extra_toolsets=[toolset])
+    deps = CoreDeps(workspace_root=settings.workspace_root.resolve(), run_id=run_id)
+
+    def fn(messages, info):
+        if not (_has_tool_return(messages) or _has_retry_prompt(messages)):
+            return ModelResponse(parts=[ToolCallPart("run_code", {"code": "open('nope')"})])
+        return _final("已如实报告缺失。")
+
+    with agent.override(model=FunctionModel(fn)):
+        outcome = execute_run(
+            agent, deps, prompt="run the snippet", settings=settings, run_id=run_id
+        )
+
+    assert isinstance(outcome, TerminalRun)
+    assert outcome.receipt.execution_state == "completed"
+    assert not outcome.receipt.unresolved_effects
+    retry_effects = [
+        fact
+        for fact in outcome.receipt.tool_effect_facts
+        if fact.tool_name == "run_code" and fact.status == "failed"
+    ]
+    assert retry_effects, "retried call must settle as a failed effect, not stay started"
+
+
+def _has_retry_prompt(messages) -> bool:
+    return any(
+        getattr(part, "part_kind", None) == "retry-prompt"
+        for message in messages
+        for part in getattr(message, "parts", [])
+    )
+
+
 def test_foreign_run_effects_are_not_recorded(tmp_path: Path):
     """A completed effect owned by a different run is not in this run's ledger:
     the public StepStore keeps per-run ledgers, so a foreign event never enters

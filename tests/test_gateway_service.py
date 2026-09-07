@@ -1119,7 +1119,10 @@ def test_provider_failure_still_settles_a_failed_receipt(tmp_path: Path, monkeyp
 
     assert len(surface.texts) == 2  # natural ack, then the terminal card
     assert surface.texts[0][1].startswith("收到，开始处理")
-    assert "Failed" in surface.texts[1][1]
+    # T014: a failed run answers the customer with the bounded notice,
+    # never an operational dump
+    assert "没有完整结束" in surface.texts[1][1]
+    assert "Run:" not in surface.texts[1][1]
     session = _session(service)
     assert session.last_terminal_run_id
     receipt = service.receipts.read(session.last_terminal_run_id)  # type: ignore[arg-type]

@@ -23,6 +23,7 @@ from zuaef_agent.models import CoreDeps
 from zuaef_agent.plugin_api import CompositionError
 
 from . import watchlist as watchlist_store
+from . import research as research_store
 from .freshness import derive_freshness, market_date_of, now_market
 
 REPO_ROOT_ENV = "ZUAEF_QUANT_REPO_ROOT"
@@ -64,12 +65,15 @@ QUANT_EVAL_SCRIPT = TOOLS_DIR / "quant_eval_qlib.py"
 QUANT_SCAN_SCRIPT = TOOLS_DIR / "quant_live_scan.py"
 QUANT_MONITOR_SCRIPT = TOOLS_DIR / "quant_trading_monitor.py"
 QUANT_RENDER_SCRIPT = TOOLS_DIR / "quant_render_business_dashboard.py"
+QUANT_MARKET_INTEL_SCRIPT = TOOLS_DIR / "quant_market_intel.py"
 DEFAULT_BENCH_DIR = REPO_ROOT / "benchmarks" / "quant" / "gen1"
 EVAL_TIMEOUT_S = 1200
 SCAN_TIMEOUT_S = 300
 ACK_TIMEOUT_S = 120
 RENDER_TIMEOUT_S = 120
 SYMBOL_CONTEXT_TIMEOUT_S = 120
+PREWARM_TIMEOUT_S = 300
+MKT_INTEL_TIMEOUT_S = 120
 GEN1_DIR = DEFAULT_BENCH_DIR
 
 #: Whitelisted StrategySpec keys (schema 1). Nothing else crosses the boundary.
@@ -421,8 +425,8 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
 
     @toolset.tool_plain
     def get_trading_context() -> str:
-        """Read the bounded CURRENT trading context from the canonical M1
-        artifacts (workspace/artifacts/quant/trading/). Read-only projection:
+        """Read the bounded CURRENT trading context (持仓/交易状态/仓位)
+        from the canonical M1 artifacts (workspace/artifacts/quant/trading/). Read-only projection:
         never recomputes the market and never re-derives triggers. Returns
         system health, market/data-trust status, READY/NEAR lists, open
         positions, exit alerts, recent durable material events, forward
@@ -506,10 +510,36 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
     def _analysis_scope(ctx: RunContext[CoreDeps]) -> str | None:
         return ctx.deps.bindings.get("analysis_scope")
 
+    def _prewarm_history(symbols: list[str]) -> dict:
+        """Best-effort history hydration for newly watched symbols (v0.2 T005).
+
+        Runs the side-env monitor's prewarm op so akshare stays out of this
+        environment. Best-effort by contract: a prewarm failure never
+        invalidates the watchlist edit — the result reports watchlist and
+        history facts separately."""
+        try:
+            # ``--state-dir`` precedes the subcommand (argparse, see
+            # get_symbol_context).
+            stdout = _run(
+                QUANT_MONITOR_SCRIPT,
+                ["--state-dir", str(workspace_root / "artifacts" / "quant" / "trading"),
+                 "prewarm-history", "--symbols", ",".join(symbols)],
+                quant_python,
+                PREWARM_TIMEOUT_S,
+            )
+        except (subprocess.TimeoutExpired, OSError, RuntimeError) as exc:
+            return {"error": f"history prewarm unavailable: {str(exc)[-200:]}"}
+        try:
+            line = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
+            data = json.loads(line)
+        except ValueError:
+            return {"error": "history prewarm returned unreadable output"}
+        return data.get("prewarm") if isinstance(data.get("prewarm"), dict) else data
+
     @toolset.tool
     def get_analysis_watchlist(ctx: RunContext[CoreDeps]) -> str:
-        """Read THIS run's analysis watchlist — the user-curated attention
-        list (scope = bound case, else this chat). Returns the symbols plus
+        """Read THIS run's analysis watchlist (自选清单/关注列表) — the
+        user-curated attention list (scope = bound case, else this chat). Returns the symbols plus
         the three-tier semantics: watchlist symbols get on-demand diagnosis
         and monitoring but NEVER enter the candidate pool or produce
         READY/NEAR; the candidate pool is algorithm-owned.
@@ -538,12 +568,15 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
     def update_analysis_watchlist(
         ctx: RunContext[CoreDeps], action: str, symbols: list[str]
     ) -> str:
-        """Add or remove symbols in THIS run's analysis watchlist (user
-        attention facts). action is add/remove; symbols are 6-digit A-share
-        codes. Local and reversible: it never places orders, never changes
+        """Add or remove symbols in THIS run's analysis watchlist (加入自选/
+        取消关注/关注列表: user attention facts). action is add/remove;
+        symbols are 6-digit A-share codes. Local and reversible: it never places orders, never changes
         the strategy, and never adds anything to the candidate pool — say
         that caveat back to the user when confirming. Invalid codes are
-        rejected with an error; report it instead of guessing."""
+        rejected with an error; report it instead of guessing. Newly added
+        symbols get a best-effort history prewarm; a prewarm failure means
+        history stays unavailable (the watchlist edit itself still
+        succeeded) — report the two facts separately."""
         scope = _analysis_scope(ctx)
         if not scope:
             return json.dumps(
@@ -573,13 +606,15 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         result["verified"] = verified
         if not verified:
             result["error"] = "watchlist write did not persist; do not claim success"
+        if verified and action == "add" and result["changed"]:
+            result["history_prewarm"] = _prewarm_history(result["changed"])
         result["note"] = "watchlist updated; analysis-only, never READY/NEAR"
         return json.dumps(result, ensure_ascii=False)
 
     @toolset.tool
     def get_symbol_context(ctx: RunContext[CoreDeps], symbol: str) -> str:
-        """On-demand single-symbol analysis context for ANY 6-digit A-share
-        code — including symbols outside the candidate pool. Read-only host
+        """On-demand single-symbol analysis context (个股诊断/报价) for ANY
+        6-digit A-share code — including symbols outside the candidate pool. Read-only host
         diagnostics: live quote with host-derived freshness, universe
         membership (candidate pool / analysis watchlist / open positions),
         frozen S3 clause distances (how far from entry conditions), MA5
@@ -611,9 +646,147 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             return json.dumps(data, ensure_ascii=False)
         return json.dumps(data, ensure_ascii=False)
 
-    @toolset.tool_plain
+    @toolset.tool_plain(defer_loading=True)
+    def get_market_intelligence(symbol: str, limit: int = 8) -> str:
+        """Bounded structured finance evidence for one 6-digit A-share code:
+        recent company news and announcements from the structured feed
+        (公司新闻/公告/消息: title, truncated summary, published time,
+        source, url). NOT open-ended web research —
+        for "why did it move / what happened in the industry" questions use
+        the harness WebSearch/WebFetch capabilities and keep source + time
+        with every fact. A fetch failure returns structured evidence of the
+        failure: degrade to PARTIAL research, never fabricate items."""
+        symbol = str(symbol).strip()
+        limit = max(1, min(int(limit), 20))
+        try:
+            stdout = _run(
+                QUANT_MARKET_INTEL_SCRIPT,
+                ["--symbol", symbol, "--limit", str(limit)],
+                quant_python,
+                MKT_INTEL_TIMEOUT_S,
+            )
+        except subprocess.TimeoutExpired:
+            return json.dumps({"error": "market intelligence fetch timed out; try again shortly"},
+                              ensure_ascii=False)
+        except RuntimeError as exc:
+            return json.dumps({"error": f"market intelligence unavailable: {str(exc)[-200:]}"},
+                              ensure_ascii=False)
+        line = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
+        try:
+            data = json.loads(line)
+        except ValueError:
+            return json.dumps({"error": "market intelligence returned unreadable output"},
+                              ensure_ascii=False)
+        return json.dumps(data, ensure_ascii=False)
+
+    # --- research artifacts (research service v0.2, T011/T012) --------------
+    # Durable research packets + customer evidence, scoped like the watchlist
+    # (bound case else chat channel). Business research state, never
+    # execution state; customer claims stay UNVERIFIED and never touch
+    # candidate/READY/NEAR/strategy/fills.
+
+    def _research_root() -> Path:
+        return workspace_root / "artifacts" / "quant" / "research"
+
+    @toolset.tool(defer_loading=True)
+    def save_research_packet(
+        ctx: RunContext[CoreDeps],
+        symbol: str,
+        research_status: str,
+        thesis: str,
+        invalidation: str = "",
+        coverage: list[str] | None = None,
+        supporting_facts: list[str] | None = None,
+        counter_evidence: list[str] | None = None,
+        risks: list[str] | None = None,
+        scenarios: list[str] | None = None,
+        unknowns: list[str] | None = None,
+        source_references: list[str] | None = None,
+    ) -> str:
+        """Persist one bounded research packet as a business artifact after a
+        full analysis (全面分析结论/研究报告/研究记录; quant-research skill). research_status is
+        COMPLETE | PARTIAL | INSUFFICIENT_EVIDENCE (business research state,
+        not runtime state). scenarios: one entry per scenario (Bull / Base /
+        Bear) with its conditions, evidence basis and invalidation. facts
+        must be current-run evidence — no tool traces, no conversation
+        memory. Returns the workspace-relative artifact path."""
+        scope = _analysis_scope(ctx)
+        if not scope:
+            return json.dumps(
+                {"error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"},
+                ensure_ascii=False,
+            )
+        try:
+            result = research_store.save_packet(
+                _research_root(), scope, symbol,
+                research_status=research_status, thesis=thesis,
+                invalidation=invalidation, coverage=coverage,
+                supporting_facts=supporting_facts, counter_evidence=counter_evidence,
+                risks=risks, scenarios=scenarios, unknowns=unknowns,
+                source_references=source_references, run_id=ctx.deps.run_id,
+            )
+        except ValueError as exc:  # ResearchError + shared 6-digit symbol rule
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        return json.dumps(result, ensure_ascii=False)
+
+    @toolset.tool(defer_loading=True)
+    def get_research_packet(ctx: RunContext[CoreDeps], symbol: str) -> str:
+        """Read the LATEST research packet for one symbol in this run's scope
+        (上次研究/研究记录/之前的风险: prior hypothesis + recent customer
+        evidence tail). A packet is a
+        PRIOR HYPOTHESIS, never current market truth: re-verify the current
+        quote and evidence via get_symbol_context before building on it."""
+        scope = _analysis_scope(ctx)
+        if not scope:
+            return json.dumps(
+                {"error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"},
+                ensure_ascii=False,
+            )
+        try:
+            packet = research_store.latest_packet(_research_root(), scope, symbol)
+            evidence = research_store.read_customer_evidence(_research_root(), scope, symbol)
+        except research_store.ResearchError as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        return json.dumps(
+            {
+                "packet": packet,
+                "recent_customer_evidence": evidence,
+                "note": None if packet else "no prior research packet for this symbol in this scope",
+            },
+            ensure_ascii=False,
+        )
+
+    @toolset.tool(defer_loading=True)
+    def record_customer_evidence(
+        ctx: RunContext[CoreDeps], symbol: str, claim: str, source_hint: str = ""
+    ) -> str:
+        """Record a customer-reported claim (客户说/客户提供/供应商说, e.g.
+        供应商说订单很满) as
+        CUSTOMER_REPORTED / UNVERIFIED evidence with provenance. It may shape
+        research attention, hypotheses and web search terms — it can NEVER
+        create READY/NEAR, change the candidate pool, the strategy or any
+        fill; say that boundary back when it matters. When a Case is bound,
+        high-value durable business context also belongs in the Case itself
+        (via the Case tools)."""
+        scope = _analysis_scope(ctx)
+        if not scope:
+            return json.dumps(
+                {"error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"},
+                ensure_ascii=False,
+            )
+        try:
+            result = research_store.record_customer_evidence(
+                _research_root(), scope, symbol, claim=claim, source_hint=source_hint,
+                run_id=ctx.deps.run_id,
+            )
+        except ValueError as exc:  # ResearchError + shared 6-digit symbol rule
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        return json.dumps(result, ensure_ascii=False)
+
+    @toolset.tool_plain(defer_loading=True)
     def render_quant_business_artifact() -> str:
-        """Deterministically render the current business dashboard HTML from
+        """Deterministically render the current business dashboard HTML (业务
+        报表/导出报表/交付报告) from
         the canonical trading artifacts (runs the host renderer; the model
         never assembles HTML itself). Returns the workspace-relative artifact
         path under artifacts/quant/delivery/ plus the renderer's bounded OK

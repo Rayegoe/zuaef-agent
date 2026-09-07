@@ -21,7 +21,7 @@ import math
 import statistics
 import time
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -211,6 +211,133 @@ def fetch_history(symbol: str, adjust: str, *, refresh: bool = False, cache_dir:
     }
     write_cache("daily", key, df, meta, cache_dir)
     return df, meta, "live"
+
+
+# Hydration seam (quant research service v0.2, T003). A daily cache whose last
+# bar is older than this many calendar days triggers one bounded refresh per
+# day; the retrieved_at guard keeps a long-suspended symbol from re-fetching
+# on every call (the upstream just returns the same last date).
+HISTORY_STALE_AFTER_DAYS = 7
+
+
+def _same_shanghai_day(stamp: str | None) -> bool:
+    if not stamp:
+        return False
+    try:
+        return datetime.fromisoformat(stamp).date() == datetime.now(TZ_SHANGHAI).date()
+    except ValueError:
+        return False
+
+
+def ensure_history(
+    symbol: str,
+    adjust: str = "qfq",
+    *,
+    required_bars: int = 25,
+    refresh: bool = False,
+    cache_dir: Path = CACHE_DIR,
+) -> dict:
+    """Hydration orchestration over ``fetch_history`` — never raises.
+
+    read_cache → validate → fetch_history if needed → structured evidence, so
+    an agent-facing path (symbol-context, watchlist prewarm) can auto-hydrate
+    a never-cached symbol instead of refusing to research it. Failure is
+    evidence, not an exception: callers keep their other facts (e.g. the
+    quote) and report the hydration error separately.
+
+    Concurrency: first-time hydration of the same symbol serializes on a
+    bounded per-symbol file lock — never a lock over the whole cache.
+    """
+    key = f"{symbol}_{adjust or 'raw'}"
+    evidence: dict = {
+        "symbol": symbol,
+        "adjust": adjust or "raw",
+        "required_bars": required_bars,
+        "bars_available": 0,
+        "sufficient": False,
+        "history_last_date": None,
+        "cache_valid": False,
+    }
+
+    def _attach(df: pd.DataFrame | None, meta: dict | None) -> None:
+        if df is None or not isinstance(meta, dict):
+            return
+        evidence["bars_available"] = int(len(df))
+        evidence["sufficient"] = int(len(df)) >= required_bars
+        evidence["history_last_date"] = str(meta.get("date_range", [None, None])[1])
+        evidence["cache_valid"] = True
+        evidence["retrieved_at"] = meta.get("retrieved_at")
+
+    try:
+        df, meta = read_cache("daily", key, cache_dir)
+    except (OSError, ValueError, pd.errors.ParserError):
+        df, meta = None, None
+    valid = (
+        df is not None
+        and meta is not None
+        and history_cache_is_current(df, meta, symbol=symbol, adjust=adjust, start_date="20180101")
+    )
+
+    if valid and not refresh:
+        _attach(df, meta)
+        stale_cutoff = (datetime.now(TZ_SHANGHAI) - timedelta(days=HISTORY_STALE_AFTER_DAYS)).date()
+        last_bar = evidence["history_last_date"]
+        needs_refresh = bool(last_bar) and str(last_bar) < stale_cutoff.isoformat()
+        if needs_refresh and not _same_shanghai_day(meta.get("retrieved_at")):
+            evidence["status"] = "refresh"
+        else:
+            evidence["status"] = "cache"
+            return evidence
+    else:
+        evidence["status"] = "hydrate"
+
+    lock_dir = cache_dir / "locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = lock_dir / f"{key}.lock"
+    intent = evidence["status"]  # "hydrate" (no valid cache) or "refresh"
+    try:
+        import fcntl
+
+        lock_fh = open(lock_path, "w")  # noqa: SIM115 — closed in finally
+    except OSError as exc:
+        evidence["status"] = "failed"
+        evidence["error"] = f"hydration lock unavailable: {exc}"
+        return evidence
+    try:
+        try:
+            fcntl.flock(lock_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            evidence["status"] = "failed"
+            evidence["error"] = "another hydration holds this symbol's lock; retry shortly"
+            return evidence
+        # Under the lock: a concurrent hydration may have populated the cache
+        # between the first probe and now — a pure-miss intent can accept it.
+        if intent == "hydrate" and not refresh:
+            try:
+                df, meta = read_cache("daily", key, cache_dir)
+            except (OSError, ValueError, pd.errors.ParserError):
+                df, meta = None, None
+            if (
+                df is not None
+                and meta is not None
+                and history_cache_is_current(df, meta, symbol=symbol, adjust=adjust, start_date="20180101")
+            ):
+                _attach(df, meta)
+                evidence["status"] = "cache"
+                return evidence
+        try:
+            df, meta, source = fetch_history(symbol, adjust, refresh=True, cache_dir=cache_dir)
+        except Exception as exc:  # noqa: BLE001 — hydration failure is evidence, never a crash
+            evidence["status"] = "failed"
+            evidence["error"] = str(exc)[-300:]
+            return evidence
+        _attach(df, meta)
+        evidence["status"] = "hydrated"
+        evidence["source"] = source
+        return evidence
+    finally:
+        fcntl.flock(lock_fh, fcntl.LOCK_UN)
+        lock_fh.close()
 
 
 def fetch_csi500_constituents(*, refresh: bool = False, cache_dir: Path = CACHE_DIR) -> tuple[pd.DataFrame, dict, str]:

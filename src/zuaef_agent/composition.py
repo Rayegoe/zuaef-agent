@@ -151,12 +151,41 @@ def _check_capability_policy(ref: PluginRef, bundle: PluginBundle) -> None:
         )
 
 
+def _iter_toolsets(toolsets: Sequence[Any]) -> list[Any]:
+    """Flatten wrapper toolsets (DeferredLoadingToolset, PreparedToolset, ...)
+    down to the leaf toolsets, so per-tool deferral flags are introspectable
+    without depending on any specific wrapper's internals."""
+    flat: list[Any] = []
+    for ts in toolsets or ():
+        flat.append(ts)
+        wrapped = getattr(ts, "wrapped", None)
+        if wrapped is not None:
+            flat.extend(_iter_toolsets([wrapped]))
+    return flat
+
+
+def _plugin_deferred_tool_names(bundle: PluginBundle) -> set[str]:
+    """Tool names a plugin itself flagged ``defer_loading`` (per-tool
+    progressive disclosure, research service v0.2 T007)."""
+    names: set[str] = set()
+    for ts in _iter_toolsets(bundle.toolsets):
+        tools = getattr(ts, "tools", None)
+        if isinstance(tools, dict):
+            names.update(
+                name
+                for name, tool in tools.items()
+                if bool(getattr(tool, "defer_loading", False))
+            )
+    return names
+
+
 def _resolve_bundles(
     refs: Sequence[PluginRef],
     *,
     settings: AgentSettings,
-    discover: Discover,
-    version_for: VersionFor,
+    discover: Discover = discover_entry_points,
+    version_for: VersionFor = version_for,
+    tool_search_authorized: bool = False,
 ) -> list[PluginBundle]:
     """Load every enabled plugin's factory and validate its bundle against the
     plugin's (possibly frozen) reference. Installed-but-unlisted plugins are
@@ -190,6 +219,14 @@ def _resolve_bundles(
         )
         _check_capability_policy(ref, bundle)
         _check_skill_dirs(ref, bundle)
+        deferred = _plugin_deferred_tool_names(bundle)
+        if deferred and not tool_search_authorized:
+            raise CompositionError(
+                f"plugin {ref.id!r} marks tools deferred ({', '.join(sorted(deferred))}) "
+                "but tool_search is not authorized by the effective generalist "
+                "policy — without it those tools would be hidden forever "
+                "(host ceiling and/or profile [generalist] request must allow it)"
+            )
         bundles.append(bundle)
     return bundles
 
@@ -291,7 +328,8 @@ def resolve_profile(
     # own UserError at schema collection — there is no silent override. ZUAEF
     # does not run a second conflict preflight on top of it.
     _bundles = _resolve_bundles(
-        refs, settings=settings, discover=discover, version_for=version_for
+        refs, settings=settings, discover=discover, version_for=version_for,
+        tool_search_authorized=bool((effective or {}).get("enable_tool_search", False)),
     )
     return _freeze(refs, profile.name, generalist=effective)
 
@@ -318,6 +356,11 @@ def build_agent_from_snapshot(
         settings=settings,
         discover=discover,
         version_for=version_for,
+        # Frozen deployment authority: the snapshot's effective generalist
+        # policy (host ∩ request at composition time) is the resume authority.
+        tool_search_authorized=bool(
+            (snapshot.generalist or {}).get("enable_tool_search", False)
+        ),
     )
     # Frozen deployment authority: the snapshot's effective generalist policy
     # replaces the mutable host/profile flags, so a profile change after a

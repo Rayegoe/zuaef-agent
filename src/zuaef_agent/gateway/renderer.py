@@ -84,36 +84,26 @@ def render_run_progress(
 def render_terminal(outcome: TerminalRun) -> str:
     """Terminal card (SPEC §41). The presentation IS the reply (outcome-first);
     audit counts stay in /status and the receipt. Surface policy: a completed
-    run's reply is pure business output — the run id is an operational fact
-    that lives in receipts, Console, /inspect and /status, and only surfaces
-    on FAILED/LIMIT_REACHED (or the no-presentation fallback, whose audit
-    lines are then the only content)."""
+    run's reply is pure business output. A FAILED/LIMIT_REACHED run never
+    shows tokens, tool counts, usage limits, unresolved effects or run ids
+    here (research service v0.2, T014 / runtime spec §11): the chat surface
+    gets a bounded business-first notice, the operational truth stays in
+    /inspect, /status and Console."""
     receipt = outcome.receipt
-    emoji = {
-        "completed": "✅ Completed",
-        "failed": "⛔ Failed",
-        "limit_reached": "⏹ Limit reached",
-    }[receipt.execution_state]
     presentation = outcome.presentation.strip()
     if receipt.execution_state != "completed":
-        usage = receipt.usage
-        lines = [f"{emoji} · {receipt.execution_state.upper()}", f"Run: {receipt.run_id}",
-                 f"Elapsed: {(receipt.finished_at - receipt.started_at).total_seconds():.3f}s",
-                 f"Requests: {usage.get('requests', 'UNKNOWN')} · Tool calls: {usage.get('tool_calls', 'UNKNOWN')}",
-                 f"Input tokens: {usage.get('input_tokens', 'UNKNOWN')} · Output tokens: {usage.get('output_tokens', 'UNKNOWN')}",
-                 f"Usage complete: {receipt.usage_complete}",
-                 f"Configured limits: {receipt.usage_limits or 'UNKNOWN'}",
-                 "Limit boundary: UNKNOWN",
-                 f"Runtime reason: {(receipt.error or 'UNKNOWN')[:1200]}",
-                 f"Artifacts: {len(receipt.artifact_facts)} · Unresolved effects: {len(receipt.unresolved_effects)}"]
-        lines.extend(f"- {fact.path[:240]}" for fact in receipt.artifact_facts[:10])
-        lines.append("/inspect — persisted operational facts, no model call")
-        return "\n".join(lines)
+        note = (
+            "本次研究没有完整结束，因此没有使用不完整证据给出预测。"
+            "系统已保留运行诊断，可直接重试。"
+            if receipt.execution_state == "failed"
+            else "本轮已达到运行预算上限，先停在这里；可直接重试继续。"
+        )
+        return f"{note}\n/inspect — 完整运行诊断（操作员）"
     if presentation:
         return presentation
     return "\n".join(
         [
-            emoji,
+            "✅ Completed",
             "",
             receipt.outcome,
             "",

@@ -63,7 +63,7 @@ _PLUGINS_DIR = Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"
 if str(_PLUGINS_DIR) not in sys.path:
     sys.path.insert(0, str(_PLUGINS_DIR))
 
-from quant_core import StrategySpec, load_config, read_cache
+from quant_core import StrategySpec, ensure_history, load_config, read_cache
 from quant_live_scan import (
     ACTIVE_SYMBOLS_PATH,
     UniverseError,
@@ -909,6 +909,27 @@ def cmd_status(args, store: Store) -> int:
     return 0
 
 
+def cmd_prewarm_history(args, store: Store) -> int:
+    """Best-effort history hydration for analysis-watchlist additions (T005).
+
+    Read-only data-plane op: hydrate what hydrates, report what does not.
+    A hydration failure never invalidates the watchlist edit that asked for
+    it — the toolset reports watchlist and history facts separately."""
+    results: dict[str, dict] = {}
+    for raw in (args.symbols or "").split(","):
+        symbol = raw.strip()
+        if not symbol:
+            continue
+        try:
+            symbol = normalize_symbol(symbol)
+        except WatchlistError as exc:
+            results[symbol] = {"status": "invalid", "error": str(exc)}
+            continue
+        results[symbol] = ensure_history(symbol, "qfq", required_bars=args.required_bars)
+    print(json.dumps({"prewarm": results}, ensure_ascii=False, default=str))
+    return 0
+
+
 def cmd_symbol_context(args, store: Store) -> int:
     """On-demand single-symbol analysis context (read-only diagnostics).
 
@@ -976,8 +997,13 @@ def cmd_symbol_context(args, store: Store) -> int:
     else:
         quote_block["freshness_reason"] = "quote unavailable in this run"
 
-    # strategy distance on the SAME primitives the frozen scan uses
+    # strategy distance on the SAME primitives the frozen scan uses.
+    # Hydration seam (research service v0.2 T004): a never-cached symbol is
+    # auto-hydrated before the cache read, so "全面分析" no longer dies on a
+    # cache miss. Hydration failure is evidence and never wipes the quote —
+    # the history block simply reports the failure separately.
     strategy_block: dict = {"available": False}
+    hydration = ensure_history(symbol, "qfq")
     hist, hist_meta = read_cache("daily", f"{symbol}_qfq")
     hist_close = (
         pd.to_numeric((hist.sort_values("date") if "date" in hist else hist)["close"], errors="coerce").dropna()
@@ -989,8 +1015,15 @@ def cmd_symbol_context(args, store: Store) -> int:
     history_block = {
         "bars_available": int(len(hist_close)) if hist_close is not None else 0,
         "required_bars": 25,
+        "hydration_status": hydration["status"],
+        "sufficient": bool(
+            (int(len(hist_close)) if hist_close is not None else 0) >= 25
+        ),
     }
-    history_block["sufficient"] = history_block["bars_available"] >= history_block["required_bars"]
+    if hydration.get("error"):
+        history_block["hydration_error"] = hydration["error"]
+    if hydration.get("history_last_date"):
+        history_block["hydration_last_date"] = hydration["history_last_date"]
     if quote_block["available"] and quote.get("prev_close", 0):
         history_block["note"] = "bars counted from the cached daily history (all cached sessions)"
     hist_last_date = None
@@ -1105,6 +1138,12 @@ def main() -> int:
     p_sym.add_argument("--symbol", required=True, help="6-digit A-share code")
     p_sym.add_argument("--scope", default=None,
                        help="analysis watchlist scope for membership facts")
+    p_prewarm = sub.add_parser("prewarm-history",
+                               help="best-effort history hydration for watchlist additions (read-only)")
+    p_prewarm.add_argument("--symbols", required=True,
+                           help="comma-separated 6-digit A-share codes")
+    p_prewarm.add_argument("--required-bars", type=int, default=25,
+                           help="sufficiency threshold reported per symbol")
     sub.add_parser("status", help="print current monitor state")
     args = parser.parse_args()
 
@@ -1117,6 +1156,7 @@ def main() -> int:
         "skip": cmd_skip,
         "status": cmd_status,
         "symbol-context": cmd_symbol_context,
+        "prewarm-history": cmd_prewarm_history,
     }
     return handlers[args.cmd](args, store)
 

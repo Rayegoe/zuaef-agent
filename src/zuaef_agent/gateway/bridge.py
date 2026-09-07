@@ -11,6 +11,7 @@ approval logic here.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal
@@ -97,6 +98,59 @@ def prior_run_history(
     except LookupError:
         return None
     return list(history) if history else None
+
+
+#: Bounded recent semantic carryover (research service v0.2, T002): the last
+#: N semantic messages (user prompts + assistant business answers) move to
+#: the next turn; everything older stays retrievable through ConversationSearch.
+SEMANTIC_HISTORY_MAX_MESSAGES = 12
+
+
+def _semantic_project(history: list[Any]) -> list[Any]:
+    """Project execution history onto semantic turns — a mechanical filter.
+
+    Keeps user prompts and assistant text answers; drops old tool calls,
+    tool results, retry prompts and model trajectories. The history is a
+    transcript, not the task-state representation (AGENTS.md runtime rules):
+    replaying a prior run's tool trajectory re-enters stale observations as
+    if they were current evidence.
+    """
+    semantic: list[Any] = []
+    for message in history:
+        kind = getattr(message, "kind", None)
+        if kind not in ("request", "response"):
+            continue
+        kept = [
+            part
+            for part in getattr(message, "parts", [])
+            if (kind == "request" and getattr(part, "part_kind", None) == "user-prompt")
+            or (kind == "response" and getattr(part, "part_kind", None) == "text")
+        ]
+        if kept:
+            semantic.append(dataclasses.replace(message, parts=kept))
+    return semantic[-SEMANTIC_HISTORY_MAX_MESSAGES:]
+
+
+def prior_semantic_history(
+    settings: AgentSettings,
+    *,
+    run_id: str,
+    conversation_id: str,
+    receipts: ReceiptStore,
+) -> list[Any] | None:
+    """Bounded recent semantic turns for a normal follow-up (v0.2 T002).
+
+    Normal chat continuity is ``bounded recent semantic turns`` + on-demand
+    ConversationSearch — never the full prior execution trajectory (ADR-03).
+    Pause/resume keeps the exact StepPersistence continuation through
+    ``resume_paused_run``; this path never touches it.
+    """
+    history = prior_run_history(
+        settings, run_id=run_id, conversation_id=conversation_id, receipts=receipts
+    )
+    if not history:
+        return history
+    return _semantic_project(history)
 
 
 def start_profile_run(

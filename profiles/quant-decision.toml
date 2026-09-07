@@ -9,6 +9,20 @@
 schema = 1
 name = "quant-decision"
 
+# Harness resource request (quant research service v0.2, T001): the effective
+# authorization is host ceiling ∩ this request (composition layer freezes it).
+# Host ceiling comes from ZUAEF_ENABLE_* in the deployment environment — a
+# profile request alone never widens host policy.
+# Memory / subagents / shell / repo_context stay unauthorized: market truth
+# has durable business artifacts, not generic memory, and quant production
+# stays a single outcome-owning agent.
+[generalist]
+web_search = true
+web_fetch = true
+tool_search = true
+conversation_search = true
+context_controls = true
+
 [[plugins]]
 id = "quant"
 allow_capabilities = true

@@ -38,12 +38,16 @@ def scope_dir(workspace_root: Path) -> Path:
     return Path(workspace_root) / WATCHLIST_DIRNAME
 
 
-def scope_filename(scope: str) -> str:
+def scope_slug(scope: str) -> str:
     """Filesystem-safe scope name; opaque bindings stay opaque."""
     if not scope or not scope.strip():
         raise WatchlistError("analysis watchlist scope is empty")
     name = _SCOPE_RE.sub("_", scope.strip())[:80].strip("._-") or "default"
-    return name + ".json"
+    return name
+
+
+def scope_filename(scope: str) -> str:
+    return scope_slug(scope) + ".json"
 
 
 def normalize_symbol(symbol: str) -> str:

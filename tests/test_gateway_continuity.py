@@ -17,7 +17,7 @@ import asyncio
 from pathlib import Path
 
 from pydantic_ai import models
-from pydantic_ai.messages import ModelResponse, TextPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai_harness.step_persistence import FileStepStore, continue_run
 
@@ -183,6 +183,75 @@ def test_turn2_sees_turn1_constraint(tmp_path, monkeypatch):
     assert session2.last_terminal_run_id != session.last_terminal_run_id
     receipt = service.receipts.read(session2.last_terminal_run_id)
     assert receipt.conversation_id == session2.conversation_id
+
+
+def test_followup_carries_semantic_turns_not_tool_trajectory(tmp_path, monkeypatch):
+    """T002 (research service v0.2): a normal follow-up receives the prior
+    run's user prompt and business answer — but NOT its tool calls/results.
+
+    The reproduced 600550 failure mode: the whole prior execution trajectory
+    (old tool calls and results) was forked into every follow-up prompt,
+    re-entering stale observations as if they were current evidence.
+    """
+    seen_part_kinds: list[list[str]] = []
+    state = {"turn": 0}
+
+    def fn(messages, info):
+        state["turn"] += 1
+        seen_part_kinds.append(
+            [getattr(p, "part_kind", "?") for m in messages for p in getattr(m, "parts", [])]
+        )
+        if state["turn"] == 1:
+            return ModelResponse(parts=[ToolCallPart("list_materials", {"query": "背景"})])
+        if state["turn"] == 2:
+            return ModelResponse(parts=[TextPart(content="第一轮结论：价格先不写。")])
+        return _final()
+
+    surface = FakeSurface()
+    service = _make_service(tmp_path, monkeypatch, surface, fn)
+
+    service.handle(_envelope("结合材料写一篇：价格先不要写", 1))
+    service.handle(_envelope("再改一版", 2))
+
+    # Turn 2 (the follow-up) sees semantic carryover only.
+    turn2_kinds = seen_part_kinds[-1]
+    assert "tool-call" not in turn2_kinds, f"tool trajectory replayed: {turn2_kinds}"
+    assert "tool-return" not in turn2_kinds, f"tool results replayed: {turn2_kinds}"
+    assert "retry-prompt" not in turn2_kinds
+    # ...while the semantic carryover itself is present (user prompt kept)
+    assert "user-prompt" in turn2_kinds
+
+
+def test_followup_keeps_prior_user_prompt_and_answer(tmp_path, monkeypatch):
+    """Semantic carryover still carries the facts a follow-up needs."""
+    seen_messages: list[list] = []
+    state = {"turn": 0}
+
+    def fn(messages, info):
+        state["turn"] += 1
+        seen_messages.append(
+            [
+                (getattr(m, "kind", "?"), getattr(p, "part_kind", "?"), str(getattr(p, "content", "")))
+                for m in messages
+                for p in getattr(m, "parts", [])
+            ]
+        )
+        if state["turn"] == 1:
+            return ModelResponse(parts=[TextPart(content="第一轮结论：客户要平价通勤定位。")])
+        return _final()
+
+    surface = FakeSurface()
+    service = _make_service(tmp_path, monkeypatch, surface, fn)
+
+    service.handle(_envelope("第一轮任务：价格先不要写", 1))
+    service.handle(_envelope("第二轮：继续", 2))
+
+    turn2 = seen_messages[-1]
+    joined = " ".join(content for _, _, content in turn2)
+    assert "价格先不要写" in joined, f"prior user prompt lost: {joined!r}"
+    assert "平价通勤定位" in joined, f"prior business answer lost: {joined!r}"
+    # and the semantic history is bounded, not a full trajectory
+    assert len(seen_messages[-1]) <= 8
 
 
 def test_reset_conversation_does_not_leak_prior_history(tmp_path, monkeypatch):

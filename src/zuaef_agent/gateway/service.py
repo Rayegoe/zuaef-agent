@@ -244,11 +244,14 @@ class GatewayService:
                 is_continuation=session.last_terminal_run_id is not None,
             ))
         self._start_progress_watchdog(session, run_id)
-        # Normal-turn continuity (SPEC §15 / T010): a follow-up message in the
-        # same conversation resumes the prior terminal run's real history from
-        # public persistence — a fresh run_id, the same conversation_id.
+        # Normal-turn continuity (research service v0.2, T002 / ADR-03): a
+        # follow-up message carries bounded recent SEMANTIC turns (user
+        # prompts + business answers) — the prior run's tool trajectory is
+        # not replayed into the prompt. ConversationSearch covers older
+        # facts on demand; pause/resume keeps the exact StepPersistence
+        # continuation via the shared resume seam.
         history = (
-            bridge.prior_run_history(
+            bridge.prior_semantic_history(
                 self.settings,
                 run_id=session.last_terminal_run_id,
                 conversation_id=session.conversation_id,

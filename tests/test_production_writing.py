@@ -292,7 +292,9 @@ def test_production_composition_through_ace_writing_profile(tmp_path, monkeypatc
 
     caps = agent.root_capability.capabilities
     cap_names = {type(c).__name__ for c in caps}
-    assert "StepPersistence" in cap_names
+    # RetrySettledStepPersistence subclasses the harness StepPersistence
+    # (ModelRetry effect settlement, research service v0.2 T013).
+    assert "RetrySettledStepPersistence" in cap_names
     assert cap_names.isdisjoint(
         {"ToolOutputLimits", "Planning", "FileSystem", "Knowledge", "Skills"}
     )

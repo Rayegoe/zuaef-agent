@@ -97,8 +97,22 @@ def test_render_terminal_classic_card_when_no_presentation():
 
 
 def test_render_terminal_failed_and_limit():
-    assert "⛔ Failed" in render_terminal(_terminal("failed"))
-    assert "⏹ Limit reached" in render_terminal(_terminal("limit_reached"))
+    failed = render_terminal(_terminal("failed"))
+    assert "没有完整结束" in failed
+    assert "可直接重试" in failed
+    assert "/inspect" in failed
+    # operational internals never reach the customer surface (T014)
+    assert "Run:" not in failed
+    assert "Requests" not in failed
+    assert "tokens" not in failed
+    assert "Unresolved effects" not in failed
+    assert "Runtime reason" not in failed
+
+    limit = render_terminal(_terminal("limit_reached"))
+    assert "预算上限" in limit
+    assert "/inspect" in limit
+    assert "Run:" not in limit
+    assert "Input tokens" not in limit
 
 
 def test_render_terminal_presentation_is_the_reply():
@@ -223,7 +237,7 @@ def test_chunk_text_respects_max():
 # ---------------------------------------------------------------------------
 
 
-def test_render_terminal_limit_reached_is_a_first_class_card():
+def test_render_terminal_limit_reached_is_bounded_and_points_to_operator_surface():
     now = datetime.now(UTC)
     receipt = RunReceipt(
         run_id="run-limit-1",
@@ -239,11 +253,9 @@ def test_render_terminal_limit_reached_is_a_first_class_card():
         artifact_facts=[ArtifactFact(path="a.md", size=1, sha256="x" * 64, change="created")],
     )
     text = render_terminal(TerminalRun(presentation="must not leak", receipt=receipt))
-    assert "LIMIT_REACHED" in text
-    assert "Requests: 12 · Tool calls: 25" in text
-    assert "Configured limits: {'request_limit': 12, 'tool_calls_limit': 20, 'total_tokens_limit': None}" in text
-    assert "Limit boundary: UNKNOWN" in text  # never guessed from token counts
-    assert "Runtime reason: The next request would exceed the request_limit of 12" in text
-    assert "Artifacts: 1 · Unresolved effects: 0" in text
+    # the chat surface stays business-first: bounded notice + operator pointer
+    assert "预算上限" in text
     assert "/inspect" in text
     assert "must not leak" not in text  # presentation is never a limit diagnosis
+    assert "Requests" not in text and "Configured limits" not in text
+    assert "Runtime reason" not in text and "run-limit-1" not in text

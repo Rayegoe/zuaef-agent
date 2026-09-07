@@ -283,6 +283,11 @@ def inspect_run(
     usage_input = _known_int(usage.get("input_tokens"))
     usage_output = _known_int(usage.get("output_tokens"))
     usage_source = _text(usage.get("source"), limit=80)
+    # Cache observability (research service v0.2, T015): provider-reported
+    # cache tokens ride the same usage payload — projected when present,
+    # omitted when absent. No second telemetry mechanism is added.
+    usage_cache_read = _known_int(usage.get("cache_read_tokens"))
+    usage_cache_write = _known_int(usage.get("cache_write_tokens"))
 
     unavailable_usage: list[str] = []
     if usage_input is None:
@@ -330,6 +335,8 @@ def inspect_run(
         "tool_calls": _known_int(run.get("tool_call_count")),
         "input_tokens": usage_input,
         "output_tokens": usage_output,
+        "cache_read_tokens": usage_cache_read,
+        "cache_write_tokens": usage_cache_write,
         "usage_source": usage_source,
         "usage_complete": run.get("usage_complete"),
         "usage_limits": dict(_mapping(run.get("usage_limits"))),
@@ -483,6 +490,15 @@ def render_inspection_markdown(
             ("Tool calls", summary.get("tool_calls")),
             ("Input tokens", summary.get("input_tokens")),
             ("Output tokens", summary.get("output_tokens")),
+            (
+                "Cache tokens (read/write)",
+                (
+                    f"{summary.get('cache_read_tokens')}/{summary.get('cache_write_tokens')}"
+                    if summary.get("cache_read_tokens") is not None
+                    or summary.get("cache_write_tokens") is not None
+                    else None
+                ),
+            ),
             ("Usage source", summary.get("usage_source")),
             ("Usage complete", summary.get("usage_complete")),
             ("Configured limits", summary.get("usage_limits") or "UNKNOWN"),

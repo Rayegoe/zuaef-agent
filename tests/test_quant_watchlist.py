@@ -343,6 +343,64 @@ class TestWatchlistTools:
             _deps(tmp_path, {"analysis_scope": "oc_group_b"})))
         assert other["symbols"] == []
 
+    def test_add_prewarms_history_for_new_symbols(self, tmp_path, monkeypatch):
+        import zuaef_quant.toolset as toolset_module
+
+        captured: dict = {}
+
+        def fake_run(script, args, quant_python, timeout):
+            captured["args"] = args
+            return json.dumps({"prewarm": {"600460": {
+                "status": "hydrated", "bars_available": 60, "sufficient": True}}})
+
+        monkeypatch.setattr(toolset_module, "_run", fake_run)
+        toolset = _toolset(tmp_path)
+        ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
+        data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"]))
+        assert data["verified"] is True
+        assert data["history_prewarm"]["600460"]["status"] == "hydrated"
+        args = captured["args"]
+        assert "prewarm-history" in args
+        assert args[args.index("--symbols") + 1] == "600460"
+
+    def test_prewarm_failure_keeps_watchlist_success_separate(self, tmp_path, monkeypatch):
+        import zuaef_quant.toolset as toolset_module
+
+        def failing_run(*_a):
+            raise RuntimeError("upstream down")
+
+        monkeypatch.setattr(toolset_module, "_run", failing_run)
+        toolset = _toolset(tmp_path)
+        ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
+        data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"]))
+        # the watchlist edit itself succeeded; hydration failure is separate evidence
+        assert data["verified"] is True and data["changed"] == ["600460"]
+        assert "error" in data["history_prewarm"]
+        persisted = json.loads(
+            (tmp_path / "workspace" / "artifacts" / "quant" / "watchlist" / "oc_group_a.json").read_text()
+        )
+        assert persisted["symbols"] == ["600460"]
+
+    def test_remove_does_not_prewarm(self, tmp_path, monkeypatch):
+        import zuaef_quant.toolset as toolset_module
+
+        calls: list = []
+
+        def fake_run(*a):
+            calls.append(a)
+            return json.dumps({"prewarm": {}})
+
+        monkeypatch.setattr(toolset_module, "_run", fake_run)
+        toolset = _toolset(tmp_path)
+        ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
+        toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"])
+        assert calls, "add must prewarm"
+        calls.clear()
+        data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "remove", ["600460"]))
+        assert data["verified"] is True
+        assert not calls
+        assert "history_prewarm" not in data
+
     def test_symbol_context_threads_scope_and_state_dir(self, tmp_path, monkeypatch):
         import zuaef_quant.toolset as toolset_module
 

@@ -73,10 +73,9 @@ Research sandbox (code_mode, when enabled — production is): the
 run_code tool wraps the evidence tools as Python callables and mounts the
 read-only history cache at /quant-cache (per-symbol daily CSVs, columns
 include date/open/close/volume). Use it for TEMPORARY analysis the fixed
-tools cannot answer: event studies, similar-history forward
-distributions, multi-symbol comparisons, custom-window statistics. The
-sandbox is for proving a one-off question, never for strategy changes:
-it cannot write anything, cannot reach the ledger/candidates/trading
+tools cannot answer (which recipe fits which question: the quant-research
+skill). The sandbox is for proving a one-off question, never for strategy
+changes: it cannot write anything, cannot reach the ledger/candidates/trading
 artifacts, and its results enter the reply as DERIVED host facts (state
 the sample size and window). If a sandbox analysis keeps being asked,
 say so and propose it as a permanent tool — do not let throwaway code
@@ -88,6 +87,18 @@ open(path).read() then .splitlines() — file objects are NOT iterable;
 pathlib lacks glob/iterdir — use os.listdir(); there is no statistics,
 csv, math module import or __import__ — write plain arithmetic loops
 (means, sorting, counting, percentiles by hand).
+
+Full-analysis research (全面分析 / 趋势预测 / 深度研究): load the
+quant-research skill and follow it — evidence hierarchy, coverage
+checklist, Bull/Base/Bear forecast contract, degradation rules, CodeMode
+recipes, the web-evidence contract (WebSearch/WebFetch facts must carry
+source, url and time — never "网上消息显示"), research packet persistence
+(save_research_packet / get_research_packet: a prior packet is a
+hypothesis, never current market truth) and customer-evidence intake
+(record_customer_evidence: CUSTOMER_REPORTED/UNVERIFIED — it may shape
+research attention and hypotheses, never READY/NEAR, candidate pool,
+strategy or fills). A missing evidence layer makes the research PARTIAL
+and is reported as missing — never guessed.
 
 Evidence-first claim rule (root principle: the LLM explains facts the host
 has proven — it never fabricates market facts):
@@ -203,6 +214,12 @@ def resolve_quant_python(workspace_root: Path) -> Path:
     return path
 
 
+#: Deferred domain methodology (research service v0.2 T006): full-analysis
+#: methodology lives in a Harness Skill, loaded on demand — the capability
+#: instructions keep only hard truth invariants.
+SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
+
+
 def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
     quant_python = resolve_quant_python(env.workspace_root)
     toolset = make_toolset(quant_python=quant_python, workspace_root=env.workspace_root)
@@ -222,7 +239,7 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
     # sandbox. The model never edits the frozen S3 rules: the sandbox is for
     # temporary derivation, never for strategy execution.
     if config.get("code_mode", False) is not True:
-        return PluginBundle(capabilities=[capability])
+        return PluginBundle(capabilities=[capability], skill_dirs=[SKILLS_DIR])
     from pydantic_ai_harness.code_mode import CodeMode
 
     cache_root = Path("data/quant-cache").resolve()
@@ -244,4 +261,4 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
         mount=MountDir(virtual_path="/quant-cache", host_path=str(cache_root), mode="read-only"),
         max_retries=3,
     )
-    return PluginBundle(capabilities=[capability, sandbox])
+    return PluginBundle(capabilities=[capability, sandbox], skill_dirs=[SKILLS_DIR])

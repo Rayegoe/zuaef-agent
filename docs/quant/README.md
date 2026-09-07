@@ -4,6 +4,40 @@
 **状态:** ENGINEERING FREEZE(P5.5 观察模式,2026-09-02 起生效)
 **当前阶段判断:** 工程链路已足够完整;最大的未知数已从"软件能不能工作"变成"它在真实市场里有没有用"。下一张 task 由真实市场派发,不由排期派发。
 
+**2026-09-07 增补 · 自主研究服务 v0.2(Harness-Native,600550 事故闭环):**
+真实事故(2026-09-07,run 8ddd2417,Feishu "为 600550 做个全面分析和趋势预测"):quote 有、
+历史 cache 缺失 → 模型如实拒判"趋势预测做不了",且 `run_code`(CodeMode)沙箱报错以
+`ModelRetry` 控制流抛出 → StepPersistence 效果记录停在 `started` 从不结算 → 结算层把一次
+实际完成的 run 降级为 FAILED("run ended with unresolved tool call(s)")。修复(两层各自最小):
+① **Runtime 正确性**:`core.RetrySettledStepPersistence.wrap_tool_execute` 在
+`ModelRetry/ToolRetryError/ToolFailedError` 时按 `on_tool_execute_error` 同款语义结算效果
+(failed + 事件流),异常继续抛给模型——run 恢复后保持 completed,回归测试
+`tests/test_execute_run_seam.py::test_model_retry_tool_call_settles_and_run_completes`。
+② **业务闭环**:`tools/quant_core.py::ensure_history`(read_cache→validate→fetch_history→
+结构化证据,per-symbol bounded lock,7 天陈旧阈值 + 当日已取回不重复刷)接入
+`symbol-context`(cache miss 自动补历史,水合失败不抹 quote)与新增 monitor 子命令
+`prewarm-history`(watchlist 新增即 best-effort 预热,失败不影响加清单)。
+③ **Harness 资源授权**:`profiles/quant-decision.toml` 增 `[generalist]` 请求
+(web_search/web_fetch/tool_search/conversation_search/context_controls;host ceiling ∩ request;
+memory/subagents/shell/repo_context 保持关闭)。**部署时 OPi5 `.env` 需补
+`ZUAEF_ENABLE_WEB_SEARCH=true` / `ZUAEF_ENABLE_WEB_FETCH=true`(host ceiling),否则 web 研究不生效**,
+并重装 profile(`cp profiles/quant-decision.toml ~/.config/zuaef/profiles/`)+ 按硬规则重启 gateway。
+④ **研究面**:`plugins/zuaef-quant/skills/quant-research/SKILL.md`(evidence hierarchy、覆盖清单、
+Bull/Base/Bear 预测契约、降级规则、CodeMode recipes、web 证据须带 source/url/时间、research packet
+复用语义——prior packet 是假设不是当前事实);新工具 `get_market_intelligence`(akshare
+stock_news_em,bounded,非爬虫)、`save_research_packet`/`get_research_packet`
+(`artifacts/quant/research/<scope>/<symbol>/`)、`record_customer_evidence`(CUSTOMER_REPORTED/
+UNVERIFIED,只能影响研究注意力,永远不碰候选池/READY-NEAR/策略/成交)。⑤ **工具面收敛(T007)**:
+5 个低频工具 `defer_loading`(经 ToolSearch 中文可发现,公告/新闻/客户说/全面分析/自选),
+核心 evidence tools 常驻;composition 层新增守卫:defer_loading 而 tool_search 未授权 = 组合失败。
+⑥ **连续性(T002)**:普通 follow-up 只携带 bounded 语义轮次(用户消息 + 业务回答,≤12 条),
+旧 tool 轨迹不再整体重放;pause/resume 仍走精确 StepPersistence。
+⑦ **客户失败 UX(T014)**:FAILED/LIMIT_REACHED 客户面只给 bounded 文案 + `/inspect` 指引,
+不再泄露 tokens/tool 计数/run id;完整诊断仍在 /inspect、/status、Console(Console 新增
+provider 上报的 cache read/write tokens 投影,T015)。
+状态:单测全绿(新增 hydration/symbol-context/research/tool-disclosure/recipe 测试);
+**OPi5 真实 Feishu 闭环证明(600550 无缓存 → 全链路)未跑前不宣称 PROVEN**。
+
 **2026-09-02 增补 · 业务看板与候选发现(Quant Business Dashboard + Candidate Discovery v1.0):**
 新增业务决策页 `docs/quant/business.html`(默认页)与确定性候选发现管线
 `tools/quant_build_candidates.py`,把产品重心从"软件进度证明"转向"市场/策略证据"。工程/审计页保留为

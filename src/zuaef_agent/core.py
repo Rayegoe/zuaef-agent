@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.exceptions import ModelRetry, ToolFailedError, ToolRetryError
 from pydantic_ai.toolsets import AbstractToolset
 from pydantic_ai_harness.filesystem import FileSystem
 from pydantic_ai_harness.planning import Planning
@@ -84,6 +85,18 @@ is read-only for general file tools) and requires an observed source; never
 fabricate sources. Distinguish observed facts from assumptions and name
 unknowns instead of guessing.
 
+Method Kernel — judgment principles for unfamiliar or consequential problems,
+not a mandatory workflow: simple tasks just get done. Reconstruct reality
+before proposing change (what is actually happening, what evidence proves it,
+what outcome is wanted). Evidence outranks explanation. Prefer the smallest
+intervention that can prove the outcome; check whether an existing seam,
+tool or fix already covers it. Make material uncertainty explicit (unknown,
+unverified, untested, insufficient evidence) instead of flattening it into
+conclusions. Try to falsify important conclusions: what would prove this
+wrong, what simpler explanation remains? Recommend durable additions only
+when evidence shows they earn their place; simplifying or removing something
+that did not is an equally valid recommendation.
+
 For normal analysis, writing, revision and planning, return the useful result
 directly to the current user. Long durable work products may be persisted under
 workspace/artifacts when the task or domain calls for it.
@@ -119,6 +132,54 @@ FILESYSTEM_PROTECTED_PATTERNS = [
     "*.key",
     "**/secrets*",
 ]
+
+
+class RetrySettledStepPersistence(StepPersistence[CoreDeps]):
+    """Settle the tool-effect record when a tool ends in a model-facing retry.
+
+    pydantic-ai treats a tool's retry/failure control flow (``ModelRetry``,
+    and its ``ToolRetryError``/``ToolFailedError`` wrappers) as non-errors:
+    it propagates out of ``handle_call`` before ``after_tool_execute`` /
+    ``on_tool_execute_error`` fire, so the effect record written at
+    ``tool_call_started`` is never finished. A run that recovers from the
+    retry and completes normally was then downgraded to ``failed`` at
+    settlement ("run ended with unresolved tool call(s)") — the reproduced
+    2026-09-07 600550 incident, where CodeMode's ``run_code`` surfaced a
+    sandbox error as a model retry. The call did execute and its error
+    reached the model, so the honest ledger fact is ``failed`` with the
+    error as the observable outcome. The exception is re-raised: the model
+    still receives it.
+    """
+
+    async def wrap_tool_execute(
+        self,
+        ctx: RunContext[CoreDeps],
+        *,
+        call: Any,
+        tool_def: Any,
+        args: Any,
+        handler: Any,
+    ) -> Any:
+        try:
+            return await handler(args)
+        except (ModelRetry, ToolRetryError, ToolFailedError) as error:
+            # Mirror on_tool_execute_error: settle both the tool-effect
+            # record and the step event stream (receipts read the events).
+            await self._finish_tool_effect(
+                self._effective_run_id(ctx),
+                call.tool_call_id,
+                tool_def.name,
+                "failed",
+                repr(error),
+            )
+            await self._record_event(
+                ctx,
+                kind="tool_call_failed",
+                tool_call_id=call.tool_call_id,
+                tool_name=tool_def.name,
+                error=repr(error),
+            )
+            raise
 
 
 def generalist_capabilities(
@@ -279,7 +340,7 @@ def build_agent(
 
     if settings.enable_step_persistence:
         capabilities.append(
-            StepPersistence[CoreDeps](
+            RetrySettledStepPersistence(
                 store=FileStepStore(
                     settings.step_store_dir,
                     max_snapshots_per_run=settings.max_snapshots_per_run,
