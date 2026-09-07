@@ -1663,8 +1663,8 @@
     },
     {
       "path": "tests/test_quant_watchlist.py",
-      "bytes": 14359,
-      "sha256": "806aa8d6c688cd44e310f87f640ea75ac4413cca99a8dfa0c6417187053150a0"
+      "bytes": 15774,
+      "sha256": "926bd7e0c67a1d280954e1dddf0016d573819c18459b5b5954456f642cb347f1"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -1968,8 +1968,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/__init__.py",
-      "bytes": 132,
-      "sha256": "70218619aa93c0f6afe1db416a7d6c5f4ad09f26191f39aaf3aa686306bebaf6"
+      "bytes": 654,
+      "sha256": "aed52c968b0c05f2f7b5622419dc324b59af24a3a2a66cb9d2fddc70715cb9da"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/freshness.py",

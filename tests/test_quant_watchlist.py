@@ -107,6 +107,36 @@ class TestWatchlistStore:
         assert wl.all_symbols(ws) == []
 
 
+def test_side_env_can_import_host_modules_without_pydantic_ai():
+    """The quant side env runs the monitor WITHOUT pydantic_ai. The package
+    __init__ must stay lazy: importing zuaef_quant.freshness / watchlist
+    from the side env must not drag zuaef_quant.plugin in. This reproduces
+    the production failure of run 4724d4a1 exactly (import chain, not
+    logic)."""
+    import subprocess
+    import textwrap
+
+    plugins_dir = str(Path(__file__).parents[1] / "plugins" / "zuaef-quant")
+    script = textwrap.dedent(f"""
+        import importlib.abc, sys
+        class _NoPydanticAI(importlib.abc.MetaPathFinder):
+            def find_spec(self, fullname, path=None, target=None):
+                if fullname == "pydantic_ai" or fullname.startswith("pydantic_ai."):
+                    raise ImportError("side env has no pydantic_ai")
+                return None
+        sys.meta_path.insert(0, _NoPydanticAI())
+        sys.path.insert(0, {plugins_dir!r})
+        import zuaef_quant.freshness as f
+        import zuaef_quant.watchlist as w
+        assert callable(f.derive_freshness) and callable(w.update_symbols_in)
+        # the plugin itself stays lazily reachable in the MAIN environment
+        print("side-env-ok")
+    """)
+    proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    assert "side-env-ok" in proc.stdout
+
+
 # ---------------------------------------------------------------------------
 # monitor: quote plane joins, lifecycle never does
 # ---------------------------------------------------------------------------
