@@ -1638,8 +1638,8 @@
     },
     {
       "path": "tests/test_quant_plugin.py",
-      "bytes": 21727,
-      "sha256": "639bf15feeb328632649a9d08a92a40a6e229ac0e5fb786ba85b3be5a4bc2896"
+      "bytes": 24188,
+      "sha256": "aa5cbe237cdb6d87d73cd07c335d6225ac28b54eb949b82a289b82c96d81e496"
     },
     {
       "path": "tests/test_quant_replay.py",
@@ -1978,8 +1978,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/plugin.py",
-      "bytes": 13026,
-      "sha256": "48e8d7dcb3375df0f9ae5ec7892ee0e4a1373513b2e62e184bbc405aff16ce86"
+      "bytes": 13514,
+      "sha256": "cef7e5c6f703b597cad61d08458525a92dd674f96352a0bac680606617b37409"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",

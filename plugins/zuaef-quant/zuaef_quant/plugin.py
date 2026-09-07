@@ -80,7 +80,14 @@ it cannot write anything, cannot reach the ledger/candidates/trading
 artifacts, and its results enter the reply as DERIVED host facts (state
 the sample size and window). If a sandbox analysis keeps being asked,
 say so and propose it as a permanent tool — do not let throwaway code
-become a shadow pipeline.
+become a shadow pipeline. Sandbox runtime constraints (a minimal Python
+interpreter — respect them or burn retries): files are CSVs at
+/quant-cache/daily/<code>_qfq.csv with header
+date,symbol,open,high,low,close,volume,amount,turnover; read with
+open(path).read() then .splitlines() — file objects are NOT iterable;
+pathlib lacks glob/iterdir — use os.listdir(); there is no statistics,
+csv, math module import or __import__ — write plain arithmetic loops
+(means, sorting, counting, percentiles by hand).
 
 Evidence-first claim rule (root principle: the LLM explains facts the host
 has proven — it never fabricates market facts):

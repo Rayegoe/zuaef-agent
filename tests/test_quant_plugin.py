@@ -457,3 +457,64 @@ class TestCodeModeSandbox:
         monkeypatch.chdir(tmp_path)  # no data/quant-cache anywhere
         with pytest.raises(CompositionError, match="data/quant-cache"):
             create_plugin(_env(tmp_path), {"code_mode": True})
+
+
+def test_code_mode_sandbox_executes_real_analysis_over_mount(tmp_path, monkeypatch):
+    """End-to-end sandbox proof: run_code reads the read-only history cache
+    and computes a real statistic in pure Python (monty runtime). Pins the
+    documented constraints: open().read() (not iteration), os.listdir (no
+    pathlib.glob), no statistics module."""
+    import asyncio
+    import textwrap
+
+    from pydantic_ai import Agent, models as pai_models
+    from pydantic_ai.models.function import FunctionModel
+    from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
+
+    pai_models.ALLOW_MODEL_REQUESTS = False
+    cache = tmp_path / "data" / "quant-cache" / "daily"
+    cache.mkdir(parents=True)
+    (cache / "000001_qfq.csv").write_text(
+        "date,symbol,open,high,low,close,volume,amount,turnover\n"
+        + "".join(f"2026-08-{d:02d},000001,10,10,10,10.5,1,1,1\n" for d in range(1, 11)),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    from pydantic_ai_harness import CodeMode
+    from pydantic_monty import MountDir
+
+    code = textwrap.dedent("""
+        import os
+        names = os.listdir("/quant-cache/daily")
+        with open("/quant-cache/daily/000001_qfq.csv") as f:
+            text = f.read()
+        lines = text.strip().splitlines()
+        header = lines[0].split(",")
+        rows = [l.split(",") for l in lines[1:] if l]
+        ci = header.index("close")
+        closes = [float(r[ci]) for r in rows]
+        up = sum(1 for i in range(1, len(closes)) if closes[i] > closes[i-1])
+        print({"files": len(names), "rows": len(rows), "up_days": up})
+    """)
+    calls = {"n": 0}
+
+    def fn(messages: list, info) -> ModelResponse:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return ModelResponse(parts=[ToolCallPart("run_code", {"code": code})])
+        return ModelResponse(parts=[TextPart(content="done")])
+
+    agent = Agent(FunctionModel(fn), capabilities=[CodeMode(
+        mount=MountDir(virtual_path="/quant-cache", host_path=str(cache.parent), mode="read-only"),
+        max_retries=3,
+    )])
+    result = asyncio.run(agent.run("probe"))
+    returns = [
+        str(p.content)
+        for m in result.all_messages()
+        for p in getattr(m, "parts", [])
+        if getattr(p, "part_kind", "") == "tool-return"
+    ]
+    assert len(returns) == 1
+    assert "'files': 1" in returns[0] and "'rows': 10" in returns[0] and "'up_days': 0" in returns[0]
