@@ -104,10 +104,10 @@ def test_render_terminal_failed_and_limit():
 def test_render_terminal_presentation_is_the_reply():
     article = "### 夏天的指尖\n\n到了八月,美甲似乎也该从好看里退一步。"
     text = render_terminal(_terminal(presentation=article))
-    assert text.startswith(article)
-    assert "✅ Completed" in text
-    assert "Run: run-term" in text  # short id on the outcome-first card
-    assert "post published" not in text  # audit prose is Console-only here
+    # business surface: the reply IS the presentation, nothing else
+    assert text == article
+    assert "✅ Completed" not in text
+    assert "Run:" not in text
     assert "Artifact byte facts" not in text
 
 

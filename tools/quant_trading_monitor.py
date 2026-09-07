@@ -56,15 +56,29 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
+# zuaef_quant.freshness / zuaef_quant.watchlist are stdlib-only host modules
+# shared with the agent's quant toolset — one source of truth for the
+# freshness contract and the analysis-watchlist layout.
+_PLUGINS_DIR = Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"
+if str(_PLUGINS_DIR) not in sys.path:
+    sys.path.insert(0, str(_PLUGINS_DIR))
 
 from quant_core import StrategySpec, load_config, read_cache
 from quant_live_scan import (
     ACTIVE_SYMBOLS_PATH,
+    UniverseError,
     fetch_batch_quotes,
     load_volume_semantics,
     resolve_universe,
     timing_from_quote_hist,
     volume_gate_suppresses,
+)
+from zuaef_quant.freshness import derive_freshness, market_date_of
+from zuaef_quant.watchlist import (
+    WatchlistError,
+    all_symbols_in,
+    normalize_symbol,
+    read_symbols_in,
 )
 
 TZ_SH = ZoneInfo("Asia/Shanghai")
@@ -338,6 +352,22 @@ def market_tick_at(quotes: dict) -> str | None:
     return max(stamps).isoformat() if stamps else None
 
 
+def watchlist_dir(state_dir: Path) -> Path:
+    """The analysis watchlist dir is a sibling of the trading dir:
+    artifacts/quant/trading ↔ artifacts/quant/watchlist."""
+    return Path(state_dir).parent / "watchlist"
+
+
+def analysis_watchlist_symbols(state_dir: Path) -> list[str]:
+    """Union of every scope's user-attention symbols. A read failure degrades
+    to an empty list — watchlist diagnostics must never break the trading
+    loop (the canonical candidate/position plane is independent)."""
+    try:
+        return all_symbols_in(watchlist_dir(state_dir))
+    except OSError:
+        return []
+
+
 # ---------------------------------------------------------------------------
 # One deterministic monitor cycle
 # ---------------------------------------------------------------------------
@@ -366,7 +396,12 @@ def run_cycle(
                 else resolve_universe(None, active_path=ACTIVE_SYMBOLS_PATH))
     symbols = list(resolved["symbols"])
     position_symbols = [p["symbol"] for p in store.positions["open"]]
-    quote_symbols = sorted(set(symbols) | set(position_symbols))
+    # Three-tier universe (analysis watchlist): user-attention symbols join
+    # the QUOTE plane only. The opportunity layer below iterates the
+    # candidate `symbols` exclusively, so a watched symbol can never produce
+    # READY/NEAR — strategy evidence stays free of user curation.
+    watchlist_symbols = analysis_watchlist_symbols(Path(state_dir))
+    quote_symbols = sorted(set(symbols) | set(position_symbols) | set(watchlist_symbols))
     quotes = (data_adapter.fetch_batch_quotes(quote_symbols) if data_adapter is not None
               else fetch_batch_quotes(quote_symbols))
     history_read = data_adapter.read_cache if data_adapter is not None else read_cache
@@ -583,6 +618,7 @@ def run_cycle(
         attention=attention, symbols=len(quote_symbols), positions_live=positions_live,
         data_trust=data_trust,
         tick_at=market_tick_at(quotes),
+        analysis_watchlist=watchlist_symbols,
     )
     return {"status": status, "events": events, "symbols": len(quote_symbols), "data_trust": data_trust}
 
@@ -590,7 +626,7 @@ def run_cycle(
 def _write_summary(store: Store, status: str, events: list, now: datetime, day: str,
                    state_dir: Path, attention: list[dict] | None = None, symbols: int = 0,
                    positions_live: dict | None = None, data_trust: str = "UNKNOWN",
-                   tick_at: str | None = None) -> None:
+                   tick_at: str | None = None, analysis_watchlist: list[str] | None = None) -> None:
     ready = [s for s, o in store.opportunities.items() if o.get("state") == ST_READY]
     near = [s for s, o in store.opportunities.items() if o.get("state") == ST_NEAR]
     exit_alerts = [p["symbol"] for p in store.positions["open"] if p.get("state") == "EXIT_ALERT"]
@@ -602,6 +638,7 @@ def _write_summary(store: Store, status: str, events: list, now: datetime, day: 
         "last_scan_at": now.isoformat() if symbols > 0 else previous.get("last_scan_at"),
         "market_tick_at": tick_at,
         "market_phase": market_phase(now),
+        "analysis_watchlist": sorted(analysis_watchlist or []),
         "day": day,
         "status": status,
         "symbols_scanned": symbols,
@@ -826,6 +863,152 @@ def cmd_status(args, store: Store) -> int:
     return 0
 
 
+def cmd_symbol_context(args, store: Store) -> int:
+    """On-demand single-symbol analysis context (read-only diagnostics).
+
+    Three-tier universe semantics: the answer states where the symbol LIVES
+    (candidate pool / analysis watchlist / open positions) and gives real
+    strategy-clause distances — but diagnostics never produce READY/NEAR.
+    Not in the candidate pool ≠ not researchable; that distinction is the
+    whole point of this command."""
+    try:
+        symbol = normalize_symbol(args.symbol)
+    except WatchlistError as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        return 2
+
+    now = now_sh()
+    _cfg, spec = _load_strategy()
+    today = now.date()
+    state = _read_json(store.dir / "state.json", {})
+    scope = (args.scope or "").strip()
+    watch_directory = watchlist_dir(store.dir)
+    try:
+        scope_symbols = read_symbols_in(watch_directory, scope) if scope else None
+    except OSError:
+        scope_symbols = None
+    candidate_symbols: list[str] | None
+    try:
+        candidate_symbols = list(
+            resolve_universe(None, active_path=ACTIVE_SYMBOLS_PATH)["symbols"]
+        )
+    except (UniverseError, OSError, ValueError):
+        candidate_symbols = None  # membership unknown stays unknown
+
+    quote = fetch_batch_quotes([symbol]).get(symbol)
+    quote_block: dict = {"available": False}
+    if quote and float(quote.get("price", 0) or 0) > 0:
+        quote_day = str(quote.get("date", ""))[:8]
+        try:
+            quote_date = datetime.strptime(quote_day, "%Y%m%d").date()
+        except ValueError:
+            quote_date = None
+        if quote_date is None:
+            q_status, q_reason = "INSUFFICIENT_EVIDENCE", "quote date unreadable"
+        elif quote_date == today and in_session(now):
+            q_status, q_reason = "LIVE_CURRENT", "today's session quote"
+        elif quote_date == today:
+            q_status = "TODAY_LAST_SESSION"
+            q_reason = f"today's quote outside session ({market_phase(now)})"
+        elif quote_date < today:
+            q_status, q_reason = "STALE", f"quote date {quote_date.isoformat()} predates today"
+        else:
+            q_status, q_reason = "INSUFFICIENT_EVIDENCE", f"quote date {quote_date.isoformat()} is in the future"
+        price = float(quote["price"])
+        prev_close = float(quote.get("prev_close", 0) or 0)
+        quote_block = {
+            "available": True,
+            "price": price,
+            "prev_close": prev_close,
+            "change_pct": round((price / prev_close - 1) * 100, 2) if prev_close > 0 else None,
+            "volume": quote.get("volume"),
+            "quote_date": quote_date.isoformat() if quote_date else None,
+            "quote_time": quote.get("time"),
+            "freshness_status": q_status,
+            "freshness_reason": q_reason,
+        }
+    else:
+        quote_block["freshness_reason"] = "quote unavailable in this run"
+
+    # strategy distance on the SAME primitives the frozen scan uses
+    strategy_block: dict = {"available": False}
+    hist, hist_meta = read_cache("daily", f"{symbol}_qfq")
+    hist_close = (
+        pd.to_numeric((hist.sort_values("date") if "date" in hist else hist)["close"], errors="coerce").dropna()
+        if hist is not None else None
+    )
+    hist_last_date = None
+    if hist is not None and len(hist):
+        raw_last = hist["date"].iloc[-1] if "date" in hist else None
+        parsed = pd.to_datetime(raw_last, errors="coerce")
+        hist_last_date = parsed.date().isoformat() if not pd.isna(parsed) else None
+    if quote_block["available"] and hist_close is not None and len(hist_close) >= 5:
+        timing = timing_from_quote_hist(quote, hist)
+        if timing is not None:
+            pullback, ratio = timing
+            strength = float(quote["price"]) - float(quote.get("prev_close", 0) or 0)
+            distances = clause_distances(pullback, ratio, strength, float(quote["price"]), spec)
+            strategy_block = {
+                "available": True,
+                "pullback_5d": round(pullback, 4),
+                "volume_ratio_20d": round(ratio, 3),
+                "strength_1d": round(strength, 3),
+                "clause_distances": {k: round(v, 4) for k, v in distances.items()},
+                "frozen_thresholds": {
+                    "entry_pullback_max": spec.entry_pullback_max,
+                    "entry_volume_ratio_min": spec.entry_volume_ratio_min,
+                },
+                "history_last_date": hist_last_date,
+                "ma5_evidence": {
+                    "close_value": float(hist_close.iloc[-1]),
+                    "ma5_value": float(hist_close.iloc[-5:].mean()),
+                    "close_date": hist_last_date,
+                },
+            }
+        else:
+            strategy_block = {"available": False, "reason": "insufficient history for timing"}
+    elif quote_block["available"]:
+        strategy_block = {"available": False, "reason": "insufficient daily history"}
+
+    last_scan_at = state.get("last_scan_at")
+    scan_freshness = derive_freshness(
+        now=now,
+        latest_market_data_date=state.get("day"),
+        last_scan_at=last_scan_at,
+    )
+    result = {
+        "symbol": symbol,
+        "requested_at": now.isoformat(timespec="seconds"),
+        "market_phase": market_phase(now),
+        "universe": {
+            "in_candidate_pool": (symbol in candidate_symbols) if candidate_symbols is not None else None,
+            "in_analysis_watchlist_scope": (symbol in scope_symbols) if scope_symbols is not None else None,
+            "analysis_scope": scope or None,
+            "in_open_positions": any(p["symbol"] == symbol for p in store.positions["open"]),
+            "semantics": (
+                "candidate pool -> READY/NEAR lifecycle; analysis watchlist -> "
+                "diagnostics only, never READY/NEAR; positions -> HOLD/EXIT watch"
+            ),
+        },
+        "quote": quote_block,
+        "strategy_distance": strategy_block,
+        "scan": {
+            "last_scan_at": last_scan_at,
+            "data_trust": state.get("data_trust") or "UNKNOWN",
+            "freshness_status": scan_freshness["freshness_status"],
+            "freshness_reason": scan_freshness["freshness_reason"],
+        },
+        "limitations": [
+            "analysis-only context: on-demand fetch, not the 45s monitor loop",
+            "diagnostic distances never generate READY/NEAR; only the frozen candidate scan does",
+            "watchlist membership is user attention, not a strategy input",
+            "strategy profitability UNPROVEN (S3 frozen, PIT-contaminated universe)",
+        ],
+    }
+    print(json.dumps(result, ensure_ascii=False, default=str))
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state-dir", type=Path, default=STATE_DIR,
@@ -855,6 +1038,11 @@ def main() -> int:
     p_skip.add_argument("--price", type=float, required=True, help="reference price for forward settlement")
     p_skip.add_argument("--note", default="", help="why the opportunity was skipped")
     p_skip.add_argument("--time", default=None)
+    p_sym = sub.add_parser("symbol-context",
+                           help="on-demand single-symbol analysis context (read-only)")
+    p_sym.add_argument("--symbol", required=True, help="6-digit A-share code")
+    p_sym.add_argument("--scope", default=None,
+                       help="analysis watchlist scope for membership facts")
     sub.add_parser("status", help="print current monitor state")
     args = parser.parse_args()
 
@@ -866,6 +1054,7 @@ def main() -> int:
         "ack-sell": cmd_ack_sell,
         "skip": cmd_skip,
         "status": cmd_status,
+        "symbol-context": cmd_symbol_context,
     }
     return handlers[args.cmd](args, store)
 

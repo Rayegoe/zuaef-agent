@@ -239,8 +239,9 @@ def test_normal_message_starts_run_and_sets_last_terminal(tmp_path: Path, monkey
     session = _session(service)
     assert session.active_run_id is None
     assert session.last_terminal_run_id
-    assert "✅ Completed" in surface.last_text()
-    assert "checked" in surface.last_text()
+    text = surface.last_text()
+    assert "checked" in text
+    assert "Run:" not in text  # business surface carries no operational ids
 
 
 def test_paused_run_sets_paused_run_id_and_creates_token(tmp_path: Path, monkeypatch):
@@ -304,7 +305,7 @@ def test_approve_callback_resumes_and_settles(tmp_path: Path, monkeypatch):
     assert getattr(receipt, "continued_from_run_id", None) == paused_run_id
     assert receipt.conversation_id == session.conversation_id
     assert any(e.tool_name == "publish_article" for e in receipt.tool_effect_facts)
-    assert "✅ Completed" in surface.last_text()
+    assert "done" in surface.last_text()
 
 
 def test_deny_callback_resumes_without_effect(tmp_path: Path, monkeypatch):
@@ -902,8 +903,7 @@ def test_authoring_task_presents_deliverable_without_approval(
 
     assert surface.approvals == []
     text = surface.last_text()
-    assert text.startswith(article)
-    assert "✅ Completed" in text
+    assert text == article  # completed reply is pure presentation, no card
     assert "Verified artifacts" not in text  # audit counts are Console-only
     session = _session(service)
     assert session.paused_run_id is None
@@ -1030,7 +1030,7 @@ def test_gateway_terminal_path_exports_delivery(tmp_path: Path, monkeypatch):
     assert delivery_root == tmp_path / "delivery"
     assert workspace_root == service.settings.workspace_root
     # the run still reached the surface: execution truth is untouched
-    assert "✅ Completed" in surface.last_text()
+    assert "done" in surface.last_text()
 
 
 def test_gateway_resume_path_exports_delivery(tmp_path: Path, monkeypatch):
@@ -1069,7 +1069,7 @@ def test_gateway_resume_path_exports_delivery(tmp_path: Path, monkeypatch):
     assert outcome.receipt.continued_from_run_id == paused_run_id
     assert delivery_root == tmp_path / "delivery"
     assert workspace_root == service.settings.workspace_root
-    assert "✅ Completed" in surface.last_text()
+    assert "done" in surface.last_text()
 
 
 def test_gateway_delivery_failure_is_operator_visible_and_truth_preserved(
@@ -1097,7 +1097,7 @@ def test_gateway_delivery_failure_is_operator_visible_and_truth_preserved(
     receipt = service.receipts.read(session.last_terminal_run_id)  # type: ignore[arg-type]
     assert receipt.execution_state == "completed"  # execution truth untouched
     combined = "".join(text for _, text in surface.texts)
-    assert "✅ Completed" in combined  # the run result is still delivered
+    assert "done" in combined  # the run result is still delivered
     assert "Durable delivery failed for run" in combined  # failure is separate/visible
 
 

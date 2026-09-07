@@ -125,7 +125,9 @@ def test_alias_switches_profile_and_runs_remaining_prompt(
     assert _session(service).profile == "research"
     assert seen["model_calls"] == 1
     assert "summarize this" in seen["last_prompt"]
-    assert "✅ Completed" in surface.last_text()
+    # the alias switch sends the profile card, then the pure presentation
+    assert surface.last_text().endswith("ran under profile")
+    assert "Run:" not in surface.last_text()
 
 
 def test_alias_without_argument_only_switches_profile(tmp_path: Path, monkeypatch):
@@ -207,7 +209,9 @@ def test_group_only_profile_allowed_in_approved_group(tmp_path: Path, monkeypatc
     service.handle(_envelope("/expert summarize this", n=1))
 
     assert seen["model_calls"] == 1
-    assert "✅ Completed" in surface.last_text()
+    # the alias switch sends the profile card, then the pure presentation
+    assert surface.last_text().endswith("ran under profile")
+    assert "Run:" not in surface.last_text()
 
 
 def test_profile_command_denied_in_dm(tmp_path: Path, monkeypatch):

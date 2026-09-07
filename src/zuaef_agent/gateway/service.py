@@ -242,6 +242,10 @@ class GatewayService:
                 # Deterministic Case binding: the session's bound case is
                 # threaded into the run's CoreDeps — the model never guesses it.
                 case_id=session.case_id,
+                # Analysis watchlist scope (three-tier universe): the user's
+                # attention facts follow the bound Case, else the chat
+                # channel — opaque to the kernel, never cross-scope visible.
+                analysis_scope=session.case_id or envelope.channel_id,
                 # Host-grounded interaction identity (P3B-3 T001/T002): the
                 # surface states who is talking; the model never infers it.
                 surface=envelope.surface,

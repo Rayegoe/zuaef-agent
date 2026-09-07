@@ -109,6 +109,7 @@ def start_profile_run(
     run_id: str | None = None,
     message_history: Sequence[Any] | None = None,
     case_id: str | None = None,
+    analysis_scope: str | None = None,
     surface: str | None = None,
     actor_role: ActorRole | None = None,
 ) -> RuntimeOutcome:
@@ -145,8 +146,13 @@ def start_profile_run(
         run_id=run_id,
         # Opaque bindings (v1.2 SPEC §4): the server threads the session's
         # bound identities into the run; the kernel preserves them across
-        # pause/resume but never inspects their meaning.
-        bindings={"case": case_id} if case_id else {},
+        # pause/resume but never inspects their meaning. ``analysis_scope``
+        # scopes user-curated watchlists (case first, else the chat channel)
+        # — opaque to the kernel, consumed only by the domain toolset.
+        bindings={
+            **({"case": case_id} if case_id else {}),
+            **({"analysis_scope": analysis_scope} if analysis_scope else {}),
+        },
     )
     # Context assembly (P3B-2 §6 / P3B-3 T003): host-grounded interaction
     # facts precede the raw user request, which stays byte-literal at the

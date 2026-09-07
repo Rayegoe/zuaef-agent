@@ -233,7 +233,7 @@ def test_full_publish_slice_through_gateway(world):
     assert receipt.execution_state == "completed"
     effects = [e for e in receipt.tool_effect_facts if e.tool_name == "wordpress_publish_post"]
     assert len(effects) == 1 and effects[0].status == "completed"
-    assert "✅ Completed" in surface.last_text()
+    assert surface.last_text() == "WordPress post published."  # presentation only
     assert surface.callback_answers == [("cb-1", "Approved. Resuming…")]
 
 

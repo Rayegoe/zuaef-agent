@@ -1218,8 +1218,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/bridge.py",
-      "bytes": 6646,
-      "sha256": "5f5696e109153cc86a1a2cb7174f1c44c219104946b37b68b6d835871930b09c"
+      "bytes": 6961,
+      "sha256": "047a5abe4dd4676a28436ad42c3d57fa141893b587f4401f42ae38c1b65d7065"
     },
     {
       "path": "src/zuaef_agent/gateway/feishu.py",
@@ -1238,8 +1238,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/renderer.py",
-      "bytes": 7650,
-      "sha256": "7af4df1d7fad89415cf96a131b04011d6f0410d99a23b02d741169d45537bb16"
+      "bytes": 7660,
+      "sha256": "c99932799fa5ca9370d36ffa31c79102801d3d00f2da4c7bc0f8fb56fbdbb85e"
     },
     {
       "path": "src/zuaef_agent/gateway/routing.py",
@@ -1253,8 +1253,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 36785,
-      "sha256": "a5c734ddfba4866e34e5dc06ad0da89bc7a16438e8dbd7c14a9d3ee2a1aed225"
+      "bytes": 37083,
+      "sha256": "0791f8da672bc75b4ef2fc0df131ce2db27bb3a0d1ccf329096de0317e19b53f"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
@@ -1488,8 +1488,8 @@
     },
     {
       "path": "tests/test_gateway_e2e_wordpress.py",
-      "bytes": 8955,
-      "sha256": "028182f813bcf1a16c69c9a22ebff22d4575960547a324a0faeeb441e85016a8"
+      "bytes": 8988,
+      "sha256": "75cc870682890f64efe3a2688df2f6fe097a725e3b75663361c91732b248b7bb"
     },
     {
       "path": "tests/test_gateway_feishu.py",
@@ -1503,8 +1503,8 @@
     },
     {
       "path": "tests/test_gateway_renderer.py",
-      "bytes": 8609,
-      "sha256": "751c584f90536a2a9314ddc3aced6fc1d832735e68fe0813fe54a26252e2d302"
+      "bytes": 8553,
+      "sha256": "19e32229d509b4c9e7cc16615cfbf107916508d5a5cbeff2e9b41ca1b48ed00d"
     },
     {
       "path": "tests/test_gateway_routing.py",
@@ -1513,13 +1513,13 @@
     },
     {
       "path": "tests/test_gateway_service.py",
-      "bytes": 42316,
-      "sha256": "1e864167f98e6c3db9acf96fbd2978e87b7ff5e01bd8f01ec407e1690efb4c49"
+      "bytes": 42328,
+      "sha256": "f96f250c457a22a742020152495002a18d5314919fa82138f745f436340a3e1c"
     },
     {
       "path": "tests/test_gateway_service_routing.py",
-      "bytes": 14358,
-      "sha256": "d7794a37fbae432b1e1b966d6019eebca237d8a8d1584f5ccf82ce1548671802"
+      "bytes": 14618,
+      "sha256": "e9b5bbdbf5d52518429822477a0613543f55a50363d40c2944275c62ba2a316c"
     },
     {
       "path": "tests/test_gateway_store.py",
@@ -1660,6 +1660,11 @@
       "path": "tests/test_quant_v31.py",
       "bytes": 13294,
       "sha256": "1936eebddd5f7389916d399b690045d34ebd5e758e9de50431c3bbec938f792c"
+    },
+    {
+      "path": "tests/test_quant_watchlist.py",
+      "bytes": 14359,
+      "sha256": "806aa8d6c688cd44e310f87f640ea75ac4413cca99a8dfa0c6417187053150a0"
     },
     {
       "path": "tests/test_receipt_store.py",
@@ -1973,13 +1978,18 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/plugin.py",
-      "bytes": 8097,
-      "sha256": "298bfb503941a0342b0edc7b6c37830b634539331357180d597899d5e8f962a7"
+      "bytes": 9348,
+      "sha256": "640630a68a493c0b686daa55f23c27e1accc9e7021e008fd9a8558b494c47cd4"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
-      "bytes": 22099,
-      "sha256": "884fbc34fbbdd624d909dbbe7de8e705c9c15acaed1056def2c917cf1eff7c0b"
+      "bytes": 26817,
+      "sha256": "ed27dec725b8ba56f6993f29b81f956eff6c68b4d42f278f4c74ae51b29817e9"
+    },
+    {
+      "path": "plugins/zuaef-quant/zuaef_quant/watchlist.py",
+      "bytes": 5306,
+      "sha256": "759ac1c935526de3d07eb3829de91ab2b4ab8dc1a4fa93a838f2b56400ccfa55"
     },
     {
       "path": "plugins/zuaef-telegram/zuaef_telegram/__init__.py",
@@ -2283,8 +2293,8 @@
     },
     {
       "path": "tools/quant_trading_monitor.py",
-      "bytes": 39539,
-      "sha256": "4c1705c5466cbf76a296830a00ee772332678d6904c2e129145ce893c623fcd4"
+      "bytes": 48375,
+      "sha256": "9c958b4cd116fa0018ce4c6a13c489e3a0bd825eb44975e98836f4dac3bdfc4b"
     },
     {
       "path": "tools/quant_v31.py",

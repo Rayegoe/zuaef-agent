@@ -51,8 +51,11 @@ def _short(run_id: str) -> str:
 
 def render_terminal(outcome: TerminalRun) -> str:
     """Terminal card (SPEC §41). The presentation IS the reply (outcome-first);
-    audit counts stay in /status and the receipt. When the presentation is
-    empty (e.g. a legacy settlement-only terminal), the classic summary card."""
+    audit counts stay in /status and the receipt. Surface policy: a completed
+    run's reply is pure business output — the run id is an operational fact
+    that lives in receipts, Console, /inspect and /status, and only surfaces
+    on FAILED/LIMIT_REACHED (or the no-presentation fallback, whose audit
+    lines are then the only content)."""
     receipt = outcome.receipt
     emoji = {
         "completed": "✅ Completed",
@@ -75,15 +78,7 @@ def render_terminal(outcome: TerminalRun) -> str:
         lines.append("/inspect — persisted operational facts, no model call")
         return "\n".join(lines)
     if presentation:
-        return "\n".join(
-            [
-                presentation,
-                "",
-                "—",
-                emoji,
-                f"Run: {_short(receipt.run_id)}",
-            ]
-        )
+        return presentation
     return "\n".join(
         [
             emoji,

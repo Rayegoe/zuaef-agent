@@ -16,12 +16,13 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from pydantic_ai import FunctionToolset
+from pydantic_ai import FunctionToolset, RunContext
 from pydantic_ai.toolsets import AbstractToolset
 
 from zuaef_agent.models import CoreDeps
 from zuaef_agent.plugin_api import CompositionError
 
+from . import watchlist as watchlist_store
 from .freshness import derive_freshness, market_date_of, now_market
 
 REPO_ROOT_ENV = "ZUAEF_QUANT_REPO_ROOT"
@@ -68,6 +69,7 @@ EVAL_TIMEOUT_S = 1200
 SCAN_TIMEOUT_S = 300
 ACK_TIMEOUT_S = 120
 RENDER_TIMEOUT_S = 120
+SYMBOL_CONTEXT_TIMEOUT_S = 120
 GEN1_DIR = DEFAULT_BENCH_DIR
 
 #: Whitelisted StrategySpec keys (schema 1). Nothing else crosses the boundary.
@@ -495,6 +497,102 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             },
             ensure_ascii=False,
         )
+
+    # --- analysis watchlist (three-tier universe, tier B) -------------------
+    # User attention facts, scoped by an opaque host binding (bound case id
+    # else chat channel id). Analysis-only: never READY/NEAR, never a
+    # strategy or candidate-pool mutation, no trading approval needed.
+
+    def _analysis_scope(ctx: RunContext[CoreDeps]) -> str | None:
+        return ctx.deps.bindings.get("analysis_scope")
+
+    @toolset.tool
+    def get_analysis_watchlist(ctx: RunContext[CoreDeps]) -> str:
+        """Read THIS run's analysis watchlist — the user-curated attention
+        list (scope = bound case, else this chat). Returns the symbols plus
+        the three-tier semantics: watchlist symbols get on-demand diagnosis
+        and monitoring but NEVER enter the candidate pool or produce
+        READY/NEAR; the candidate pool is algorithm-owned.
+        """
+        scope = _analysis_scope(ctx)
+        if not scope:
+            return json.dumps(
+                {"error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"},
+                ensure_ascii=False,
+            )
+        symbols = watchlist_store.read_symbols_in(
+            watchlist_store.scope_dir(workspace_root), scope
+        )
+        return json.dumps(
+            {
+                "scope": scope,
+                "symbols": symbols,
+                "count": len(symbols),
+                "semantics": "analysis-only; never READY/NEAR; candidate pool untouched",
+                "note": "positions are tracked separately in get_trading_context",
+            },
+            ensure_ascii=False,
+        )
+
+    @toolset.tool
+    def update_analysis_watchlist(
+        ctx: RunContext[CoreDeps], action: str, symbols: list[str]
+    ) -> str:
+        """Add or remove symbols in THIS run's analysis watchlist (user
+        attention facts). action is add/remove; symbols are 6-digit A-share
+        codes. Local and reversible: it never places orders, never changes
+        the strategy, and never adds anything to the candidate pool — say
+        that caveat back to the user when confirming. Invalid codes are
+        rejected with an error; report it instead of guessing."""
+        scope = _analysis_scope(ctx)
+        if not scope:
+            return json.dumps(
+                {"error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"},
+                ensure_ascii=False,
+            )
+        try:
+            result = watchlist_store.update_symbols_in(
+                watchlist_store.scope_dir(workspace_root),
+                scope,
+                action,
+                symbols,
+                run_id=ctx.deps.run_id,
+            )
+        except watchlist_store.WatchlistError as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        result["note"] = "watchlist updated; analysis-only, never READY/NEAR"
+        return json.dumps(result, ensure_ascii=False)
+
+    @toolset.tool
+    def get_symbol_context(ctx: RunContext[CoreDeps], symbol: str) -> str:
+        """On-demand single-symbol analysis context for ANY 6-digit A-share
+        code — including symbols outside the candidate pool. Read-only host
+        diagnostics: live quote with host-derived freshness, universe
+        membership (candidate pool / analysis watchlist / open positions),
+        frozen S3 clause distances (how far from entry conditions), MA5
+        evidence and scan freshness. Use this instead of refusing to analyze
+        an off-pool symbol: not being in the candidate pool only means it
+        cannot produce READY/NEAR, never that it cannot be researched."""
+        args = ["symbol-context", "--symbol", str(symbol)]
+        scope = _analysis_scope(ctx)
+        if scope:
+            args += ["--scope", scope]
+        args += ["--state-dir", str(workspace_root / "artifacts" / "quant" / "trading")]
+        try:
+            stdout = _run(QUANT_MONITOR_SCRIPT, args, quant_python, SYMBOL_CONTEXT_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            return json.dumps(
+                {"error": "symbol context fetch timed out; try again shortly"},
+                ensure_ascii=False,
+            )
+        line = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
+        try:
+            data = json.loads(line)
+        except ValueError:
+            return json.dumps({"error": "symbol context returned unreadable output"}, ensure_ascii=False)
+        if isinstance(data, dict) and data.get("error"):
+            return json.dumps(data, ensure_ascii=False)
+        return json.dumps(data, ensure_ascii=False)
 
     @toolset.tool_plain
     def render_quant_business_artifact() -> str:

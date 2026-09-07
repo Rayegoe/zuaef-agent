@@ -180,3 +180,49 @@ runtime_reason The next request would exceed the request_limit of 12 …
 
 未证明（需操作者）：对生产 gateway 主动断 provider 的现场演练（会降级在用的
 飞书通道，未在无人在场时执行）；T012 真实飞书五步流。
+
+## M2 业务补丁：Chat Surface Cleanup + Runtime Analysis Watchlist（2026-09-07 操作者指令）
+
+两条产品边界修正，均由操作者基于真实飞书体验提出。
+
+### 1. 业务聊天不再泄漏运行标识
+
+completed 回复 = 纯 presentation（模型回答），不再附 `✅ Completed` / `Run:`
+前缀。Run ID 只出现在：FAILED / LIMIT_REACHED 卡、无 presentation 的回退卡、
+`/status`、`/inspect`、Approval 卡。`normal chat = business surface，
+Console = operational surface`。
+
+### 2. 三层股票宇宙（candidate pool / analysis watchlist / positions）
+
+002654 事件暴露的语义错误：把「不在自动候选池」等同成「不能研究」。
+
+- **candidate pool**：算法所有，只有它产生 READY/NEAR；用户不能从聊天塞票。
+- **analysis watchlist**（新增一等能力）：用户关注事实，
+  `workspace/artifacts/quant/watchlist/<scope>.json`，host tool 独占写、
+  不进 Git。scope = 绑定 Case 优先，否则聊天 channel
+  （`CoreDeps.bindings["analysis_scope"]`，opaque，Quant Core 不知道客户概念），
+  多群/多客户天然隔离。`legacy_watchlist.toml` 保持 repo 种子/兼容基线，
+  运行时永不写入。
+- **positions**：monitor 照旧，一等公民。
+
+Agent 新增 3 个 host tools（plugins/zuaef-quant/zuaef_quant/toolset.py）：
+
+- `get_symbol_context(symbol)`：任意 6 位 A 股的按需独立诊断（报价+host 派生
+  新鲜度、三层归属、冻结 S3 clause 距离、MA5 证据、scan 新鲜度、limitations）
+  —— 由 monitor 新子命令 `symbol-context` 提供，诊断距离永不产生交易状态。
+- `get_analysis_watchlist()`：读本 scope 的名单（无 scope 绑定 → fail-closed）。
+- `update_analysis_watchlist(action=add/remove, symbols=[...])`：本地可逆、
+  无需交易 approval（不下单、不改策略），invalid 代码拒绝。
+
+Monitor 扩展：`quote universe = candidates ∪ positions ∪ analysis watchlist
+(all scopes union)`，机会层只迭代候选 —— 自选票有行情但**永远不会 READY/NEAR**
+（有专门测试：给自选票 READY 级行情也只进报价面）。state.json 记录
+`analysis_watchlist`。`get_trading_context` 不暴露跨 scope 并集（隔离）。
+
+指令面：QUANT_INSTRUCTIONS 增加三层宇宙语义与「不在候选池 ≠ 不能研究」的
+回答口径（含关注/取消关注的确认话术）。
+
+测试：`tests/test_quant_watchlist.py` 16 例（store 校验/scope 逃逸防护/
+cap/隔离、monitor 报价面加入但 lifecycle 隔离、symbol-context 语义、toolset
+scope 绑定与 fail-closed、bridge bindings 线程化）；既有 gateway/routing/e2e
+断言随 surface 改动更新。全量回归 1150 passed + manifest 校验通过。
