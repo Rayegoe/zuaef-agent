@@ -368,6 +368,52 @@ def analysis_watchlist_symbols(state_dir: Path) -> list[str]:
         return []
 
 
+# Evidence-first (symbol context): price-limit arithmetic is a host fact,
+# never an LLM probability guess. Board classification from the code prefix
+# covers the regular regimes; ST (±5%) is NOT detectable from the code alone
+# and stays an explicit limitation rather than a guess.
+_PRICE_LIMIT_RULES = (
+    ("300", 0.20, "SZ_CHINEXT"), ("301", 0.20, "SZ_CHINEXT"),
+    ("688", 0.20, "SH_STAR"), ("689", 0.20, "SH_STAR"),
+    ("43", 0.30, "BJ"), ("83", 0.30, "BJ"), ("87", 0.30, "BJ"),
+    ("88", 0.30, "BJ"), ("92", 0.30, "BJ"),
+)
+_PRICE_LIMIT_DEFAULT = (0.10, "MAIN_BOARD")
+
+
+def price_limit_rule(symbol: str, prev_close: float, price: float | None = None) -> dict:
+    """Host-computed daily price limit for one A-share (evidence packet).
+
+    limit_up_price uses the standard two-decimal rounding of prev_close ×
+    (1 + pct); ``at_limit_up`` compares the observed price against it."""
+    code = str(symbol).strip()
+    pct, board = _PRICE_LIMIT_DEFAULT
+    for prefix, rule_pct, rule_board in _PRICE_LIMIT_RULES:
+        if code.startswith(prefix):
+            pct, board = rule_pct, rule_board
+            break
+    if prev_close <= 0:
+        return {
+            "available": False,
+            "board": board,
+            "reason": "prev_close unavailable",
+            "limitations": ["ST shares trade at ±5% and cannot be detected from the code prefix"],
+        }
+    limit_up = round(prev_close * (1 + pct), 2)
+    result = {
+        "available": True,
+        "board": board,
+        "price_limit_pct": pct,
+        "limit_up_price": limit_up,
+        "basis": "board-prefix rule on the 6-digit code; host arithmetic",
+        "limitations": ["ST shares trade at ±5% and cannot be detected from the code prefix"],
+    }
+    if price is not None and price > 0:
+        result["at_limit_up"] = price >= limit_up
+        result["distance_to_limit"] = round(limit_up - price, 3)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # One deterministic monitor cycle
 # ---------------------------------------------------------------------------
@@ -937,6 +983,16 @@ def cmd_symbol_context(args, store: Store) -> int:
         pd.to_numeric((hist.sort_values("date") if "date" in hist else hist)["close"], errors="coerce").dropna()
         if hist is not None else None
     )
+    # history sufficiency is a host fact: the frozen timing needs 25 cached
+    # sessions strictly before the quote date — never an LLM impression of
+    # "历史不足"
+    history_block = {
+        "bars_available": int(len(hist_close)) if hist_close is not None else 0,
+        "required_bars": 25,
+    }
+    history_block["sufficient"] = history_block["bars_available"] >= history_block["required_bars"]
+    if quote_block["available"] and quote.get("prev_close", 0):
+        history_block["note"] = "bars counted from the cached daily history (all cached sessions)"
     hist_last_date = None
     if hist is not None and len(hist):
         raw_last = hist["date"].iloc[-1] if "date" in hist else None
@@ -992,6 +1048,12 @@ def cmd_symbol_context(args, store: Store) -> int:
         },
         "quote": quote_block,
         "strategy_distance": strategy_block,
+        "history": history_block,
+        "market_rules": (
+            price_limit_rule(symbol, float(quote["prev_close"]), float(quote["price"]))
+            if quote_block["available"] and float(quote.get("prev_close", 0) or 0) > 0
+            else {"available": False, "reason": "quote unavailable"}
+        ),
         "scan": {
             "last_scan_at": last_scan_at,
             "data_trust": state.get("data_trust") or "UNKNOWN",

@@ -560,6 +560,19 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             )
         except watchlist_store.WatchlistError as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        # Write -> read-back: "已加入" may only be said after the persisted
+        # state itself proves the change; a write that did not stick is
+        # reported as a failure, never as success.
+        persisted = watchlist_store.read_symbols_in(
+            watchlist_store.scope_dir(workspace_root), scope
+        )
+        verified = all(
+            (s in persisted) if action == "add" else (s not in persisted)
+            for s in result["changed"]
+        )
+        result["verified"] = verified
+        if not verified:
+            result["error"] = "watchlist write did not persist; do not claim success"
         result["note"] = "watchlist updated; analysis-only, never READY/NEAR"
         return json.dumps(result, ensure_ascii=False)
 
