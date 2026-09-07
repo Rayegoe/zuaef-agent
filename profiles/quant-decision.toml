@@ -13,5 +13,11 @@ name = "quant-decision"
 id = "quant"
 allow_capabilities = true
 
+[plugins.config]
+# Research sandbox: run_code over the evidence tools + read-only history
+# cache mount, for throwaway analysis code (event studies, similar-history
+# distributions, comparisons). Never edits strategy, ledger or candidates.
+code_mode = true
+
 [[plugins]]
 id = "telegram"

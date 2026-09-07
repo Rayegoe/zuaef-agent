@@ -226,3 +226,26 @@ Monitor 扩展：`quote universe = candidates ∪ positions ∪ analysis watchli
 cap/隔离、monitor 报价面加入但 lifecycle 隔离、symbol-context 语义、toolset
 scope 绑定与 fail-closed、bridge bindings 线程化）；既有 gateway/routing/e2e
 断言随 surface 改动更新。全量回归 1150 passed + manifest 校验通过。
+
+## Research Sandbox（CodeMode）接入（2026-09-07 操作者方向确认）
+
+按「Codex 建能力、Agent 用能力解决未知问题」的边界，接入 harness CodeMode
+作为 quant 的第二类计算能力（固定 evidence tools 之外的研究型沙盒）：
+
+- `create_plugin(config={"code_mode": true})` 时追加 `CodeMode` capability：
+  evidence tools（get_trading_context / get_symbol_context / get_live_signals
+  / get_analysis_watchlist / evaluate_strategy）被包装为 run_code 内的 Python
+  可调用；只读 mount 暴露 `data/quant-cache`（权威日线缓存）到沙盒
+  `/quant-cache`；默认 30s/256MiB backstop；生产策略、ledger、trading
+  artifacts 不在沙盒可达范围。默认（无 flag）不启用，缺失缓存 fail-loud。
+- profile `quant-decision.toml` 启用 code_mode；指令面写明沙盒语义：临时
+  推导（事件研究/相似历史 forward 分布/横截面比较/自定义窗口统计），结果
+  作为 DERIVED host fact 进入回复（须报样本量与窗口）；反复被问的分析应
+  提议固化为永久工具，不允许一次性代码变成影子管线。
+- 暂未启用 WebSearch/WebFetch（Market Intelligence 层）：按能力准入规则
+  需要真实失败证据（某次客户问题因缺外部信息而答不出）再开，避免为
+  「可能有用的感知」付费。Durable research memory 复用现有 Decision
+  Brief / knowledge / Case 事实，不新建记忆服务。
+
+测试：`TestCodeModeSandbox` 4 例（默认无沙盒、无 flag 不启用、启用后
+只读 mount + 五工具白名单、缺缓存 fail-loud）。全量回归 1160 passed。

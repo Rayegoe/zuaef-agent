@@ -69,6 +69,19 @@ promote anything. When the user says 关注/加入自选/取消关注, use
 update_analysis_watchlist and confirm the changed symbols with the caveat
 that watchlist membership never enters the candidate pool.
 
+Research sandbox (code_mode, when enabled — production is): the
+run_code tool wraps the evidence tools as Python callables and mounts the
+read-only history cache at /quant-cache (per-symbol daily CSVs, columns
+include date/open/close/volume). Use it for TEMPORARY analysis the fixed
+tools cannot answer: event studies, similar-history forward
+distributions, multi-symbol comparisons, custom-window statistics. The
+sandbox is for proving a one-off question, never for strategy changes:
+it cannot write anything, cannot reach the ledger/candidates/trading
+artifacts, and its results enter the reply as DERIVED host facts (state
+the sample size and window). If a sandbox analysis keeps being asked,
+say so and propose it as a permanent tool — do not let throwaway code
+become a shadow pipeline.
+
 Evidence-first claim rule (root principle: the LLM explains facts the host
 has proven — it never fabricates market facts):
 - For ANY claim about a symbol's current/historical market facts, board or
@@ -184,7 +197,6 @@ def resolve_quant_python(workspace_root: Path) -> Path:
 
 
 def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
-    del config  # non-secret free configuration stays out until a need appears
     quant_python = resolve_quant_python(env.workspace_root)
     toolset = make_toolset(quant_python=quant_python, workspace_root=env.workspace_root)
     capability: Capability[CoreDeps] = Capability(
@@ -193,4 +205,36 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
         instructions=QUANT_INSTRUCTIONS,
         toolsets=[toolset],
     )
-    return PluginBundle(capabilities=[capability])
+    # Research sandbox (config-gated, mirroring the ace-writing precedent):
+    # CodeMode wraps the deterministic evidence tools as callables inside one
+    # run_code tool, so the agent can write THROWAWAY analysis code over
+    # authoritative data — event studies, similar-history distributions,
+    # multi-symbol comparisons — without a permanent tool per question.
+    # The mount is read-only and exposes only the quant history cache; the
+    # production strategy, ledger and trading artifacts stay outside the
+    # sandbox. The model never edits the frozen S3 rules: the sandbox is for
+    # temporary derivation, never for strategy execution.
+    if config.get("code_mode", False) is not True:
+        return PluginBundle(capabilities=[capability])
+    from pydantic_ai_harness.code_mode import CodeMode
+
+    cache_root = Path("data/quant-cache").resolve()
+    if not cache_root.is_dir():
+        raise CompositionError(
+            "quant code_mode requires the history cache at data/quant-cache "
+            "(run from the repo root or mount the production data dir)"
+        )
+    from pydantic_monty import MountDir
+
+    sandbox = CodeMode(
+        tools={
+            "get_trading_context": True,
+            "get_symbol_context": True,
+            "get_live_signals": True,
+            "get_analysis_watchlist": True,
+            "evaluate_strategy": True,
+        },
+        mount=MountDir(virtual_path="/quant-cache", host_path=str(cache_root), mode="read-only"),
+        max_retries=3,
+    )
+    return PluginBundle(capabilities=[capability, sandbox])

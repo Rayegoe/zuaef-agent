@@ -409,3 +409,51 @@ def _dt_now_shanghai_minus(seconds: int) -> str:
     from datetime import datetime, timedelta, timezone
     tz = timezone(timedelta(hours=8))
     return (datetime.now(tz) - timedelta(seconds=seconds)).isoformat()
+
+
+# ---------------------------------------------------------------------------
+# research sandbox (CodeMode): config-gated capability, read-only data seam
+# ---------------------------------------------------------------------------
+
+
+class TestCodeModeSandbox:
+    def test_default_composition_has_no_sandbox(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)  # no data/quant-cache in cwd
+        bundle = create_plugin(_env(tmp_path), {})
+        assert bundle.capabilities, "quant capability always present"
+        from pydantic_ai_harness.code_mode import CodeMode
+        assert not any(isinstance(c, CodeMode) for c in bundle.capabilities)
+
+    def test_code_mode_disabled_by_absent_flag_even_with_cache(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data" / "quant-cache").mkdir(parents=True)
+        bundle = create_plugin(_env(tmp_path), {})
+        from pydantic_ai_harness.code_mode import CodeMode
+        assert not any(isinstance(c, CodeMode) for c in bundle.capabilities)
+
+    def test_code_mode_enabled_gives_readonly_cache_mount(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cache = tmp_path / "data" / "quant-cache"
+        cache.mkdir(parents=True)
+        (cache / "daily").mkdir()
+        bundle = create_plugin(_env(tmp_path), {"code_mode": True})
+        from pydantic_ai_harness.code_mode import CodeMode
+        sandboxed = [c for c in bundle.capabilities if isinstance(c, CodeMode)]
+        assert len(sandboxed) == 1
+        mode = sandboxed[0]
+        # the five evidence tools are sandboxed as callables; the rest of the
+        # agent's surface (native tools) stays untouched
+        assert mode.tools == {
+            "get_trading_context": True, "get_symbol_context": True,
+            "get_live_signals": True, "get_analysis_watchlist": True,
+            "evaluate_strategy": True,
+        }
+        mounts = mode.mount if isinstance(mode.mount, list) else [mode.mount]
+        host_paths = [str(m.host_path) for m in mounts]
+        assert any(h.endswith("data/quant-cache") for h in host_paths)
+        assert all(m.mode == "read-only" for m in mounts)
+
+    def test_code_mode_without_cache_fails_loud(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)  # no data/quant-cache anywhere
+        with pytest.raises(CompositionError, match="data/quant-cache"):
+            create_plugin(_env(tmp_path), {"code_mode": True})
