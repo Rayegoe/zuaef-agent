@@ -14,7 +14,6 @@ from zuaef_agent.gateway.renderer import (
     render_new_conversation,
     render_pause,
     render_profile,
-    render_run_accepted,
     render_status,
     render_terminal,
 )
@@ -220,23 +219,8 @@ def test_chunk_text_respects_max():
 
 
 # ---------------------------------------------------------------------------
-# M2 T002/T004/T015: deterministic acceptance card, first-class limit card
+# M2 T004/T015: first-class limit card
 # ---------------------------------------------------------------------------
-
-
-def test_render_run_accepted_is_deterministic_host_text():
-    assert render_run_accepted(run_id="abc123def", profile="quant-decision") == (
-        "ACCEPTED · RUNNING\nRun: abc123def\nProfile: quant-decision"
-    )
-
-
-def test_render_run_accepted_console_link_only_when_valid_and_configured():
-    ok = render_run_accepted(run_id="r1", profile="p", public_base_url="https://console.example.net")
-    assert "Console: https://console.example.net/?run=r1" in ok
-    # never guess or leak: credentials, foreign schemes, queries, spaces, garbage
-    for bad in ("http://u:p@host/", "ftp://host/", "https://host/?q=1",
-                "not a url", "https://host/a b", ""):
-        assert "Console:" not in render_run_accepted(run_id="r1", profile=None, public_base_url=bad)
 
 
 def test_render_terminal_limit_reached_is_a_first_class_card():

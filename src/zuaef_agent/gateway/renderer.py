@@ -9,7 +9,6 @@ long messages chunk below the Telegram hard limit.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from urllib.parse import quote, urlsplit, urlunsplit
 
 from zuaef_agent.runtime import PausedRun, TerminalRun
 
@@ -48,20 +47,6 @@ def preview_arguments(args: dict) -> str:
 
 def _short(run_id: str) -> str:
     return run_id[:8] + "…"
-
-
-def render_run_accepted(*, run_id: str, profile: str | None, public_base_url: str | None = None) -> str:
-    lines = ["ACCEPTED · RUNNING", f"Run: {run_id}", f"Profile: {profile or 'UNKNOWN'}"]
-    if public_base_url:
-        try:
-            url = urlsplit(public_base_url)
-            if (url.scheme in {"http", "https"} and url.hostname and url.port != 0
-                    and not url.username and not url.password and not url.query
-                    and not url.fragment and not any(c.isspace() for c in public_base_url)):
-                lines.append("Console: " + urlunsplit((url.scheme, url.netloc, url.path or "/", "run=" + quote(run_id, safe=""), "")))
-        except ValueError:
-            pass
-    return "\n".join(lines)
 
 
 def render_terminal(outcome: TerminalRun) -> str:

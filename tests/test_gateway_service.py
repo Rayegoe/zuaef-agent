@@ -901,8 +901,7 @@ def test_authoring_task_presents_deliverable_without_approval(
     service.handle(_envelope("改写这篇文章", n=1))
 
     assert surface.approvals == []
-    assert surface.texts[0][1].startswith("ACCEPTED")
-    text = surface.texts[-1][1]
+    text = surface.last_text()
     assert text.startswith(article)
     assert "✅ Completed" in text
     assert "Verified artifacts" not in text  # audit counts are Console-only
@@ -1103,12 +1102,13 @@ def test_gateway_delivery_failure_is_operator_visible_and_truth_preserved(
 
 
 # ---------------------------------------------------------------------------
-# M2 T002/T005: deterministic ACCEPTED before any execution; /inspect is a
-# host-only post-mortem that never starts an agent.
+# M2 T005: /inspect is a host-only post-mortem that never starts an agent.
+# (T002's ACCEPTED card was removed by operator decision — the terminal card
+# is the reply; no per-run acceptance chatter. 2026-09-07.)
 # ---------------------------------------------------------------------------
 
 
-def test_accepted_is_sent_even_when_the_model_never_responds(tmp_path: Path, monkeypatch):
+def test_provider_failure_still_settles_a_failed_receipt(tmp_path: Path, monkeypatch):
     def boom(messages, info):
         raise RuntimeError("provider down")
     surface = FakeSurface()
@@ -1116,9 +1116,12 @@ def test_accepted_is_sent_even_when_the_model_never_responds(tmp_path: Path, mon
 
     service.handle(_envelope("hello"))
 
-    assert surface.texts[0][1].startswith("ACCEPTED")  # host text, model-independent
-    assert any("Failed" in text for _, text in surface.texts[1:])
-    assert _session(service).last_terminal_run_id
+    assert len(surface.texts) == 1  # single terminal reply, no acceptance card
+    assert "Failed" in surface.texts[0][1]
+    session = _session(service)
+    assert session.last_terminal_run_id
+    receipt = service.receipts.read(session.last_terminal_run_id)  # type: ignore[arg-type]
+    assert receipt.execution_state == "failed"
 
 
 def test_inspect_without_terminal_run_never_starts_an_agent(tmp_path: Path, monkeypatch):

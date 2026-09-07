@@ -94,6 +94,9 @@ REUSED 保持不变：ReceiptStore/StepPersistence、串行 Gateway、SSE invali
 - T002 `render_run_accepted()`：deterministic、无模型、`start_profile_run()` 前
   发送；`ZUAEF_CONSOLE_PUBLIC_BASE_URL` 合法时附 `?run=` 链接，带凭据/查询串/
   非法 scheme/空白一律不猜。测试钉死 texts[0]=ACCEPTED 且模型抛错时仍先发。
+  **2026-09-07 操作者决定移除**：每次运行都向群里发 ACCEPTED 卡片属噪音，
+  terminal 卡片保留 run id 与 `/inspect` 提示，`/inspect` 与 Console 亦不依赖
+  它。实现与测试已删除（规范 §11 在本部署点作废，依 §33 记录分歧）。
 - T003 `RunReceipt`/`PauseReceipt` 增 additive optional `usage_limits`，
   `execute_run` 在验收时冻结三项 limit；旧 receipt 无该字段仍可读（显式测试）。
 - T004 LIMIT_REACHED 一等投影：terminal 卡片（usage、configured limits、
