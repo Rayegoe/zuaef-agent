@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -48,6 +50,8 @@ from .renderer import (
     render_profile,
     render_status,
     render_terminal,
+    render_run_natural_ack,
+    render_run_progress,
 )
 from .routing import RoutingPolicy
 from .store import ApprovalTokenError, GatewayStore
@@ -110,6 +114,13 @@ _DRAFT_REF = re.compile(r"msg-[A-Za-z0-9_.-]+\.md")
 DRAFT_PREVIEW_MAX = 2800
 
 
+def _run_coro(coro):
+    """Run one coroutine to completion from a non-loop thread (the progress
+    watchdog). The dispatch loop stays synchronous; this thread owns its own
+    event loop."""
+    return asyncio.run(coro)
+
+
 class GatewayService:
     def __init__(
         self,
@@ -123,6 +134,8 @@ class GatewayService:
         max_artifact_bytes: int = 10 * 1024 * 1024,
         allowed_user_ids: set[str] | None = None,
         routing_policy: RoutingPolicy | None = None,
+        run_ack: bool = True,
+        run_progress_seconds: float = 25.0,
     ):
         self.settings = settings
         self.store = store
@@ -134,6 +147,14 @@ class GatewayService:
         self.allowed_user_ids = allowed_user_ids
         self.routing = routing_policy or RoutingPolicy()
         self.receipts = ReceiptStore(settings.state_root)
+        # Natural chat bridging: one state-composed acknowledgment at
+        # acceptance, plus at most ONE mid-run progress line after
+        # ``run_progress_seconds`` composed from persisted StepPersistence
+        # facts. Bounded deterministic transport — no new execution model.
+        self.run_ack = run_ack
+        self.run_progress_seconds = run_progress_seconds
+        self._progress_stops: dict[str, threading.Event] = {}
+        self._progress_lock = threading.Lock()
 
     # ── dispatch ────────────────────────────────────────────────────────────
 
@@ -217,6 +238,12 @@ class GatewayService:
         run_id = uuid4().hex
         session = session.model_copy(update={"active_run_id": run_id})
         self.store.save_session(session)
+        if self.run_ack:
+            self._send_text(session, render_run_natural_ack(
+                profile=profile,
+                is_continuation=session.last_terminal_run_id is not None,
+            ))
+        self._start_progress_watchdog(session, run_id)
         # Normal-turn continuity (SPEC §15 / T010): a follow-up message in the
         # same conversation resumes the prior terminal run's real history from
         # public persistence — a fresh run_id, the same conversation_id.
@@ -252,10 +279,12 @@ class GatewayService:
                 actor_role=envelope.actor_role,
             )
         except CompositionError as exc:
+            self._stop_progress_watchdog(run_id)
             session = session.model_copy(update={"active_run_id": None})
             self.store.save_session(session)
             self._send_text(session, render_error(str(exc)))
             return
+        self._stop_progress_watchdog(run_id)
         if isinstance(outcome, PausedRun):
             self._settle_paused(session, outcome)
         else:
@@ -704,6 +733,70 @@ class GatewayService:
             ),
         )
         return session
+
+    # ── progress bridging ───────────────────────────────────────────────────
+
+    def _start_progress_watchdog(self, session: SessionBinding, run_id: str) -> None:
+        """One bounded thread per run: after ``run_progress_seconds`` of
+        silence, send a single progress line composed from persisted
+        StepPersistence facts. Cancelled on settle; never fires twice; never
+        touches the execution path."""
+        if self.run_progress_seconds is None or self.run_progress_seconds <= 0:
+            return
+        stop = threading.Event()
+        with self._progress_lock:
+            self._progress_stops[run_id] = stop
+
+        def watchdog() -> None:
+            if stop.wait(max(0.0, self.run_progress_seconds)):
+                return
+            with self._progress_lock:
+                if self._progress_stops.get(run_id) is not stop:
+                    return  # already settled and cleaned up
+            text = render_run_progress(**self._progress_facts(run_id))
+            try:
+                self._send_text(session, text)
+            except Exception as exc:  # noqa: BLE001 — bridging is non-fatal
+                logger.warning("progress ping failed for run %s: %s", run_id, exc)
+
+        threading.Thread(target=watchdog, name=f"progress-{run_id[:8]}", daemon=True).start()
+
+    def _stop_progress_watchdog(self, run_id: str) -> None:
+        with self._progress_lock:
+            stop = self._progress_stops.pop(run_id, None)
+        if stop is not None:
+            stop.set()
+
+    def _progress_facts(self, run_id: str) -> dict:
+        """Read persisted operational facts for one run; anything unreadable
+        stays out of the sentence (never invented)."""
+        facts: dict = {"elapsed_seconds": int(self.run_progress_seconds or 0)}
+        try:
+            from ..web.projector import activity_view, build_timeline
+            from ..web.readers import load_run_facts
+
+            load = load_run_facts(self.settings, run_id)
+            run_facts = _run_coro(load)
+            if run_facts is None:
+                return facts
+            timeline = build_timeline(run_facts)
+            requests = sum(
+                1 for row in timeline if row.kind == "model_request" and row.finished_at is not None
+            )
+            if requests:
+                facts["requests"] = requests
+            started = [
+                row for row in timeline
+                if row.kind == "tool_call" and row.status == "started"
+            ]
+            if started:
+                facts["tool_name"] = started[-1].title
+            activity = activity_view(run_facts)
+            if activity == "SETTLING":
+                facts.pop("tool_name", None)
+        except Exception as exc:  # noqa: BLE001 — facts are best-effort
+            logger.info("progress facts unavailable for run %s: %s", run_id, exc)
+        return facts
 
     def _cmd_inspect(self, session: SessionBinding) -> None:
         from ..web.inspection import render_inspection_markdown, render_run_json

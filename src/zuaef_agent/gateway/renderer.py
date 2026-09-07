@@ -49,6 +49,38 @@ def _short(run_id: str) -> str:
     return run_id[:8] + "…"
 
 
+def render_run_natural_ack(*, profile: str | None, is_continuation: bool) -> str:
+    """Short natural acknowledgment at run acceptance, composed from host
+    state (continuation or fresh, profile) — never a run id, never a
+    mechanical status card."""
+    scope = f"（{profile}）" if profile else ""
+    if is_continuation:
+        return f"收到，接着上一轮继续处理{scope}——结果出来直接回你。"
+    return f"收到，开始处理{scope}——结果出来直接回你。"
+
+
+def render_run_progress(
+    *,
+    requests: int | None = None,
+    tool_name: str | None = None,
+    elapsed_seconds: int | None = None,
+) -> str:
+    """One bounded mid-run progress line, composed from persisted
+    operational facts (model requests settled, tool currently running,
+    elapsed seconds). Facts that do not exist stay out of the sentence —
+    the host never invents a percentage or a stage name."""
+    facts: list[str] = []
+    if requests:
+        facts.append(f"已完成 {requests} 轮模型调用")
+    if tool_name:
+        facts.append(f"正在调用 {tool_name}")
+    if elapsed_seconds is not None:
+        facts.append(f"已 {elapsed_seconds} 秒")
+    if not facts:
+        return "还在处理，结果出来直接回你。"
+    return "还在处理：" + "，".join(facts) + "——出结果直接回你。"
+
+
 def render_terminal(outcome: TerminalRun) -> str:
     """Terminal card (SPEC §41). The presentation IS the reply (outcome-first);
     audit counts stay in /status and the receipt. Surface policy: a completed

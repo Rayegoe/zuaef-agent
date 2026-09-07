@@ -233,7 +233,8 @@ def test_full_publish_slice_through_gateway(world):
     assert receipt.execution_state == "completed"
     effects = [e for e in receipt.tool_effect_facts if e.tool_name == "wordpress_publish_post"]
     assert len(effects) == 1 and effects[0].status == "completed"
-    assert surface.last_text() == "WordPress post published."  # presentation only
+    assert surface.texts[-1] == "WordPress post published."  # terminal reply is pure presentation
+    assert surface.texts[0].startswith("收到，开始处理")  # natural ack precedes it
     assert surface.callback_answers == [("cb-1", "Approved. Resuming…")]
 
 

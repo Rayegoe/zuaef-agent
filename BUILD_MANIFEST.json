@@ -1238,8 +1238,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/renderer.py",
-      "bytes": 7660,
-      "sha256": "c99932799fa5ca9370d36ffa31c79102801d3d00f2da4c7bc0f8fb56fbdbb85e"
+      "bytes": 9010,
+      "sha256": "b23265ba54b425c7b069058d7e60d28fb77b0470609799717d40bbe29c3f0099"
     },
     {
       "path": "src/zuaef_agent/gateway/routing.py",
@@ -1248,13 +1248,13 @@
     },
     {
       "path": "src/zuaef_agent/gateway/runner.py",
-      "bytes": 11220,
-      "sha256": "d4841df2edbc16e9f77b007b47c91a748520796a8c46f79a7b41954361fcc3b3"
+      "bytes": 11642,
+      "sha256": "ff277e1a8501dfeb13e26bc573fc776ac0af14030e61fe70677a21bd833a7a2d"
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 37083,
-      "sha256": "0791f8da672bc75b4ef2fc0df131ce2db27bb3a0d1ccf329096de0317e19b53f"
+      "bytes": 41295,
+      "sha256": "bef790ac5de5a49ede9b807f5d4adc85f9c953ddd5a3762f4a887847ff19d4a4"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
@@ -1488,8 +1488,8 @@
     },
     {
       "path": "tests/test_gateway_e2e_wordpress.py",
-      "bytes": 8988,
-      "sha256": "75cc870682890f64efe3a2688df2f6fe097a725e3b75663361c91732b248b7bb"
+      "bytes": 9095,
+      "sha256": "7abb6f667c41ec6be610ace341395ba816507cd5753640aa620174e8d7fb56d9"
     },
     {
       "path": "tests/test_gateway_feishu.py",
@@ -1513,8 +1513,8 @@
     },
     {
       "path": "tests/test_gateway_service.py",
-      "bytes": 42328,
-      "sha256": "f96f250c457a22a742020152495002a18d5314919fa82138f745f436340a3e1c"
+      "bytes": 45254,
+      "sha256": "174bdc071ee459f31ba3c0a39a81f347c6f0b65878e1bef1626f0b28022b37a2"
     },
     {
       "path": "tests/test_gateway_service_routing.py",

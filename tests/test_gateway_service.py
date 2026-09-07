@@ -902,8 +902,9 @@ def test_authoring_task_presents_deliverable_without_approval(
     service.handle(_envelope("改写这篇文章", n=1))
 
     assert surface.approvals == []
-    text = surface.last_text()
+    text = surface.texts[-1][1]
     assert text == article  # completed reply is pure presentation, no card
+    assert surface.texts[0][1].startswith("收到，开始处理")  # natural ack
     assert "Verified artifacts" not in text  # audit counts are Console-only
     session = _session(service)
     assert session.paused_run_id is None
@@ -1116,8 +1117,9 @@ def test_provider_failure_still_settles_a_failed_receipt(tmp_path: Path, monkeyp
 
     service.handle(_envelope("hello"))
 
-    assert len(surface.texts) == 1  # single terminal reply, no acceptance card
-    assert "Failed" in surface.texts[0][1]
+    assert len(surface.texts) == 2  # natural ack, then the terminal card
+    assert surface.texts[0][1].startswith("收到，开始处理")
+    assert "Failed" in surface.texts[1][1]
     session = _session(service)
     assert session.last_terminal_run_id
     receipt = service.receipts.read(session.last_terminal_run_id)  # type: ignore[arg-type]
@@ -1182,3 +1184,75 @@ def test_inspect_renders_deterministic_post_mortem_without_model(tmp_path: Path,
     assert "Configured limits" in text and "request_limit" in text
     assert "Runtime reason: The next request would exceed the request_limit of 12" in text
     assert "Usage complete: True" in text
+
+
+# ---------------------------------------------------------------------------
+# Natural chat bridging: state-composed ack + single mid-run progress line
+# (composed from persisted facts — never a mechanical status card)
+# ---------------------------------------------------------------------------
+
+
+def test_ack_varies_with_continuation_state_and_hides_run_id(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="好"))
+    service.handle(_envelope("第一问", n=1))
+    assert surface.texts[0][1] == "收到，开始处理（writing）——结果出来直接回你。"
+    service.handle(_envelope("第二问", n=2))
+    assert surface.texts[2][1] == "收到，接着上一轮继续处理（writing）——结果出来直接回你。"
+    assert all("Run" not in t and "run" not in t for _, t in surface.texts)
+
+
+def test_ack_can_be_disabled(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="done"))
+    service.run_ack = False
+    service.handle(_envelope("hello", n=1))
+    assert len(surface.texts) == 1 and "done" in surface.texts[0][1]
+
+
+def test_progress_ping_fires_once_from_persisted_facts(tmp_path: Path, monkeypatch):
+    import time as _t
+
+    def slow(messages, info):
+        _t.sleep(0.5)
+        return _final(outcome="完成")
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, slow)
+    service.run_progress_seconds = 0.05
+
+    service.handle(_envelope("慢慢查", n=1))
+
+    progress = [t for _, t in surface.texts if t.startswith("还在处理")]
+    assert len(progress) == 1, surface.texts  # bounded: exactly one ping
+    assert "出结果直接回你" in progress[0]
+    terminal = surface.texts[-1][1]
+    assert "完成" in terminal
+
+
+def test_progress_ping_disabled_by_zero(tmp_path: Path, monkeypatch):
+    import time as _t
+
+    def slow(messages, info):
+        _t.sleep(0.3)
+        return _final(outcome="done")
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, slow)
+    service.run_progress_seconds = 0
+
+    service.handle(_envelope("hello", n=1))
+
+    assert not [t for _, t in surface.texts if t.startswith("还在处理")]
+
+
+def test_progress_ping_stays_silent_after_settle(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="done"))
+    service.run_progress_seconds = 0.05
+
+    service.handle(_envelope("快问快答", n=1))
+
+    import time as _t
+    _t.sleep(0.3)  # the watchdog deadline passes AFTER the run settled
+    assert not [t for _, t in surface.texts if t.startswith("还在处理")]
