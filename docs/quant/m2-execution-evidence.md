@@ -136,3 +136,44 @@ T009 部署后 smoke、T010 故障隔离、T012 真实飞书 ACCEPTED → live �
 LIMIT_REACHED → /inspect 与 Quant 独立刷新。真实飞书入站操作需要操作者配合；
 测试 adapter 不等于真实飞书证明。
 
+
+## T009 部署后验证（commit 5f8940c，14:05–14:10 CST）
+
+```text
+4 units active（console / quant-dashboard / gateway / feishu-gateway）
+2 timers enabled（monitor / bridge）
+GET :8765/api/health → {"ok":true,"version":"0.1.1"}，bundle index-lwb_HMiR.js
+GET :8787/api/quant/now → market_phase OPEN_PM（host 派生）、runtime HEALTHY
+monitor restart 后 state.json 写出 cycle_at / market_tick_at（age 42s）/
+freshness CURRENT，51 symbols，data_trust PASS
+```
+
+monitor 是 timer 驱动的一次性 session，本可等下一 tick 取新代码；为当日完成
+T007/T008 生产验证手动 restart 一次，重启后立即恢复心跳与扫描（重启安全）。
+
+事故 receipt 77c45d0e 经新投影（真实数据，非 fixture）：
+
+```text
+status limit_reached · activity LIMIT_REACHED · profile quant-decision
+requests 12 · tool_calls 25 · input 746,586 · output 20,928 · usage_complete true
+usage_limits {} → Configured limits UNKNOWN（旧 receipt，诚实未知）
+limit_boundary UNKNOWN（不从 token 数猜测）
+runtime_reason The next request would exceed the request_limit of 12 …
+```
+
+## T010 故障隔离
+
+测试级（全绿）：
+
+- provider 异常 → ACCEPTED 仍先行、receipt failed
+  （test_accepted_is_sent_even_when_the_model_never_responds）。
+- UsageLimitExceeded → limit_reached receipt 冻结 limits
+  （test_limit_reached_receipt_freezes_configured_usage_limits，真实 runtime seam）。
+- Quant monitor 全链路 200 测试零模型参与；Console projection/inspection 测试
+  零 provider 参与 —— 两条平面在构造上互不依赖。
+
+生产级：事故 receipt 在部署后立即可通过 Console 投影与 inspection 复盘
+（上方输出）；monitor/dashboard 与 gateway 独立 restart 各自恢复。
+
+未证明（需操作者）：对生产 gateway 主动断 provider 的现场演练（会降级在用的
+飞书通道，未在无人在场时执行）；T012 真实飞书五步流。
