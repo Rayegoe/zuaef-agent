@@ -428,6 +428,26 @@ Zero core change: `core.py`, `runtime.py`, `composition.py` untouched (diff
 confirmed). The direct-toolset path stays as proof evidence and the plugin
 toolset is tool-for-tool identical to it (parity test).
 
+## Domain pack: ZUAEF-ASHARE-001 Quant Trading Workbench
+
+The zuaef-quant plugin composes an A-share decision assistant on the same
+core (zero kernel change): M1 deterministic trading monitor -> canonical
+file-native artifacts -> one-shot Telegram event bridge -> quant-decision
+agent interpretation -> supervisor delivery, plus a business dashboard with a
+loopback-only write path. Current authority:
+`zuaef-quant-spec-v3.1-20260905/00_SOURCE_OF_TRUTH.md`. Ops runbook:
+`docs/quant/README.md`. Knowledge: `workspace/knowledge/concepts/quant-telegram-workbench.md`.
+
+Status: proactive chain is **IMPLEMENTED_NOT_PROVEN** — it becomes PROVEN only
+after one real A-share session delivers a zero-user-initiation end-to-end
+notification. Event-driven human-in-the-loop decision assistant, not an
+automated trading system. Profitability remains UNPROVEN (S3 frozen,
+PIT-contaminated universe).
+
+Multi-host sync is plain git: `git push origin main && git push opi5 main`
+(`opi5` = SSH remote to `/home/orangepi/zuaef-agent`); docs and knowledge are
+repo files, so git sync is doc sync.
+
 ## Next
 
 The shared seam is now proven on two business slices: writing (task-local

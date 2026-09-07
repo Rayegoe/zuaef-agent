@@ -14,6 +14,7 @@ Read only the relevant nodes; do not load the whole corpus by default.
 - [quant-execution-truth](concepts/quant-execution-truth.md) — T+1/涨跌停/成本规则、双引擎重放、防伪测试
 - [quant-eval-methodology](concepts/quant-eval-methodology.md) — 四窗角色、反过拟合协议、指标、流水线
 - [quant-live-ops](concepts/quant-live-ops.md) — 日常运行命令、观察日志、冻结/重启规则、故障速查
+- [quant-telegram-workbench](concepts/quant-telegram-workbench.md) — Trading Workbench：事件桥架构/契约、投递权威、freshness 契约、运维教训、IMPLEMENTED_NOT_PROVEN 边界
 - [quant-trading-fundamentals](concepts/quant-trading-fundamentals.md) — 量化基础概念学习索引（9 原则 × 项目实践）
 
 Source node: [zuaef-quant](sources/zuaef-quant.md)（全部可追溯证据位置）

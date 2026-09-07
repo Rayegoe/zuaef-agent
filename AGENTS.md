@@ -142,3 +142,25 @@ When a worker is launched from a merged `.supervisor/NEXT.md`, that exact
 instruction is the worker's execution authority. `TASKS.md` remains
 backlog/evidence. Completing the authorized instruction does not authorize the
 next task.
+
+## Live-ops facts (2026-09-05, from real incidents — additive, no rule above is changed)
+
+- Gateway loads `.env` once at process start (`AgentSettings.from_env`). Any
+  `.env` edit requires `systemctl --user restart zuaef-gateway`; the oneshot
+  quant bridge re-reads it every tick and never needs a restart.
+- A gateway poll loop failing every ~65s with EMPTY httpx error messages while
+  fresh processes succeed = wedged in-process connection pool behind the local
+  proxy tunnel → restart the gateway; do not debug the network first.
+- New files under `tools/`, `tests/`, `plugins/`, `profiles/` MUST be added to
+  `BUILD_MANIFEST.json` (covers-all contract); changed pinned files get
+  surgical entry updates — never regenerate the whole manifest.
+- Canonical trading-ledger writes go through `tools/quant_trading_monitor.py`
+  only (per-transaction `.ledger.lock` serializes cycle vs ack-CLI writes).
+  Never write `workspace/artifacts/quant/trading/**` from anything else.
+- Domain truth for quant work: `zuaef-quant-spec-v3.1-20260905/00_SOURCE_OF_TRUTH.md`
+  (current authority), `docs/quant/README.md` (ops runbook), knowledge node
+  `quant-telegram-workbench`. Source priority on disagreement: local running
+  tree/artifacts > reviewed GitHub main > v3.1 pack > older docs.
+- Multi-host sync is plain git: `git push origin main` + `git push opi5 main`
+  (opi5 = SSH remote `/home/orangepi/zuaef-agent`). Docs are repo files; git
+  sync IS doc sync.

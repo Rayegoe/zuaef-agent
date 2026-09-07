@@ -190,6 +190,11 @@ footer{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(
     <div class="k"><div class="v" id="kpi-evidence">—</div><div class="l">策略证据</div></div>
   </div>
 
+  <div class="card" id="v31-governance-card">
+    <h2>v3.1 证据与影子治理 <span class="scope research">V3.1 · SHADOW ONLY</span> <span class="cnt">research / replay / shadow 严格分离，不计入 live-forward</span></h2>
+    <div id="v31-summary"></div>
+  </div>
+
   <div class="card">
     <h2>今日动作候选 <span class="scope today">TODAY · LIVE</span> <span class="cnt" id="scan-meta"></span></h2>
     <div id="trigger-box"></div>
@@ -287,7 +292,7 @@ footer{margin-top:26px;color:var(--dim);font-size:12px;border-top:1px solid var(
 </div>
 <script>
 window.DASH = {
- "generated_at": "2026-09-04 16:01 UTC",
+ "generated_at": "2026-09-07 04:53 UTC",
  "warning": "历史 S3 证据薄弱;盈利能力仍未证明 (NOT YET)。",
  "not_a_buy_note": "候选排名只是研究关注度的排序,不是买入建议;实际动作仍需确定性实时触发加人工决策。盈利能力仍未证明。",
  "trading": {
@@ -311,7 +316,7 @@ window.DASH = {
   "alerts": []
  },
  "now": {
-  "generated_at": "2026-09-05T00:01:39+08:00",
+  "generated_at": "2026-09-07T12:53:00+08:00",
   "present": true,
   "as_of": "2026-09-04T19:10:35.702555+08:00",
   "day": "2026-09-04",
@@ -321,7 +326,7 @@ window.DASH = {
   "runtime": "HEALTHY",
   "stale": false,
   "heartbeat_at": "2026-09-04T19:10:35+08:00",
-  "heartbeat_age_seconds": 17464,
+  "heartbeat_age_seconds": 236545,
   "last_scan_at": null,
   "scan_age_seconds": null,
   "symbols_scanned": 0,
@@ -427,7 +432,22 @@ window.DASH = {
     "d1_day": "2026-09-04",
     "d1": 0.019231
    }
-  ]
+  ],
+  "v31_replay": {
+   "run_id": "replay-20260905-v1",
+   "as_of": "2026-09-04T23:59:59+08:00",
+   "status": "blocked",
+   "day_count": 10,
+   "blocked_day_count": 10,
+   "observation_count": 0,
+   "live_forward_increment": 0,
+   "intraday_equivalence": false,
+   "reasons": [
+    "HISTORICAL_CANDIDATE_UNAVAILABLE",
+    "HISTORICAL_QUOTE_ARCHIVE_UNAVAILABLE",
+    "HISTORICAL_VOLUME_SEMANTICS_UNPROVEN"
+   ]
+  }
  },
  "kpi": {
   "today_decision": "NOT_RUN_TODAY",
@@ -1977,6 +1997,63 @@ window.DASH = {
   "degradations": [],
   "banner": "数据质量分维未全绿: freshness=WARN; pit=FAIL"
  },
+ "v31": {
+  "available": true,
+  "replay": {
+   "run_id": "replay-20260905-v1",
+   "as_of": "2026-09-04T23:59:59+08:00",
+   "status": "blocked",
+   "day_count": 10,
+   "blocked_day_count": 10,
+   "observation_count": 0,
+   "live_forward_increment": 0,
+   "intraday_equivalence": false,
+   "reasons": [
+    "HISTORICAL_CANDIDATE_UNAVAILABLE",
+    "HISTORICAL_QUOTE_ARCHIVE_UNAVAILABLE",
+    "HISTORICAL_VOLUME_SEMANTICS_UNPROVEN"
+   ]
+  },
+  "regime_shadow": null,
+  "s0": null,
+  "experiment": {
+   "experiment_id": "regime-shadow-v1-exp-20260905",
+   "hypothesis": "独立 regime shadow 可提示回避损失；未证明前不改变生产。",
+   "baseline_version": "active-s3-frozen-2026-09-02",
+   "change": "regime projection OFF -\u003e shadow",
+   "mechanism": "用可用时间明确的市场证据生成独立参与建议。",
+   "variable_changes": {
+    "regime_projection": [
+     "OFF",
+     "shadow"
+    ]
+   },
+   "data_window": [
+    "2026-08-24",
+    "2026-09-04"
+   ],
+   "primary_metric": "avoided_loss_d5",
+   "risk_metric": "suppressed_opportunity_d5",
+   "rejection_condition": "PIT不完整或没有新live-forward，不允许promotion。",
+   "state": "PROPOSED",
+   "evidence_namespace": "research",
+   "run_ids": [],
+   "limitations": []
+  },
+  "promotion": {
+   "state": "BLOCKED",
+   "requested_action": "promote",
+   "reasons": [
+    "MISSING_LIVE_FORWARD_EVAL",
+    "UNPROVEN_S1_REPLAY",
+    "UNPROVEN_S2_SHADOW",
+    "NEW_LIVE_FORWARD_AND_ZERO_UNRESOLVED_INTEGRITY_FAILURES_REQUIRE_REVIEW"
+   ],
+   "namespace": "research",
+   "production_config_changed": false
+  },
+  "promotion_state": "BLOCKED"
+ },
  "anti_leakage": {
   "verdict": "P0_4_SCOPED_PASS"
  },
@@ -2475,6 +2552,42 @@ function renderStatic(){
   const ev = $('kpi-evidence');
   ev.textContent = zh(EV_ZH, k.strategy_evidence);
   ev.style.color = 'var(--amber)';
+
+  // v3.1 evidence governance
+  const v31 = D.v31 || {};
+  const rp = (v31.replay || {});
+  const shadow = ((v31.regime_shadow || {}).regime || {});
+  const s0 = ((v31.s0 || {}).payload || {});
+  const skip = s0.skip_analysis || {};
+  const position = s0.position_audit || {};
+  const regimeColor = {NORMAL:'var(--green)', SELECTIVE:'var(--amber)', DO_NOT_PARTICIPATE:'var(--red)'}[shadow.regime] || 'var(--dim)';
+  const stateColor = {BLOCKED:'var(--red)', REJECTED:'var(--red)'}[v31.promotion_state] || 'var(--amber)';
+  const replayReasons = (rp.reasons||[]).length ? (rp.reasons||[]).map(x=>`<span class="rf">${esc(x)}</span>`).join(' ') : '—';
+  $('v31-summary').innerHTML = `<dl class="kv">
+    <dt>严格 PIT 回放</dt><dd>
+      <b>${esc(rp.status || 'UNAVAILABLE')}</b> · ${esc(rp.day_count ?? 0)} 天，其中 ${esc(rp.blocked_day_count ?? 0)} 天 blocked ·
+      观察 ${esc(rp.observation_count ?? 0)} · live-forward 增量 ${esc(rp.live_forward_increment ?? 0)} ·
+      盘中等价 ${rp.intraday_equivalence === true ? '已证明' : '未证明'}
+      <div class="dim" style="margin-top:5px">${replayReasons}</div>
+    </dd>
+    <dt>Market Regime</dt><dd>
+      <b style="color:${regimeColor}">${esc(shadow.regime || 'BLOCKED')}</b>
+      · participation=${esc(shadow.participation_permission || '—')} · rule=${esc(shadow.regime_rule_version || '—')}
+      · as_of=${esc(shadow.regime_as_of || '—')}
+      <div class="dim" style="margin-top:5px">${esc((shadow.regime_reason_codes||[]).join('; ') || '缺失所有 PIT 市场特征')}</div>
+    </dd>
+    <dt>S0 / SKIP 研究</dt><dd>
+      positions=${esc(position.positions ?? 0)} (${esc(position.conclusion || 'INSUFFICIENT_EVIDENCE')}) ·
+      human observations=${esc(skip.total ?? 0)} · synthetic fills=${esc(skip.synthetic_fills ?? 0)} ·
+      conclusion=${esc(skip.conclusion || 'INSUFFICIENT_EVIDENCE')}
+    </dd>
+    <dt>Experiment</dt><dd>
+      id=${esc((v31.experiment||{}).experiment_id || '—')} · variable=${esc(Object.keys((v31.experiment||{}).variable_changes||{})[0] || '—')} ·
+      promotion=<b style="color:${stateColor}">${esc(v31.promotion_state)}</b> · production config 不变
+      <div class="dim" style="margin-top:5px">${esc(((v31.promotion||{}).reasons||[]).join('; ') || '尚无 promotion decision')}</div>
+    </dd>
+    <dt>证据边界</dt><dd>replay/shadow/experiment 全部隔离于 production；本卡不显示也不计入 live-forward 收益。</dd>
+  </dl>`;
   if (D.data_quality.status !== 'PASS' && D.data_quality.banner){
     $('dq-banner').textContent = 'DATA DEGRADED / 交易可信度受限 — ' + D.data_quality.banner;
     $('dq-banner').style.display = 'block';

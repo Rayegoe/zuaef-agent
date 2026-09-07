@@ -948,8 +948,8 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 9826,
-      "sha256": "05e30e7adecd84cb680a82c7855433941645833bea82e460774076f4f678c463"
+      "bytes": 11292,
+      "sha256": "be3735d21b387072b653f9e39880eb68a748751f302c3d22572d059145cf0f42"
     },
     {
       "path": "CHANGELOG.md",
@@ -973,8 +973,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 20101,
-      "sha256": "d9a7bc4f1c16ad9da62b1caa5a02f8fc4962c61d4fa99c22876d1834cace342e"
+      "bytes": 21184,
+      "sha256": "aa5bc8ecd37a40e1ac8c25461a9aea03ee517fb59bade552e6362dfc3800a85b"
     },
     {
       "path": "REFACTOR_NOTES.md",
@@ -2318,8 +2318,8 @@
     },
     {
       "path": "workspace/knowledge/index.md",
-      "bytes": 1161,
-      "sha256": "914cb5265ad7049bb0c68acdedc4ebcdd694a8d9398a49c221ae6014b1ccde23"
+      "bytes": 1356,
+      "sha256": "f62d4990009abe143298ee97f14b026829e6ae31b30f14f9839bdc5a141a7877"
     },
     {
       "path": "benchmarks/editorial-learning/README.md",

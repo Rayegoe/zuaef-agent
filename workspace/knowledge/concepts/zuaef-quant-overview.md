@@ -8,8 +8,12 @@ tags:
 - agent-design
 sources:
 - id: sources/zuaef-quant
+  resource: zuaef-quant-spec-v3.1-20260905/00_SOURCE_OF_TRUTH.md
+  title: v3.1 spec pack — Source of Truth（当前权威；v2.0-optimized 为其下位输入）
+  evidence: "M1 monitor / canonical acks / forward D+1..D+8+MFE/MAE / Workbench + loopback writes / six-tool capability / Telegram document delivery / one-shot bridge + timer 全部 IMPLEMENTED；proactive 链 IMPLEMENTED_NOT_PROVEN"
+- id: sources/zuaef-quant
   resource: zuaef-quant-final-spec-v2.0-optimized/00_START_HERE.md
-  title: Final spec v2.0 (optimized, executable baseline 2026-09-03)
+  title: Final spec v2.0 (optimized, executable baseline 2026-09-03；历史契约层)
   evidence: "Status FINAL/EXECUTABLE; North Star; spec v2.0 replaces v1.1/v1.2; product success"
 - id: sources/zuaef-quant
   resource: zuaef-quant-final-spec-v2.0-optimized/02_AGENT_AND_HARNESS.md
@@ -33,7 +37,7 @@ sources:
   evidence: "same frozen inputs; attribution classes A-F; residual UNEXPLAINED fails P0.5"
 generated:
   by: zuaef-agent
-  date: 2026-09-04
+  date: 2026-09-05
 ---
 
 # 项目总览
@@ -79,8 +83,24 @@ ZUAEF Agent Core（业务域中立，零量化改动）
      差异必归因（A 市场规则差  B 不支持对等  C Qlib 局限  D/E bug  F 无法解释）；F 残留= P0.5 失败
 ```
 
-权威 spec：`zuaef-quant-final-spec-v2.0-optimized/`（EXECUTABLE，2026-09-03 基线 main）
-为当前执行契约；`zuaef-quant-final-spec-v2.0-clean/` 为可读精校版；v1.0-final 保留为历史。
+2026-09-05 增补（spec v3.1 基线）：Trading Workbench 事件驱动层
+
+```text
+Trading Workbench（详见 concepts/quant-telegram-workbench.md）
+├─ Phase 1 Dashboard：business.html（NOW 层 + 口径徽章 + Action Queue + Timeline）
+│    + loopback-only 写适配器（quant_serve POST → canonical ack CLI）
+├─ Phase 2 主动助理：quant_telegram_bridge（oneshot + systemd timer 45s）
+│    durable alerts → E1/E2 Agent 解释（interpretation-only，bridge 是唯一投递权威）
+│    E3/E4/E5 确定性文案；SYSTEM_RECOVERED 确定性证据；T10 日报复用 Dashboard verdict
+├─ freshness 契约（host 派生 5 态：FRESH/NOT_SCANNED/STALE/MARKET_NOT_OPEN/INSUFFICIENT_EVIDENCE）
+│    get_trading_context 直接给 freshness 事实，模型禁止自推新旧
+└─ zuaef-telegram：send_document + send_artifact_to_supervisor（host 固定收件人/范围，
+     operator self-delivery 无 approval；客户外发审批边界不动）
+
+权威 spec：`zuaef-quant-spec-v3.1-20260905/`（00_SOURCE_OF_TRUTH.md 为当前权威；
+源不一致时：本机运行树/services/canonical artifacts > GitHub main ≥ 2026-09-05 基线 > v3.1 pack > 旧文档；
+"Never reset a working runtime to satisfy stale documentation"）。
+v2.0-optimized 降为下位契约层；v1.0-final 保留为历史。
 
 重依赖（akshare、pyqlib）**永不进 Agent 主环境**——评估/扫描在侧环境 `.venv-quant`
 （Python 3.12）以 subprocess 执行；插件包自身不背这些库（P3 设计，README §2）。
@@ -112,6 +132,12 @@ P2 独立执行重放 → P3 能力接入 → P4 三轮模型进化 → P5 实�
 | Profitability Proof | **NOT YET**（最好子策略 ≈ +0.37% 年化/29 笔，噪声内，有意停止 in-sample 追寻） |
 | Live Decision Product | **FIRST PROOF PASS**（2026-09-02 盘中实测 NO_TRADE，86s 端到端延迟） |
 
-**当前阶段**：P5.5 ENGINEERING FREEZE 持续 —— 观察模式本体已由 M1 交易时段循环 v0.1 接管
-（连续盯盘 + 持仓管理 + forward 观察，见 quant-live-ops）；P0.5 双引擎对账已实现并进入可信对等路径。
+**当前阶段**：P5.5 ENGINEERING FREEZE 持续 —— 观察模式本体已由 M1 交易时段循环接管
+（连续盯盘 + 持仓管理 + forward 观察，见 quant-live-ops）；P0.5 双引擎对账已实现并进入可信对等路径；
+Trading Workbench Phase 1+2 已实现（Dashboard + 事件桥 + 工件投递 + freshness 契约）。
 代码仍冻结：新功能必须来自真实市场派发的任务。
+
+**证明边界（v3.1 §00）**：proactive 链 `Runtime → alert → Bridge → Agent(E1/E2) → Bridge →
+Telegram` = **IMPLEMENTED_NOT_PROVEN**——单测全绿或手动投递成功都不晋升；必须由一次真实
+A 股时段的"用户零发起端到端回执"（T12）晋升为 PROVEN。工作定语：事件驱动的人机决策助理，
+不是自动交易系统。盈利能力 UNPROVEN 不变。

@@ -26,6 +26,34 @@ C Qlib 局限/D-E bug/F 无法解释),**任何 UNEXPLAINED 残留 = P0.5 失败*
 另:评估/审计工具(quant_core/live_scan/anti_leakage/pit_audit/eval_qlib/validate_semantics)随冻结期
 修订同步更新;business/dashboard 快照刷新。日常操作索引见 `workspace/knowledge/concepts/quant-live-ops.md`。
 
+**2026-09-05 增补 · Trading Workbench 运维手册 + 多机同步（v3.1 基线）:**
+
+组件链：`quant_trading_monitor`（45s 确定性循环，canonical truth 写入带 `.ledger.lock` 串行化）→
+`trading/alerts.jsonl` durable 事件流 → `quant_telegram_bridge`（oneshot+systemd timer，byte 游标 +
+独立 delivered_ids，E1/E2 Agent 解释、E3/E4/E5 确定性文案、SYSTEM_RECOVERED 确定性证据、T10 日报）→
+zuaef-telegram（文本/文档投递）→ Supervisor。Dashboard/`/api/quant/now` 与
+`get_trading_context`（含 host 派生 freshness 5 态）同源只读。完整契约与教训见
+`workspace/knowledge/concepts/quant-telegram-workbench.md`。
+
+**部署**：`cp ops/systemd/zuaef-quant-bridge.{service,timer} ~/.config/systemd/user/ &&
+systemctl --user daemon-reload && systemctl --user enable --now zuaef-quant-bridge.timer`；
+monitor 仍按 §5 runbook 手动起 `session --interval 45 --exit-on-close`。
+通知日志：`.zuaef-state/quant-bridge/bridge.jsonl`；游标状态：`state.json`。
+
+**两条硬运维规则**（真实事故换来的）：① 改 `.env` 后必须 `systemctl --user restart
+zuaef-gateway`（gateway 仅在启动时经 `AgentSettings.from_env()` 载入 `.env`；症状=
+quant-decision 会话每条消息报 `telegram plugin credentials missing`）；② gateway poll
+集体失败且空错误消息、每 ~65s 一条、新进程同路径请求秒通 = 进程内连接池/代理隧道半死 →
+同样 restart。bridge 免重启（oneshot 每 tick 全新进程）。
+
+**多机同步**：`git push origin main`（GitHub）+ `git push opi5 main`（SSH 直推
+/home/orangepi/zuaef-agent；opi5 侧等价 `git pull origin main`）。文档/知识/配置全在
+repo 内——git 同步即文档同步；opi5 上如有常驻服务，同步后按两条硬规则检查重启。
+
+**状态门**（v3.1 §00_SOURCE_OF_TRUTH）：proactive 链 = **IMPLEMENTED_NOT_PROVEN**；
+真实 A 股时段"用户零发起端到端回执"（T12）跑通前不宣称 PROVEN。事件驱动的人机决策助理，
+不是自动交易系统。
+
 **2026-09-04 增补 · Trading Workbench v0.1 Phase 2(主动实时助理 + 工件投递,T1–T12):**
 从 Pull(用户主动问)升级为 Push(Runtime 主动报),架构不变:Runtime 发现事实 → Agent 解释事实 →
 Telegram 送给人。新增 host 侧 oneshot Event Bridge `tools/quant_telegram_bridge.py`(systemd timer

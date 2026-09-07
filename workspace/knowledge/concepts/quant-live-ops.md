@@ -27,9 +27,17 @@ sources:
   resource: tools/quant_p05_reconcile.py
   title: P0.5 reconcile CLI
   evidence: "--config benchmarks/quant/gen1/quant.toml; attribution classes"
+- id: sources/zuaef-quant
+  resource: tools/quant_telegram_bridge.py
+  title: Quant Telegram event bridge (oneshot + systemd timer)
+  evidence: "E1/E2 Agent run；E3/E4/E5 确定性；游标+delivered_ids；checkpoint-after-delivery"
+- id: sources/zuaef-quant
+  resource: zuaef-quant-spec-v3.1-20260905/00_SOURCE_OF_TRUTH.md
+  title: v3.1 Source of Truth
+  evidence: "IMPLEMENTED_NOT_PROVEN 边界；T12 晋升条件"
 generated:
   by: zuaef-agent
-  date: 2026-09-04
+  date: 2026-09-05
 ---
 
 # 观察模式日常运行
@@ -146,3 +154,45 @@ B=Agent 有权 WATCH/NO_TRADE；比较期望值、回撤、坏交易剔除率、
 | evaluate_strategy already ran this round | 一轮守卫生效（设计行为），写完 Result 即结束 |
 | manifest 完整性失败 | `python tools/regen_manifest.py` |
 | 扫描全 0 触发 | 正常（S3 条件选择性高）；连续多周 0 触发才构成研究信号 |
+
+## Trading Workbench 运维（2026-09-05 增补，v3.1 基线）
+
+详见 [quant-telegram-workbench](quant-telegram-workbench.md)。本节只记动作。
+
+### 组件与部署
+
+```bash
+# M1 monitor（开盘前后手动起，会话结束自动退；--exit-on-close 到 15:00 收）
+.venv/bin/python tools/quant_trading_monitor.py session --interval 45 --exit-on-close
+
+# Telegram 事件桥（oneshot + timer，45s 一 tick；tick 内含 Agent run 时 systemd 自动不重叠）
+cp ops/systemd/zuaef-quant-bridge.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now zuaef-quant-bridge.timer
+systemctl --user status zuaef-quant-bridge.service   # 最近一次 tick 的结果
+tail -5 .zuaef-state/quant-bridge/bridge.jsonl       # 通知日志（事件/run_id/投递结果）
+```
+
+### 硬规则（真实事故换来的）
+
+1. **改 `.env` 后必须 `systemctl --user restart zuaef-gateway`**——gateway 启动时经
+   `AgentSettings.from_env()` 一次性把 `.env` 读进 os.environ；热改对运行中进程无效。
+   症状：切 quant-decision 会话后每条消息报 `telegram plugin credentials missing`。
+2. **gateway poll 集体失败（空错误消息、每 ~65s 一条、新进程同路径请求秒通）**
+   = 进程内连接池/代理隧道半死 → 同样 restart gateway。长驻消费新写 oneshot+timer。
+3. bridge 本体免重启：oneshot 每 tick 全新进程，永远重读 `.env`。
+
+### 多机同步（GitHub ↔ opi5）
+
+```bash
+git push origin main   # GitHub（Rayegoe/zuaef-agent）
+git push opi5 main     # opi5 主机（SSH 直推 /home/orangepi/zuaef-agent）
+# opi5 侧等价做法：git pull origin main
+```
+
+文档/知识/配置全部是 repo 内文件——git 同步即文档同步；无需额外分发机制。
+同步后如 opi5 跑常驻服务（gateway/bridge/monitor），按上面硬规则检查是否需要重启。
+
+### 状态门
+
+proactive 链 = **IMPLEMENTED_NOT_PROVEN**（v3.1 §00）：真实时段"用户零发起端到端回执"
+（T12）跑通前不得宣称 PROVEN。
