@@ -2623,13 +2623,13 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/validation.py",
-      "bytes": 6348,
-      "sha256": "ff1a0d56b9ed16dd5fbe35c47fad985e7495deb09363c98ea1f05d5e487ef9fb"
+      "bytes": 7226,
+      "sha256": "c624a07f76daf84f1b27bfce15c780b7816c0eec6cc21a2a2a2b6b2adbb50535"
     },
     {
       "path": "tests/test_quant_validation_accounting.py",
-      "bytes": 6377,
-      "sha256": "d654c5d1f6e4dea639fe08cefaa52c0baf3e223c0bde449c0d7157b4a2545199"
+      "bytes": 7735,
+      "sha256": "f06f8ef9696a78284703b26263bc5f9194595b82b16723c1f433682e18815362"
     }
   ]
 }

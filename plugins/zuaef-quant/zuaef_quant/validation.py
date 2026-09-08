@@ -118,6 +118,29 @@ def compute_validation_accounting(
 
     settled_full = [o for o in executed if o.get(_FULL_HORIZON_FIELD) is not None]
     accumulating = [o for o in executed if o.get(_FULL_HORIZON_FIELD) is None]
+    # Live-verification refinement (2026-09-08: production answered
+    # trading_days=2 and the reader could not tell the measurement window is
+    # narrower than the validation period): disclose when the soak record
+    # itself starts after validation started.
+    soak_dates = [
+        str(row.get("ts"))[:10] for row in soak_rows if str(row.get("ts", ""))[:10]
+    ]
+    soak_record_since = min(soak_dates) if soak_dates else None
+    limitations = [
+        ("settled means the full-horizon (d8) forward window exists; an "
+         "EXIT_ALERT position is still open until the human executes and "
+         "record_trade_outcome closes it — the two planes are independent"),
+        "validation age counts from the earliest paper position entry",
+        ("trading days are measured in-session soak scan dates (actual "
+         "operating days), never an exchange-holiday calendar"),
+    ]
+    if started and soak_record_since and soak_record_since > started:
+        limitations.append(
+            f"the soak record itself only begins {soak_record_since} (the "
+            "continuous monitor went live after validation started; earlier "
+            "entries were on-demand cycles) — the trading-day count covers "
+            "only the recorded window"
+        )
     return {
         "as_of": as_of.isoformat(),
         "forward_validation_started_at": started,
@@ -127,6 +150,7 @@ def compute_validation_accounting(
             "distinct in-session soak scan dates since validation start "
             "(measured operating days, not an exchange calendar)"
         ),
+        "operating_days_record_since": soak_record_since,
         "observations": len(observations),
         "observations_executed": len(executed),
         "observations_skipped": len(skipped),
@@ -144,12 +168,5 @@ def compute_validation_accounting(
         ),
         "near_events_observed": sum(1 for a in alerts if a.get("type") == "NEW_NEAR"),
         "lifecycle": lifecycle,
-        "limitations": [
-            ("settled means the full-horizon (d8) forward window exists; an "
-             "EXIT_ALERT position is still open until the human executes and "
-             "record_trade_outcome closes it — the two planes are independent"),
-            "validation age counts from the earliest paper position entry",
-            ("trading days are measured in-session soak scan dates (actual "
-             "operating days), never an exchange-holiday calendar"),
-        ],
+        "limitations": limitations,
     }

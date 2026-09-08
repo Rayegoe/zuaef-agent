@@ -163,3 +163,34 @@ def test_no_soak_rows_leaves_trading_days_unknown_but_keeps_calendar():
     )
     assert a["validation_age_calendar_days"] == 25
     assert a["validation_age_trading_days"] == 0
+
+
+def test_soak_window_narrower_than_validation_is_disclosed():
+    """Live-verification finding (2026-09-08): soak.jsonl only began 9/3
+    while validation started 8/15 — the 2 measured trading days must carry
+    their measurement-window disclosure."""
+    soak = [
+        {"ts": "2026-09-03T22:00:00+08:00", "status": "MARKET_CLOSED"},
+        {"ts": "2026-09-07T09:47:00+08:00", "status": "ALERTS"},
+        {"ts": "2026-09-08T09:47:00+08:00", "status": "NO_TRADE"},
+    ]
+    a = compute_validation_accounting(
+        positions=_positions(), forward=_forward(), soak_rows=soak,
+        alerts=_alerts(), as_of=AS_OF,
+    )
+    assert a["operating_days_record_since"] == "2026-09-03"
+    assert a["validation_age_trading_days"] == 2
+    assert any("soak record itself only begins 2026-09-03" in line for line in a["limitations"])
+
+
+def test_soak_covering_full_validation_has_no_window_warning():
+    soak = [
+        {"ts": "2026-08-15T09:47:00+08:00", "status": "ALERTS"},
+        {"ts": "2026-09-08T09:47:00+08:00", "status": "NO_TRADE"},
+    ]
+    a = compute_validation_accounting(
+        positions=_positions(), forward=_forward(), soak_rows=soak,
+        alerts=_alerts(), as_of=AS_OF,
+    )
+    assert a["operating_days_record_since"] == "2026-08-15"
+    assert not any("soak record itself only begins" in line for line in a["limitations"])
