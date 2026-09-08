@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-knowledge-worker"
+version = "0.1.0"
+description = "General knowledge-work plugin for ZUAEF: You.com search/research plus bounded workspace document reading."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic-ai>=2.38,<3",
+  "pydantic-ai-harness[youdotcom]>=0.29,<0.30",
+  "beautifulsoup4>=4.12",
+  "pypdf>=5",
+  "python-docx>=1.1",
+  "openpyxl>=3.1",
+  "python-pptx>=1.0",
+]
+
+[project.entry-points."zuaef.plugins"]
+knowledge-worker = "zuaef_knowledge_worker.plugin:build_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["zuaef_knowledge_worker"]

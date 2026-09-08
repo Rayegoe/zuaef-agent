@@ -973,8 +973,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 21184,
-      "sha256": "aa5bc8ecd37a40e1ac8c25461a9aea03ee517fb59bade552e6362dfc3800a85b"
+      "bytes": 22941,
+      "sha256": "e0b1901534fda91295738df0d232070d595ac68d4dee0d116936918a1a324690"
     },
     {
       "path": "REFACTOR_NOTES.md",
@@ -1698,8 +1698,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 3728,
-      "sha256": "20963c00249068fffd77cd84e0fdde81b0804e276139c1836d661b03dbf1b23d"
+      "bytes": 3914,
+      "sha256": "a6f7dec70d0f1397f0569ac797a64216f500c48beda884463cb7a2e2830d430b"
     },
     {
       "path": "spec/SPEC.md",
@@ -2578,13 +2578,48 @@
     },
     {
       "path": "uv.lock",
-      "bytes": 614982,
-      "sha256": "3d854553e2acdf02e0c6caa4456e6a6f734e837b87dd814f3ef6ba18b7ae6912"
+      "bytes": 618323,
+      "sha256": "52e9b960ed08308ff3372de6241d9f9c2aa4be3d364714470e72de6806e701fb"
     },
     {
       "path": "workspace/knowledge/index.md",
       "bytes": 1356,
       "sha256": "f62d4990009abe143298ee97f14b026829e6ae31b30f14f9839bdc5a141a7877"
+    },
+    {
+      "path": "plugins/zuaef-knowledge-worker/zuaef_knowledge_worker/__init__.py",
+      "bytes": 107,
+      "sha256": "05e300e1107662fd0e4f9a3699079e9baaf33465dc37e4afda557ef8a349f2de"
+    },
+    {
+      "path": "plugins/zuaef-knowledge-worker/zuaef_knowledge_worker/plugin.py",
+      "bytes": 4664,
+      "sha256": "431df72f5a4e44ae21a5b60e64c1f6ff70696ee3fd262f96b9d3c54977522c0c"
+    },
+    {
+      "path": "plugins/zuaef-knowledge-worker/zuaef_knowledge_worker/document_tools.py",
+      "bytes": 13527,
+      "sha256": "9508ff6bf33bcad839c07a4de6e52346a4cd89f6111452f20254b7d0a013ee67"
+    },
+    {
+      "path": "plugins/zuaef-knowledge-worker/zuaef_knowledge_worker/skills/knowledge-worker/SKILL.md",
+      "bytes": 1749,
+      "sha256": "71bca9b76d7a3989f04a1bfa5634a7151862ed613933358d4967aeec934426d3"
+    },
+    {
+      "path": "profiles/general-knowledge-worker.toml",
+      "bytes": 560,
+      "sha256": "dbcf999a57c281b4a9f99ceff5c2524a545bc61914eabb4a1b353627b2a9acf3"
+    },
+    {
+      "path": "tests/test_knowledge_worker_documents.py",
+      "bytes": 14130,
+      "sha256": "4a9af5cda8301a23df52a63c3941068db3058ff122d90a854159b927db17c8f2"
+    },
+    {
+      "path": "tests/test_knowledge_worker_plugin.py",
+      "bytes": 12698,
+      "sha256": "c8f5dd08b9b0981fe1c1359b8515eaa7249885eb88d152bd692ddb3deb1eb23f"
     }
   ]
 }

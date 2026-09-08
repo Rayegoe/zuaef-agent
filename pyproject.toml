@@ -37,6 +37,7 @@ dependencies = [
   "zuaef-competitive-intelligence",
   "zuaef-telegram",
   "zuaef-quant",
+  "zuaef-knowledge-worker",
   "lark-channel-sdk==1.4.0",
 ]
 
@@ -67,6 +68,7 @@ zuaef-writing-pack = { workspace = true }
 zuaef-competitive-intelligence = { workspace = true }
 zuaef-telegram = { workspace = true }
 zuaef-quant = { workspace = true }
+zuaef-knowledge-worker = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -86,7 +88,7 @@ pythonpath = [
 # dump_bin ingestion script, and the feishu spec-pack reference material) —
 # their lint health is owned upstream, so the product gate scans the delivery
 # tree only.
-exclude = [".agents", "_bmad", "zuaef-editorial-control-v0.1", "tools/quant/upstream", "zuaef-feishu-surface-spec-pack-v0.1"]
+exclude = [".agents", "_bmad", "zuaef-editorial-control-v0.1", "tools/quant/upstream", "zuaef-feishu-surface-spec-pack-v0.1", "zuaef-general-knowledge-worker-spec-v0.1", "zuaef-quant-autonomous-research-service-spec-v0.2-harness-native"]
 
 [tool.ruff.lint.per-file-ignores]
 # E402: deliberate sys.path bootstrapping before importing the editable plugins

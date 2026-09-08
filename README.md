@@ -448,6 +448,43 @@ Multi-host sync is plain git: `git push origin main && git push opi5 main`
 (`opi5` = SSH remote to `/home/orangepi/zuaef-agent`); docs and knowledge are
 repo files, so git sync is doc sync.
 
+## General knowledge worker profile (`general-knowledge-worker`)
+
+A default knowledge-work deployment: direct Q&A, workspace documents
+(PDF/DOCX/XLSX/PPTX/HTML/MD/TXT/CSV/JSON), live web search and multi-step
+research through the official Harness You.com capabilities, durable
+Knowledge reuse, and long artifacts — one core agent, no new runtime. The
+plugin (`zuaef-knowledge-worker`) is the profile's sole open-web provider;
+core `web_search`/`web_fetch` stay off to avoid tool-name collisions.
+
+Install and check:
+
+```bash
+uv sync                                                     # installs the plugin distribution
+cp profiles/general-knowledge-worker.toml ~/.config/zuaef/profiles/
+uv run zuaef-agent profile show general-knowledge-worker    # validate composition inputs
+```
+
+Deployment environment (host ceiling + credential, never in the profile):
+
+- `YDC_API_KEY` — You.com API key; composition fails loudly without it.
+- `ZUAEF_ENABLE_TOOL_SEARCH=true` and the other `ZUAEF_ENABLE_*` flags the
+  deployment should authorize (effective authorization = host ceiling ∩ the
+  profile's `[generalist]` request). `shell`/`repo_context` stay false: this
+  profile reads untrusted web/document content and must not carry execution
+  authority. Code/deploy requests get a truthful refusal plus an optional
+  spec/handoff artifact (Capability Truth contract), not a pretended build.
+
+Run:
+
+```bash
+uv run zuaef-agent run --profile general-knowledge-worker "什么是 PIT？"
+uv run zuaef-agent run --profile general-knowledge-worker "读 workspace/inbox/sample.pdf，总结三个核心结论并标出页码"
+```
+
+Long deliverables land under `workspace/artifacts/knowledge-worker/`;
+durable conclusions go through the existing Knowledge write path.
+
 ## Next
 
 The shared seam is now proven on two business slices: writing (task-local
