@@ -1678,8 +1678,8 @@
     },
     {
       "path": "profiles/quant-decision.toml",
-      "bytes": 1528,
-      "sha256": "3a3647d5f4d00974f5007c107a8bf9aceece29bbdf31771c0c25ec1d6924cc4f"
+      "bytes": 1841,
+      "sha256": "ff5083c63ff53bcf40c8c227cb3ceab14af6a357f114bac3533afbee28dd9e77"
     },
     {
       "path": "profiles/stillevo-ebike-intel.toml",

@@ -16,9 +16,13 @@ name = "quant-decision"
 # Memory / subagents / shell / repo_context stay unauthorized: market truth
 # has durable business artifacts, not generic memory, and quant production
 # stays a single outcome-owning agent.
+# Core WebSearch/WebFetch stay OFF (2026-09-08 operator decision, deployed on
+# OPi5 first, reconciled into the repo): the market-intelligence layer needs
+# real-failure admission evidence before enabling — the quant research flow
+# must not pay for "might help later" perception (capability admission rule).
 [generalist]
-web_search = true
-web_fetch = true
+web_search = false
+web_fetch = false
 tool_search = true
 conversation_search = true
 context_controls = true
