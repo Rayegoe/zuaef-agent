@@ -135,9 +135,9 @@ receipt 旧格式兼容（1）、web console limit_reached/旧 receipt 投影（
 
 ## 待补验收
 
-T009 部署后 smoke、T010 故障隔离、T012 真实飞书 ACCEPTED → live →
+T010 生产级 provider 断供演练、T012 真实飞书 ACCEPTED → live →
 LIMIT_REACHED → /inspect 与 Quant 独立刷新。真实飞书入站操作需要操作者配合；
-测试 adapter 不等于真实飞书证明。
+测试 adapter 不等于真实飞书证明。（T009 部署后 smoke 已完成，见下节。）
 
 
 ## T009 部署后验证（commit 5f8940c，14:05–14:10 CST）
@@ -249,3 +249,34 @@ scope 绑定与 fail-closed、bridge bindings 线程化）；既有 gateway/rout
 
 测试：`TestCodeModeSandbox` 4 例（默认无沙盒、无 flag 不启用、启用后
 只读 mount + 五工具白名单、缺缓存 fail-loud）。全量回归 1160 passed。
+
+## T011 HEAD 回归与双端同步（2026-09-08）
+
+部署提交 5f8940c 之后又有 8 个提交（chat bridging、research service v0.2、
+learning 等），在当前 HEAD `9ef8b29` 重取 T011 证据：
+
+```bash
+timeout 590 .venv/bin/pytest -q tests/
+# 1220 passed, 22 warnings in 220.24s
+```
+
+`web-ui/` 与 `src/zuaef_agent/web/static/` 自 5f8940c 起零变更
+（`git diff --name-only 5f8940c..HEAD` 两路径为空），前端 check exit 0 /
+build 产物 `index-lwb_HMiR.js` 证据沿用部署时点，不重复证明未变更事实。
+
+同步与运行面（2026-09-08 17:06 CST，只读）：
+
+- `git ls-remote`：origin 与 opi5 的 main 均为 `9ef8b29` = 本地 HEAD，
+  无待部署缺口。
+- OPi5：4 units active（console / quant-dashboard / gateway / feishu-gateway）、
+  2 timers enabled（monitor / bridge）、`:8765/api/health` → ok。
+- `:8787/api/quant/now`（收盘后）：`market_phase=MARKET_CLOSED`（host 派生）、
+  `last_scan_at=15:00:17` 收盘收束扫描、`market_tick_at=null → freshness
+  UNKNOWN` —— 收盘扫描不取行情，缺失事实保持 UNKNOWN 不伪造，符合 T007 语义；
+  runtime HEALTHY、`stale=false`。
+- OPi5 工作树漂移（未处理，留操作者决定）：
+  `profiles/quant-decision.toml` 有未提交修改；
+  `workspace/workspace/artifacts/supervisor-build-loop-blueprint.md` 为未跟踪
+  嵌套路径。
+
+至此 M2 本地可独立完成的部分全部收束；剩余两项均需操作者在场。
