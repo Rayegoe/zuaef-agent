@@ -82,7 +82,9 @@ def build_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
         "Load the coding skill for engineering work. Never push, publish, restart services, "
         "or perform destructive host operations through Shell. These require a separately "
         "approval-gated tool; none is supplied by this plugin. Shell allowlisting is an "
-        "accident guardrail, not hostile-code isolation. Do not read credentials via Shell. "
+        "accident guardrail, not hostile-code isolation. Shell matches bare command names "
+        "only: path-prefixed executables such as .venv/bin/pytest are rejected, so invoke "
+        "pytest/uv/ruff directly or through uv run. Do not read credentials via Shell. "
         "Report changed, tested, committed and activation state separately."
     ))
     return PluginBundle(

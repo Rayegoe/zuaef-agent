@@ -2658,8 +2658,8 @@
     },
     {
       "path": "plugins/zuaef-coding/zuaef_coding/plugin.py",
-      "bytes": 4107,
-      "sha256": "a836f7257d01004a1f985c0462f0de230988ac576fb10f8a35ea549972eaa716"
+      "bytes": 4286,
+      "sha256": "3b250a330b713aab240e4e115e809ba604ca031e507a21a794db12d622353297"
     },
     {
       "path": "plugins/zuaef-coding/zuaef_coding/skills/coding/SKILL.md",
