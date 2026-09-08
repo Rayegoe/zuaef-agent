@@ -31,6 +31,9 @@ REPO_DENIED_PATTERNS = (
 BASE_COMMANDS = (
     "git", "rg", "grep", "find", "ls", "cat", "sed", "head", "tail",
     "python", "uv", "pytest", "ruff", "make",
+    # Read-only executable lookup: the guidance requires checking CLI
+    # installation before claiming availability, so a probe must exist.
+    "which",
 )
 DENIED_ENV_PATTERNS = (
     *LLM_API_KEY_ENV_PATTERNS, "*API_KEY*", "*TOKEN*", "*SECRET*", "*PASSWORD*",
@@ -84,7 +87,8 @@ def build_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
         "approval-gated tool; none is supplied by this plugin. Shell allowlisting is an "
         "accident guardrail, not hostile-code isolation. Shell matches bare command names "
         "only: path-prefixed executables such as .venv/bin/pytest are rejected, so invoke "
-        "pytest/uv/ruff directly or through uv run. Do not read credentials via Shell. "
+        "pytest/uv/ruff directly or through uv run; probe CLI availability with which. "
+        "Do not read credentials via Shell. "
         "Report changed, tested, committed and activation state separately."
     ))
     return PluginBundle(
