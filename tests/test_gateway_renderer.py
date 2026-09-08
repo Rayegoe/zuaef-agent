@@ -259,3 +259,42 @@ def test_render_terminal_limit_reached_is_bounded_and_points_to_operator_surface
     assert "must not leak" not in text  # presentation is never a limit diagnosis
     assert "Requests" not in text and "Configured limits" not in text
     assert "Runtime reason" not in text and "run-limit-1" not in text
+
+
+# ── Terminal Delivery Guard (incidents 9c1c9abb / 77c45d0e) ──────────────
+# The recorded business deliverable must reach the user even when the run
+# ends without the model's final reply — never silence over a finished brief.
+
+_INCIDENT_002415_REPLY = (
+    "002415：WATCH（s3_longer_hold）\n"
+    "002415今日进入NEAR带但未触发READY: 仅当日强度为负(-1.22%)阻断入场。\n"
+    "失效条件：强度子句转非负并触发READY。\n"
+    "依据：9-08扫描: READY=空, NEAR=[002415,601996], triggers=0"
+)
+
+
+def test_render_terminal_limit_reached_delivers_recorded_brief():
+    text = render_terminal(_terminal("limit_reached"), reply_artifact=_INCIDENT_002415_REPLY)
+    assert "预算上限" in text
+    assert "已落盘的决策结论" in text
+    assert "002415：WATCH（s3_longer_hold）" in text
+    assert "失效条件：" in text
+    assert "/inspect" in text
+    # the deliverable is transport, not a new model claim — and the card
+    # still never leaks operational internals
+    assert "Run:" not in text
+    assert "Requests" not in text
+
+
+def test_render_terminal_failed_delivers_recorded_brief():
+    text = render_terminal(_terminal("failed"), reply_artifact=_INCIDENT_002415_REPLY)
+    assert "没有完整结束" in text
+    assert "已落盘的决策结论" in text
+    assert "002415：WATCH" in text
+
+
+def test_render_terminal_blank_reply_artifact_keeps_bare_notice():
+    text = render_terminal(_terminal("limit_reached"), reply_artifact="   ")
+    assert "预算上限" in text
+    assert "已落盘的决策结论" not in text
+    assert "/inspect" in text

@@ -22,8 +22,8 @@ from pydantic_ai.toolsets import AbstractToolset
 from zuaef_agent.models import CoreDeps
 from zuaef_agent.plugin_api import CompositionError
 
-from . import watchlist as watchlist_store
 from . import research as research_store
+from . import watchlist as watchlist_store
 from .freshness import derive_freshness, market_date_of, now_market
 
 REPO_ROOT_ENV = "ZUAEF_QUANT_REPO_ROOT"
@@ -101,6 +101,45 @@ FLOAT_KEYS = {
 
 class SpecError(ValueError):
     """Raised when a submitted strategy spec violates the execution ABI."""
+
+
+# Terminal Delivery Guard (incident 9c1c9abb / 77c45d0e): a run that ends
+# without the model's final reply must not bury an already-recorded decision.
+# The reply marker is the domain-owned handoff to the Gateway presentation
+# layer: same path and JSON shape are read by
+# ``src/zuaef_agent/gateway/service.py`` (_reply_artifact_text). It lives
+# under artifacts/ (model write-protected) and carries presentation-ready
+# text composed mechanically from the brief fields — never new semantics.
+REPLY_MARKER_NAME = "last-reply.json"
+
+
+def compose_reply_text(record: dict[str, Any]) -> str:
+    """Deterministic user-facing text assembled from the model-authored
+    brief fields (presentation formatting only, no new judgment)."""
+    return (
+        f"{record['symbol']}：{record['action']}（{record['strategy_name']}）\n"
+        f"{record['why']}\n"
+        f"失效条件：{record['invalidation']}\n"
+        f"依据：{record['trigger_facts']}"
+    )
+
+
+def _write_reply_marker(
+    briefs_dir: Path, decision_id: str, recorded_at: _dt.datetime, record: dict[str, Any]
+) -> None:
+    """Atomically publish the run's user-facing deliverable pointer.
+
+    The Gateway renders this only when a run ends without the model's reply
+    and the marker is fresh for that run (recorded_at >= run start), so a
+    stale marker from an earlier run is never re-delivered."""
+    marker = {
+        "recorded_at": recorded_at.isoformat(),
+        "decision_id": decision_id,
+        "text": compose_reply_text(record),
+    }
+    tmp = briefs_dir / f".{REPLY_MARKER_NAME}.tmp"
+    tmp.write_text(json.dumps(marker, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(briefs_dir / REPLY_MARKER_NAME)
 
 
 def validate_spec_dict(data: dict[str, Any]) -> dict[str, Any]:
@@ -365,6 +404,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         briefs.mkdir(parents=True, exist_ok=True)
         out = briefs / f"{decision_id}.json"
         out.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+        _write_reply_marker(briefs, decision_id, brief_dt, record)
         return json.dumps(
             {
                 "recorded": True,

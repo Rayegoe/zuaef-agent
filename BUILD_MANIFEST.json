@@ -1563,8 +1563,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
-      "bytes": 36463,
-      "sha256": "22f426638ada9491f3ee2644db7c91121547edbcc1d4efeefb2a0fbe43e4acbf"
+      "bytes": 38232,
+      "sha256": "857c208223f3b1dc760d18e9df55056c6582aba7066b1b220204bbdc6b7a7051"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/watchlist.py",
@@ -1788,8 +1788,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/renderer.py",
-      "bytes": 8293,
-      "sha256": "62c6a9a674bb45f881777a1eb6362b0cf9fd7d4c27eef6e6fcc52c4ea301b518"
+      "bytes": 8980,
+      "sha256": "b6e64c60fface62cb1f8219ce7b3889fd747ffcf8a076791a77d47b9d421facf"
     },
     {
       "path": "src/zuaef_agent/gateway/routing.py",
@@ -1803,8 +1803,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 41485,
-      "sha256": "133c0449d741c9dedb55c0cd21ec1e1d2e4690db707be55c1c17f4d72e8b8d1a"
+      "bytes": 43538,
+      "sha256": "c65e20cca25bb9ef81bc012500bb255d5f5fbc55dbffd435620a3cc9175cc0e9"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
@@ -2178,8 +2178,8 @@
     },
     {
       "path": "tests/test_gateway_renderer.py",
-      "bytes": 8867,
-      "sha256": "d1e29af577c6ae19ededb3c1a51159520c84b9543e7accc304e53d7be72b396e"
+      "bytes": 10514,
+      "sha256": "0c10cc07b6d1782e0c97b596fd2f61f7024035fe9b3bcf43370ea61865acd22c"
     },
     {
       "path": "tests/test_gateway_routing.py",
@@ -2188,8 +2188,8 @@
     },
     {
       "path": "tests/test_gateway_service.py",
-      "bytes": 45414,
-      "sha256": "97072b6cc6c97b5b07f266e4719ca7af2ef70f61e00fa1cd4f83ada968482484"
+      "bytes": 51542,
+      "sha256": "da79337013a98a347f48aaf5c2df262c19db9565e05893016925d157ebdf01a1"
     },
     {
       "path": "tests/test_gateway_service_routing.py",
@@ -2323,8 +2323,8 @@
     },
     {
       "path": "tests/test_quant_plugin.py",
-      "bytes": 27119,
-      "sha256": "bf5c4164dc4c4d771acafc0e5dc8e635172b477349efe55a9ac57f309381257c"
+      "bytes": 28791,
+      "sha256": "69e4a56cb35832fd4bd1227c91dc48bbe3f9aae3f8aa50512add6635878ec439"
     },
     {
       "path": "tests/test_quant_replay.py",

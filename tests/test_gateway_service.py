@@ -8,6 +8,7 @@ bridge's composition seams (the same pattern as the bridge tests).
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import UTC, datetime
 from importlib.metadata import EntryPoint
@@ -1259,3 +1260,155 @@ def test_progress_ping_stays_silent_after_settle(tmp_path: Path, monkeypatch):
     import time as _t
     _t.sleep(0.3)  # the watchdog deadline passes AFTER the run settled
     assert not [t for _, t in surface.texts if t.startswith("还在处理")]
+
+
+# ── Terminal Delivery Guard (incidents 9c1c9abb / 77c45d0e) ──────────────
+# A run whose business deliverable was already recorded must never answer
+# the user with a bare budget notice. The quant domain marks the deliverable
+# (last-reply.json); the gateway delivers it fresh-for-this-run only.
+
+_INCIDENT_002415_REPLY = (
+    "002415：WATCH（s3_longer_hold）\n"
+    "002415今日进入NEAR带但未触发READY: 仅当日强度为负(-1.22%)阻断入场。\n"
+    "失效条件：强度子句转非负并触发READY。\n"
+    "依据：9-08扫描: READY=空, NEAR=[002415,601996], triggers=0"
+)
+
+
+def _write_reply_marker(workspace: Path, *, recorded_at: datetime, text: str = _INCIDENT_002415_REPLY):
+    briefs = workspace / "artifacts" / "quant" / "briefs"
+    briefs.mkdir(parents=True, exist_ok=True)
+    (briefs / "last-reply.json").write_text(
+        json.dumps({"recorded_at": recorded_at.isoformat(), "decision_id": "brief-20260908-1755-002415", "text": text}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def test_reply_artifact_text_fresh_stale_missing(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final())
+    workspace = service.settings.workspace_root
+
+    started_at = datetime.now(UTC)
+    receipt = RunReceipt(
+        run_id="r1", conversation_id="c1", model="test",
+        started_at=started_at, finished_at=started_at,
+        execution_state="limit_reached", outcome="",
+    )
+    assert service._reply_artifact_text(receipt) is None  # missing marker
+
+    _write_reply_marker(workspace, recorded_at=started_at)
+    delivered = service._reply_artifact_text(receipt)
+    assert delivered is not None and delivered.startswith("002415：WATCH")
+
+    stale = RunReceipt(
+        run_id="r2", conversation_id="c1", model="test",
+        started_at=started_at.replace(year=started_at.year + 1), finished_at=started_at,
+        execution_state="limit_reached", outcome="",
+    )
+    assert service._reply_artifact_text(stale) is None  # marker predates the run
+
+    completed = RunReceipt(
+        run_id="r3", conversation_id="c1", model="test",
+        started_at=started_at, finished_at=started_at,
+        execution_state="completed", outcome="answered",
+    )
+    assert service._reply_artifact_text(completed) is None  # completed runs need no fallback
+
+    long_text = "x" * 5000
+    _write_reply_marker(workspace, recorded_at=started_at, text=long_text)
+    assert service._reply_artifact_text(receipt) == long_text[:2400]
+
+
+def test_limit_reached_run_delivers_recorded_decision_brief(tmp_path: Path, monkeypatch):
+    """Acceptance D1 #1: a run that recorded its decision brief must never
+    answer the user with only the budget notice (incident 9c1c9abb shape:
+    brief written at request 12, request 13 blocked)."""
+    workspace_holder: dict = {}
+
+    def fn(messages, info):
+        # The model's last act before the budget boundary: record the brief.
+        # The FunctionModel runs host-side, so the marker write mirrors what
+        # record_decision_brief does inside the run.
+        workspace = workspace_holder["workspace"]
+        _write_reply_marker(workspace, recorded_at=datetime.now(UTC))
+        has_return = any(
+            getattr(part, "part_kind", None) == "tool-return"
+            for message in messages
+            for part in getattr(message, "parts", [])
+        )
+        if not has_return:
+            return ModelResponse(parts=[ToolCallPart("list_materials", {"query": "q"})])
+        return _final()
+
+    surface = FakeSurface()
+    settings = _settings(tmp_path).with_overrides(request_limit=1)
+    workspace_holder["workspace"] = settings.workspace_root
+    _write_profile(tmp_path)
+    store = GatewayStore(tmp_path / "guard.sqlite3")
+    monkeypatch.setattr(core_module, "resolve_model", lambda s: FunctionModel(fn))
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.continuation.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.validate_profile", _fixture_validate
+    )
+    service = GatewayService(
+        settings=settings,
+        store=store,
+        surface=surface,
+        default_profile="writing",
+        config_root=tmp_path / "config",
+    )
+
+    service.handle(_envelope("分析 002415", n=1))
+
+    text = surface.texts[-1][1]
+    assert "预算上限" in text
+    assert "已落盘的决策结论" in text
+    assert "002415：WATCH（s3_longer_hold）" in text
+    assert "失效条件：" in text
+
+
+def test_limit_reached_without_marker_keeps_bare_notice(tmp_path: Path, monkeypatch):
+    """No deliverable recorded → the honest bare budget notice stays."""
+    def fn(messages, info):
+        has_return = any(
+            getattr(part, "part_kind", None) == "tool-return"
+            for message in messages
+            for part in getattr(message, "parts", [])
+        )
+        if not has_return:
+            return ModelResponse(parts=[ToolCallPart("list_materials", {"query": "q"})])
+        return _final()
+
+    surface = FakeSurface()
+    settings = _settings(tmp_path).with_overrides(request_limit=1)
+    _write_profile(tmp_path)
+    store = GatewayStore(tmp_path / "guard-bare.sqlite3")
+    monkeypatch.setattr(core_module, "resolve_model", lambda s: FunctionModel(fn))
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.continuation.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.validate_profile", _fixture_validate
+    )
+    service = GatewayService(
+        settings=settings,
+        store=store,
+        surface=surface,
+        default_profile="writing",
+        config_root=tmp_path / "config",
+    )
+
+    service.handle(_envelope("do it", n=1))
+
+    text = surface.texts[-1][1]
+    assert "预算上限" in text
+    assert "已落盘的决策结论" not in text

@@ -81,14 +81,20 @@ def render_run_progress(
     return "还在处理：" + "，".join(facts) + "——出结果直接回你。"
 
 
-def render_terminal(outcome: TerminalRun) -> str:
+def render_terminal(outcome: TerminalRun, *, reply_artifact: str | None = None) -> str:
     """Terminal card (SPEC §41). The presentation IS the reply (outcome-first);
     audit counts stay in /status and the receipt. Surface policy: a completed
     run's reply is pure business output. A FAILED/LIMIT_REACHED run never
     shows tokens, tool counts, usage limits, unresolved effects or run ids
     here (research service v0.2, T014 / runtime spec §11): the chat surface
     gets a bounded business-first notice, the operational truth stays in
-    /inspect, /status and Console."""
+    /inspect, /status and Console.
+
+    ``reply_artifact`` is the host-read, domain-marked deliverable text
+    (Terminal Delivery Guard, incident 9c1c9abb): when a run ends without the
+    model's final reply but its business result was already recorded, the
+    recorded result is delivered instead of silence — no extra model request.
+    """
     receipt = outcome.receipt
     presentation = outcome.presentation.strip()
     if receipt.execution_state != "completed":
@@ -98,6 +104,13 @@ def render_terminal(outcome: TerminalRun) -> str:
             if receipt.execution_state == "failed"
             else "本轮已达到运行预算上限，先停在这里；可直接重试继续。"
         )
+        if reply_artifact and reply_artifact.strip():
+            return (
+                f"{note}\n\n"
+                "以下是本轮已落盘的决策结论（来自运行产物，非重新推理）：\n\n"
+                f"{reply_artifact.strip()}\n\n"
+                "/inspect — 完整运行诊断（操作员）"
+            )
         return f"{note}\n/inspect — 完整运行诊断（操作员）"
     if presentation:
         return presentation

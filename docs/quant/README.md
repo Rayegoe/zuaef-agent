@@ -35,6 +35,13 @@ UNVERIFIED,只能影响研究注意力,永远不碰候选池/READY-NEAR/策略/�
 ⑦ **客户失败 UX(T014)**:FAILED/LIMIT_REACHED 客户面只给 bounded 文案 + `/inspect` 指引,
 不再泄露 tokens/tool 计数/run id;完整诊断仍在 /inspect、/status、Console(Console 新增
 provider 上报的 cache read/write tokens 投影,T015)。
+⑧ **终局必达(2026-09-08,事故 9c1c9abb/77c45d0e)**:`record_decision_brief` 落盘时原子发布
+reply 标记 `artifacts/quant/briefs/last-reply.json`(`{recorded_at, decision_id, text}`,
+text 由 brief 字段确定性拼装);run 以 failed/limit_reached 终态且模型未及回复时,Gateway
+读取新鲜标记(`recorded_at ≥ 本次 run started_at`,过期不投递,≤2400 字符)把已落盘结论
+随预算提示一起发给用户——不再"产物已写但用户收不到"。领域语义在 quant 插件、呈现传输在
+Gateway、核心不动;实验记录 `docs/runtime-refoundation/experiments/D1-terminal-delivery-guard.md`
+(D1-B progress-aware budget / stall detector / turn 压缩为后续阶段,未实施)。
 状态:单测全绿(新增 hydration/symbol-context/research/tool-disclosure/recipe 测试);
 **OPi5 真实 Feishu 闭环证明(600550 无缓存 → 全链路)未跑前不宣称 PROVEN**。
 

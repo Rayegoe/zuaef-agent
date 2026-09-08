@@ -14,10 +14,11 @@ output is ever interpreted as approval.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import re
 import threading
-import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -48,16 +49,20 @@ from .renderer import (
     render_new_conversation,
     render_pause,
     render_profile,
-    render_status,
-    render_terminal,
     render_run_natural_ack,
     render_run_progress,
+    render_status,
+    render_terminal,
 )
 from .routing import RoutingPolicy
 from .store import ApprovalTokenError, GatewayStore
 from .surface import SurfaceAdapter
 
 logger = logging.getLogger(__name__)
+
+# Terminal Delivery Guard: bounded presentation of a domain-marked reply
+# artifact when a run ends without the model's final response.
+REPLY_ARTIFACT_MAX_CHARS = 2400
 
 HELP_TEXT = """\
 ZUAEF
@@ -307,7 +312,40 @@ class GatewayService:
             outcome.receipt.execution_state,
         )
         self._export_delivery(session, outcome)
-        self._send_text(session, render_terminal(outcome))
+        self._send_text(
+            session,
+            render_terminal(
+                outcome, reply_artifact=self._reply_artifact_text(outcome.receipt)
+            ),
+        )
+
+    def _reply_artifact_text(self, receipt: RunReceipt) -> str | None:
+        """Terminal Delivery Guard (incidents 9c1c9abb / 77c45d0e): a run that
+        ended without the model's final reply must not bury an already
+        recorded business result. Reads the quant domain's reply marker
+        (``artifacts/quant/briefs/last-reply.json``, written by
+        ``record_decision_brief``), fresh for THIS run only (marker
+        ``recorded_at`` >= run start — a stale marker from an earlier run is
+        never re-delivered), bounded. Host-grounded presentation transport:
+        the domain decides WHAT is the reply, the gateway only delivers it."""
+        if receipt.execution_state == "completed":
+            return None
+        marker_path = (
+            self.settings.workspace_root / "artifacts" / "quant" / "briefs"
+            / "last-reply.json"
+        )
+        try:
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+            recorded_at = datetime.fromisoformat(str(marker["recorded_at"]))
+            text = str(marker["text"])
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+        started_at = receipt.started_at
+        if getattr(started_at, "tzinfo", None) is None and recorded_at.tzinfo is not None:
+            started_at = started_at.replace(tzinfo=recorded_at.tzinfo)
+        if recorded_at < started_at or not text.strip():
+            return None
+        return text.strip()[:REPLY_ARTIFACT_MAX_CHARS]
 
     def _export_delivery(self, session: SessionBinding, outcome: TerminalRun) -> None:
         """Caller-side durable delivery of a completed run's artifacts.
@@ -476,7 +514,12 @@ class GatewayService:
             paused_run_id,
         )
         self._export_delivery(session, outcome)
-        self._send_text(session, render_terminal(outcome))
+        self._send_text(
+            session,
+            render_terminal(
+                outcome, reply_artifact=self._reply_artifact_text(outcome.receipt)
+            ),
+        )
 
     def _reject_callback(
         self, callback_id: str | None, session: SessionBinding, message: str
@@ -948,7 +991,12 @@ class GatewayService:
             paused_run_id,
         )
         self._export_delivery(session, outcome)
-        self._send_text(session, render_terminal(outcome))
+        self._send_text(
+            session,
+            render_terminal(
+                outcome, reply_artifact=self._reply_artifact_text(outcome.receipt)
+            ),
+        )
 
     def _cmd_artifacts(self, session: SessionBinding) -> None:
         if not session.last_terminal_run_id:

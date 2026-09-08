@@ -391,6 +391,34 @@ class TestRecordDecisionBrief:
         brief_file = env.workspace_root / "artifacts" / "quant" / "briefs" / "brief-test-600519.json"
         assert json.loads(brief_file.read_text(encoding="utf-8"))["action"] == "ENTER_CANDIDATE"
 
+    def test_brief_writes_reply_marker_for_terminal_delivery(self, tmp_path, monkeypatch):
+        """Terminal Delivery Guard (incident 9c1c9abb): the brief is the
+        user-facing answer; recording it publishes the domain reply marker
+        the Gateway delivers when a run ends without the model's reply."""
+        toolset, env = self._toolset(tmp_path, monkeypatch)
+        func = toolset.tools["record_decision_brief"].function
+        func(
+            decision_id="brief-20260908-1755-002415",
+            symbol="002415",
+            action="WATCH",
+            signal_timestamp=_dt_now_shanghai_minus(30),
+            why="002415今日进入NEAR带但未触发READY: 当日强度为负(-1.22%)阻断入场。",
+            invalidation="强度子句转非负并触发READY -> 升级评估。",
+            expected_holding="视触发而定",
+            strategy_name="s3_longer_hold",
+            trigger_facts="9-08扫描: READY=空, NEAR=[002415,601996]",
+        )
+        marker_file = env.workspace_root / "artifacts" / "quant" / "briefs" / "last-reply.json"
+        marker = json.loads(marker_file.read_text(encoding="utf-8"))
+        assert marker["decision_id"] == "brief-20260908-1755-002415"
+        assert marker["recorded_at"]
+        assert "002415：WATCH（s3_longer_hold）" in marker["text"]
+        assert "阻断入场" in marker["text"]
+        assert "失效条件：强度子句转非负" in marker["text"]
+        assert "依据：9-08扫描" in marker["text"]
+        # atomic publish: no temp residue beside the marker
+        assert not list(marker_file.parent.glob(".last-reply.json.tmp"))
+
     def test_invalid_action_rejected(self, tmp_path, monkeypatch):
         toolset, _ = self._toolset(tmp_path, monkeypatch)
         func = toolset.tools["record_decision_brief"].function
@@ -467,9 +495,10 @@ def test_code_mode_sandbox_executes_real_analysis_over_mount(tmp_path, monkeypat
     import asyncio
     import textwrap
 
-    from pydantic_ai import Agent, models as pai_models
+    from pydantic_ai import Agent
+    from pydantic_ai import models as pai_models
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
     from pydantic_ai.models.function import FunctionModel
-    from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 
     pai_models.ALLOW_MODEL_REQUESTS = False
     cache = tmp_path / "data" / "quant-cache" / "daily"
@@ -528,9 +557,10 @@ def test_code_mode_forward_distribution_recipe_runs(tmp_path, monkeypatch):
     import asyncio
     import textwrap
 
-    from pydantic_ai import Agent, models as pai_models
-    from pydantic_ai.models.function import FunctionModel
+    from pydantic_ai import Agent
+    from pydantic_ai import models as pai_models
     from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+    from pydantic_ai.models.function import FunctionModel
 
     pai_models.ALLOW_MODEL_REQUESTS = False
     cache = tmp_path / "data" / "quant-cache" / "daily"
