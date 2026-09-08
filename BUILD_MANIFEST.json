@@ -1553,8 +1553,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/plugin.py",
-      "bytes": 14553,
-      "sha256": "35c507e7aa09fb9a5d5b89f117779c262ead7eda375072c3c6433bcf10884f6a"
+      "bytes": 15448,
+      "sha256": "6ba73258d8048d8764a6741c1147cf9090f47198e684290f469811de3524f77e"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/research.py",
@@ -1563,8 +1563,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
-      "bytes": 38232,
-      "sha256": "857c208223f3b1dc760d18e9df55056c6582aba7066b1b220204bbdc6b7a7051"
+      "bytes": 39236,
+      "sha256": "d3f58a80691e9f517395b302d2377ec23397a5f006786c9994b4b2f5178fec09"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/watchlist.py",
@@ -1573,8 +1573,8 @@
     },
     {
       "path": "plugins/zuaef-quant/skills/quant-research/SKILL.md",
-      "bytes": 5633,
-      "sha256": "43d32878489d8083d495ad8596c843c7d0f918d46339f6185c35cd8c0ace297d"
+      "bytes": 6379,
+      "sha256": "61f87b94079b66ad137742822b6ed4f7fb8601acbb74ebde8c0634f36d191a27"
     },
     {
       "path": "plugins/zuaef-telegram/skills/telegram-reporting/SKILL.md",
@@ -2188,8 +2188,8 @@
     },
     {
       "path": "tests/test_gateway_service.py",
-      "bytes": 51542,
-      "sha256": "da79337013a98a347f48aaf5c2df262c19db9565e05893016925d157ebdf01a1"
+      "bytes": 53849,
+      "sha256": "d2d23f431f2a915e1f6e3cd2977cfdd4274ba6e6dc222a53dc92be43c5e8825d"
     },
     {
       "path": "tests/test_gateway_service_routing.py",
@@ -2323,8 +2323,8 @@
     },
     {
       "path": "tests/test_quant_plugin.py",
-      "bytes": 28791,
-      "sha256": "69e4a56cb35832fd4bd1227c91dc48bbe3f9aae3f8aa50512add6635878ec439"
+      "bytes": 30075,
+      "sha256": "61a1517fe955bd067656d256ddf439be7de86a7433500e2e1de509f19533fe08"
     },
     {
       "path": "tests/test_quant_replay.py",
@@ -2620,6 +2620,16 @@
       "path": "tests/test_knowledge_worker_plugin.py",
       "bytes": 12698,
       "sha256": "c8f5dd08b9b0981fe1c1359b8515eaa7249885eb88d152bd692ddb3deb1eb23f"
+    },
+    {
+      "path": "plugins/zuaef-quant/zuaef_quant/validation.py",
+      "bytes": 6348,
+      "sha256": "ff1a0d56b9ed16dd5fbe35c47fad985e7495deb09363c98ea1f05d5e487ef9fb"
+    },
+    {
+      "path": "tests/test_quant_validation_accounting.py",
+      "bytes": 6377,
+      "sha256": "d654c5d1f6e4dea639fe08cefaa52c0baf3e223c0bde449c0d7157b4a2545199"
     }
   ]
 }

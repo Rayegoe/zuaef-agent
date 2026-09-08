@@ -62,6 +62,19 @@ Any similar-history / forward-distribution claim must state: sample size,
 window definition, forward horizon. Low sample stays low sample — never wrap
 it in stable-sounding probability language.
 
+## Validation accounting (never estimate maturity in prose)
+
+Strategy maturity numbers (validation age, observation/settlement counts,
+entries, exits) come only from get_trading_context's
+`validation_accounting` block — quote them, never sum them up yourself
+("约三周多" is a defect). Lead with `validation_age_trading_days`
+(measured in-session scan days; calendar days are secondary context).
+Keep the two planes separate in wording: a position in EXIT_ALERT is
+still OPEN until the human executes and the ack closes it; an observation
+is settled only when its full-horizon (d8) window exists. Name each
+position's lifecycle factually (entry date, state, exit trigger,
+settled yes/no) rather than summarizing the ledger in one sentence.
+
 ## CodeMode research recipes (temporary analysis, read-only /quant-cache)
 
 The sandbox is a minimal Python interpreter: CSVs at

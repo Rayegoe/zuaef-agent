@@ -25,6 +25,7 @@ from zuaef_agent.plugin_api import CompositionError
 from . import research as research_store
 from . import watchlist as watchlist_store
 from .freshness import derive_freshness, market_date_of, now_market
+from .validation import compute_validation_accounting
 
 REPO_ROOT_ENV = "ZUAEF_QUANT_REPO_ROOT"
 TOOLS_DIR_ENV_MARKERS = ("tools/quant_eval_qlib.py", "benchmarks/quant/gen1/quant.toml")
@@ -210,6 +211,22 @@ def _read_jsonl_tail(path: Path, limit: int) -> list[dict]:
         return []
     rows = []
     for line in lines[-limit:]:
+        try:
+            rows.append(json.loads(line))
+        except ValueError:
+            continue
+    return rows
+
+
+def _read_jsonl(path: Path) -> list[dict]:
+    """Full append-only stream read for ledger accounting (soak/alerts are
+    bounded by market days, ~hundreds of bytes per row)."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    rows = []
+    for line in lines:
         try:
             rows.append(json.loads(line))
         except ValueError:
@@ -469,8 +486,10 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         from the canonical M1 artifacts (workspace/artifacts/quant/trading/). Read-only projection:
         never recomputes the market and never re-derives triggers. Returns
         system health, market/data-trust status, READY/NEAR lists, open
-        positions, exit alerts, recent durable material events, forward
-        summary and heartbeat/last-scan times. Freshness is a HOST-derived
+        positions, exit alerts, recent durable material events, the
+        validation_accounting block (ledger-computed strategy maturity:
+        validation ages, observation settlement, per-symbol lifecycle) and
+        heartbeat/last-scan times. Freshness is a HOST-derived
         fact (freshness_status/freshness_reason plus the requested/data/scan
         dates): never infer data freshness from dates yourself and never
         interpret READY/NEAR as a current-day result unless
@@ -484,16 +503,26 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         forward = _read_json(trading / "forward.json", {"observations": []})
         soak = _read_jsonl_tail(trading / "soak.jsonl", 50)
         alerts = _read_jsonl_tail(trading / "alerts.jsonl", 20)
-        observations = forward.get("observations") or []
         events = [
             {k: a.get(k) for k in ("ts", "type", "symbol", "what", "why", "price", "venue")}
             for a in alerts
         ]
+        now = now_market()
+        # D2 Quant Evidence Accounting: strategy maturity is a ledger fact
+        # the model explains, never a prose estimate. The block keeps the
+        # position-lifecycle plane and the forward-observation plane
+        # explicitly separate (incident 505438f3 review).
+        validation_accounting = compute_validation_accounting(
+            positions=positions,
+            forward=forward,
+            soak_rows=_read_jsonl(trading / "soak.jsonl"),
+            alerts=_read_jsonl(trading / "alerts.jsonl"),
+            as_of=now.date(),
+        )
         last_scan_at = _resolve_last_scan_at(
             workspace_root / "artifacts" / "quant" / "business" / "last_scan.json",
             soak,
         )
-        now = now_market()
         freshness = derive_freshness(
             now=now,
             latest_market_data_date=state.get("day"),
@@ -515,10 +544,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                 "exit_alerts": state.get("exit_alerts") or [],
                 "positions": positions.get("open") or [],
                 "recent_material_events": events,
-                "forward": {
-                    "observations": len(observations),
-                    "settled": sum(1 for o in observations if o.get("d8") is not None),
-                },
+                "validation_accounting": validation_accounting,
                 # Freshness contract (Freshness Spec v0.1 §3): host-derived
                 # facts the model must read before any "today" claim.
                 "requested_at": now.isoformat(),

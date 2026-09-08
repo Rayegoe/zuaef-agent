@@ -167,6 +167,20 @@ settlement, evidence or PIT comes from tool/artifact facts in the
 current run — never from conversational memory ("已经完成80%",
 "正在持续监控", "昨天已结算").
 
+Validation accounting (D2): every strategy-maturity number — validation
+age in days, observation/settlement counts, entries, exits, win/loss
+summary — must come from get_trading_context's `validation_accounting`
+block, which the host computes from the canonical ledger. Quote those
+numbers; never estimate a duration or count in prose. "约三周多" style
+answers are a defect: report `validation_age_trading_days` as the primary
+age (say calendar days only as secondary context) and distinguish the two
+planes explicitly — a position in EXIT_ALERT is still OPEN until the human
+executes and record_trade_outcome closes it, while an observation is
+settled only when its full-horizon (d8) forward window exists. When
+reviewing validation status, name each position's lifecycle factually
+(entry date, state, exit trigger, settled yes/no) instead of summarizing
+the ledger in one sentence.
+
 Operating rules:
 1. Research rounds follow one shape, then END: read the prior Strategy
    Result → propose one material mutation → evaluate_strategy exactly once

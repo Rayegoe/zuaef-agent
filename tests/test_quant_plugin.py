@@ -230,8 +230,18 @@ class TestGetTradingContext:
         assert data["positions"][0]["venue"] == "paper"
         # heartbeat != last successful scan
         assert data["heartbeat_at"] == "2026-09-04T09:47:00+08:00"
+        # D2: ledger-computed maturity replaces the old 2-field forward dict
+        va = data["validation_accounting"]
+        assert va["observations"] == 2
+        assert va["observations_executed"] == 1 and va["observations_skipped"] == 1
+        # the fixture's EXECUTED observation carries no d8 yet: accumulating
+        assert va["observations_settled_full_horizon"] == 0
+        assert va["observations_accumulating"] == 1
+        assert va["open_positions"] == 1
+        assert va["lifecycle"][0]["symbol"] == "601799"
+        assert "d8" in va["limitations"][0]
         assert data["last_scan_at"] == "2026-09-04T09:47:00+08:00"
-        assert data["forward"] == {"observations": 2, "settled": 1}
+        assert "forward" not in data  # replaced by validation_accounting (D2)
         assert data["recent_material_events"][0]["type"] == "NEW_READY"
         assert any("UNPROVEN" in l for l in data["limitations"])
 
@@ -625,3 +635,20 @@ def test_code_mode_forward_distribution_recipe_runs(tmp_path, monkeypatch):
     # state hit at closes 13.0, 13.5, 14.0 (14.5 has no forward bar) -> n=3
     assert "'n': 3" in returns[0]
     assert "'best': 0.0385" in returns[0] and "'worst': 0.0357" in returns[0]
+
+
+def test_instructions_carry_validation_accounting_contract():
+    """D2: maturity metrics are ledger facts, not prose estimates."""
+    from zuaef_quant.plugin import QUANT_INSTRUCTIONS
+
+    assert "validation_accounting" in QUANT_INSTRUCTIONS
+    assert "validation_age_trading_days" in QUANT_INSTRUCTIONS
+    assert "约三周多" in QUANT_INSTRUCTIONS  # the named defect stays named
+    skill = (
+        Path(__file__).parents[1]
+        / "plugins/zuaef-quant/skills/quant-research/SKILL.md"
+    )
+    text = skill.read_text(encoding="utf-8")
+    assert "Validation accounting" in text
+    assert "validation_age_trading_days" in text
+    assert "still OPEN until the human executes" in text

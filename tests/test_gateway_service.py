@@ -1412,3 +1412,60 @@ def test_limit_reached_without_marker_keeps_bare_notice(tmp_path: Path, monkeypa
     text = surface.texts[-1][1]
     assert "预算上限" in text
     assert "已落盘的决策结论" not in text
+
+
+def test_twelve_turn_run_with_recorded_brief_still_delivers(tmp_path: Path, monkeypatch):
+    """D1-A closure condition (operator acceptance #1): a run that needs
+    >12 valid model turns and recorded its decision brief before the budget
+    boundary must still deliver the recorded result — the guard must be a
+    mechanism, not luck (incident 9c1c9abb: brief at request 12, request 13
+    blocked)."""
+    state = {"calls": 0}
+    workspace_holder: dict = {}
+
+    def fn(messages, info):
+        state["calls"] += 1
+        if state["calls"] == 12:
+            # the model's last allowed act: record the brief (marker write
+            # mirrors record_decision_brief inside the run)
+            _write_reply_marker(
+                workspace_holder["workspace"], recorded_at=datetime.now(UTC)
+            )
+        if state["calls"] <= 12:
+            # keep working: each turn issues another tool call; turn 12's
+            # call is the brief recording, request 13 never gets sent
+            return ModelResponse(
+                parts=[ToolCallPart("save_artifact", {"title": f"step-{state['calls']}", "body": f"s{state['calls']}"})]
+            )
+        return _final()
+
+    surface = FakeSurface()
+    settings = _settings(tmp_path).with_overrides(request_limit=12)
+    workspace_holder["workspace"] = settings.workspace_root
+    _write_profile(tmp_path)
+    store = GatewayStore(tmp_path / "guard-12t.sqlite3")
+    monkeypatch.setattr(core_module, "resolve_model", lambda s: FunctionModel(fn))
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.continuation.build_profile_agent", _fixture_builder
+    )
+    monkeypatch.setattr(
+        "zuaef_agent.gateway.bridge.validate_profile", _fixture_validate
+    )
+    service = GatewayService(
+        settings=settings,
+        store=store,
+        surface=surface,
+        default_profile="writing",
+        config_root=tmp_path / "config",
+    )
+
+    service.handle(_envelope("long analysis", n=1))
+
+    assert state["calls"] == 12  # the boundary was actually hit mid-work
+    text = surface.texts[-1][1]
+    assert "预算上限" in text
+    assert "已落盘的决策结论" in text
+    assert "002415：WATCH（s3_longer_hold）" in text

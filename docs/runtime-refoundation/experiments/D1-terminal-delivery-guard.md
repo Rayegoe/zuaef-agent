@@ -93,7 +93,31 @@ real research run is outstanding and recorded as such.
   legally used), no-progress turns → recovery → PARTIAL result. Acceptance
   #3/#4; `/inspect` should distinguish COMPLETED / COMPLETED_PARTIAL /
   STALLED / HARD_LIMIT_REACHED (#5).
-- D1-C phase 4: orchestration compression — planning churn (5 bookkeeping
-  calls incl. post-analysis read_plan/update_task_statuses) and per-tool
-  round trips vs a business-level aggregate (e.g. get_quant_decision_context);
-  target 3–6 turns for a single-symbol analysis.
+## 7. Closure update (2026-09-08 evening)
+
+- **D1-A → PASS (mechanism-level, closed)**: the forced fixture
+  `test_twelve_turn_run_with_recorded_brief_still_delivers` reproduces the
+  operator's acceptance — `request_limit=12`, twelve real model turns of
+  tool work, the brief recorded by turn 12, request 13 rejected by the
+  runtime, and the recorded conclusion still delivered to the user. This is
+  the mechanism guarantee, not luck. Live production confirmation pending
+  the next real >12-turn research run (low probability given D1-C gains).
+- **D1-C → MEASURED IMPROVED**: first two post-deploy production runs on
+  OPi5 (receipts `78ce147f` 19:58 CST, `505438f3` 20:19 CST, both
+  `completed`) vs the 9c1c9abb baseline: 6 req / 10 tools / 159,317 input /
+  66% cache-read / 3m32s and 3 req / 4 tools / 55,779 input / 1m50s, vs
+  12 / 16 / 283,570 / 28% / 8m47s. Zero failed run_code (was 3).
+- **D2 Quant Evidence Accounting implemented (same day, operator
+  directive)**: `zuaef_quant/validation.py` computes strategy maturity from
+  the canonical ledger — `validation_age_calendar_days`,
+  `validation_age_trading_days` (distinct in-session soak scan dates since
+  the earliest paper entry: measured operating days, never a calendar
+  guess), observation counts split executed/skipped and
+  settled-full-horizon(d8)/accumulating, entries/exits, ready/near event
+  counts, and a per-symbol lifecycle table (entry date, state, exit
+  trigger, position_closed, forward observation settled d1/d5/d8) that
+  keeps the position plane and the observation plane explicitly separate
+  (the "3× EXIT_ALERT vs settled=2" ambiguity). Served inside
+  `get_trading_context`; QUANT_INSTRUCTIONS + quant-research SKILL forbid
+  prose estimation ("约三周多" named as the defect) and require quoting the
+  block. 8 new tests; full suite 1279 passed.
