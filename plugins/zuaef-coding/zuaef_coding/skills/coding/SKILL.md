@@ -19,7 +19,8 @@ concrete requirement. Respect the repository's existing manifest contract.
 
 Run targeted verification after meaningful changes, inspect the final diff and
 report remaining unknowns. Local commits require the configured permission and
-green relevant checks. Push/publish/restart/destructive host operations require
+green relevant checks. Run the targeted pytest covering this change before any
+local commit. Push/publish/restart/destructive host operations require
 a separately approval-gated capability; stop if it is unavailable. Do not read
 secrets through Shell or bypass denied paths. Source changes do not activate
 already imported Gateway code: report restart required after terminal delivery.

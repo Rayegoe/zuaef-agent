@@ -2633,8 +2633,8 @@
     },
     {
       "path": "tests/test_coding_profile.py",
-      "bytes": 7216,
-      "sha256": "cf31d186d2e9ead0bbfae524081e8b9b255b77bf7a59f7f82545e1ed19ba99d7"
+      "bytes": 7455,
+      "sha256": "ee834596f60c20e87019c50038e651953934dba87afb17879696d9a7f5ed99df"
     },
     {
       "path": "profiles/coding.toml",
@@ -2663,8 +2663,8 @@
     },
     {
       "path": "plugins/zuaef-coding/zuaef_coding/skills/coding/SKILL.md",
-      "bytes": 1474,
-      "sha256": "a2b155f60735901c04dd96a26aeebb5e2f5afa402d53d8124c3e8ff8c508a217"
+      "bytes": 1544,
+      "sha256": "de2ca239ec20be6083dcbd8ad9ec23faa00eb525d3c1336bdfc1144b6e629a87"
     }
   ]
 }

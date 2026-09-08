@@ -162,3 +162,9 @@ def test_installed_profile_and_other_profiles(tmp_path, monkeypatch):
     for name in ("quant-decision", "general-knowledge-worker"):
         other = resolve_profile(name, settings, config_root=ROOT)
         assert "coding" not in {ref.id for ref in other.plugins}
+
+
+def test_skill_md_mandates_targeted_pytest_before_local_commit():
+    skill = ROOT / "plugins/zuaef-coding/zuaef_coding/skills/coding/SKILL.md"
+    assert skill.is_file()
+    assert "targeted pytest" in skill.read_text(encoding="utf-8")
