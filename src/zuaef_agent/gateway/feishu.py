@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import queue
 import threading
 import time
@@ -41,6 +42,7 @@ from lark_channel import FeishuChannel, PolicyConfig, SecurityConfig
 from .models import (
     CONTROL_CALLBACK_ACTIONS,
     CONTROL_PREFIX,
+    AttachmentRef,
     InboundEnvelope,
 )
 
@@ -79,6 +81,7 @@ class FeishuAdapter:
         app_secret: str,
         allowed_user_ids: set[str],
         workspace_root: Path,
+        max_upload_bytes: int = 20971520,
         allowed_chat_ids: set[str] | None = None,
         require_mention: bool = True,
         security_mode: str = "audit",
@@ -99,6 +102,9 @@ class FeishuAdapter:
         self.security_mode = security_mode
         self.domain = domain
         self.workspace_root = workspace_root
+        if max_upload_bytes <= 0:
+            raise ValueError("max_upload_bytes must be positive")
+        self.max_upload_bytes = max_upload_bytes
         self.connect_timeout = connect_timeout
         self._events: queue.Queue[InboundEnvelope] = queue.Queue()
         self._thread: threading.Thread | None = None
@@ -227,14 +233,86 @@ class FeishuAdapter:
         reconnect backfill, so there is nothing to persist per batch."""
         return None
 
-    def _on_message(self, msg: Any) -> None:
+    async def _on_message(self, msg: Any) -> None:
         try:
             envelope = self._normalize_message(msg)
         except Exception:
             logger.exception("feishu inbound normalization failed")
             return
         if envelope is not None:
+            resources = [r for r in (getattr(msg, "resources", None) or ())
+                         if getattr(r, "type", None) == "file"]
+            try:
+                for resource in resources:
+                    name = getattr(resource, "file_name", None) or "attachment"
+                    self._safe_component(name)
+                    self._safe_component(envelope.message_id)
+                    key = getattr(resource, "file_key", None)
+                    if not key:
+                        raise ValueError("missing file key")
+                    data = await asyncio.wait_for(
+                        self._channel.download_resource(
+                            key, resource_type="file", message_id=envelope.message_id,
+                        ), timeout=_SEND_TIMEOUT_SECONDS,
+                    )
+                    if not isinstance(data, bytes):
+                        raise TypeError("download returned no file")
+                    if len(data) > self.max_upload_bytes:
+                        raise ValueError("file exceeds max-upload limit")
+                    relative = self._save_file(envelope.message_id, name, data)
+                    envelope.attachments.append(AttachmentRef(
+                        kind="document", local_path=relative,
+                        original_name=name, size=len(data),
+                    ))
+            except Exception as exc:  # noqa: BLE001 — SDK transport boundary
+                logger.warning("feishu attachment unavailable: %s", type(exc).__name__)
+                # Already on the SDK loop: awaiting send avoids schedule().result()
+                # deadlocking that same loop. Do not start a run with missing input.
+                try:
+                    await asyncio.wait_for(self._channel.send(envelope.channel_id, {
+                        "text": "附件接收失败：请检查文件权限、大小限制及文件名后重试。"
+                        "本条消息未开始执行。",
+                    }), timeout=_SEND_TIMEOUT_SECONDS)
+                except Exception:
+                    logger.exception("feishu attachment error delivery failed")
+                return
             self._events.put(envelope)
+
+    @staticmethod
+    def _safe_component(value: str) -> None:
+        if (not isinstance(value, str) or value in {"", ".", ".."}
+                or any(c in value for c in ("/", "\\", ":"))
+                or any(ord(c) < 32 or ord(c) == 127 for c in value)):
+            raise ValueError("unsafe attachment path component")
+
+    def _save_file(self, message_id: str, name: str, data: bytes) -> str:
+        # Directory handles + O_NOFOLLOW prevent symlink swaps and exclusive
+        # creation prevents overwriting existing files, including leaf symlinks.
+        self._safe_component(message_id)
+        self._safe_component(name)
+        root = self.workspace_root.resolve()
+        descriptor = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            for part in ("inbox", "feishu", message_id):
+                try:
+                    os.mkdir(part, mode=0o700, dir_fd=descriptor)
+                except FileExistsError:
+                    pass
+                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                dir_fd=descriptor)
+                os.close(descriptor)
+                descriptor = child
+            fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                         0o600, dir_fd=descriptor)
+            try:
+                with os.fdopen(fd, "wb") as stream:
+                    stream.write(data)
+            except BaseException:
+                os.unlink(name, dir_fd=descriptor)
+                raise
+        finally:
+            os.close(descriptor)
+        return (Path("inbox") / "feishu" / message_id / name).as_posix()
 
     def _normalize_message(self, msg: Any) -> InboundEnvelope | None:
         user_id = getattr(msg, "sender_id", "") or ""
@@ -268,7 +346,10 @@ class FeishuAdapter:
         # body_text is content_text minus this bot's own @mention (SDK
         # semantics) — the right basis for command routing.
         body = (getattr(msg, "body_text", "") or "").strip()
-        if not body:
+        if not body and not any(
+            getattr(r, "type", None) == "file"
+            for r in (getattr(msg, "resources", None) or ())
+        ):
             kind = getattr(getattr(msg, "content", None), "kind", "unknown")
             logger.info(
                 "ignored feishu non-text message kind=%s (v0.1 handles text/post only)",
@@ -283,7 +364,7 @@ class FeishuAdapter:
             thread_id=thread_id or None,
             chat_type=chat_type,
             message_id=getattr(msg, "message_id", "") or "",
-            text=body,
+            text=body or "Attached file.",
             # Authorized Feishu operators speak as the supervisor, mirroring
             # the Telegram console allowlist semantics.
             actor_role="supervisor",

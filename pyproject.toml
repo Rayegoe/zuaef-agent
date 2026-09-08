@@ -38,6 +38,7 @@ dependencies = [
   "zuaef-telegram",
   "zuaef-quant",
   "zuaef-knowledge-worker",
+  "zuaef-coding",
   "lark-channel-sdk==1.4.0",
 ]
 
@@ -69,6 +70,7 @@ zuaef-competitive-intelligence = { workspace = true }
 zuaef-telegram = { workspace = true }
 zuaef-quant = { workspace = true }
 zuaef-knowledge-worker = { workspace = true }
+zuaef-coding = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

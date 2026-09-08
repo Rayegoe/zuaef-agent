@@ -26,6 +26,8 @@ class FakeChannel:
 
     def __init__(self):
         self.handlers: dict[str, Any] = {}
+        self.downloads = []
+        self.file_data = b"spec content"
         self.sent: list[tuple[str, dict, dict | None]] = []
         self.fail_next_send = False
         self.connected = False
@@ -35,6 +37,15 @@ class FakeChannel:
 
     def on(self, name: str, handler) -> None:
         self.handlers[name] = handler
+
+    def emit_message(self, message):
+        asyncio.run(self.handlers["message"](message))
+
+    async def download_resource(self, file_key, **kwargs):
+        self.downloads.append((file_key, kwargs))
+        if isinstance(self.file_data, Exception):
+            raise self.file_data
+        return self.file_data
 
     async def send(self, to, message, opts=None):
         self.sent.append((to, message, opts))
@@ -128,7 +139,7 @@ def test_constructor_fails_closed_without_user_allowlist():
 def test_group_message_with_mention_normalizes():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](_message())
+    channel.emit_message(_message())
 
     events = _poll_all(adapter)
 
@@ -151,7 +162,7 @@ def test_body_text_is_forwarded_verbatim_for_commands():
     (spec pack 02 §5)."""
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](_message(body_text="今天盯什么？"))
+    channel.emit_message(_message(body_text="今天盯什么？"))
     events = _poll_all(adapter)
     assert events[0].text == "今天盯什么？"
 
@@ -159,14 +170,14 @@ def test_body_text_is_forwarded_verbatim_for_commands():
 def test_group_message_without_mention_is_dropped():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](_message(mentioned_bot=False))
+    channel.emit_message(_message(mentioned_bot=False))
     assert _poll_all(adapter) == []
 
 
 def test_group_message_without_mention_delivered_when_mention_not_required():
     channel = FakeChannel()
     adapter = _adapter(channel, require_mention=False)
-    channel.handlers["message"](_message(mentioned_bot=False))
+    channel.emit_message(_message(mentioned_bot=False))
     events = _poll_all(adapter)
     assert len(events) == 1
 
@@ -174,35 +185,35 @@ def test_group_message_without_mention_delivered_when_mention_not_required():
 def test_group_not_in_allowlist_is_dropped():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](_message(chat_id="oc_other"))
+    channel.emit_message(_message(chat_id="oc_other"))
     assert _poll_all(adapter) == []
 
 
 def test_group_with_empty_allowlist_is_dropped_fail_closed():
     channel = FakeChannel()
     adapter = _adapter(channel, allowed_chat_ids=set())
-    channel.handlers["message"](_message())
+    channel.emit_message(_message())
     assert _poll_all(adapter) == []
 
 
 def test_bot_sender_is_dropped():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](_message(sender_is_bot=True, sender_type="bot"))
+    channel.emit_message(_message(sender_is_bot=True, sender_type="bot"))
     assert _poll_all(adapter) == []
 
 
 def test_unauthorized_user_is_dropped():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](_message(sender_id="ou_999"))
+    channel.emit_message(_message(sender_id="ou_999"))
     assert _poll_all(adapter) == []
 
 
 def test_p2p_message_is_delivered_without_mention():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](
+    channel.emit_message(
         _message(
             chat_id="oc_dm_1",
             chat_type="p2p",
@@ -219,14 +230,14 @@ def test_p2p_message_is_delivered_without_mention():
 def test_unknown_chat_type_is_dropped():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](_message(chat_type="topic"))
+    channel.emit_message(_message(chat_type="topic"))
     assert _poll_all(adapter) == []
 
 
 def test_non_text_message_is_dropped():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](
+    channel.emit_message(
         _message(body_text="", content=SimpleNamespace(kind="image"))
     )
     assert _poll_all(adapter) == []
@@ -235,7 +246,7 @@ def test_non_text_message_is_dropped():
 def test_thread_id_normalized_from_conversation():
     channel = FakeChannel()
     adapter = _adapter(channel)
-    channel.handlers["message"](
+    channel.emit_message(
         _message(conversation=SimpleNamespace(thread_id="th_1"))
     )
     events = _poll_all(adapter)
@@ -420,3 +431,94 @@ def test_real_channel_construction_wires_policy_and_security():
     assert policy.allow_from == ["ou_1"]
     assert policy.group_allowlist == ["oc_group_1"]
     assert policy.require_mention is True
+
+
+def _file(name="spec.zip", key="file-key"):
+    from lark_channel import ResourceDescriptor
+    return ResourceDescriptor(type="file", file_key=key, file_name=name)
+
+
+@pytest.mark.parametrize("text", ["", "按这个 spec 开工"])
+def test_authorized_file_download_and_prompt(tmp_path, text):
+    from zuaef_agent.gateway.bridge import project_prompt
+    channel = FakeChannel()
+    adapter = _adapter(channel, workspace_root=tmp_path)
+    channel.emit_message(_message(body_text=text, resources=[_file()]))
+    events = _poll_all(adapter)
+    assert len(events) == 1
+    ref = events[0].attachments[0]
+    assert ref.local_path == "inbox/feishu/om_100/spec.zip"
+    assert ref.original_name == "spec.zip"
+    assert ref.size == len(channel.file_data)
+    assert ref.mime_type is None  # SDK 1.4 resource descriptor does not carry MIME.
+    assert (tmp_path / ref.local_path).read_bytes() == channel.file_data
+    assert ref.local_path in project_prompt(events[0])
+    assert channel.downloads == [("file-key", {"resource_type": "file", "message_id": "om_100"})]
+
+
+@pytest.mark.parametrize("overrides", [
+    {"sender_id": "unauthorized"}, {"sender_is_bot": True},
+    {"mentioned_bot": False}, {"chat_id": "other"},
+])
+def test_inadmissible_files_never_download(tmp_path, overrides):
+    channel = FakeChannel()
+    adapter = _adapter(channel, workspace_root=tmp_path)
+    channel.emit_message(_message(body_text="", resources=[_file()], **overrides))
+    assert not channel.downloads
+    assert not list(tmp_path.iterdir())
+    assert not _poll_all(adapter)
+
+
+@pytest.mark.parametrize("data", [None, RuntimeError("permission denied"), b"oversized"])
+def test_file_failures_are_visible_and_do_not_enqueue(tmp_path, data):
+    channel = FakeChannel()
+    channel.file_data = data
+    adapter = _adapter(channel, workspace_root=tmp_path, max_upload_bytes=3)
+    channel.emit_message(_message(resources=[_file()]))
+    assert not _poll_all(adapter)
+    assert not list(tmp_path.iterdir())
+    assert "附件接收失败" in channel.sent[0][1]["text"]
+
+
+@pytest.mark.parametrize("name", ["../spec.zip", "/tmp/spec.zip", "..", "x\\evil", "x\n.zip"])
+def test_unsafe_file_names_rejected_before_download(tmp_path, name):
+    channel = FakeChannel()
+    adapter = _adapter(channel, workspace_root=tmp_path)
+    channel.emit_message(_message(resources=[_file(name)]))
+    assert not channel.downloads
+    assert not _poll_all(adapter)
+    assert channel.sent
+
+
+def test_message_path_and_symlink_and_overwrite_refused(tmp_path):
+    channel = FakeChannel()
+    adapter = _adapter(channel, workspace_root=tmp_path)
+    channel.emit_message(_message(message_id="../bad", resources=[_file()]))
+    assert not channel.downloads
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (tmp_path / "inbox").symlink_to(outside, target_is_directory=True)
+    channel.emit_message(_message(resources=[_file()]))
+    assert not _poll_all(adapter)
+    assert not list(outside.iterdir())
+    (tmp_path / "inbox").unlink()
+    channel.emit_message(_message(resources=[_file()]))
+    assert len(_poll_all(adapter)) == 1
+    target = tmp_path / "inbox/feishu/om_100/spec.zip"
+    original = target.read_bytes()
+    channel.file_data = b"replacement"
+    channel.emit_message(_message(resources=[_file()]))
+    assert not _poll_all(adapter)
+    assert target.read_bytes() == original
+
+
+def test_real_sdk_awaits_async_message_handler(tmp_path):
+    import inspect
+
+    from lark_channel import FeishuChannel
+    channel = FeishuChannel(app_id="cli_test", app_secret="test-only")
+    adapter = _adapter(channel, workspace_root=tmp_path)
+    assert inspect.iscoroutinefunction(adapter._on_message)
+    # Use the real SDK emitter (public on registration above), without networking.
+    asyncio.run(channel._invoke("message", _message(body_text="sdk dispatch")))
+    assert _poll_all(adapter)[0].text == "sdk dispatch"

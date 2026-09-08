@@ -142,6 +142,7 @@ def default_adapter(config: GatewayConfig, settings: AgentSettings) -> SurfaceAd
             domain=config.feishu_domain,
             connect_timeout=float(config.feishu_connect_timeout),
             workspace_root=settings.workspace_root.resolve(),
+            max_upload_bytes=config.max_upload_bytes,
         )
     assert config.telegram_token is not None
     return TelegramAdapter(

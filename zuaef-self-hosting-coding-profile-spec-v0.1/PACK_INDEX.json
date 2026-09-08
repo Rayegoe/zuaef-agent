@@ -1,0 +1,28 @@
+{
+  "name": "zuaef-self-hosting-coding-profile-spec-v0.1",
+  "target_repo": "Rayegoe/zuaef-agent",
+  "status": "implementation-ready",
+  "primary_profile": "coding",
+  "primary_architecture": "Harness-native self-hosting coding profile",
+  "external_workers": [
+    "codex",
+    "pi"
+  ],
+  "external_workers_role": "optional shell tools",
+  "files": [
+    "README.md",
+    "00_SOURCE_OF_TRUTH.md",
+    "01_PRD.md",
+    "02_ARCHITECTURE.md",
+    "03_PROFILE_AND_PLUGIN_SPEC.md",
+    "04_SELF_HOSTING_FLOW.md",
+    "05_FEISHU_SPEC_INGEST.md",
+    "06_CODEX_PI_ROLE.md",
+    "07_SECURITY_APPROVAL_DEPLOYMENT.md",
+    "08_IMPLEMENTATION_TASKS.md",
+    "09_ACCEPTANCE_GATES.md",
+    "10_FILES_AND_PATCH_MAP.md",
+    "11_UPSTREAM_REFERENCES.md",
+    "12_MASTER_PROMPT.md"
+  ]
+}

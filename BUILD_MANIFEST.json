@@ -1698,8 +1698,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 3914,
-      "sha256": "a6f7dec70d0f1397f0569ac797a64216f500c48beda884463cb7a2e2830d430b"
+      "bytes": 3968,
+      "sha256": "8442daa8d4e44272ae130612ebe0d6f7deed7e6475ff9387d4f3815b2d6ae28f"
     },
     {
       "path": "spec/SPEC.md",
@@ -1773,8 +1773,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/feishu.py",
-      "bytes": 19316,
-      "sha256": "ae6a9f4a489beb61386971bfc189ab9753f61e214284cdf477d47bb08896fb5d"
+      "bytes": 23527,
+      "sha256": "ee3fa61afd3ab3db34af942eff7b02ca1d00bb55bb623572e600c846137bc36f"
     },
     {
       "path": "src/zuaef_agent/gateway/interaction_projection.py",
@@ -1798,8 +1798,8 @@
     },
     {
       "path": "src/zuaef_agent/gateway/runner.py",
-      "bytes": 11642,
-      "sha256": "ff277e1a8501dfeb13e26bc573fc776ac0af14030e61fe70677a21bd833a7a2d"
+      "bytes": 11696,
+      "sha256": "3db3119befd4380c9265717d544a1b6beb8a196ddb4d25bcd5db2b519cdfc1f2"
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
@@ -2168,8 +2168,8 @@
     },
     {
       "path": "tests/test_gateway_feishu.py",
-      "bytes": 13707,
-      "sha256": "f83ff979a56f7e61b7ebee0300ecaa1e40ab5865daf290e3f9f2327d7351b916"
+      "bytes": 17902,
+      "sha256": "59eb924663d821daef58ee8f17e5875ea64627db70dcc96aa30dc56a5ee72fb2"
     },
     {
       "path": "tests/test_gateway_models.py",
@@ -2578,8 +2578,8 @@
     },
     {
       "path": "uv.lock",
-      "bytes": 618323,
-      "sha256": "52e9b960ed08308ff3372de6241d9f9c2aa4be3d364714470e72de6806e701fb"
+      "bytes": 618835,
+      "sha256": "d50485bee39fabdb3e9082c5446fea6c3b664b1ade6f766b0c570751542bfa59"
     },
     {
       "path": "workspace/knowledge/index.md",
@@ -2630,6 +2630,41 @@
       "path": "tests/test_quant_validation_accounting.py",
       "bytes": 7735,
       "sha256": "f06f8ef9696a78284703b26263bc5f9194595b82b16723c1f433682e18815362"
+    },
+    {
+      "path": "tests/test_coding_profile.py",
+      "bytes": 7216,
+      "sha256": "cf31d186d2e9ead0bbfae524081e8b9b255b77bf7a59f7f82545e1ed19ba99d7"
+    },
+    {
+      "path": "profiles/coding.toml",
+      "bytes": 603,
+      "sha256": "60c2d30ba55dc073203a8a1186a6d4f76b19bf02ece825b293a86cee2ecbecaf"
+    },
+    {
+      "path": "docs/coding.md",
+      "bytes": 5810,
+      "sha256": "af99c1cfe3e66416f191e894449ef11b972e4ba4a13498e2349bd9789bf14df4"
+    },
+    {
+      "path": "plugins/zuaef-coding/pyproject.toml",
+      "bytes": 455,
+      "sha256": "3df5d532baae7bcb50c5f6a59f5997bdce692008133002340273f438738d999b"
+    },
+    {
+      "path": "plugins/zuaef-coding/zuaef_coding/__init__.py",
+      "bytes": 47,
+      "sha256": "e15631e8d4dc9ae6301c075f00f27596d27c972c0dd30176eda57b4f530834e3"
+    },
+    {
+      "path": "plugins/zuaef-coding/zuaef_coding/plugin.py",
+      "bytes": 4107,
+      "sha256": "a836f7257d01004a1f985c0462f0de230988ac576fb10f8a35ea549972eaa716"
+    },
+    {
+      "path": "plugins/zuaef-coding/zuaef_coding/skills/coding/SKILL.md",
+      "bytes": 1474,
+      "sha256": "a2b155f60735901c04dd96a26aeebb5e2f5afa402d53d8124c3e8ff8c508a217"
     }
   ]
 }

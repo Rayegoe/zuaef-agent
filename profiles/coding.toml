@@ -1,0 +1,28 @@
+schema = 1
+name = "coding"
+
+[generalist]
+web_search = false
+web_fetch = false
+tool_search = true
+memory = false
+conversation_search = true
+context_controls = true
+subagents = false
+# Plugin supplies both Shell roots with credential filtering; core Shell has none.
+shell = false
+repo_context = false
+
+[[plugins]]
+id = "coding"
+allow_capabilities = true
+defer_tools = false
+
+[plugins.config]
+# Explicit per-user checkout: Barry and OPi5 both deploy under ~/zuaef-agent.
+repo_root = "~/zuaef-agent"
+code_mode = false
+allow_codex = false
+allow_pi = false
+allow_local_commit = true
+output_language = "zh-CN"
