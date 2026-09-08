@@ -2643,8 +2643,8 @@
     },
     {
       "path": "docs/coding.md",
-      "bytes": 5810,
-      "sha256": "af99c1cfe3e66416f191e894449ef11b972e4ba4a13498e2349bd9789bf14df4"
+      "bytes": 6235,
+      "sha256": "a4357351ca727ebc6501b34c542c4e4fcd40494ba901eb759a476c8520e9e8f5"
     },
     {
       "path": "plugins/zuaef-coding/pyproject.toml",

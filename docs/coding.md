@@ -11,6 +11,13 @@ Run `uv sync --inexact` in the deployment checkout (preserves installed optional
 groups), then `uv run --no-sync zuaef-agent plugin list` and
 `uv run --no-sync zuaef-agent profile check coding --config-root .`.
 
+The Gateway resolves profiles from the deployment config root
+(`$ZUAEF_CONFIG_ROOT/profiles/`, default `~/.config/zuaef/profiles/`), **not**
+from the checkout's `profiles/` directory: install the profile with
+`cp profiles/coding.toml <config-root>/profiles/`. `--config-root .` only
+verifies the checkout copy. Profile TOMLs are read per run, so installing or
+editing one needs no restart; `.env` and code changes still do.
+
 `profiles/coding.toml` explicitly configures `repo_root = "~/zuaef-agent"`:
 Barry expands this to `/home/barry/zuaef-agent`; OPi5's orangepi user expands it
 to `/home/orangepi/zuaef-agent`. For another checkout or disposable worktree,
