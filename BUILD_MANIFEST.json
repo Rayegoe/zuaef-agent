@@ -1758,8 +1758,8 @@
     },
     {
       "path": "src/zuaef_agent/effects.py",
-      "bytes": 713,
-      "sha256": "eb2fe4f2cd3a1b4d0013dc8ea3d01c9315ad9b108f71b183a927ab16e834fda9"
+      "bytes": 1114,
+      "sha256": "09a0441f3ae8198db557c0a969972140e3566380fb43c71f325826b57398e0bf"
     },
     {
       "path": "src/zuaef_agent/gateway/__init__.py",
@@ -2123,8 +2123,8 @@
     },
     {
       "path": "tests/test_effects.py",
-      "bytes": 375,
-      "sha256": "fed17172ddb3de6c3af4e71d3848d9610d30223b339183aba87c904445eedd46"
+      "bytes": 916,
+      "sha256": "30de8632144870b522a78f56e854c6ade6c6b49fb4b161d29345bc5d2b0403db"
     },
     {
       "path": "tests/test_epub_corpus.py",
