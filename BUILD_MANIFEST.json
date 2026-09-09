@@ -2658,13 +2658,13 @@
     },
     {
       "path": "plugins/zuaef-coding/zuaef_coding/plugin.py",
-      "bytes": 6716,
-      "sha256": "b70cbaf5385193bfa3b95aef16f2e4a33f23b443ddc4b65e9cb1c801b5e9e61c"
+      "bytes": 6973,
+      "sha256": "bf3843f3efc5425f0389dcedb5aa0240a3594cabf43c247e4a55efcbf87912cc"
     },
     {
       "path": "plugins/zuaef-coding/zuaef_coding/skills/coding/SKILL.md",
-      "bytes": 1650,
-      "sha256": "fd193764ded13de951dceda7bef2ac6b0ec686e256067a556807c25c09dbe324"
+      "bytes": 1864,
+      "sha256": "aed45c6d81907884b81c2bf512257c59598ffb777d7dafa1610b50a2105ffecf"
     }
   ]
 }

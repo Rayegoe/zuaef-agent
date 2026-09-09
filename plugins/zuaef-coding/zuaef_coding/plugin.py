@@ -122,7 +122,11 @@ def build_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
         "services, or perform destructive host operations through Shell; those "
         "require a separately approval-gated tool that this plugin does not "
         "supply. "
-        "Report changed, tested, committed and activation state separately."
+        "Report changed, tested, committed and activation state separately. "
+        "Deliver the terminal report as chat plain text: no markdown "
+        "headings, tables, bold/italic markers, blockquotes, horizontal "
+        "rules or backticks; structure with short lines, blank lines and "
+        "simple numbering instead."
     ))
     return PluginBundle(
         capabilities=capabilities, toolsets=[guidance],

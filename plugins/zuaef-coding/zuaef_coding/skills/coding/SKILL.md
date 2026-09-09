@@ -32,3 +32,7 @@ concrete requirement. Respect the repository's existing manifest contract.
 Run the targeted pytest covering a change before any local commit, inspect the
 final diff, and report remaining unknowns. Source changes do not activate
 already imported Gateway code: report restart required after terminal delivery.
+
+Deliver the terminal report as chat plain text: no markdown headings, tables,
+bold/italic markers, blockquotes, horizontal rules or backticks. Structure
+with short lines, blank lines and simple numbering instead.
