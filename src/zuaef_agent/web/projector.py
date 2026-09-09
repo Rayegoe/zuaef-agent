@@ -197,7 +197,12 @@ def _response_usage(message: Any) -> dict[str, int] | None:
     if usage is None:
         return None
     extracted: dict[str, int] = {}
-    for key in ("input_tokens", "output_tokens"):
+    for key in (
+        "input_tokens",
+        "output_tokens",
+        "cache_read_tokens",
+        "cache_write_tokens",
+    ):
         value = getattr(usage, key, None)
         if isinstance(value, int):
             extracted[key] = value
@@ -462,6 +467,41 @@ def build_timeline(facts: RunFacts) -> list[TimelineRow]:
 
     rows.sort(key=_sort_key)
     return rows
+
+
+def live_usage(facts: RunFacts) -> dict[str, int] | None:
+    """Cumulative settled provider-reported usage for mid-run progress
+    (gateway progress telemetry v0.1).
+
+    Sum of per-response usage from the latest persisted snapshot, exactly
+    as the provider reported each settled request — never an estimate, so
+    the sum is a lower bound of the terminal receipt aggregate, which
+    stays the final authority. ``None`` (rendered as "unavailable") when
+    the snapshot is absent or any settled response lacks integer usage —
+    a stale or ambiguous correlation is reported as unavailable, never
+    guessed.
+    """
+    _, responses = _snapshot_messages(facts)
+    if not responses:
+        return None
+    total: dict[str, int] = {}
+    for message in responses:
+        usage = getattr(message, "usage", None)
+        if usage is None:
+            return None
+        for key in ("input_tokens", "output_tokens"):
+            if not isinstance(getattr(usage, key, None), int):
+                return None
+        for key in (
+            "input_tokens",
+            "output_tokens",
+            "cache_read_tokens",
+            "cache_write_tokens",
+        ):
+            value = getattr(usage, key, None)
+            if isinstance(value, int):
+                total[key] = total.get(key, 0) + value
+    return total or None
 
 
 def usage_summary(facts: RunFacts, timeline: list[TimelineRow]) -> dict[str, Any] | None:

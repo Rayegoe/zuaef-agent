@@ -59,26 +59,64 @@ def render_run_natural_ack(*, profile: str | None, is_continuation: bool) -> str
     return f"收到，开始处理{scope}，结果出来直接回你。"
 
 
+def _format_k(value: int) -> str:
+    """Bounded chat-friendly token count: 82400 → "82.4k", 1000 → "1k"."""
+    if value >= 1000:
+        text = f"{value / 1000:.1f}".rstrip("0").rstrip(".")
+        return f"{text}k"
+    return str(value)
+
+
 def render_run_progress(
     *,
     requests: int | None = None,
+    tool_calls: int | None = None,
     tool_name: str | None = None,
     elapsed_seconds: int | None = None,
+    usage: dict | None = None,
 ) -> str:
-    """One bounded mid-run progress line, composed from persisted
-    operational facts (model requests settled, tool currently running,
-    elapsed seconds). Facts that do not exist stay out of the sentence —
-    the host never invents a percentage or a stage name."""
+    """Two-line mid-run checkpoint (gateway progress telemetry v0.1),
+    composed from persisted operational facts only: settled model requests,
+    unique observed tool calls, current tool, actual elapsed seconds, and
+    cumulative settled provider-reported usage. Facts that do not exist
+    stay out of the sentence — the host never invents a percentage, a
+    stage name, or an in-flight token estimate; when coherent settled
+    usage is absent the sentence says so instead of estimating."""
     facts: list[str] = []
     if requests:
-        facts.append(f"已完成 {requests} 轮模型调用")
+        facts.append(f"{requests} 轮模型")
+    if tool_calls:
+        facts.append(f"{tool_calls} 次工具")
     if tool_name:
-        facts.append(f"正在调用 {tool_name}")
-    if elapsed_seconds is not None:
-        facts.append(f"已 {elapsed_seconds} 秒")
-    if not facts:
-        return "还在处理，结果出来直接回你。"
-    return "还在处理：" + "，".join(facts) + "，出结果直接回你。"
+        facts.append(f"当前 {tool_name}")
+    usage_line: str | None = None
+    if (
+        isinstance(usage, dict)
+        and isinstance(usage.get("input_tokens"), int)
+        and isinstance(usage.get("output_tokens"), int)
+    ):
+        cache_read = usage.get("cache_read_tokens") or 0
+        # Cache-read tokens are a subset of input tokens — parenthetical,
+        # never added (progress telemetry v0.1 token truth).
+        if cache_read:
+            usage_line = (
+                f"输入 {_format_k(usage['input_tokens'])}"
+                f"（缓存读取 {_format_k(cache_read)}）"
+                f"/ 输出 {_format_k(usage['output_tokens'])}"
+            )
+        else:
+            usage_line = (
+                f"输入 {_format_k(usage['input_tokens'])}"
+                f" / 输出 {_format_k(usage['output_tokens'])}"
+            )
+    else:
+        facts.append("Token 用量暂不可用")
+    head = " · ".join(facts)
+    head = f"还在处理：{head}" if head else "还在处理"
+    tail = f"已运行 {elapsed_seconds} 秒，出结果直接回你。"
+    if usage_line:
+        return f"{head}\n{usage_line} · {tail}"
+    return f"{head}\n{tail}"
 
 
 def render_terminal(outcome: TerminalRun, *, reply_artifact: str | None = None) -> str:

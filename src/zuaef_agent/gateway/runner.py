@@ -88,6 +88,18 @@ def _env_list(name: str) -> frozenset[str]:
     )
 
 
+def validate_progress_schedule(first: int, second: int) -> None:
+    """Fail-closed progress-schedule rule (progress telemetry v0.1):
+    ``first=0`` disables the bridge; an enabled schedule requires a
+    strictly later second checkpoint seed."""
+    if first > 0 and second <= first:
+        raise ValueError(
+            "ZUAEF_RUN_PROGRESS_SECONDS_2 must be greater than "
+            "ZUAEF_RUN_PROGRESS_SECONDS when the progress bridge is enabled "
+            "(set ZUAEF_RUN_PROGRESS_SECONDS=0 to disable the bridge)"
+        )
+
+
 def load_gateway_config(args: Any) -> GatewayConfig:
     """Merge environment and CLI flags; no validation of presence happens
     here — that is the startup sequence's job (fail closed)."""
@@ -197,6 +209,12 @@ def run_gateway(
         bridge.validate_profile(
             config.profile, settings, config_root=config.config_root
         )
+
+    # Progress telemetry v0.1: first=0 disables the progress bridge; an
+    # enabled schedule requires a strictly later second checkpoint seed.
+    validate_progress_schedule(
+        config.run_progress_seconds, config.run_progress_seconds_2
+    )
 
     # 4 + 5. Fail closed: per-surface credentials and a non-empty user
     # allowlist (no allow-all default on any surface).

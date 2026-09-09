@@ -19,6 +19,7 @@ import json
 import logging
 import re
 import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -119,6 +120,15 @@ _DRAFT_REF = re.compile(r"msg-[A-Za-z0-9_.-]+\.md")
 DRAFT_PREVIEW_MAX = 2800
 
 
+def progress_checkpoint_seconds(first: float, second: float, n: int) -> float:
+    """Checkpoint time T_n of the arithmetic-backoff progress schedule
+    (gateway progress telemetry v0.1): step = second - first, and
+    T_n = first + step * n * (n-1) / 2 — so the first two checkpoints are
+    exactly the configured seeds and later gaps grow by one step each
+    (25, 50, 100, 175, 275, ...). Pure arithmetic; no schedule knobs."""
+    return first + (second - first) * n * (n - 1) / 2
+
+
 def _run_coro(coro):
     """Run one coroutine to completion from a non-loop thread (the progress
     watchdog). The dispatch loop stays synchronous; this thread owns its own
@@ -154,13 +164,14 @@ class GatewayService:
         self.routing = routing_policy or RoutingPolicy()
         self.receipts = ReceiptStore(settings.state_root)
         # Natural chat bridging: one state-composed acknowledgment at
-        # acceptance, plus bounded mid-run checkpoint lines (defaults 25s
-        # and 50s) composed from persisted StepPersistence facts. Bounded
-        # deterministic transport — no new execution model.
+        # acceptance, plus arithmetic-backoff mid-run checkpoint lines
+        # (25s, 50s, 100s, 175s, ... from the two seed configs) composed
+        # from persisted StepPersistence facts. Bounded deterministic
+        # transport — no new execution model.
         self.run_ack = run_ack
         self.run_progress_seconds = run_progress_seconds
         self.run_progress_seconds_2 = run_progress_seconds_2
-        self._progress_stops: dict[str, list[threading.Event]] = {}
+        self._progress_stops: dict[str, threading.Event] = {}
         self._progress_lock = threading.Lock()
 
     # ── dispatch ────────────────────────────────────────────────────────────
@@ -785,56 +796,59 @@ class GatewayService:
     # ── progress bridging ───────────────────────────────────────────────────
 
     def _start_progress_watchdog(self, session: SessionBinding, run_id: str) -> None:
-        """Bounded threads per run: at each configured checkpoint delay
-        (defaults 25s and 50s) where the run is still unsettled, send at
-        most one progress line composed from persisted StepPersistence
-        facts. Cancelled on settle; each checkpoint fires at most once;
+        """One daemon watchdog thread per run (progress telemetry v0.1):
+        fires the arithmetic-backoff checkpoint schedule seeded by the two
+        progress configs, each deadline anchored to ``time.monotonic()``
+        watchdog start so render/send latency never drifts later
+        checkpoints. At most one line per checkpoint; cancelled on settle;
         never touches the execution path."""
-        delays = [
-            delay
-            for delay in (self.run_progress_seconds, self.run_progress_seconds_2)
-            if delay and delay > 0
-        ]
-        if not delays:
+        first = self.run_progress_seconds
+        second = self.run_progress_seconds_2
+        if first is None or first <= 0:
+            return  # bridge disabled (startup validation covers bad schedules)
+        if second is None or second <= first:
             return
-        stops = [threading.Event() for _ in delays]
+        stop = threading.Event()
         with self._progress_lock:
-            self._progress_stops[run_id] = stops
+            self._progress_stops[run_id] = stop
 
-        def watchdog(stop: threading.Event, delay: float) -> None:
-            if stop.wait(max(0.0, delay)):
-                return
-            with self._progress_lock:
-                if stop not in self._progress_stops.get(run_id, ()):
-                    return  # already settled and cleaned up
-            text = render_run_progress(
-                **self._progress_facts(run_id, elapsed_seconds=int(delay))
-            )
-            try:
-                self._send_text(session, text)
-            except Exception as exc:  # noqa: BLE001 — bridging is non-fatal
-                logger.warning("progress ping failed for run %s: %s", run_id, exc)
+        def watchdog() -> None:
+            start = time.monotonic()
+            n = 0
+            while True:
+                n += 1
+                wait = start + progress_checkpoint_seconds(first, second, n) - time.monotonic()
+                if stop.wait(max(0.0, wait)):
+                    return
+                with self._progress_lock:
+                    if self._progress_stops.get(run_id) is not stop:
+                        return  # already settled and cleaned up
+                text = render_run_progress(
+                    **self._progress_facts(
+                        run_id, elapsed_seconds=int(time.monotonic() - start)
+                    )
+                )
+                try:
+                    self._send_text(session, text)
+                except Exception as exc:  # noqa: BLE001 — bridging is non-fatal
+                    logger.warning("progress ping failed for run %s: %s", run_id, exc)
 
-        for stop, delay in zip(stops, delays):
-            threading.Thread(
-                target=watchdog,
-                args=(stop, delay),
-                name=f"progress-{run_id[:8]}",
-                daemon=True,
-            ).start()
+        threading.Thread(target=watchdog, name=f"progress-{run_id[:8]}", daemon=True).start()
 
     def _stop_progress_watchdog(self, run_id: str) -> None:
         with self._progress_lock:
-            stops = self._progress_stops.pop(run_id, None)
-        for stop in stops or []:
+            stop = self._progress_stops.pop(run_id, None)
+        if stop is not None:
             stop.set()
 
     def _progress_facts(self, run_id: str, *, elapsed_seconds: int = 0) -> dict:
         """Read persisted operational facts for one run; anything unreadable
-        stays out of the sentence (never invented)."""
+        stays out of the sentence (never invented). Usage is cumulative
+        settled provider-reported usage from the shared projector — it is
+        omitted entirely when the correlation is absent or ambiguous."""
         facts: dict = {"elapsed_seconds": elapsed_seconds}
         try:
-            from ..web.projector import activity_view, build_timeline
+            from ..web.projector import activity_view, build_timeline, live_usage
             from ..web.readers import load_run_facts
 
             load = load_run_facts(self.settings, run_id)
@@ -847,6 +861,11 @@ class GatewayService:
             )
             if requests:
                 facts["requests"] = requests
+            tool_call_ids = {
+                row.id for row in timeline if row.kind == "tool_call"
+            }
+            if tool_call_ids:
+                facts["tool_calls"] = len(tool_call_ids)
             started = [
                 row for row in timeline
                 if row.kind == "tool_call" and row.status == "started"
@@ -856,6 +875,9 @@ class GatewayService:
             activity = activity_view(run_facts)
             if activity == "SETTLING":
                 facts.pop("tool_name", None)
+            usage = live_usage(run_facts)
+            if usage:
+                facts["usage"] = usage
         except Exception as exc:  # noqa: BLE001 — facts are best-effort
             logger.info("progress facts unavailable for run %s: %s", run_id, exc)
         return facts

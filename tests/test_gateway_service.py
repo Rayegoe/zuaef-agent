@@ -1228,7 +1228,7 @@ def test_progress_ping_fires_once_from_persisted_facts(tmp_path: Path, monkeypat
     service.handle(_envelope("慢慢查", n=1))
 
     progress = [t for _, t in surface.texts if t.startswith("还在处理")]
-    assert len(progress) == 1, surface.texts  # bounded: exactly one ping
+    assert len(progress) == 1, surface.texts  # next checkpoint (50s) past settle
     assert "出结果直接回你" in progress[0]
     terminal = surface.texts[-1][1]
     assert "完成" in terminal
@@ -1262,56 +1262,112 @@ def test_progress_ping_stays_silent_after_settle(tmp_path: Path, monkeypatch):
     assert not [t for _, t in surface.texts if t.startswith("还在处理")]
 
 
-def test_progress_second_checkpoint_fires_while_run_in_flight(tmp_path: Path, monkeypatch):
+def test_progress_schedule_is_arithmetic_backoff():
+    from zuaef_agent.gateway.service import progress_checkpoint_seconds
+
+    assert [round(progress_checkpoint_seconds(25, 50, n), 6) for n in range(1, 8)] == [
+        25, 50, 100, 175, 275, 400, 550,
+    ]
+    # first two checkpoints are exactly the configured seeds
+    assert progress_checkpoint_seconds(10, 35, 1) == 10
+    assert progress_checkpoint_seconds(10, 35, 2) == 35
+
+
+def test_progress_schedule_validation_fails_closed():
+    import pytest
+
+    from zuaef_agent.gateway.runner import validate_progress_schedule
+
+    validate_progress_schedule(0, 0)  # first=0 disables the bridge
+    validate_progress_schedule(25, 50)  # enabled, valid
+    with pytest.raises(ValueError):
+        validate_progress_schedule(25, 25)
+    with pytest.raises(ValueError):
+        validate_progress_schedule(50, 25)
+
+
+def test_progress_checkpoints_fire_on_schedule_while_in_flight(tmp_path: Path, monkeypatch):
     import time as _t
 
     def slow(messages, info):
-        _t.sleep(0.9)
+        _t.sleep(0.5)
         return _final(outcome="完成")
 
     surface = FakeSurface()
     service = _service(tmp_path, monkeypatch, surface, slow)
     service.run_progress_seconds = 0.05
-    service.run_progress_seconds_2 = 0.3
+    service.run_progress_seconds_2 = 0.3  # schedule: 0.05, 0.3, 0.8, ...
 
     service.handle(_envelope("慢慢查", n=1))
 
     progress = [t for _, t in surface.texts if t.startswith("还在处理")]
-    assert len(progress) == 2, surface.texts  # bounded: one ping per checkpoint
-    assert "出结果直接回你" in progress[1]
+    assert len(progress) == 2, surface.texts  # 0.05 and 0.3 fire; 0.8 past settle
+    assert all("出结果直接回你" in t for t in progress)
+    assert all("已运行" in t for t in progress)  # actual elapsed, not the knob
     terminal = surface.texts[-1][1]
     assert "完成" in terminal
 
 
-def test_progress_second_checkpoint_can_be_disabled(tmp_path: Path, monkeypatch):
+def test_render_run_progress_usage_line_matches_ux_spec():
+    from zuaef_agent.gateway.renderer import render_run_progress
+
+    text = render_run_progress(
+        requests=4,
+        tool_calls=7,
+        tool_name="repo_search_files",
+        elapsed_seconds=50,
+        usage={
+            "input_tokens": 82400,
+            "output_tokens": 1700,
+            "cache_read_tokens": 61200,
+        },
+    )
+    assert text == (
+        "还在处理：4 轮模型 · 7 次工具 · 当前 repo_search_files\n"
+        "输入 82.4k（缓存读取 61.2k）/ 输出 1.7k · 已运行 50 秒，出结果直接回你。"
+    )
+
+
+def test_render_run_progress_without_coherent_usage_says_unavailable():
+    from zuaef_agent.gateway.renderer import render_run_progress
+
+    text = render_run_progress(requests=4, tool_calls=7, elapsed_seconds=50)
+    assert text == "还在处理：4 轮模型 · 7 次工具 · Token 用量暂不可用\n已运行 50 秒，出结果直接回你。"
+
+
+def test_render_run_progress_cache_read_is_parenthetical_subset():
+    from zuaef_agent.gateway.renderer import render_run_progress
+
+    text = render_run_progress(
+        elapsed_seconds=1,
+        usage={"input_tokens": 1000, "output_tokens": 999, "cache_read_tokens": 0},
+    )
+    assert text == "还在处理\n输入 1k / 输出 999 · 已运行 1 秒，出结果直接回你。"
+
+
+def test_progress_tool_calls_are_unique_observed_calls(tmp_path: Path, monkeypatch):
+    """The watchdog counts unique tool calls via the shared projector —
+    exercised end to end through a slow in-flight run with a started tool."""
     import time as _t
 
     def slow(messages, info):
-        _t.sleep(0.5)
+        _t.sleep(0.4)
         return _final(outcome="done")
 
     surface = FakeSurface()
     service = _service(tmp_path, monkeypatch, surface, slow)
     service.run_progress_seconds = 0.05
-    service.run_progress_seconds_2 = 0
-
-    service.handle(_envelope("hello", n=1))
-
-    progress = [t for _, t in surface.texts if t.startswith("还在处理")]
-    assert len(progress) == 1, surface.texts
-
-
-def test_progress_second_checkpoint_silent_after_settle(tmp_path: Path, monkeypatch):
-    surface = FakeSurface()
-    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="done"))
-    service.run_progress_seconds = 0.05
     service.run_progress_seconds_2 = 0.2
 
-    service.handle(_envelope("快问快答", n=1))
+    service.handle(_envelope("查一查", n=1))
 
-    import time as _t
-    _t.sleep(0.6)  # both checkpoint deadlines pass AFTER the run settled
-    assert not [t for _, t in surface.texts if t.startswith("还在处理")]
+    progress = [t for _, t in surface.texts if t.startswith("还在处理")]
+    assert progress, surface.texts
+    # no invented facts: a fixture run with no persisted steps renders no
+    # model/tool counts and no usage
+    assert "Token 用量暂不可用" in progress[0]
+    assert "轮模型" not in progress[0]
+    assert "次工具" not in progress[0]
 
 
 # ── Terminal Delivery Guard (incidents 9c1c9abb / 77c45d0e) ──────────────
