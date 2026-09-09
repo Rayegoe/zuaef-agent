@@ -8,7 +8,7 @@ from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelRetry
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
-from pydantic_ai_harness import FileSystem
+from pydantic_ai_harness import FileSystem, RepoContext, Shell
 from zuaef_coding.plugin import build_plugin
 
 from zuaef_agent.composition import (
@@ -134,6 +134,53 @@ def test_secret_symlink_denied(repo):
         asyncio.run(fs.read_file("alias.txt"))
 
 
+def _coding_repo_context(b):
+    matches = [c for c in b.capabilities if isinstance(c, RepoContext)]
+    assert len(matches) == 1
+    return matches[0]
+
+
+def test_repo_context_narrowed_to_agents_authority(repo):
+    # Spec v0.1 §12.A: AGENTS.md stays always-on authority; README is retrieval
+    # material and the asset inventory is a startup ritual, not a coding need.
+    rc = _coding_repo_context(bundle(repo))
+    assert tuple(rc.filenames) == ("AGENTS.md",)
+    assert rc.expose_inventory_tool is False
+    # repo FileSystem/Shell remain present beside it.
+    caps = bundle(repo).capabilities
+
+    def _is_shell(c):
+        return isinstance(c, Shell) or getattr(c, "wrapped", None).__class__ is Shell
+
+    assert sum(_is_shell(c) for c in caps) == 2  # workspace + repo Shell
+    assert any(getattr(c, "wrapped", None).__class__.__name__ == "FileSystem"
+               for c in caps)
+
+
+def test_always_on_discipline_without_skill_load(repo):
+    # Spec v0.1 §12.B/§12.C: the mandatory discipline lives in the always-on
+    # plugin instructions; deferred skill discovery is never required for it.
+    b = bundle(repo)
+    lowered = str(b.toolsets[0]._instructions).lower()
+    for clause in (
+        "already supplied by repocontext",
+        "do not create, read or maintain a plan",
+        "do not inventory agent capabilities",
+        "planning only for genuinely multi-step work",
+        "no more than two files",
+        "as soon as you have enough evidence",
+        "on-demand resources, not startup steps",
+        "never push",
+        "do not read credentials",
+        "bare allowed command names",
+        "changed, tested, committed and activation",
+        "local commits allowed: false",
+    ):
+        assert clause in lowered, clause
+    assert "load the coding skill" not in lowered
+    assert b.skill_dirs  # optional deeper skill material stays available
+
+
 def test_cli_flags_and_commit_guidance(repo):
     b = bundle(repo, allow_codex=True, allow_pi=True, allow_local_commit=True)
     assert {"codex", "pi"} <= set(b.capabilities[0].allowed_commands)
@@ -147,18 +194,31 @@ def test_installed_profile_and_other_profiles(tmp_path, monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-only")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "1")
     monkeypatch.setenv("YDC_API_KEY", "test-only")
+    # Host ceilings ON so the effective policy discriminates the profile's
+    # own requests (Spec v0.1 §12.D): ToolSearch/ConversationSearch denied,
+    # context controls kept.
     settings = AgentSettings(model="test", workspace_root=tmp_path / "workspace",
-                             runtime_state_root=tmp_path / "state")
+                             runtime_state_root=tmp_path / "state",
+                             enable_tool_search=True, enable_conversation_search=True,
+                             enable_context_controls=True)
     agent, snap = build_profile_agent(settings, profile="coding", config_root=ROOT)
     assert snap.plugins[0].id == "coding"
     assert snap.generalist["enable_shell"] is False
+    assert snap.generalist["enable_tool_search"] is False
+    assert snap.generalist["enable_conversation_search"] is False
+    assert snap.generalist["enable_context_controls"] is True
     # Full core combination actually collects schemas and completes, offline.
+    seen_tools: set[str] = set()
+
     async def scripted(messages, info):
+        seen_tools.update(t.name for t in info.function_tools)
         assert "repo_run_command" in {t.name for t in info.function_tools}
         return ModelResponse(parts=[TextPart("done")])
     with agent.override(model=FunctionModel(scripted)):
         assert asyncio.run(agent.run("check", deps=CoreDeps(
             workspace_root=settings.workspace_root, run_id="coding-composition"))).output == "done"
+    # No inventory startup ritual on the composed coding surface (§12.A).
+    assert "inventory_agent_context" not in seen_tools
     for name in ("quant-decision", "general-knowledge-worker"):
         other = resolve_profile(name, settings, config_root=ROOT)
         assert "coding" not in {ref.id for ref in other.plugins}

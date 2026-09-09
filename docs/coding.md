@@ -37,10 +37,32 @@ checks on Harness 0.29.0/PydanticAI 2.40.0. ON exposes one `run_code` and leaves
 Shell directly available. OFF is the production default until a real coding
 trajectory demonstrates a benefit; compatibility alone is not admission evidence.
 
-The profile requests tool search, conversation search and context controls;
-these remain subject to the existing host ceiling (`ZUAEF_ENABLE_TOOL_SEARCH`,
-`ZUAEF_ENABLE_CONVERSATION_SEARCH`, `ZUAEF_ENABLE_CONTEXT_CONTROLS`). Skills must
-be enabled to load coding guidance. RepoContext comes from the plugin.
+The profile requests only context controls; ToolSearch and ConversationSearch
+are denied at the profile level (still subject to the existing host ceiling,
+`ZUAEF_ENABLE_CONTEXT_CONTROLS` etc.). The single-purpose profile has no
+reproduced coding failure that needs either search surface, and the 2026-09-09
+execution-discipline evidence (run `aea67372`: an 18-request limit_reached
+small-demo run dominated by inventory/planning/exploration) removed them.
+RepoContext comes from the plugin.
+
+## Execution discipline (2026-09-09, Spec v0.1)
+
+Coding behavior is **always-on plugin instruction**, not a deferred skill load:
+
+- RepoContext autoloads `AGENTS.md` only (repository authority); README is
+  retrieval material for on-demand reading, and the `inventory_agent_context`
+  asset-inventory tool is disabled.
+- The core coding discipline (match effort to task size, no
+  planning/inventory startup on small tasks, edit as soon as evidence suffices,
+  narrowest verification immediately, Planning only for genuinely multi-step
+  work) never depends on `load_capability`. The `coding` skill remains
+  registered as optional deeper material (Spec packs, archive safety, Codex/Pi
+  verification protocol).
+- Acceptance observation for a small task: ~4-8 model requests / 6-14 tool
+  calls (acceptable <=12 with a real test failure); these are observational
+  metrics, not runtime gates. Baseline failure:
+  `aea67372b0eb4bd799c8b5fa4585572d` (18/18 requests, 31 tool calls, zero
+  implementation calls).
 
 **Intentional adjustment to the Spec's recommended shape:** generalist `shell`
 is false. The existing core Shell inherits the host environment without credential

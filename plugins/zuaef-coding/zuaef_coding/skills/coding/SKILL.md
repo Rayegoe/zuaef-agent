@@ -1,26 +1,34 @@
 ---
 name: coding
-description: Implement, inspect, test and extend the configured ZUAEF repository with native repo tools.
+description: Optional deeper coding material for the configured ZUAEF repository. Core coding discipline is always-on in the coding plugin; this skill only adds non-mandatory depth.
 ---
 
-Own the requested engineering outcome. Read repository AGENTS.md first, inspect
-existing work, and preserve unrelated edits. Choose the lowest extension layer
-that solves the task: Skill, Toolset, Plugin/Profile, then admitted Capability
-or Core changes. Use repo tools for source and workspace tools for attachments
-and artifacts. Locate and read the supplied Spec's authority before implementing.
+Core coding execution discipline is always-on in the coding plugin instructions.
+Loading this skill is optional and never required to behave as the coding
+profile; it only carries deeper, non-mandatory material.
+
+## Complex work: Spec packs and multi-step changes
+
+For an explicit Spec Pack, migration or cross-cutting change, locate and read
+the supplied Spec's authority before implementing, keep a short plan current,
+and execute one causal slice per verify cycle. Update task status only when
+state meaningfully changed — never merely because the planning tools exist.
+Once a responsible file or seam is found, stop broad exploration.
+
+## Archive extraction safety
 
 Inspect archives before extraction: keep destinations under workspace, reject
 absolute paths, `..` escapes and symlinks. Transport does not extract archives.
 
-Use native tools for normal coding. Codex/Pi are optional configured Shell helpers;
-verify their installation, inspect their diff and test their output yourself.
+## Optional CLI helpers (Codex / Pi)
+
+Codex/Pi are optional configured Shell helpers; verify their installation,
+inspect their diff and test their output yourself before relying on either.
 Never introduce a worker framework or new hash/manifest machinery without a
 concrete requirement. Respect the repository's existing manifest contract.
 
-Run targeted verification after meaningful changes, inspect the final diff and
-report remaining unknowns. Local commits require the configured permission and
-green relevant checks. Run the targeted pytest covering this change before any
-local commit. Push/publish/restart/destructive host operations require
-a separately approval-gated capability; stop if it is unavailable. Do not read
-secrets through Shell or bypass denied paths. Source changes do not activate
+## Verification, commits and activation
+
+Run the targeted pytest covering a change before any local commit, inspect the
+final diff, and report remaining unknowns. Source changes do not activate
 already imported Gateway code: report restart required after terminal delivery.

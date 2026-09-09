@@ -4,9 +4,11 @@ name = "coding"
 [generalist]
 web_search = false
 web_fetch = false
-tool_search = true
+# ToolSearch/ConversationSearch off: single-purpose profile, no coding failure
+# demonstrated a need (run aea67372 execution-discipline evidence, Spec v0.1 §7).
+tool_search = false
 memory = false
-conversation_search = true
+conversation_search = false
 context_controls = true
 subagents = false
 # Plugin supplies both Shell roots with credential filtering; core Shell has none.
