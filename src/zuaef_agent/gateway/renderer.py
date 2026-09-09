@@ -55,8 +55,8 @@ def render_run_natural_ack(*, profile: str | None, is_continuation: bool) -> str
     mechanical status card."""
     scope = f"（{profile}）" if profile else ""
     if is_continuation:
-        return f"收到，接着上一轮继续处理{scope}——结果出来直接回你。"
-    return f"收到，开始处理{scope}——结果出来直接回你。"
+        return f"收到，接着上一轮继续处理{scope}，结果出来直接回你。"
+    return f"收到，开始处理{scope}，结果出来直接回你。"
 
 
 def render_run_progress(
@@ -78,7 +78,7 @@ def render_run_progress(
         facts.append(f"已 {elapsed_seconds} 秒")
     if not facts:
         return "还在处理，结果出来直接回你。"
-    return "还在处理：" + "，".join(facts) + "——出结果直接回你。"
+    return "还在处理：" + "，".join(facts) + "，出结果直接回你。"
 
 
 def render_terminal(outcome: TerminalRun, *, reply_artifact: str | None = None) -> str:

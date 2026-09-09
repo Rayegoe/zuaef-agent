@@ -1200,9 +1200,9 @@ def test_ack_varies_with_continuation_state_and_hides_run_id(tmp_path: Path, mon
     surface = FakeSurface()
     service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="好"))
     service.handle(_envelope("第一问", n=1))
-    assert surface.texts[0][1] == "收到，开始处理（writing）——结果出来直接回你。"
+    assert surface.texts[0][1] == "收到，开始处理（writing），结果出来直接回你。"
     service.handle(_envelope("第二问", n=2))
-    assert surface.texts[2][1] == "收到，接着上一轮继续处理（writing）——结果出来直接回你。"
+    assert surface.texts[2][1] == "收到，接着上一轮继续处理（writing），结果出来直接回你。"
     assert all("Run" not in t and "run" not in t for _, t in surface.texts)
 
 
