@@ -141,6 +141,7 @@ class GatewayService:
         routing_policy: RoutingPolicy | None = None,
         run_ack: bool = True,
         run_progress_seconds: float = 25.0,
+        run_progress_seconds_2: float = 50.0,
     ):
         self.settings = settings
         self.store = store
@@ -153,12 +154,13 @@ class GatewayService:
         self.routing = routing_policy or RoutingPolicy()
         self.receipts = ReceiptStore(settings.state_root)
         # Natural chat bridging: one state-composed acknowledgment at
-        # acceptance, plus at most ONE mid-run progress line after
-        # ``run_progress_seconds`` composed from persisted StepPersistence
-        # facts. Bounded deterministic transport — no new execution model.
+        # acceptance, plus bounded mid-run checkpoint lines (defaults 25s
+        # and 50s) composed from persisted StepPersistence facts. Bounded
+        # deterministic transport — no new execution model.
         self.run_ack = run_ack
         self.run_progress_seconds = run_progress_seconds
-        self._progress_stops: dict[str, threading.Event] = {}
+        self.run_progress_seconds_2 = run_progress_seconds_2
+        self._progress_stops: dict[str, list[threading.Event]] = {}
         self._progress_lock = threading.Lock()
 
     # ── dispatch ────────────────────────────────────────────────────────────
@@ -783,40 +785,54 @@ class GatewayService:
     # ── progress bridging ───────────────────────────────────────────────────
 
     def _start_progress_watchdog(self, session: SessionBinding, run_id: str) -> None:
-        """One bounded thread per run: after ``run_progress_seconds`` of
-        silence, send a single progress line composed from persisted
-        StepPersistence facts. Cancelled on settle; never fires twice; never
-        touches the execution path."""
-        if self.run_progress_seconds is None or self.run_progress_seconds <= 0:
+        """Bounded threads per run: at each configured checkpoint delay
+        (defaults 25s and 50s) where the run is still unsettled, send at
+        most one progress line composed from persisted StepPersistence
+        facts. Cancelled on settle; each checkpoint fires at most once;
+        never touches the execution path."""
+        delays = [
+            delay
+            for delay in (self.run_progress_seconds, self.run_progress_seconds_2)
+            if delay and delay > 0
+        ]
+        if not delays:
             return
-        stop = threading.Event()
+        stops = [threading.Event() for _ in delays]
         with self._progress_lock:
-            self._progress_stops[run_id] = stop
+            self._progress_stops[run_id] = stops
 
-        def watchdog() -> None:
-            if stop.wait(max(0.0, self.run_progress_seconds)):
+        def watchdog(stop: threading.Event, delay: float) -> None:
+            if stop.wait(max(0.0, delay)):
                 return
             with self._progress_lock:
-                if self._progress_stops.get(run_id) is not stop:
+                if stop not in self._progress_stops.get(run_id, ()):
                     return  # already settled and cleaned up
-            text = render_run_progress(**self._progress_facts(run_id))
+            text = render_run_progress(
+                **self._progress_facts(run_id, elapsed_seconds=int(delay))
+            )
             try:
                 self._send_text(session, text)
             except Exception as exc:  # noqa: BLE001 — bridging is non-fatal
                 logger.warning("progress ping failed for run %s: %s", run_id, exc)
 
-        threading.Thread(target=watchdog, name=f"progress-{run_id[:8]}", daemon=True).start()
+        for stop, delay in zip(stops, delays):
+            threading.Thread(
+                target=watchdog,
+                args=(stop, delay),
+                name=f"progress-{run_id[:8]}",
+                daemon=True,
+            ).start()
 
     def _stop_progress_watchdog(self, run_id: str) -> None:
         with self._progress_lock:
-            stop = self._progress_stops.pop(run_id, None)
-        if stop is not None:
+            stops = self._progress_stops.pop(run_id, None)
+        for stop in stops or []:
             stop.set()
 
-    def _progress_facts(self, run_id: str) -> dict:
+    def _progress_facts(self, run_id: str, *, elapsed_seconds: int = 0) -> dict:
         """Read persisted operational facts for one run; anything unreadable
         stays out of the sentence (never invented)."""
-        facts: dict = {"elapsed_seconds": int(self.run_progress_seconds or 0)}
+        facts: dict = {"elapsed_seconds": elapsed_seconds}
         try:
             from ..web.projector import activity_view, build_timeline
             from ..web.readers import load_run_facts

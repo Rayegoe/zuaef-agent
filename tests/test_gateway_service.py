@@ -1191,8 +1191,8 @@ def test_inspect_renders_deterministic_post_mortem_without_model(tmp_path: Path,
 
 
 # ---------------------------------------------------------------------------
-# Natural chat bridging: state-composed ack + single mid-run progress line
-# (composed from persisted facts — never a mechanical status card)
+# Natural chat bridging: state-composed ack + bounded mid-run checkpoint
+# lines (composed from persisted facts — never a mechanical status card)
 # ---------------------------------------------------------------------------
 
 
@@ -1259,6 +1259,58 @@ def test_progress_ping_stays_silent_after_settle(tmp_path: Path, monkeypatch):
 
     import time as _t
     _t.sleep(0.3)  # the watchdog deadline passes AFTER the run settled
+    assert not [t for _, t in surface.texts if t.startswith("还在处理")]
+
+
+def test_progress_second_checkpoint_fires_while_run_in_flight(tmp_path: Path, monkeypatch):
+    import time as _t
+
+    def slow(messages, info):
+        _t.sleep(0.9)
+        return _final(outcome="完成")
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, slow)
+    service.run_progress_seconds = 0.05
+    service.run_progress_seconds_2 = 0.3
+
+    service.handle(_envelope("慢慢查", n=1))
+
+    progress = [t for _, t in surface.texts if t.startswith("还在处理")]
+    assert len(progress) == 2, surface.texts  # bounded: one ping per checkpoint
+    assert "出结果直接回你" in progress[1]
+    terminal = surface.texts[-1][1]
+    assert "完成" in terminal
+
+
+def test_progress_second_checkpoint_can_be_disabled(tmp_path: Path, monkeypatch):
+    import time as _t
+
+    def slow(messages, info):
+        _t.sleep(0.5)
+        return _final(outcome="done")
+
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, slow)
+    service.run_progress_seconds = 0.05
+    service.run_progress_seconds_2 = 0
+
+    service.handle(_envelope("hello", n=1))
+
+    progress = [t for _, t in surface.texts if t.startswith("还在处理")]
+    assert len(progress) == 1, surface.texts
+
+
+def test_progress_second_checkpoint_silent_after_settle(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    service = _service(tmp_path, monkeypatch, surface, lambda m, i: _final(outcome="done"))
+    service.run_progress_seconds = 0.05
+    service.run_progress_seconds_2 = 0.2
+
+    service.handle(_envelope("快问快答", n=1))
+
+    import time as _t
+    _t.sleep(0.6)  # both checkpoint deadlines pass AFTER the run settled
     assert not [t for _, t in surface.texts if t.startswith("还在处理")]
 
 

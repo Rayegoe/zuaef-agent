@@ -63,10 +63,11 @@ class GatewayConfig:
     profile_aliases: dict[str, str] = field(default_factory=dict)
     group_defaults: dict[str, str] = field(default_factory=dict)
     profile_access: dict[str, Any] = field(default_factory=dict)
-    # Natural chat bridging: acceptance ack + single mid-run progress line
-    # composed from persisted facts. 0 disables the progress ping.
+    # Natural chat bridging: acceptance ack + bounded mid-run checkpoint
+    # lines composed from persisted facts. 0 disables that checkpoint.
     run_ack: bool = True
     run_progress_seconds: int = 25
+    run_progress_seconds_2: int = 50
 
 
 def _env_int(name: str, default: int) -> int:
@@ -123,6 +124,7 @@ def load_gateway_config(args: Any) -> GatewayConfig:
         profile_access=parse_access_policy(os.getenv("ZUAEF_GATEWAY_PROFILE_ACCESS")),
         run_ack=_env_bool("ZUAEF_RUN_ACK", True),
         run_progress_seconds=_env_int("ZUAEF_RUN_PROGRESS_SECONDS", 25),
+        run_progress_seconds_2=_env_int("ZUAEF_RUN_PROGRESS_SECONDS_2", 50),
     )
 
 
@@ -250,6 +252,7 @@ def run_gateway(
         ),
         run_ack=config.run_ack,
         run_progress_seconds=float(config.run_progress_seconds),
+        run_progress_seconds_2=float(config.run_progress_seconds_2),
         routing_policy=_routing_policy(config),
     )
 

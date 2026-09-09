@@ -1798,13 +1798,13 @@
     },
     {
       "path": "src/zuaef_agent/gateway/runner.py",
-      "bytes": 11696,
-      "sha256": "3db3119befd4380c9265717d544a1b6beb8a196ddb4d25bcd5db2b519cdfc1f2"
+      "bytes": 11881,
+      "sha256": "b85640cb573a54d1eb01233521e83cefdaaa122ec28605a152450278ce193e2b"
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 43538,
-      "sha256": "c65e20cca25bb9ef81bc012500bb255d5f5fbc55dbffd435620a3cc9175cc0e9"
+      "bytes": 44085,
+      "sha256": "0dc914e6d2f840451c5722053a565a93ee932e129287d137219da6d6384a9983"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
@@ -2188,8 +2188,8 @@
     },
     {
       "path": "tests/test_gateway_service.py",
-      "bytes": 53849,
-      "sha256": "d2d23f431f2a915e1f6e3cd2977cfdd4274ba6e6dc222a53dc92be43c5e8825d"
+      "bytes": 55608,
+      "sha256": "2671184c1650a81dc7b1e36df2a578af874ef2bd65649a713fd025e4a3c08fd9"
     },
     {
       "path": "tests/test_gateway_service_routing.py",
