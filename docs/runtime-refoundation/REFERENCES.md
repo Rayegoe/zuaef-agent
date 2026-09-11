@@ -4,6 +4,8 @@ These are design anchors to re-check when implementation questions arise.
 
 ## ZUAEF
 
+- `docs/architecture/NORTH_STAR.md`
+- `docs/architecture/CONSOLIDATION_SPEC.md`
 - `AGENTS.md`
 - `Outcome-First PydanticAI Agent Engineering Guide v2.0.md`
 - `src/zuaef_agent/core.py`

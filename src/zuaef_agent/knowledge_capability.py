@@ -29,7 +29,14 @@ class Knowledge(AbstractCapability[CoreDeps]):
                 "evidence locator. When a document depends on factual "
                 "material, include the real source URLs inside the body (a "
                 "link section) so a reader can follow them. Use knowledge "
-                "ids such as concepts/agent-harness or sources/youtube-abc123."
+                "ids such as concepts/agent-harness or sources/youtube-abc123. "
+                "When the user explicitly asks only to record supplied text: "
+                "preserve the supplied content and attribution; do not "
+                "research, validate, enrich or reinterpret it unless asked; "
+                "do not place it under hypotheses/ merely because it contains "
+                "a causal claim; recording a statement does not promote it to "
+                "system fact; verification state should be expressed as "
+                "not_requested when verification was not requested."
             )
         )
 

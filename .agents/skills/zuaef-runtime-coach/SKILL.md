@@ -9,6 +9,10 @@ description: Optimize ZUAEF Agent runtime behavior by measuring real trajectorie
 
 Drive the repository toward the smallest reliable Agent loop.
 
+The broad architecture boundary is `docs/architecture/NORTH_STAR.md`. This skill owns the runtime
+subset of that North Star: model-boundary complexity, capability admission, trajectory minimality,
+and outcome-preserving runtime change.
+
 Do not equate:
 - fewer files with a better Agent;
 - more capabilities with a better Agent;
@@ -22,12 +26,18 @@ Do not equate:
 Before runtime architecture work read:
 
 ```text
+docs/architecture/NORTH_STAR.md
 docs/runtime-refoundation/SPEC.md
 docs/runtime-refoundation/BENCHMARKS.md
 docs/runtime-refoundation/CAPABILITY_ADMISSION.md
 docs/runtime-refoundation/DELETION.md
 docs/runtime-refoundation/TASKS.md
 ```
+
+If the work touches surfaces, deterministic operator control, command grammar, Gateway
+responsibilities, profile namespace, package ownership, or root-`tools/` domain ownership, also read
+`docs/architecture/CONSOLIDATION_SPEC.md` and follow its workstream order. Consolidation work is not
+a runtime experiment and must not become Runtime v2.
 
 ## Loop
 

@@ -3,13 +3,14 @@
 # 交易时段内从仓库根执行:  bash tools/quant_daily.sh
 # 流程: 校验活跃候选宇宙(非空) → 实时扫描(存业务页快照) → Agent 决策(产 Decision Brief)
 #       → 观察日志追加 → 渲染业务页 + 工程/审计页。
-# 候选池刷新是独立的盘后/手动动作 (uv run --group quant python tools/quant_build_candidates.py),
+# 候选池刷新是独立的盘后/手动动作 (.venv-quant/bin/python -m zuaef_quant.candidates_sidecar),
 # 本脚本不重建候选基本面数据。
 # 可选: 之后 git add docs/quant/ && git commit && git push 发布页面快照。
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export ZUAEF_QUANT_PYTHON="${ZUAEF_QUANT_PYTHON:-$PWD/.venv-quant/bin/python}"
 export ZUAEF_QUANT_REPO_ROOT="${ZUAEF_QUANT_REPO_ROOT:-$PWD}"
+export PYTHONPATH="$PWD/plugins/zuaef-quant${PYTHONPATH:+:$PYTHONPATH}"
 OBS_LOG="benchmarks/quant/gen1/OBSERVATION_LOG.md"
 ACTIVE_SYMBOLS="data/quant-cache/candidates/active_symbols.json"
 SCAN_TMP="$(mktemp /tmp/quant_scan_XXXXXX.json)"
@@ -18,7 +19,7 @@ echo "== [0/3] 活跃候选宇宙校验 (fail closed) =="
 if [ ! -s "$ACTIVE_SYMBOLS" ]; then
 	echo "FATAL: 活跃候选宇宙缺失/为空 ($ACTIVE_SYMBOLS)。" >&2
 	echo "       空宇宙不能当作合法 NO_TRADE 市场结论。先运行候选刷新:" >&2
-	echo "       uv run --group quant python tools/quant_build_candidates.py" >&2
+	echo "       .venv-quant/bin/python -m zuaef_quant.candidates_sidecar" >&2
 	exit 2
 fi
 python3 - "$ACTIVE_SYMBOLS" <<'PY'
@@ -26,12 +27,12 @@ import json, sys
 d = json.load(open(sys.argv[1]))
 symbols = d.get("symbols") or []
 if not symbols:
-    sys.exit("FATAL: active_symbols.json has no symbols — rerun tools/quant_build_candidates.py (fail closed)")
+    sys.exit("FATAL: active_symbols.json has no symbols — rerun python -m zuaef_quant.candidates_sidecar (fail closed)")
 print(f"active candidate universe: {len(symbols)} 只 (as_of {d.get('as_of','?')})")
 PY
 
 echo "== [1/3] 实时扫描 (活跃候选宇宙) =="
-uv run --group quant python tools/quant_live_scan.py >"$SCAN_TMP"
+"${ZUAEF_QUANT_PYTHON}" -m zuaef_quant.scan_sidecar >"$SCAN_TMP"
 mkdir -p workspace/artifacts/quant/business
 cp "$SCAN_TMP" workspace/artifacts/quant/business/last_scan.json
 python3 -c "import json;d=json.load(open('$SCAN_TMP'));print(f\"universe={d['universe_size']}({d['universe']}) 触发={len(d['triggers'])} scan={d['scan_ms']}ms 报价源={d['quote_source']}\")"
@@ -72,7 +73,7 @@ else:
         f.write(line + "\n")
     print("已追加:", line)
 PY
-python3 tools/quant_render_business_dashboard.py
+python3 -m zuaef_quant.dashboard.render
 python3 tools/quant_render_dashboard.py
 cp workspace/artifacts/quant/dashboard.html docs/quant/dashboard.html
 echo "完成 → docs/quant/business.html (业务页) + docs/quant/dashboard.html (工程/审计页)"

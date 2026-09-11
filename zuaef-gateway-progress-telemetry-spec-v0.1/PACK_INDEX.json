@@ -1,0 +1,38 @@
+{
+  "name": "zuaef-gateway-progress-telemetry-spec-v0.1",
+  "status": "implementation-ready",
+  "target_repo": "Rayegoe/zuaef-agent",
+  "scope": "generic Gateway progress telemetry",
+  "default_checkpoints_seconds": [
+    25,
+    50,
+    100,
+    175,
+    275,
+    400,
+    550,
+    725,
+    925,
+    1150
+  ],
+  "config_seeds": [
+    "ZUAEF_RUN_PROGRESS_SECONDS",
+    "ZUAEF_RUN_PROGRESS_SECONDS_2"
+  ],
+  "files": [
+    "00_SOURCE_OF_TRUTH.md",
+    "01_SCHEDULE_AND_NUMBERS.md",
+    "02_TRANSIENT_STATE_MACHINE.md",
+    "03_PROGRESS_FACTS_CONTRACT.md",
+    "04_LIVE_USAGE_CONTRACT.md",
+    "05_RENDERER_UX.md",
+    "06_CONFIG_AND_MIGRATION.md",
+    "07_CODE_PATCH_MAP.md",
+    "08_TEST_MATRIX.md",
+    "09_ACCEPTANCE.md",
+    "10_FAILURE_BEHAVIOR.md",
+    "11_IMPLEMENTATION_TASKS.md",
+    "12_MASTER_PROMPT.md",
+    "README.md"
+  ]
+}

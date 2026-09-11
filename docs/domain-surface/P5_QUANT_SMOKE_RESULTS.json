@@ -1,0 +1,252 @@
+{
+  "runner": "temporary P5 P3 smoke runner (.zuaef-state, not delivered)",
+  "tested_tree": "cf581e50b62e + local P0–P5 patches",
+  "model_env": "deepseek/deepseek-v4-flash-0731",
+  "surface": "GatewayService.handle (telegram capture adapter)",
+  "runs": [
+    {
+      "key": "canary2-positions",
+      "prompt": "我现在持有什么？",
+      "channel_id": "p5gw-canary2-positions",
+      "analysis_scope": "p5gw-canary2-positions",
+      "expected": [
+        "get_positions"
+      ],
+      "run_id": "276198a1612b4afa94bc2ef14ca0782c",
+      "gateway_error": null,
+      "wall_clock_s": 61.6,
+      "outbound": [
+        "收到，开始处理（quant-decision），结果出来直接回你。",
+        "当前没有持有任何股票——持仓列表为空，也没有退警中的待处理项。\n\n补充一点数据状态：这条持仓信息本身来自账户口径，今天（9月11日）的市场数据尚未到位，最新数据停在9月4日，最近一次扫描是9月3日。也就是说“当前无持仓”这一事实可信，但如果你的意思是“现在有没有可以买的机会”，那需要等今天的数据和扫描完成才能判断，现在不能下结论。"
+      ],
+      "last_outbound": "当前没有持有任何股票——持仓列表为空，也没有退警中的待处理项。\n\n补充一点数据状态：这条持仓信息本身来自账户口径，今天（9月11日）的市场数据尚未到位，最新数据停在9月4日，最近一次扫描是9月3日。也就是说“当前无持仓”这一事实可信，但如果你的意思是“现在有没有可以买的机会”，那需要等今天的数据和扫描完成才能判断，现在不能下结论。",
+      "tool_sequence": [
+        "search_tools",
+        "get_positions"
+      ],
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "expected_hit": true,
+      "model_requests": 3,
+      "usage": {
+        "input_tokens": 43136,
+        "cache_write_tokens": 0,
+        "cache_read_tokens": 0,
+        "output_tokens": 317,
+        "input_audio_tokens": 0,
+        "cache_audio_read_tokens": 0,
+        "output_audio_tokens": 0,
+        "details": {
+          "is_byok": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 132,
+          "image_tokens": 0
+        },
+        "cost": null,
+        "requests": 3,
+        "tool_calls": 2,
+        "largest_input_tokens": 15265
+      },
+      "execution_state": "completed",
+      "runtime_error": null
+    },
+    {
+      "key": "canary4-live-scan",
+      "prompt": "重新扫描一下今天。",
+      "channel_id": "p5gw-canary4-live-scan",
+      "analysis_scope": "p5gw-canary4-live-scan",
+      "expected": [
+        "run_live_scan"
+      ],
+      "run_id": "afa173f8d925422fa2d8af4db904ec99",
+      "gateway_error": null,
+      "wall_clock_s": 89.9,
+      "outbound": [
+        "收到，开始处理（quant-decision），结果出来直接回你。",
+        "刚才重新跑了今天的候选池扫描：50 只候选全部取到实时行情，量能语义校验通过，触发数为 0，本次扫描没有产生任何 READY/NEAR 标的。\n\n具体到个股，全部 50 只的回撤/量比都不满足当前策略的组合条件（5日回撤需达到 -5% 以上且 20日量比 ≥1.8），最接近的几只像中国海油（量比 2.25 但回撤仅 -2.3%）都是只满足单边条件。扫描快照时间 2026-09-11 22:35，行情截至当日 16:15 收盘，属于今日已完成的扫描。\n\n按系统口径，今天无触发即不产生任何交易动作；这属于正常的不交易结果，不是扫描异常。"
+      ],
+      "last_outbound": "刚才重新跑了今天的候选池扫描：50 只候选全部取到实时行情，量能语义校验通过，触发数为 0，本次扫描没有产生任何 READY/NEAR 标的。\n\n具体到个股，全部 50 只的回撤/量比都不满足当前策略的组合条件（5日回撤需达到 -5% 以上且 20日量比 ≥1.8），最接近的几只像中国海油（量比 2.25 但回撤仅 -2.3%）都是只满足单边条件。扫描快照时间 2026-09-11 22:35，行情截至当日 16:15 收盘，属于今日已完成的扫描。\n\n按系统口径，今天无触发即不产生任何交易动作；这属于正常的不交易结果，不是扫描异常。",
+      "tool_sequence": [
+        "search_tools",
+        "run_live_scan"
+      ],
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "expected_hit": true,
+      "model_requests": 3,
+      "usage": {
+        "input_tokens": 47528,
+        "cache_write_tokens": 0,
+        "cache_read_tokens": 4096,
+        "output_tokens": 844,
+        "input_audio_tokens": 0,
+        "cache_audio_read_tokens": 0,
+        "output_audio_tokens": 0,
+        "details": {
+          "is_byok": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 579,
+          "image_tokens": 0
+        },
+        "cost": null,
+        "requests": 3,
+        "tool_calls": 2,
+        "largest_input_tokens": 19390
+      },
+      "execution_state": "completed",
+      "runtime_error": null
+    },
+    {
+      "key": "canary7-market-wide",
+      "prompt": "分析今天A股为什么大跌。",
+      "channel_id": "p5gw-canary7-market-wide",
+      "analysis_scope": "p5gw-canary7-market-wide",
+      "expected": [
+        "get_market_context"
+      ],
+      "run_id": "7e3a9c09fb5840428b7917c4d2f99dc3",
+      "gateway_error": null,
+      "wall_clock_s": 256.9,
+      "outbound": [
+        "收到，开始处理（quant-decision），结果出来直接回你。",
+        "今天确实是普跌，不是某一两个板块的事：上证收于3888点、跌1.18%，深证跌1.08%，沪深300跌0.84%，科创50跌幅最大1.45%，创业板相对最稳只跌0.49%；广度上约4567家下跌、仅604家上涨，涨跌比0.13，两市成交约1.97万亿。这是典型的大面积risk-off。需要说明一点：今天板块层面的领跌/滞后数据是缺失的，所以\"A股内部哪些行业带头跌\"现在属于未知，我不会用个股或候选池去替它作答。\n\n外盘背景同样是向下的：亚洲指数今日普遍走弱，日经跌1.93%、韩国KOSPI跌1.76%、台湾加权跌1.61%、澳洲跌0.89%、港股相对温和跌0.60%；同时原油大跌（WTI约-2.77%、布伦特约-2.31%）。也就是说今天更像一次区域性的风险偏好收缩，不是A股独有的现象，中国市场的跌幅与亚洲同步走弱的方向一致。\n\n至于\"为什么\"，可观察到的线索是美方数据：东方财富晚间消息，美国9月一年期通胀预期初值升至4.6%，汽油涨价叠加贸易紧张压低美国消费者信心。串起来可以形成\"通胀预期回升→利率与风险偏好受压→全球risk-off传导到亚太\"的解释——但这属于我的推断，不是数据能证明的因果：消息标题只能证明这些报道存在，从美方通胀预期到A股下跌之间的传导路径是未知环节。要坐实归因，还需要板块数据和后续外盘的演变来确认。"
+      ],
+      "last_outbound": "今天确实是普跌，不是某一两个板块的事：上证收于3888点、跌1.18%，深证跌1.08%，沪深300跌0.84%，科创50跌幅最大1.45%，创业板相对最稳只跌0.49%；广度上约4567家下跌、仅604家上涨，涨跌比0.13，两市成交约1.97万亿。这是典型的大面积risk-off。需要说明一点：今天板块层面的领跌/滞后数据是缺失的，所以\"A股内部哪些行业带头跌\"现在属于未知，我不会用个股或候选池去替它作答。\n\n外盘背景同样是向下的：亚洲指数今日普遍走弱，日经跌1.93%、韩国KOSPI跌1.76%、台湾加权跌1.61%、澳洲跌0.89%、港股相对温和跌0.60%；同时原油大跌（WTI约-2.77%、布伦特约-2.31%）。也就是说今天更像一次区域性的风险偏好收缩，不是A股独有的现象，中国市场的跌幅与亚洲同步走弱的方向一致。\n\n至于\"为什么\"，可观察到的线索是美方数据：东方财富晚间消息，美国9月一年期通胀预期初值升至4.6%，汽油涨价叠加贸易紧张压低美国消费者信心。串起来可以形成\"通胀预期回升→利率与风险偏好受压→全球risk-off传导到亚太\"的解释——但这属于我的推断，不是数据能证明的因果：消息标题只能证明这些报道存在，从美方通胀预期到A股下跌之间的传导路径是未知环节。要坐实归因，还需要板块数据和后续外盘的演变来确认。",
+      "tool_sequence": [
+        "search_tools",
+        "get_market_context"
+      ],
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "expected_hit": true,
+      "model_requests": 3,
+      "usage": {
+        "input_tokens": 45053,
+        "cache_write_tokens": 0,
+        "cache_read_tokens": 27904,
+        "output_tokens": 2429,
+        "input_audio_tokens": 0,
+        "cache_audio_read_tokens": 0,
+        "output_audio_tokens": 0,
+        "details": {
+          "is_byok": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 2100,
+          "image_tokens": 0
+        },
+        "cost": null,
+        "requests": 3,
+        "tool_calls": 2,
+        "largest_input_tokens": 16952
+      },
+      "execution_state": "completed",
+      "runtime_error": null
+    },
+    {
+      "key": "canary5a-watchlist-add",
+      "prompt": "把600519加入观察。",
+      "channel_id": "p5gw-canary-watchlist",
+      "analysis_scope": "p5gw-canary-watchlist",
+      "expected": [
+        "manage_watchlist"
+      ],
+      "run_id": "c94b2a61b71348229da5f8c5be341b21",
+      "gateway_error": null,
+      "wall_clock_s": 28.0,
+      "outbound": [
+        "收到，开始处理（quant-decision），结果出来直接回你。",
+        "已经把600519加入本会话的自选清单，并完成历史数据预热——历史缓存有效，可用数据2111根（需要25根以上），数据到9月11日，足够支撑按需诊断。按自选口径看它就行：它不影响自动候选池、不产生READY/NEAR，也不会改变策略本身，只用于你想看它的时候做单只诊断。"
+      ],
+      "last_outbound": "已经把600519加入本会话的自选清单，并完成历史数据预热——历史缓存有效，可用数据2111根（需要25根以上），数据到9月11日，足够支撑按需诊断。按自选口径看它就行：它不影响自动候选池、不产生READY/NEAR，也不会改变策略本身，只用于你想看它的时候做单只诊断。",
+      "tool_sequence": [
+        "search_tools",
+        "manage_watchlist"
+      ],
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "expected_hit": true,
+      "model_requests": 3,
+      "usage": {
+        "input_tokens": 41252,
+        "cache_write_tokens": 0,
+        "cache_read_tokens": 14080,
+        "output_tokens": 637,
+        "input_audio_tokens": 0,
+        "cache_audio_read_tokens": 0,
+        "output_audio_tokens": 0,
+        "details": {
+          "is_byok": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 467,
+          "image_tokens": 0
+        },
+        "cost": null,
+        "requests": 3,
+        "tool_calls": 2,
+        "largest_input_tokens": 14292
+      },
+      "execution_state": "completed",
+      "runtime_error": null
+    },
+    {
+      "key": "canary5b-watchlist-remove",
+      "prompt": "把600519移出观察。",
+      "channel_id": "p5gw-canary-watchlist",
+      "analysis_scope": "p5gw-canary-watchlist",
+      "expected": [
+        "manage_watchlist"
+      ],
+      "run_id": "ae93b9baed024910a1918c65694c6951",
+      "gateway_error": null,
+      "wall_clock_s": 16.3,
+      "outbound": [
+        "收到，开始处理（quant-decision），结果出来直接回你。",
+        "已将600519（贵州茅台）移出观察清单，当前观察清单为空。这只是停止对该符号的关注跟踪，不影响任何交易状态——观察清单成员资格本就从不进入候选池，也不会产生 READY/NEAR；移除同样不改变其候选池资格。"
+      ],
+      "last_outbound": "已将600519（贵州茅台）移出观察清单，当前观察清单为空。这只是停止对该符号的关注跟踪，不影响任何交易状态——观察清单成员资格本就从不进入候选池，也不会产生 READY/NEAR；移除同样不改变其候选池资格。",
+      "tool_sequence": [
+        "search_tools",
+        "manage_watchlist"
+      ],
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "expected_hit": true,
+      "model_requests": 3,
+      "usage": {
+        "input_tokens": 41010,
+        "cache_write_tokens": 0,
+        "cache_read_tokens": 13824,
+        "output_tokens": 421,
+        "input_audio_tokens": 0,
+        "cache_audio_read_tokens": 0,
+        "output_audio_tokens": 0,
+        "details": {
+          "is_byok": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 264,
+          "image_tokens": 0
+        },
+        "cost": null,
+        "requests": 3,
+        "tool_calls": 2,
+        "largest_input_tokens": 14120
+      },
+      "execution_state": "completed",
+      "runtime_error": null
+    }
+  ],
+  "summary": {
+    "expected_hit": 5,
+    "generic_escapes": 0,
+    "legacy_broad_reads": 0,
+    "execution_failures": 0,
+    "total": 5
+  },
+  "watchlist_scope_after": {
+    "scope": "p5gw-canary-watchlist",
+    "symbols": [],
+    "updated_at": "2026-09-11T14:40:58.784315+00:00",
+    "updated_by_run": "ae93b9baed024910a1918c65694c6951",
+    "note": "user attention facts; analysis-only, never READY/NEAR"
+  }
+}

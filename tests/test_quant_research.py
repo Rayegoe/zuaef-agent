@@ -16,10 +16,9 @@ from types import SimpleNamespace
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
 sys.path.insert(0, str(Path(__file__).parents[1] / "plugins" / "zuaef-quant"))
 
-import quant_market_intel as intel
+from zuaef_quant import market_intel as intel
 from zuaef_quant import research as research_store
 
 
@@ -165,7 +164,7 @@ class TestMarketIntelAdapter:
         assert "error" in out and "feed down" in out["error"]
 
     def test_main_rejects_bad_symbol(self, capsys):
-        sys.argv = ["quant_market_intel.py", "--symbol", "ABC"]
+        sys.argv = ["zuaef_quant.market_intel", "--symbol", "ABC"]
         assert intel.main() == 2
         assert "6-digit" in capsys.readouterr().out
 
@@ -234,16 +233,16 @@ class TestResearchTools:
 
         captured: dict = {}
 
-        def fake_run(script, args, quant_python, timeout):
-            captured["script"], captured["args"] = script, args
+        def fake_run(module, args, quant_python, timeout):
+            captured["module"], captured["args"] = module, args
             return json.dumps({"symbol": "600550", "count": 0, "items": []})
 
-        monkeypatch.setattr(toolset_module, "_run", fake_run)
+        monkeypatch.setattr(toolset_module, "_run_module", fake_run)
         toolset = _toolset(tmp_path)
         out = json.loads(toolset.tools["get_market_intelligence"].function("600550", 5))
         assert out["count"] == 0
-        script, args = captured["script"], captured["args"]
-        assert script.name == "quant_market_intel.py"
+        module, args = captured["module"], captured["args"]
+        assert module == "zuaef_quant.market_intel"
         assert args[args.index("--symbol") + 1] == "600550"
         assert args[args.index("--limit") + 1] == "5"
 
@@ -251,7 +250,7 @@ class TestResearchTools:
         import zuaef_quant.toolset as toolset_module
 
         monkeypatch.setattr(
-            toolset_module, "_run",
+            toolset_module, "_run_module",
             lambda *a: (_ for _ in ()).throw(RuntimeError("side env exploded")),
         )
         toolset = _toolset(tmp_path)
@@ -261,7 +260,7 @@ class TestResearchTools:
 
 class TestPluginSkillDelivery:
     def test_bundle_ships_quant_research_skill_dir(self, tmp_path, monkeypatch):
-        from zuaef_quant.plugin import create_plugin, SKILLS_DIR
+        from zuaef_quant.plugin import SKILLS_DIR, create_plugin
 
         monkeypatch.setenv("ZUAEF_QUANT_PYTHON", sys.executable)
         bundle = create_plugin(

@@ -26,6 +26,7 @@ from uuid import uuid4
 
 from ..composition import CompositionError
 from ..config import AgentSettings
+from ..fast_actions import try_fast_action
 from ..models import PauseReceipt, RunReceipt
 from ..profiles import list_profiles
 from ..receipt_store import ReceiptStore
@@ -212,6 +213,18 @@ class GatewayService:
             return
         if session.paused_run_id:
             self._send_text(session, WAITING_FOR_APPROVAL)
+            return
+        # Deterministic fast path: mechanically extractable actions run
+        # directly without run-id allocation, acknowledgment/progress state or
+        # a model call.  False positives are more expensive than false
+        # negatives here, so recognition is deliberately strict.
+        fast_result = try_fast_action(
+            text=envelope.text,
+            workspace_root=self.settings.workspace_root,
+            now=datetime.now(UTC),
+        )
+        if fast_result.handled:
+            self._send_text(session, fast_result.reply or "已记录。")
             return
         self._start_run(envelope, session)
 

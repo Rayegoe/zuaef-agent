@@ -11,9 +11,9 @@ User-level units for the Orange Pi 5 Pro node. Source of truth for the runtime;
 | `zuaef-console.service` | simple | Agent Console — `.venv/bin/zuaef-agent web` on 127.0.0.1:8765 |
 | `zuaef-gateway.service` | simple | Telegram gateway — `gateway start --surface telegram --profile quant-decision` |
 | `zuaef-feishu-gateway.service` | simple | Feishu gateway (Feishu Surface v0.1) — `gateway start --surface feishu`, credentials via `feishu.env` |
-| `zuaef-quant-dashboard.service` | simple | Quant Workbench — `.venv/bin/python tools/quant_serve.py` on 127.0.0.1:8787 |
+| `zuaef-quant-dashboard.service` | simple | Quant Workbench — `.venv/bin/zuaef-quant dashboard serve` on 127.0.0.1:8787 |
 | `zuaef-quant-monitor.service` + `.timer` | simple + timer | M1 live monitor, sessions Mon–Fri 09:30 / 13:00, `--exit-on-close` |
-| `zuaef-quant-bridge.service` + `.timer` | oneshot + timer | event bridge every 45 s |
+| `zuaef-quant-bridge.service` + `.timer` | oneshot + timer | event bridge every 45 s via `.venv/bin/zuaef-quant bridge once` |
 
 Paths use `%h/zuaef-agent` (repo expected at `$HOME/zuaef-agent`). The installer
 rewrites `%h/zuaef-agent` to the real repo path when it lives elsewhere.

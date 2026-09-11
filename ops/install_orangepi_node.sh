@@ -305,8 +305,8 @@ fi
 # ───────────────────────────── 12. smoke / summary ───────────────────────────
 if [[ "$SMOKE" -eq 1 ]]; then
   say "12/12" "smoke: monitor once + bridge --dry-run"
-  ( cd "$REPO_ROOT" && .venv/bin/python tools/quant_trading_monitor.py once || true )
-  ( cd "$REPO_ROOT" && .venv/bin/python tools/quant_telegram_bridge.py --dry-run || true )
+  ( cd "$REPO_ROOT" && .venv/bin/zuaef-quant monitor once || true )
+  ( cd "$REPO_ROOT" && .venv/bin/zuaef-quant bridge once --dry-run || true )
 fi
 
 say "done" "Orange Pi Production Node v1 bootstrap complete"
@@ -339,7 +339,7 @@ Verify from a workstation:
 Notes
   - Do NOT schedule quant_daily.sh anymore: M1 monitor + bridge is the single
     decision path (otherwise two competing decision paths).
-  - Keep 8765/8787 loopback; quant_serve.py POSTs are loopback-enforced.
+  - Keep 8765/8787 loopback; dashboard serve POSTs are loopback-enforced.
   - ops/systemd supervisor-sync units are x86-host artifacts (hardcoded codex
     x64 path) — not part of this package.
 EOF

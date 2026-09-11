@@ -39,6 +39,41 @@ _NON_OBSERVATION_STATUSES = {
 _FULL_HORIZON_FIELD = "d8"
 
 
+def forward_evidence_counts(forward: dict[str, Any] | None) -> dict[str, Any]:
+    """Single deterministic projection of ``trading/forward.json`` counts.
+
+    Two settled views exist and must not be conflated:
+
+    - ``settled_all_kinds`` is the dashboard's formal-forward count (every
+      observation that has a full d8 window, including SKIP records);
+    - ``settled_executed`` is the strategy-maturity accounting fact (only
+      EXECUTED observations with a full d8 window).
+
+    They share one parse of the canonical observation list so a caller cannot
+    invent a different row traversal. Missing/unreadable forward state stays
+    absent (count 0, all settled counts 0), never fabricated.
+    """
+    data = forward if isinstance(forward, dict) else {}
+    observations = data.get("observations") or []
+    executed = [o for o in observations if o.get("kind") == "EXECUTED"]
+    skipped = [o for o in observations if o.get("kind") == "SKIP"]
+    return {
+        "present": bool(forward),
+        "count": len(observations),
+        "executed": len(executed),
+        "skipped": len(skipped),
+        "settled_all_kinds": sum(
+            1 for o in observations if o.get(_FULL_HORIZON_FIELD) is not None
+        ),
+        "settled_executed": sum(
+            1 for o in executed if o.get(_FULL_HORIZON_FIELD) is not None
+        ),
+        "accumulating_executed": sum(
+            1 for o in executed if o.get(_FULL_HORIZON_FIELD) is None
+        ),
+    }
+
+
 def _obs_day(value: Any) -> str | None:
     day = str(value) if value else None
     return day or None
@@ -59,9 +94,8 @@ def compute_validation_accounting(
     open_pos = positions.get("open") or []
     closed_pos = positions.get("closed") or []
     all_positions = [*open_pos, *closed_pos]
-    observations = forward.get("observations") or []
-    executed = [o for o in observations if o.get("kind") == "EXECUTED"]
-    skipped = [o for o in observations if o.get("kind") == "SKIP"]
+    observations = (forward or {}).get("observations") or []
+    forward_counts = forward_evidence_counts(forward)
 
     entry_dates = [
         str(p.get("entry_date"))
@@ -116,8 +150,6 @@ def compute_validation_accounting(
             }
         )
 
-    settled_full = [o for o in executed if o.get(_FULL_HORIZON_FIELD) is not None]
-    accumulating = [o for o in executed if o.get(_FULL_HORIZON_FIELD) is None]
     # Live-verification refinement (2026-09-08: production answered
     # trading_days=2 and the reader could not tell the measurement window is
     # narrower than the validation period): disclose when the soak record
@@ -151,11 +183,11 @@ def compute_validation_accounting(
             "(measured operating days, not an exchange calendar)"
         ),
         "operating_days_record_since": soak_record_since,
-        "observations": len(observations),
-        "observations_executed": len(executed),
-        "observations_skipped": len(skipped),
-        "observations_settled_full_horizon": len(settled_full),
-        "observations_accumulating": len(accumulating),
+        "observations": forward_counts["count"],
+        "observations_executed": forward_counts["executed"],
+        "observations_skipped": forward_counts["skipped"],
+        "observations_settled_full_horizon": forward_counts["settled_executed"],
+        "observations_accumulating": forward_counts["accumulating_executed"],
         "paper_entries": sum(1 for p in all_positions if p.get("venue") == "paper"),
         "real_entries": sum(1 for p in all_positions if p.get("venue") == "real"),
         "completed_exits": len(closed_pos),

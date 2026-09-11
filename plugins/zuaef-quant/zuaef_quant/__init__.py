@@ -2,7 +2,7 @@
 
 This package must stay importable in the quant side environment, which has
 no pydantic_ai: submodules like ``freshness`` and ``watchlist`` are
-stdlib-only host logic shared with ``tools/quant_trading_monitor.py``.
+stdlib-only host logic shared by the operator CLI and sidecars.
 The plugin capability (``zuaef_quant.plugin``) depends on pydantic_ai and
 is therefore imported lazily — never at package import time.
 """

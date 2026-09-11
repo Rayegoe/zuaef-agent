@@ -16,5 +16,5 @@ Type=oneshot
 WorkingDirectory=%h/zuaef-agent
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1
-ExecStart=%h/zuaef-agent/.venv/bin/python %h/zuaef-agent/tools/quant_telegram_bridge.py
+ExecStart=%h/zuaef-agent/.venv/bin/zuaef-quant bridge once
 TimeoutStartSec=900

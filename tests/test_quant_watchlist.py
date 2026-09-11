@@ -24,13 +24,12 @@ pytest.importorskip("pandas")
 pytest.importorskip("zuaef_quant")
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
+sys.path.insert(0, str(Path(__file__).parents[1] / "plugins" / "zuaef-quant"))
 
-import quant_trading_monitor as mon  # noqa: E402
-from zuaef_quant import watchlist as wl  # noqa: E402
-from zuaef_quant.toolset import make_toolset  # noqa: E402
+import zuaef_quant.monitor as mon
 
 # shared monitor fixtures/constants (fixture data plane, no network)
-from test_quant_trading_monitor import (  # noqa: E402
+from test_quant_trading_monitor import (
     HIST,
     NOW,
     QUOTES,
@@ -40,6 +39,8 @@ from test_quant_trading_monitor import (  # noqa: E402
     make_hist,
     make_quote,
 )
+from zuaef_quant import watchlist as wl
+from zuaef_quant.toolset import make_toolset
 
 
 @pytest.fixture()
@@ -131,8 +132,8 @@ class TestSymbolContextEvidence:
         return code, captured["data"]
 
     def test_price_limit_is_host_arithmetic_not_llm_guess(self, tmp_path, monkeypatch):
-        code, data = self._ctx(tmp_path, monkeypatch)
-        assert code == 0
+        _code, data = self._ctx(tmp_path, monkeypatch)
+        assert _code == 0
         rules = data["market_rules"]
         # 002654 = SZ main board: 10%; limit_up = round(4.93 * 1.10, 2) = 5.42
         assert rules["board"] == "MAIN_BOARD"
@@ -147,19 +148,19 @@ class TestSymbolContextEvidence:
         ("830001", 0.30, "BJ"), ("600001", 0.10, "MAIN_BOARD"),
     ])
     def test_board_prefix_rules(self, tmp_path, monkeypatch, symbol, pct, board):
-        code, data = self._ctx(tmp_path, monkeypatch, symbol=symbol, prev_close=10.0, price=11.0)
+        _code, data = self._ctx(tmp_path, monkeypatch, symbol=symbol, prev_close=10.0, price=11.0)
         rules = data["market_rules"]
         assert rules["board"] == board and rules["price_limit_pct"] == pct
         assert rules["limit_up_price"] == round(10.0 * (1 + pct), 2)
 
     def test_history_sufficiency_is_a_host_count(self, tmp_path, monkeypatch):
-        code, data = self._ctx(tmp_path, monkeypatch)
+        _code, data = self._ctx(tmp_path, monkeypatch)
         assert data["history"]["bars_available"] == 30
         assert data["history"]["required_bars"] == 25
         assert data["history"]["sufficient"] is True
 
     def test_short_history_marks_distance_unavailable_not_estimated(self, tmp_path, monkeypatch):
-        code, data = self._ctx(tmp_path, monkeypatch)
+        _code, data = self._ctx(tmp_path, monkeypatch)
         assert data["history"]["sufficient"] is True  # fixture is sufficient here
         # the strategy block separately states availability; a short-history
         # variant is covered by the insufficient-history reason path
@@ -191,7 +192,7 @@ def test_side_env_can_import_host_modules_without_pydantic_ai():
         # the plugin itself stays lazily reachable in the MAIN environment
         print("side-env-ok")
     """)
-    proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
+    proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, check=False)
     assert proc.returncode == 0, proc.stderr
     assert "side-env-ok" in proc.stdout
 
@@ -353,7 +354,7 @@ class TestWatchlistTools:
             return json.dumps({"prewarm": {"600460": {
                 "status": "hydrated", "bars_available": 60, "sufficient": True}}})
 
-        monkeypatch.setattr(toolset_module, "_run", fake_run)
+        monkeypatch.setattr(toolset_module, "_run_module", fake_run)
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
         data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"]))
@@ -369,7 +370,7 @@ class TestWatchlistTools:
         def failing_run(*_a):
             raise RuntimeError("upstream down")
 
-        monkeypatch.setattr(toolset_module, "_run", failing_run)
+        monkeypatch.setattr(toolset_module, "_run_module", failing_run)
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
         data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"]))
@@ -390,7 +391,7 @@ class TestWatchlistTools:
             calls.append(a)
             return json.dumps({"prewarm": {}})
 
-        monkeypatch.setattr(toolset_module, "_run", fake_run)
+        monkeypatch.setattr(toolset_module, "_run_module", fake_run)
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
         toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"])
@@ -410,7 +411,7 @@ class TestWatchlistTools:
             calls.append(args)
             return json.dumps({"symbol": "600460", "universe": {}})
 
-        monkeypatch.setattr(toolset_module, "_run", fake_run)
+        monkeypatch.setattr(toolset_module, "_run_module", fake_run)
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
         json.loads(toolset.tools["get_symbol_context"].function(ctx, "600460"))
@@ -427,15 +428,17 @@ def test_monitor_parser_accepts_the_tool_argv(tmp_path: Path):
     """End-to-end argv contract: the exact arguments the toolset builds are
     accepted by the REAL monitor argparse (run 5936e0ed passed tool facts
     but died at the parser because --state-dir trailed the subcommand)."""
+    import os
     import subprocess
 
     repo = Path(__file__).parents[1]
+    env = {**os.environ, "PYTHONPATH": str(repo / "plugins" / "zuaef-quant") + os.pathsep + os.environ.get("PYTHONPATH", "")}
     argv = [
-        sys.executable, str(repo / "tools" / "quant_trading_monitor.py"),
+        sys.executable, "-m", "zuaef_quant.monitor",
         "--state-dir", str(tmp_path / "trading"),
         "symbol-context", "--symbol", "ABC",  # invalid code: stops pre-network
     ]
-    proc = subprocess.run(argv, capture_output=True, text=True, cwd=repo)
+    proc = subprocess.run(argv, capture_output=True, text=True, cwd=repo, env=env, check=False)
     assert proc.returncode == 2, proc.stderr[-400:]
     assert "6 digits" in proc.stdout
 
@@ -447,8 +450,8 @@ def test_monitor_parser_accepts_the_tool_argv(tmp_path: Path):
 
 def test_bridge_threads_analysis_scope_binding(tmp_path: Path, monkeypatch):
     from pydantic_ai import models
-    from pydantic_ai.models.function import FunctionModel
     from pydantic_ai.messages import ModelResponse, TextPart
+    from pydantic_ai.models.function import FunctionModel
 
     from zuaef_agent import core as core_module
     from zuaef_agent.config import AgentSettings

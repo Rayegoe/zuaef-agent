@@ -5,7 +5,7 @@
 `docs/quant/README.md` §5–§6。
 
 **2026-09-02 checkpoint — P5 Observation UX: PASS。** 新增有界观察工具化(一键 daily runner
-`tools/quant_daily.sh` + loopback 实时看板 `tools/quant_serve.py` + 看板每 60s 轮询确定性
+`zuaef-quant` operator CLI + loopback 实时看板 `zuaef_quant.dashboard.serve` + 看板每 60s 轮询确定性
 scan), 属 P5 观察模式的工具化, 不是 P6。明确不做 watcher/systemd timer —— 无"手动运行已烦到
 影响使用"的真实失败。**实时观察 ≠ 实时烧模型**: 看板只拉确定性 scan, LLM 仅在手动运行
 `quant_daily.sh` 时启动。当前活跃宇宙 = 用户自选 4 只 (601233/002460/002415/000009;

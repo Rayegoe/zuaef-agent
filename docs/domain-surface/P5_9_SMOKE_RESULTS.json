@@ -1,0 +1,150 @@
+{
+  "surface": "zuaef-agent run --profile quant-decision (real model, real plugins, isolated /tmp workspace)",
+  "tested_tree": "main@cf581e5 + P0-P5.9 patches",
+  "recorded_at_utc": "2026-09-11T16:36:09.685278Z",
+  "runs": [
+    {
+      "key": "canary6_symbol",
+      "run_id": "44d63c6104ef459081b5edf9bbf66522",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "execution_state": "completed",
+      "requests": 2,
+      "tool_calls": 1,
+      "wall_seconds": 104.7,
+      "tool_sequence": [
+        "get_symbol_context"
+      ],
+      "error": null
+    },
+    {
+      "key": "canary7_market_wide",
+      "run_id": "d9f0d9f6680b41b4b8e9f87e19c43f43",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_calls": 2,
+      "wall_seconds": 120.8,
+      "tool_sequence": [
+        "search_tools",
+        "get_market_context"
+      ],
+      "error": null
+    },
+    {
+      "key": "canary8_compositional",
+      "run_id": "d20cc7e29f054faf895677d5c537e921",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_calls": 3,
+      "wall_seconds": 172.2,
+      "tool_sequence": [
+        "search_tools",
+        "get_market_context",
+        "get_positions"
+      ],
+      "error": null
+    },
+    {
+      "key": "market_intelligence",
+      "run_id": "45a9fcfab625455190d02daff8af7cdf",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_calls": 3,
+      "wall_seconds": 34.9,
+      "tool_sequence": [
+        "search_tools",
+        "search_knowledge",
+        "get_market_intelligence"
+      ],
+      "error": null
+    },
+    {
+      "key": "evaluate_strategy",
+      "run_id": "a63c75cb8d864760b2746fc595190669",
+      "model": "deepseek/deepseek-v4-flash-0731",
+      "execution_state": "completed",
+      "requests": 2,
+      "tool_calls": 1,
+      "wall_seconds": 61.9,
+      "tool_sequence": [
+        "evaluate_strategy"
+      ],
+      "error": null,
+      "evaluator": {
+        "window": {
+          "name": "research",
+          "start": "2018-01-01",
+          "end": "2022-12-31"
+        },
+        "universe": "csi500_subset",
+        "universe_size": 37,
+        "intents_total": 54,
+        "independent_replay": {
+          "total_return_pct": 1.7661,
+          "annualized_return_pct": 0.2031,
+          "max_drawdown_pct": -2.1415,
+          "trade_count": 24,
+          "total_cost": 443.05,
+          "cost_drag_pct_of_initial": 0.4431
+        },
+        "vector_stage": {
+          "total_return_pct": 1.6017,
+          "annualized_return_pct": 0.1843,
+          "max_drawdown_pct": -2.8569,
+          "trade_count": 24,
+          "total_cost": 449.44,
+          "cost_drag_pct_of_initial": 0.4494
+        },
+        "consistency": {
+          "annualized_return_diff_pp": 0.0188,
+          "tolerance_pp": 3.0,
+          "within_tolerance": true
+        },
+        "blocked_trades": {
+          "insufficient_budget": 3,
+          "no_position": 3
+        }
+      },
+      "artifact_paths": [
+        "artifacts/quant/children/child_p59_probe-20260911T163219Z/blocked_trades.csv",
+        "artifacts/quant/children/child_p59_probe-20260911T163219Z/equity_replay.csv",
+        "artifacts/quant/children/child_p59_probe-20260911T163219Z/equity_vector.csv",
+        "artifacts/quant/children/child_p59_probe-20260911T163219Z/evidence.json",
+        "artifacts/quant/children/child_p59_probe-20260911T163219Z/intents.csv",
+        "artifacts/quant/children/child_p59_probe-20260911T163219Z/result.md",
+        "artifacts/quant/children/child_p59_probe-20260911T163219Z/strategy.toml",
+        "artifacts/quant/children/child_p59_probe-20260911T163219Z/trades.csv"
+      ]
+    }
+  ],
+  "operator_regression": {
+    "status_json": "exit 0 (real state)",
+    "scan_legacy_watchlist_json": "exit 0, 15 symbols, 15 quotes, volume semantics STALE (fail-closed)",
+    "dashboard_render": "exit 0, 114.9 KB single-file HTML",
+    "dashboard_serve": {
+      "GET /business": 200,
+      "GET /engineering": 200,
+      "GET /api/attention": 200,
+      "GET /api/quant/now": 200
+    },
+    "monitor_once_isolated": {
+      "exit": 0,
+      "status": "MARKET_CLOSED",
+      "events": [],
+      "symbols": 0
+    },
+    "bridge_once_dry_run": {
+      "exit": 0,
+      "output": "Bridge tick completed"
+    }
+  },
+  "root_independence": {
+    "probe": "/tmp/p59-rootless (package + benchmarks/quant/gen1/quant.toml + empty workspace; no tools/)",
+    "market_intel_help": "OK",
+    "candidates_sidecar_help": "OK",
+    "eval_sidecar_help": "OK",
+    "dashboard_render": "OK (75.0 KB degraded-state HTML, honest MISSING data quality)"
+  }
+}

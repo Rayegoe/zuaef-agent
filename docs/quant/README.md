@@ -2,7 +2,56 @@
 
 **Spec:** `ZUAEF-ASHARE-001` v2.0-final(2026-09-03, 基线 main; 见 zuaef-quant-final-spec-v2.0-optimized/) · v1.0-final 为历史
 **状态:** ENGINEERING FREEZE(P5.5 观察模式,2026-09-02 起生效)
+**2026-09-11 增补 · P5 Operator Surface:**
+入口层次(生产权威只在 plugin/CLI):
+
+```text
+Use the Agent       Telegram / Feishu / Gateway → quant-decision semantic surface
+Operate Quant       zuaef-quant ...              → deterministic operator CLI
+Develop / Validate  tools/quant_* audit & benchmark utilities
+```
+
+日常 Quant 运维统一走 deterministic、零模型请求的 `zuaef-quant` CLI,不再需要手记
+production implementation 路径与 Python 环境:
+
+```text
+zuaef-quant status
+zuaef-quant scan
+zuaef-quant watchlist list|add|remove --scope <existing-scope>
+zuaef-quant monitor once|status
+zuaef-quant dashboard render|serve
+zuaef-quant bridge once
+```
+
+`scan` 直接执行 `zuaef_quant.scan_sidecar`,与 Agent 的 `run_live_scan()` 共用同一 scan authority;
+`watchlist` 直接调用唯一 `zuaef_quant.watchlist.update_symbols_in` 写路径;`monitor`、
+`dashboard render/serve`、`bridge once` 复用现有 production entry。默认输出面向 operator,
+`--json` 给 automation。Developer/audit 脚本(PIT、anti-leakage、proof、reconcile 等)仍留在
+`tools/` / `benchmarks/`,不进入 operator CLI。
+
 **当前阶段判断:** 工程链路已足够完整;最大的未知数已从"软件能不能工作"变成"它在真实市场里有没有用"。下一张 task 由真实市场派发,不由排期派发。
+
+**2026-09-11 增补 · Task Boundary & Evidence Scope Repair v0.1:**
+真实事故闭环:Case A(coding profile 下问 `分析a股大跌原因` 触发 18 次模型请求 / 28 次工具调用并
+`limit_reached`)与 Case B(用户提供完整文本 + `————记录下来` 却进入研究/假设写入)。修复不是一个
+"更聪明的 Agent",而是四条系统不变量:① **Fast Action Gate** — `records this text` 这类高置信度、
+可从当前消息机械提取的动作在 run_id 分配/进度 watchdog/模型调用前由
+`src/zuaef_agent/fast_actions.py` 直写 `KnowledgeStore`,保留用户原文并把验证状态标为
+`not_requested`;歧义引用("把刚才那个记下来")与复合任务("记录下来并分析")严格 fall through。
+② **Coding Scope Guard** — coding profile always-on 指令明确:业务/市场问题不是仓库调查,非
+coding 请求必须零工具调用并简短告知 profile mismatch,不自动跨 profile 路由。③ **Market-Wide
+Evidence** — 新工具 `get_market_context`(bounded、read-only、`defer_loading`,side env
+`zuaef_quant.market_context`)返回指数/涨跌家数/成交额/行业涨跌/亚洲外盘/原油/美债/美元与
+有限条市场新闻;任何缺失保持 `null/missing`,**不得用 candidate pool / watchlist / positions
+代替全市场证据**。④ **Claim Scope Invariant** — 现有 quant tools 返回 `evidence_scope`
+(`CANDIDATE_POOL` / `TRADING_ACCOUNT` / `SINGLE_SYMBOL` / `SINGLE_SYMBOL_NEWS` /
+`A_SHARE_MARKET_WIDE`);`get_trading_context` 用 `scope_map` 区分 READY/NEAR(候选池)与
+positions/EXIT(账户)。claim scope 不得大于 supporting evidence;prediction alignment 不是
+causal validation;previous assistant prose 不是 evidence。市场原因回答按 OBSERVED /
+INTERPRETATION / UNKNOWN 分层,默认不追加无关持仓 EXIT_ALERT。单测见
+`tests/test_fast_actions.py`、`tests/test_quant_market_context.py`、`tests/test_quant_plugin.py`、
+`tests/test_gateway_service.py`、`tests/test_coding_profile.py`;真实模型 canary 与部署状态见
+实施报告。请求预算策略不变:禁止用提高 `request_limit` 解决错误 trajectory。
 
 **2026-09-07 增补 · 自主研究服务 v0.2(Harness-Native,600550 事故闭环):**
 真实事故(2026-09-07,run 8ddd2417,Feishu "为 600550 做个全面分析和趋势预测"):quote 有、
@@ -13,7 +62,7 @@
 `ModelRetry/ToolRetryError/ToolFailedError` 时按 `on_tool_execute_error` 同款语义结算效果
 (failed + 事件流),异常继续抛给模型——run 恢复后保持 completed,回归测试
 `tests/test_execute_run_seam.py::test_model_retry_tool_call_settles_and_run_completes`。
-② **业务闭环**:`tools/quant_core.py::ensure_history`(read_cache→validate→fetch_history→
+② **业务闭环**:`zuaef_quant.quant_core.ensure_history`(read_cache→validate→fetch_history→
 结构化证据,per-symbol bounded lock,7 天陈旧阈值 + 当日已取回不重复刷)接入
 `symbol-context`(cache miss 自动补历史,水合失败不抹 quote)与新增 monitor 子命令
 `prewarm-history`(watchlist 新增即 best-effort 预热,失败不影响加清单)。
@@ -47,30 +96,30 @@ Gateway、核心不动;实验记录 `docs/runtime-refoundation/experiments/D1-te
 
 **2026-09-02 增补 · 业务看板与候选发现(Quant Business Dashboard + Candidate Discovery v1.0):**
 新增业务决策页 `docs/quant/business.html`(默认页)与确定性候选发现管线
-`tools/quant_build_candidates.py`,把产品重心从"软件进度证明"转向"市场/策略证据"。工程/审计页保留为
+`zuaef_quant.candidates_sidecar`,把产品重心从"软件进度证明"转向"市场/策略证据"。工程/审计页保留为
 `docs/quant/dashboard.html`(经 `/engineering` 访问)。三个宇宙分离:`legacy_watchlist`(用户自选/持仓名单,
 只诊断不自动晋级; 2026-09-02 起含截图追加的 11 只自选股, 名单由用户提名扩充)/ `candidate_pool`(CSI300∪CSI500 筛出的 20–50 只证据排名)/ `action_candidates`
 (活跃策略在候选池上的确定性触发,0–10 只)。**候选排名不是买入建议;盈利能力仍未证明**;实时动作依旧
 必须来自既有确定性触发证据。详见 §5.7 与 `benchmarks/quant/gen1/candidates_policy.toml`。
 
 **2026-09-04 增补 · M1 交易时段循环 + P0.5 双引擎对账 + Final Spec v2.0:**
-① `tools/quant_trading_monitor.py`(M1 Live Trading Loop v0.1):交易时段内连续盯盘循环(30–60s),
+① `zuaef_quant.monitor`(M1 Live Trading Loop v0.1):交易时段内连续盯盘循环(30–60s),
 机会状态机 WATCH→NEAR→READY→INVALIDATED,`EXECUTED` 仅由用户 `ack-buy` 置位;持仓为一等公民
 (仅 ack-buy 创建/ack-sell 关闭,按冻结 S3 退出规则监控);forward 观察(D+1/3/5/8、MFE/MAE)只从缓存
 日线对真实记录累积,绝不 mock/回填。状态落 `workspace/artifacts/quant/trading/`。**Agent 不轮询**:
 循环全确定性,实质状态变化进告警流后由 Agent 事后解读(详见 spec 02)。
-② `tools/quant_p05_reconcile.py`(P0.5):同一冻结策略+同一冻结 intents 双引擎逐笔对账——Qlib 研究面
+② `tools/quant_p05_reconcile.py`(P0.5 developer/audit):同一冻结策略+同一冻结 intents 双引擎逐笔对账——Qlib 研究面
 (qfq, market_truth OFF)vs 独立 A 股重放(raw, market_truth ON),差异必归因(A 市场规则差/B 不支持对等/
 C Qlib 局限/D-E bug/F 无法解释),**任何 UNEXPLAINED 残留 = P0.5 失败**。验证通过后无需每日跑。
 ③ 权威 spec 升级为 `zuaef-quant-final-spec-v2.0-optimized/`(EXECUTABLE);`zuaef-quant-final-spec-v2.0-clean/`
 为可读精校版;产品北星=`select → monitor → decide → manage → observe → learn`。
-另:评估/审计工具(quant_core/live_scan/anti_leakage/pit_audit/eval_qlib/validate_semantics)随冻结期
+另:评估/审计工具(`zuaef_quant.quant_core` / `zuaef_quant.scan_sidecar` / `zuaef_quant.eval_sidecar`，以及 `quant_anti_leakage_check` / `quant_pit_audit` / `quant_validate_semantics` 等 developer tools)随冻结期
 修订同步更新;business/dashboard 快照刷新。日常操作索引见 `workspace/knowledge/concepts/quant-live-ops.md`。
 
 **2026-09-05 增补 · Trading Workbench 运维手册 + 多机同步（v3.1 基线）:**
 
-组件链：`quant_trading_monitor`（45s 确定性循环，canonical truth 写入带 `.ledger.lock` 串行化）→
-`trading/alerts.jsonl` durable 事件流 → `quant_telegram_bridge`（oneshot+systemd timer，byte 游标 +
+组件链：`zuaef_quant.monitor`（45s 确定性循环，canonical truth 写入带 `.ledger.lock` 串行化）→
+`trading/alerts.jsonl` durable 事件流 → `zuaef_quant.bridge`（oneshot+systemd timer，byte 游标 +
 独立 delivered_ids，E1/E2 Agent 解释、E3/E4/E5 确定性文案、SYSTEM_RECOVERED 确定性证据、T10 日报）→
 zuaef-telegram（文本/文档投递）→ Supervisor。Dashboard/`/api/quant/now` 与
 `get_trading_context`（含 host 派生 freshness 5 态）同源只读。完整契约与教训见
@@ -97,7 +146,7 @@ repo 内——git 同步即文档同步；opi5 上如有常驻服务，同步后
 
 **2026-09-04 增补 · Trading Workbench v0.1 Phase 2(主动实时助理 + 工件投递,T1–T12):**
 从 Pull(用户主动问)升级为 Push(Runtime 主动报),架构不变:Runtime 发现事实 → Agent 解释事实 →
-Telegram 送给人。新增 host 侧 oneshot Event Bridge `tools/quant_telegram_bridge.py`(systemd timer
+Telegram 送给人。新增 host 侧 oneshot Event Bridge `zuaef_quant.bridge`(systemd timer
 每 45s 一次,读 `trading/alerts.jsonl`,字节游标 + 独立 delivered_ids,源文件 truncate/rotate 安全)。
 分发契约:E1 NEW_READY / E2 POSITION_EXIT_ALERT → 每事件一次 `quant-decision` Agent run
 (interpretation-only:prompt 硬约束 + receipt tool_effect_facts 守卫,bridge 是唯一投递权威);
@@ -117,7 +166,7 @@ Telegram 失败 → 游标不推进,逐行 checkpoint-after-delivery 原地重�
 **2026-09-04 增补 · Trading Workbench v0.1 Phase 1(Dashboard 层,T1–T6):**
 `docs/quant/business.html` 升级为 Human-Agent Trading Workbench 第一阶段。① **truth 收敛**:
 `record_trade_outcome`(zuaef-quant toolset)停止写 `workspace/quant/outcomes.jsonl`,改走 canonical
-`quant_trading_monitor.py ack-buy/ack-sell`(LOCAL fact write,无 approval——记录人的既成事实,不下单);
+`zuaef_quant.monitor ack-buy/ack-sell`(LOCAL fact write,无 approval——记录人的既成事实,不下单);
 ack 增加 `--venue`(paper/real,落 position 与 alert)/`--note`;sell 仅全仓平仓(shares 不等于持仓即拒),
 且 venue 必须与持仓一致;新增 `skip` 子命令(HUMAN_SKIP alert + SKIP forward 观察,走既有 settle,
 机会状态机不动)。② **NOW 层**:页面顶部唯一当前事实卡,由 `now_snapshot()`(renderer 内单实现,serve
@@ -192,19 +241,19 @@ Live Decision Product    FIRST PROOF PASS(交互式;watcher 有意未建)
 - 宇宙:当前 CSI500 成分排序 stride 采样 **37 只**(12 只因 2018-06-30 前无足够回溯被排除,逐只记录)。PIT 局限(今日成员回看历史)显式记录于所有 Strategy Result。
 - 冻结基准配置 `benchmarks/quant/gen1/{quant.toml,strategy.toml}`:research 2018–2022(Agent 可见)/ promotion 2023–2024(host-only)/ holdout 2025+(隐藏,从未触碰)。
 - **真实失败②:pyqlib 0.9.7 无 cp313 wheel**(Cython 包)。 qlib 是研究内核、永不进 Agent 运行时 → 建 gitignored 的 **Python 3.12 侧环境 `.venv-quant`**(akshare+pyqlib 共存)。
-- wheel 不带 `scripts/dump_bin.py` → 从**已审计上游 commit** vendor 到 `tools/quant/upstream/`(MIT,来源注明),调用其公开的 `DumpDataAll(...).dump()`。
+- wheel 不带 `scripts/dump_bin.py` → 从**已审计上游 commit** vendor 到 `plugins/zuaef-quant/zuaef_quant/dump_bin.py`(MIT,来源注明),由 `zuaef_quant.eval_sidecar` 调用其公开的 `DumpDataAll(...).dump()`。
 - 基线 `volume_pullback_reversal`(5 日回撤 ≤ −6% + 20 日量比 ≥ 1.8 + 收盘强度 ≥ 0;出场:持有天数/MA5/止损/止盈):**24 笔 / 5 年 / 年化 +0.20% / 最大回撤 −2.1% / 成本拖累 0.44%** —— 真实的、不 attractive 的基线。
 
 ### P2 — 独立重放 + A股执行真相 ✅
 
-- `tools/quant_core.py` 事件循环引擎:**只消费冻结 intents + raw 可执行价格 + 冻结规则**,永不读 Qlib NAV。规则生效日期化(T+1、板块涨跌停(创业板 2020-08-24 起 20%)、涨停买/跌停卖 block、停牌递延、整手、佣金+最低佣金、印花税有效日期(2023-08-28 下调)、滑点)。
+- `zuaef_quant.quant_core` 事件循环引擎:**只消费冻结 intents + raw 可执行价格 + 冻结规则**,永不读 Qlib NAV。规则生效日期化(T+1、板块涨跌停(创业板 2020-08-24 起 20%)、涨停买/跌停卖 block、停牌递延、整手、佣金+最低佣金、印花税有效日期(2023-08-28 下调)、滑点)。
 - **14 个防伪 alpha 测试**(T+1、涨跌停、停牌、整手、成本、board 差异、market_truth 开关、无未来函数)。**测试抓出一个真 bug:intent 在决策日当天成交**——修复为"次日开盘成交"。
 - 双引擎一致性:年化差 **0.02pp**(容忍 3pp)。vector 阶段(qfq 面板、关市场真相)vs 独立重放(raw 价格、开市场真相)消费**同一份冻结 intents**。
 
 ### P3 — QuantDecision 接入 ZUAEF ✅
 
-- `plugins/zuaef-quant`(workspace 成员,`zuaef.plugins` 入口点 `quant`):轻量 `Capability(id="quant-decision")` + 领域指令(证据层级/真相来源/报告语义/操作守则)+ 六个确定性工具,**Core 零业务改动**。重活在侧环境 subprocess 执行,插件包自身不背 akshare/qlib。
-- 工具(6 个):`evaluate_strategy`(纯数值参数、白名单校验、返回有界证据)/ `get_live_signals`(确定性扫描,LLM 永不扫全市场)/ `record_decision_brief`(六种 action 枚举,实测 signal→brief 延迟)/ `record_trade_outcome`(canonical ack,仅记录人类已成交事实、不下单;venue=paper/real;Phase 1 仅全仓平仓)/ `get_trading_context`(只读 canonical trading 上下文,不重算市况、不重推触发)/ `render_quant_business_artifact`(确定性渲染业务 HTML 到 `artifacts/quant/delivery/`)。
+- `plugins/zuaef-quant`(workspace 成员,`zuaef.plugins` 入口点 `quant`):轻量 `Capability(id="quant-decision")` + 领域指令(证据层级/真相来源/报告语义/操作守则)+ 确定性工具,**Core 零业务改动**。重活在侧环境 subprocess 执行,插件包自身不背 akshare/qlib。
+- 工具:`evaluate_strategy`(纯数值参数、白名单校验、返回有界证据)/ `get_live_signals`(确定性扫描,LLM 永不扫全市场)/ `get_market_context`(bounded market-wide 证据,`defer_loading`,替代候选池外推全市场)/ `record_decision_brief`(六种 action 枚举,实测 signal→brief 延迟)/ `record_trade_outcome`(canonical ack,仅记录人类已成交事实、不下单;venue=paper/real;Phase 1 仅全仓平仓)/ `get_trading_context`(只读 canonical trading 上下文,不重算市况、不重推触发)/ `render_quant_business_artifact`(确定性渲染业务 HTML 到 `artifacts/quant/delivery/`)。
 - **真实失败③:首个版本让模型提交整段 TOML 字符串,弱模型不会调** → 改为普通数值参数(默认值即基线),一次工具调用即可完成 mutation。
 - Profile `profiles/quant-decision.toml`(`allow_capabilities = true`);22 个插件契约测试(白名单越界、canonical ack 路由与宿主拒绝原样透传、get_trading_context 只读投影、渲染落点等)。
 
@@ -262,10 +311,10 @@ QuantDecision Capability               ← 10 条稳定领域指令 + 1 个 Quan
       └── record_trade_outcome(纯本地)─┘
                 │
                 ▼
-      tools/quant_core.py(确定性机制:缓存/规则/重放/指标)
-      tools/quant_eval_qlib.py(Qlib 面板表达式 → 冻结 intents → 双引擎 → artifacts)
-      tools/quant_live_scan.py(子集批量报价 → 确定性触发)
-      tools/quant_p0_data_proof.py / quant_fetch_universe.py(数据证明/宇宙准备)
+      zuaef_quant.quant_core(确定性机制:缓存/规则/重放/指标)
+      zuaef_quant.eval_sidecar(Qlib 面板表达式 → 冻结 intents → 双引擎 → artifacts)
+      zuaef_quant.scan_sidecar(子集批量报价 → 确定性触发)
+      tools/quant_p0_data_proof.py / tools/quant_fetch_universe.py(developer 数据证明/宇宙准备)
                 │
                 ▼
 数据面:akshare 1.18.94
@@ -301,8 +350,8 @@ validate spec(白名单数值字段;任意 Python 永不越过边界)
 | `benchmarks/quant/gen1/candidates_policy.toml` | 候选发现 v1 政策(权重/阈值, 阈值在政策不在代码) |
 | `workspace/artifacts/quant/business/candidate_snapshot.json` | 候选池审计工件(评分/理由/红旗/来源/coverage) |
 | `data/quant-cache/candidates/active_symbols.json` | 候选池 → live scan 的确定性 handoff(gitignored) |
-| `tools/quant_build_candidates.py` | 确定性候选发现(CSI300∪CSI500 → 评分 → 行业封顶) |
-| `tools/quant_render_business_dashboard.py` | 业务页渲染器(纯 stdlib) |
+| `zuaef_quant.candidates_sidecar` | 生产候选发现(CSI300∪CSI500 → 评分 → 行业封顶) |
+| `zuaef_quant.dashboard.render` | 业务页渲染器(纯 stdlib,operator app) |
 | `workspace/artifacts/quant/business/last_scan.json` | 最近一次活跃宇宙扫描快照(quant_daily.sh 落盘) |
 | `benchmarks/quant/gen1/STATUS.md` | 四行证明状态 + 冻结决策 + 已知局限 |
 | `benchmarks/quant/gen1/OBSERVATION_LOG.md` | 观察模式每日一行日志 |
@@ -311,7 +360,7 @@ validate spec(白名单数值字段;任意 Python 永不越过边界)
 | `workspace/artifacts/quant/briefs/` | Decision Brief JSON(含实测延迟) |
 | `data/quant-cache/` | 行情缓存+sidecar、qlib bin 库(gitignored,可随时重建) |
 | `.venv-quant/` | Python 3.12 侧环境(akshare+pyqlib;gitignored) |
-| `tools/quant/upstream/dump_bin.py` | vendored qlib 上游脚本(已审计 commit,MIT) |
+| `plugins/zuaef-quant/zuaef_quant/dump_bin.py` | vendored qlib 上游脚本(已审计 commit,MIT,production evaluator owner) |
 | `tests/test_quant_replay.py` | 14 个防伪 alpha 测试 |
 | `tests/test_quant_plugin.py` | 16 个插件契约测试 |
 
@@ -387,7 +436,7 @@ ZUAEF_QUANT_REPO_ROOT=$PWD \
 只想快速看盘而不起 Agent(不产生 brief,不消耗模型):
 
 ```bash
-uv run --group quant python tools/quant_live_scan.py
+.venv/bin/zuaef-quant scan
 ```
 
 ### 5.3 每日一行观察日志(唯一记录动作)
@@ -456,7 +505,7 @@ candidate_pool            workspace/artifacts/quant/business/candidate_snapshot.
   CSI300∪CSI500 筛选       盘后/手动刷新, 目标 20–50 只, 证据排名(价值/质量/可交易/时序)
   + 评分 + 行业封顶             ↓ 确定性 handoff
 active_candidates         data/quant-cache/candidates/active_symbols.json
-  活跃策略触发的输入        quant_live_scan.py 默认宇宙 → 0–10 触发 → Agent
+  活跃策略触发的输入        zuaef_quant.scan_sidecar 默认宇宙 → 0–10 触发 → Agent
 ```
 
 关键规则:
@@ -472,17 +521,17 @@ active_candidates         data/quant-cache/candidates/active_symbols.json
 
 ```bash
 # 盘后/手动:候选池刷新(确定性, 无 LLM; 首次约 5-8 分钟, 之后吃缓存)
-uv run --group quant python tools/quant_build_candidates.py
+.venv-quant/bin/python -m zuaef_quant.candidates_sidecar
 
 # 本地看板(默认业务页; 工程页在 /engineering)
-python3 tools/quant_serve.py
+.venv/bin/zuaef-quant dashboard serve
 #   http://127.0.0.1:8787/              → 业务决策页 docs/quant/business.html
 #   http://127.0.0.1:8787/engineering   → 工程/审计页 docs/quant/dashboard.html
 #   /api/scan      → 活跃候选宇宙实时扫描
 #   /api/watchlist → legacy watchlist 显式扫描
 
 # 只重渲页面(不起服务)
-python3 tools/quant_render_business_dashboard.py
+.venv/bin/zuaef-quant dashboard render
 ```
 
 数据面(全部已在本部署网络实测可用,无 EastMoney 依赖):成分 CSIndex(CSI300/CSI500,单指数失败回退
@@ -532,25 +581,25 @@ uv run --group quant python tools/quant_p0_data_proof.py
 uv run --group quant python tools/quant_fetch_universe.py
 
 # 基线评估(命令行直接跑,不经 Agent)
-.venv-quant/bin/python tools/quant_eval_qlib.py \
+.venv-quant/bin/python -m zuaef_quant.eval_sidecar \
   --config benchmarks/quant/gen1/quant.toml \
   --strategy benchmarks/quant/gen1/strategy.toml \
   --out workspace/artifacts/quant/gen1 --window research
 
 # 实时扫描(无 LLM; 默认宇宙 = 候选池 handoff → 37 只子集回退 → 否则响亮失败)
-uv run --group quant python tools/quant_live_scan.py
+.venv/bin/zuaef-quant scan
 
 # 显式 watchlist 扫描(只扫 legacy 名单)
-uv run --group quant python tools/quant_live_scan.py --universe-file benchmarks/quant/gen1/legacy_watchlist.toml
+.venv/bin/zuaef-quant scan --universe-file benchmarks/quant/gen1/legacy_watchlist.toml
 
 # 候选池刷新(盘后/手动, 无 LLM)
-uv run --group quant python tools/quant_build_candidates.py
+.venv-quant/bin/python -m zuaef_quant.candidates_sidecar
 
 # 业务页渲染(纯 stdlib)
-python3 tools/quant_render_business_dashboard.py
+.venv/bin/zuaef-quant dashboard render
 
 # 本地看板服务(loopback; / 业务页, /engineering 工程页)
-python3 tools/quant_serve.py
+.venv/bin/zuaef-quant dashboard serve
 
 # 日常决策(经 Agent,见 §5.2; 一键版 bash tools/quant_daily.sh)
 

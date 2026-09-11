@@ -15,8 +15,7 @@ from types import SimpleNamespace
 
 import pandas as pd
 import pytest
-
-from tools import quant_core
+from zuaef_quant import quant_core
 
 
 def _raw_history(n_bars: int, last_date: str = "2026-02-20") -> pd.DataFrame:

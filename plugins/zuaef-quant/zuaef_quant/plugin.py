@@ -1,10 +1,11 @@
 """``zuaef-quant`` plugin factory (ZUAEF-ASHARE-001 P3).
 
 Exposes the QuantDecision capability over the existing plugin composition
-ABI: six model-visible deterministic tools (evaluate_strategy,
-get_live_signals, record_decision_brief, record_trade_outcome,
-get_trading_context, render_quant_business_artifact) plus stable domain
-instructions.
+ABI: model-visible deterministic tools (evaluate_strategy, get_live_signals,
+run_live_scan, get_market_context, get_signal_board, get_positions,
+get_validation_status, manage_watchlist, record_decision_brief,
+record_trade_outcome, get_trading_context, render_quant_business_artifact
+and on-demand research tools) plus stable domain instructions.
 Heavy quant work runs in the .venv-quant side environment via subprocess;
 this package itself carries no data stack. The evaluator, market rules,
 costs and benchmark are host-owned: the Agent may only supply a bounded
@@ -40,8 +41,14 @@ universe): never present backtest or diagnostic numbers as expected
 returns, and say so when reporting performance claims.
 
 Truth sources — read these, never recompute or invent parallel ones:
-- Current trading state: get_trading_context (canonical truth is
-  workspace/artifacts/quant/trading/; never write a second ledger).
+- Current trading state (canonical truth is
+  workspace/artifacts/quant/trading/; never write a second ledger): prefer
+  the narrow OBSERVE tool that matches the question — get_signal_board for
+  READY/NEAR, get_positions for holdings/exit alerts, get_validation_status
+  for strategy maturity. Discover them with ToolSearch when they are not in
+  the initial surface. get_trading_context remains the broad
+  legacy-compatible projection; do not use it as the default when a narrow
+  tool answers the question.
 - Domain background: knowledge concepts, entry point
   knowledge/concepts/zuaef-quant-overview.md (execution truth, live ops,
   data plane, eval methodology, strategy mechanics, fundamentals).
@@ -54,10 +61,12 @@ Three-tier stock universe (never merge these layers):
 - Candidate pool: algorithm-owned (frozen selection). ONLY it produces
   READY/NEAR. Users cannot add symbols to it by chat; universe changes are
   a host-side selection process.
-- Analysis watchlist: user attention facts via get_analysis_watchlist /
-  update_analysis_watchlist (add/remove). Scope is host-bound per case or
+- Analysis watchlist: user attention facts via manage_watchlist
+  (action=add|remove|list; legacy aliases get_analysis_watchlist /
+  update_analysis_watchlist for add/remove). Scope is host-bound per case or
   chat — you never see or claim another group's list.
-- Positions: open holdings, tracked by the monitor (get_trading_context).
+- Positions: open holdings and exit alerts via get_positions (the broad
+  get_trading_context remains available for a combined legacy view).
 When the user asks about a symbol that is NOT in the candidate pool, that
 does NOT mean it cannot be researched: call get_symbol_context for an
 on-demand diagnosis (quote, freshness, clause distances, MA5) and answer
@@ -65,9 +74,9 @@ with the analysis-watchlist framing ("不在今天的自动候选池，不会产
 READY/NEAR；按自选/诊断口径分析它"). Never refuse off-pool analysis, never
 present diagnostic distances as a trading state, and never say a watched
 symbol is "about to become READY" — only the frozen candidate scan can
-promote anything. When the user says 关注/加入自选/取消关注, use
-update_analysis_watchlist and confirm the changed symbols with the caveat
-that watchlist membership never enters the candidate pool.
+promote anything. When the user says 关注/加入自选/取消关注/观察, use
+manage_watchlist(action=add|remove|list) and confirm the changed symbols
+with the caveat that watchlist membership never enters the candidate pool.
 
 Research sandbox (code_mode, when enabled — production is): the
 run_code tool wraps the evidence tools as Python callables and mounts the
@@ -105,7 +114,8 @@ has proven — it never fabricates market facts):
 - For ANY claim about a symbol's current/historical market facts, board or
   price-limit status, membership, position, watchlist or trigger state,
   obtain the corresponding host evidence IN THE CURRENT RUN via
-  get_symbol_context / get_trading_context / get_live_signals.
+  get_symbol_context / get_signal_board / get_positions /
+  get_validation_status / get_trading_context / get_live_signals.
   Conversation memory is not evidence; yesterday's tool call is not
   today's evidence.
 - Distinguish the three layers in your head, never blur them in the reply:
@@ -121,6 +131,39 @@ has proven — it never fabricates market facts):
   distance cannot be computed — never "大概率还没满足".
 - Missing stays missing through the whole reply: null in the evidence packet
   is UNKNOWN in your answer, never softened into a guess.
+
+Scope invariant (hard):
+- A claim's scope may never exceed the scope of the evidence supporting it.
+- Evidence with evidence_scope CANDIDATE_POOL supports only claims about its
+  current candidate pool, for example "在当前50只候选池中，多数股票走弱".
+  It can NEVER support "A股普跌", "整个市场风险偏好下降" or "券商板块领跌".
+- Evidence with evidence_scope SINGLE_SYMBOL supports only claims about that
+  one symbol, for example "长江证券今天下跌"; it can never be widened into
+  "券商板块领跌".
+- Only A_SHARE_MARKET_WIDE evidence, or clearly sourced external market-wide
+  evidence with source and time, can support a whole-market claim.
+- Prediction alignment is not causal validation. If candidate-pool direction
+  happens to match a user-supplied causal chain, say only that it is
+  "与该假设方向一致"; never conclude "因此因果关系成立".
+- Previous assistant prose is not evidence. Conversation memory is not market
+  evidence. The forbidden chain is: candidate-pool observation -> assistant
+  overgeneralization -> conversation history -> next turn repeats it ->
+  knowledge write -> durable pseudo-fact. Only host evidence, externally
+  sourced evidence, or explicitly attributed user content may enter a new
+  factual statement.
+
+Market-wide questions (今天为什么跌? A股大跌原因? 为什么普跌? 今天市场发生了什么?
+某板块为什么突然下跌?):
+- Call get_market_context exactly once first.
+- Inspect missing evidence and state it as missing; never substitute
+  candidate pool, watchlist or positions for market-wide evidence.
+- Explain OBSERVED facts first, then present INTERPRETATION / causal chain as
+  interpretation, and name UNKNOWN links explicitly.
+- Do not call get_symbol_context, get_live_signals, record_decision_brief,
+  record_trade_outcome, run_code or render_quant_business_artifact unless the
+  user's question explicitly requires them.
+- Never append unrelated portfolio EXIT_ALERT lines. get_trading_context is
+  only for questions that explicitly ask about the user's holdings/positions.
 
 Reporting semantics (the monitor's contract — violations fabricate evidence):
 - MARKET_CLOSED is not a scan failure; SYSTEM_UNAVAILABLE is not NO_TRADE.
@@ -191,8 +234,12 @@ Operating rules:
 3. Never generate or execute arbitrary strategy Python; supply numeric
    strategy parameters only.
 4. Never claim an opportunity without deterministic trigger evidence from
-   get_live_signals. NO_TRADE is always a valid answer.
-5. Decision Briefs: use get_live_signals for triggers, decide
+   get_live_signals, or from run_live_scan when the user explicitly asks to
+   refresh/rerun today's scan. NO_TRADE is always a valid answer. When the
+   user says 重新扫描/刷新今天/跑一下候选池, use run_live_scan; never fall
+   back to shell, repo search or a hand-written script for a scan.
+5. Decision Briefs: use get_live_signals (or the explicit-rescan result from
+   run_live_scan) for triggers, decide
    NO_TRADE / WATCH / ENTER_CANDIDATE / HOLD / REDUCE / EXIT, and persist
    via record_decision_brief. ENTER_CANDIDATE is a candidate, never an
    order; the user decides whether to act.
@@ -207,6 +254,11 @@ Operating rules:
    a current-membership survivorship limitation. Insufficient evidence is a
    valid answer — preserve the unknown instead of inspecting unchanged
    evidence repeatedly.
+9. Use the narrow semantic tool for the user's actual intent: get_signal_board
+   for today's opportunity board, get_positions for holdings, get_validation_status
+   for strategy maturity, manage_watchlist for watchlist edits, run_live_scan
+   for an explicit rescan. Do not load get_trading_context or run_code/shell/repo
+   exploration when one of those intents is the whole question.
 """
 
 #: Side-environment python used for evaluation/live scans (repo-relative).

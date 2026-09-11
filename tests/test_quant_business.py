@@ -19,14 +19,17 @@ import pytest
 pytest.importorskip("pandas")
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
+sys.path.insert(0, str(Path(__file__).parents[1] / "plugins" / "zuaef-quant"))
 
-import quant_build_candidates as b
-import quant_core as core
-import quant_live_scan as scan
-import quant_render_business_dashboard as biz
-import quant_serve as serve
+# Production authority for these paths now lives in the plugin package; the
+# root scripts are compatibility wrappers and are exercised separately.
 import quant_validate_semantics as semantics
-from quant_live_scan import UniverseError, resolve_universe
+from zuaef_quant import candidates_sidecar as b
+from zuaef_quant import quant_core as core
+from zuaef_quant import scan_sidecar as scan
+from zuaef_quant.dashboard import render as biz
+from zuaef_quant.dashboard import serve
+from zuaef_quant.scan_sidecar import UniverseError, resolve_universe
 
 
 def make_policy(**overrides) -> dict:
@@ -507,7 +510,7 @@ class TestBusinessRenderer:
         # the payload carries the actionable banner text
         assert "候选快照缺失" in html
         assert "D.data_quality.status !== 'PASS'" in html
-        assert "quant_build_candidates.py" in html
+        assert "zuaef_quant.candidates_sidecar" in html
 
     def test_first_viewport_free_of_engineering_jargon(self, biz_env):
         write_snapshot(biz_env["snapshot"], [cand("600000")])
@@ -709,9 +712,11 @@ class TestServerRoutes:
         assert serve.page_for_path("/nope") is None
 
     def test_api_routes(self):
-        assert serve.api_command_for_path("/api/scan") == serve.SCAN_CMD
+        scan = serve.api_command_for_path("/api/scan")
+        assert scan is not None and scan[1:3] == ["-m", "zuaef_quant.scan_sidecar"]
         watch = serve.api_command_for_path("/api/watchlist")
-        assert watch is not None and watch[-1] == "benchmarks/quant/gen1/legacy_watchlist.toml"
+        assert watch is not None and watch[1:3] == ["-m", "zuaef_quant.scan_sidecar"]
+        assert watch[-1] == "benchmarks/quant/gen1/legacy_watchlist.toml"
         assert watch[-2] == "--universe-file"
         assert serve.api_command_for_path("/") is None
 
@@ -1084,11 +1089,11 @@ class TestPitDimension:
 # P0.4 anti-leakage behavioral check (pure logic; qlib path runs in side env)
 # ---------------------------------------------------------------------------
 
-from datetime import date
+from datetime import UTC, date
 
 import pandas as pd
 import quant_anti_leakage_check as leak
-from quant_core import Intent
+from zuaef_quant.quant_core import Intent
 
 
 def make_panel(dates, symbols, close=10.0, volume=1_000_000.0):
@@ -1313,7 +1318,7 @@ class TestAckCommandBuilder:
             "symbol": "601799", "shares": 100, "price": 76.32, "venue": "paper",
             "executed_at": "2026-09-04T11:07:42+08:00", "note": "n",
         })
-        assert "tools/quant_trading_monitor.py" in cmd and "ack-buy" in cmd
+        assert cmd[1:3] == ["-m", "zuaef_quant.monitor"] and "ack-buy" in cmd
         assert cmd[cmd.index("--state-dir") + 1] == "workspace/artifacts/quant/trading"
         assert cmd[cmd.index("--venue") + 1] == "paper"
         assert cmd[cmd.index("--shares") + 1] == "100"
@@ -1434,24 +1439,30 @@ class TestQuantHttpApi:
 
 
 class TestMarketPhaseMirror:
+    # Market-local fixture timestamps (UTC+8); the mirror converts aware
+    # datetimes to Asia/Shanghai before comparing times.
+    from datetime import timedelta as _timedelta
+    from datetime import timezone as _timezone
+
+    _MARKET_TZ = _timezone(_timedelta(hours=8))
+
     @pytest.mark.parametrize("moment,expected", [
-        (datetime(2026, 9, 2, 9, 29, 59), "PRE_OPEN"),
-        (datetime(2026, 9, 2, 9, 30, 0), "OPEN_AM"),
-        (datetime(2026, 9, 2, 12, 18, 0), "LUNCH_BREAK"),
-        (datetime(2026, 9, 2, 13, 0, 0), "OPEN_PM"),
-        (datetime(2026, 9, 2, 15, 0, 0), "MARKET_CLOSED"),
-        (datetime(2026, 9, 5, 10, 0, 0), "MARKET_CLOSED"),  # Saturday
+        (datetime(2026, 9, 2, 9, 29, 59, tzinfo=_MARKET_TZ), "PRE_OPEN"),
+        (datetime(2026, 9, 2, 9, 30, 0, tzinfo=_MARKET_TZ), "OPEN_AM"),
+        (datetime(2026, 9, 2, 12, 18, 0, tzinfo=_MARKET_TZ), "LUNCH_BREAK"),
+        (datetime(2026, 9, 2, 13, 0, 0, tzinfo=_MARKET_TZ), "OPEN_PM"),
+        (datetime(2026, 9, 2, 15, 0, 0, tzinfo=_MARKET_TZ), "MARKET_CLOSED"),
+        (datetime(2026, 9, 5, 10, 0, 0, tzinfo=_MARKET_TZ), "MARKET_CLOSED"),  # Saturday
     ])
     def test_renderer_mirror_matches_monitor_rule(self, moment, expected):
         # naive datetimes are market-local; the stdlib mirror must agree with
         # the pandas-loading monitor it deliberately does not import
-        import quant_trading_monitor as mon
+        from zuaef_quant import monitor as mon
         assert biz.market_phase(moment) == expected
         assert biz.market_phase(moment) == mon.market_phase(moment)
 
     def test_aware_utc_input_is_converted_to_market_local(self):
-        from datetime import timezone
-        utc_noon = datetime(2026, 9, 2, 4, 18, tzinfo=timezone.utc)  # 12:18 Shanghai
+        utc_noon = datetime(2026, 9, 2, 4, 18, tzinfo=UTC)  # 12:18 Shanghai
         assert biz.market_phase(utc_noon) == "LUNCH_BREAK"
 
 

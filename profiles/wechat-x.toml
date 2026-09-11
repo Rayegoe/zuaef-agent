@@ -1,0 +1,29 @@
+# 公众号 + X 双节奏创作部署（wechat-x 插件）。
+# 安装：cp profiles/wechat-x.toml ~/.config/zuaef/profiles/wechat-x.toml
+# config 只允许非 secret 键；账号身份在这里配置，不写进共享 skill。
+schema = 1
+name = "wechat-x"
+
+[generalist]
+web_search = false
+web_fetch = false
+tool_search = true
+memory = false
+conversation_search = false
+context_controls = true
+subagents = false
+shell = false
+repo_context = false
+
+[[plugins]]
+id = "wechat-x"
+allow_capabilities = false
+defer_tools = false
+
+[plugins.config]
+account_name = "坐驰未来"
+pen_name = "片言"
+slogan = "片言以通百意，坐驰以驭万景"
+audience = "中小企业老板、业务负责人"
+tone = "面向业务决策者：短句给节奏，判断给重量，具体给信任；不回避复杂性，但不把复杂性扔给读者。"
+corpus_namespace = "wechat-x"

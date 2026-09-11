@@ -17,11 +17,12 @@ import pytest
 
 pytest.importorskip("pandas")
 
+sys.path.insert(0, str(Path(__file__).parents[1] / "plugins" / "zuaef-quant"))
 sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
 
 import pandas as pd
-import quant_core
-from quant_core import (
+from zuaef_quant import quant_core
+from zuaef_quant.quant_core import (
     Intent,
     MarketRules,
     ReplayEngine,
@@ -248,7 +249,7 @@ class TestNoLookahead:
         assert buys[0].price == pytest.approx(expected)
 
     def test_builder_property_against_truncated_panel(self):
-        from quant_eval_qlib import build_intents
+        from zuaef_quant.eval_sidecar import build_intents
 
         dates = pd.date_range("2024-01-02", periods=40, freq="B")
         base = (100.0 + (pd.Series(range(40)) % 7) * 5).values

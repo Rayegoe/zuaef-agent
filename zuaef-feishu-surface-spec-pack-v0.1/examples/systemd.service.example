@@ -1,0 +1,18 @@
+# CONCEPTUAL ONLY.
+# Prefer modifying/reusing the existing zuaef runtime/gateway service.
+
+[Unit]
+Description=ZUAEF Feishu Surface
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=<ACTUAL_ZUAEF_REPO>
+EnvironmentFile=%h/.config/zuaef/feishu.env
+ExecStart=<ACTUAL_UV> run <ACTUAL_ENTRYPOINT>
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

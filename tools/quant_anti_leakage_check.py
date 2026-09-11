@@ -14,7 +14,7 @@ Compared items (per checkpoint, over a fixed comparison window before D):
                          of candidate membership
   - entry intents        BUY decisions (deterministic slot-contended rule)
   - exit intents         SELL decisions
-  - timing surface       quant_live_scan.timing_from_quote_hist at past
+  - timing surface       zuaef_quant.scan_sidecar.timing_from_quote_hist at past
                          dates with truncated vs full cached history — the
                          code path shared by the live scan and candidate
                          scoring
@@ -48,11 +48,13 @@ import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+_PLUGIN_ROOT = Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"
+if str(_PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PLUGIN_ROOT))
 
 import pandas as pd
-from quant_core import TZ_SHANGHAI, load_config, read_cache
-from quant_live_scan import timing_from_quote_hist
+from zuaef_quant.quant_core import TZ_SHANGHAI, load_config, read_cache
+from zuaef_quant.scan_sidecar import timing_from_quote_hist
 
 CACHE_DIR = Path("data/quant-cache")
 EVIDENCE_DIR = Path("workspace/artifacts/quant/semantic")
@@ -67,7 +69,7 @@ EXIT_CODES = {"P0_4_SCOPED_PASS": 0, "P0_4_FAIL": 1, "P0_4_UNKNOWN": 2}
 def build_intents_trunc(panel: pd.DataFrame, spec, window_start: str, end: str):
     """Delegates to the production intent builder (lazy import keeps this
     module importable without qlib for the pure-function tests)."""
-    from quant_eval_qlib import build_intents
+    from zuaef_quant.eval_sidecar import build_intents
 
     return build_intents(panel, spec, (window_start, end))
 
@@ -337,8 +339,8 @@ def main() -> int:
     parser.add_argument("--out-dir", type=Path, default=EVIDENCE_DIR)
     args = parser.parse_args()
 
-    from quant_core import StrategySpec
-    from quant_eval_qlib import load_panel
+    from zuaef_quant.eval_sidecar import load_panel
+    from zuaef_quant.quant_core import StrategySpec
 
     cfg = load_config(args.config)
     spec = StrategySpec.from_config(load_config(args.strategy))
@@ -349,7 +351,7 @@ def main() -> int:
 
     qlib_dir = CACHE_DIR / "qlib_data"
     if not qlib_dir.exists():
-        print(json.dumps({"verdict": "P0_4_UNKNOWN", "reason": "qlib store missing; run tools/quant_eval_qlib.py first"}))
+        print(json.dumps({"verdict": "P0_4_UNKNOWN", "reason": "qlib store missing; run zuaef_quant.eval_sidecar first"}))
         return EXIT_CODES["P0_4_UNKNOWN"]
     pad_start = str(date.fromisoformat(window_start).replace(year=date.fromisoformat(window_start).year - 1))
 

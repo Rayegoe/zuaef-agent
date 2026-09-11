@@ -1,0 +1,24 @@
+{
+  "name": "ZUAEF General Knowledge Worker Profile Spec Pack",
+  "version": "0.1",
+  "date": "2026-09-08",
+  "target_repo": "Rayegoe/zuaef-agent",
+  "files": [
+    "00_README_FIRST.md",
+    "01_PRODUCT_SPEC.md",
+    "02_ARCHITECTURE.md",
+    "03_PROFILE_AND_PLUGIN_CONTRACT.md",
+    "04_IMPLEMENTATION_PLAN.md",
+    "05_ACCEPTANCE_TESTS.md",
+    "06_CODEX_MASTER_PROMPT.md",
+    "07_SOURCE_NOTES.md",
+    "08_SUPERVISOR_BUILD_FOLLOWON.md",
+    "09_PATCH_MAP.md",
+    "proposed/plugins/zuaef-knowledge-worker/pyproject.toml",
+    "proposed/plugins/zuaef-knowledge-worker/zuaef_knowledge_worker/__init__.py",
+    "proposed/plugins/zuaef-knowledge-worker/zuaef_knowledge_worker/document_tools.py",
+    "proposed/plugins/zuaef-knowledge-worker/zuaef_knowledge_worker/plugin.py",
+    "proposed/plugins/zuaef-knowledge-worker/zuaef_knowledge_worker/skills/knowledge-worker/SKILL.md",
+    "proposed/profiles/general-knowledge-worker.toml"
+  ]
+}

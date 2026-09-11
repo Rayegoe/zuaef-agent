@@ -9,9 +9,10 @@ import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-import quant_trading_monitor as monitor
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"))
 import quant_v31 as v31
-from quant_core import load_config
+from zuaef_quant import monitor
+from zuaef_quant.quant_core import load_config
 
 NOW = "2026-09-02T10:00:00+08:00"
 

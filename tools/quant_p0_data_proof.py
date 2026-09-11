@@ -33,9 +33,11 @@ from pathlib import Path
 import akshare as ak
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).parent))
+_PLUGIN_ROOT = Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"
+if str(_PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PLUGIN_ROOT))
 
-from quant_core import TZ_SHANGHAI, fetch_csi500_constituents, fetch_history
+from zuaef_quant.quant_core import TZ_SHANGHAI, fetch_csi500_constituents, fetch_history
 
 HISTORY_SYMBOL = "600519"  # fixed proof symbol (贵州茅台, long continuous history)
 

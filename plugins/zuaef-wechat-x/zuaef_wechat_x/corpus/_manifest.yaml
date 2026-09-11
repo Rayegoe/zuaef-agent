@@ -1,0 +1,218 @@
+id: wiki-machine-soul
+name: Machine & Soul Knowledge Base
+classification: HUM.PHILOSOPHY
+template: custom
+status: active
+created: "2026-05-25"
+
+description: >
+  Production knowledge base for Machine & Soul (坐驰未来) content.
+  Eastern wisdom, Western thought, and the human question in the age of AI.
+  Feeds the wechat-x-publish skill for daily content generation.
+  Not a philosophy archive — a content engine.
+
+tagline: >
+  Eastern wisdom, Western thought, and the human question in the age of AI.
+
+# ── Content Architecture ──────────────────────────
+
+sources:
+  east:
+    - id: laozi
+      title: 道德经 / Tao Te Ching
+      themes: [wu-wei, non-control, nature, soft-power, control-illusion]
+      status: grounded
+
+    - id: zhuangzi
+      title: 庄子 / Zhuangzi
+      themes: [freedom, equality-of-things, dream, uselessness, identity-cage]
+      status: scaffold
+
+    - id: huineng
+      title: 六祖坛经 / Platform Sutra
+      themes: [sudden-awakening, no-thought, original-mind, attention, clarity]
+      status: scaffold
+
+    - id: wang-yangming
+      title: 传习录 / Instructions for Practical Living
+      themes: [unity-of-knowledge-action, conscience, agency, judgment-in-action]
+      status: scaffold
+
+    - id: su-dongpo
+      title: 苏东坡诗文选 / Selected Works of Su Dongpo
+      themes: [suffering-dignity, aesthetics, humor, resilience, leisure]
+      status: scaffold
+
+    - id: analects
+      title: 论语 / The Analects
+      themes: [role, relationship, self-cultivation, order, responsibility]
+      status: scaffold
+
+    - id: heart-diamond-sutra
+      title: 心经 / 金刚经 / Heart Sutra & Diamond Sutra
+      themes: [emptiness, non-self, attachment, illusion]
+      status: scaffold
+
+    - id: art-of-war
+      title: 孙子兵法 / The Art of War
+      themes: [shi, virtual-real, information-advantage, knowable-uncontrollable]
+      status: scaffold
+
+  west:
+    - id: marcus-aurelius
+      title: 《沉思录》/ Meditations
+      themes: [inner-order, self-discipline, fate, spiritual-discipline]
+      status: scaffold
+
+    - id: epictetus
+      title: 《手册》/ Enchiridion
+      themes: [control-uncontrollable, stoic-freedom]
+      status: scaffold
+
+    - id: montaigne
+      title: 《随笔集》/ Essays
+      themes: [skepticism, self-observation, life-wisdom, human-wholeness]
+      status: scaffold
+
+    - id: hume
+      title: 《人类理解研究》/ An Enquiry Concerning Human Understanding
+      themes: [empiricism, skepticism, limits-of-reason]
+      status: scaffold
+
+    - id: nietzsche
+      title: Nietzsche: The Gay Science / Thus Spoke Zarathustra
+      themes: [god-is-dead, value-revaluation, nihilism, meaning-creation]
+      status: scaffold
+
+    - id: william-james
+      title: 《实用主义》/ Pragmatism & 《宗教经验之种种》
+      themes: [experience, action, pragmatic-consequences, belief-practice]
+      status: scaffold
+
+    - id: plato
+      title: Plato: Apology / Republic (selections)
+      themes: [soul, truth, cave-allegory, philosopher]
+      status: scaffold
+
+    - id: mill
+      title: John Stuart Mill: On Liberty
+      themes: [freedom, individual, social-pressure]
+      status: scaffold
+
+characters:
+  british-voice:
+    - id: shakespeare
+      title: Shakespeare: Hamlet / King Lear / The Tempest
+      themes: [human-complexity, power, nihilism, order-collapse]
+      status: scaffold
+
+    - id: william-blake
+      title: William Blake
+      themes: [imagination, anti-mechanical-reason, zhuangzi-parallel]
+      status: scaffold
+
+    - id: edmund-burke
+      title: Edmund Burke
+      themes: [tradition, order, organic-evolution, anti-radical-rationalism]
+      status: scaffold
+
+    - id: bertrand-russell
+      title: Bertrand Russell: The Problems of Philosophy
+      themes: [clarity, skepticism, british-rationality]
+      copyright_note: check_per_source
+      status: scaffold
+
+    - id: wittgenstein
+      title: Wittgenstein: Tractatus Logico-Philosophicus
+      themes: [language-boundary, silence, unsayable]
+      copyright_note: check_per_source
+      status: scaffold
+
+concepts:
+  - wu-wei
+    status: grounded
+  - shi
+    status: scaffold
+  - emptiness
+    status: scaffold
+  - non-self
+    status: scaffold
+  - practical-wisdom
+    status: scaffold
+  - autonomy
+    status: scaffold
+  - meaning
+    status: scaffold
+  - attention
+    status: scaffold
+  - control
+    status: grounded
+  - anxiety
+    status: scaffold
+
+bridges:
+  - laozi-heidegger-control
+    status: grounded
+  - zhuangzi-alan-watts-freedom
+    status: scaffold
+  - huineng-wittgenstein-clarity
+    status: scaffold
+  - su-dongpo-montaigne-suffering
+    status: scaffold
+  - wang-yangming-william-james-action
+    status: scaffold
+
+ai_age_themes:
+  - ai-and-control
+    status: grounded
+  - ai-and-work
+    status: scaffold
+  - ai-and-meaning
+    status: scaffold
+  - ai-and-attention
+    status: scaffold
+  - ai-and-selfhood
+    status: scaffold
+  - ai-and-civilisation
+    status: scaffold
+
+# ── Publishing Pipeline ───────────────────────────
+
+pipeline:
+  skill: wechat-x-publish
+  account: 坐驰未来
+  author: 片言
+  slogan: 片言以通百意，坐驰以驭万景
+  platforms:
+    - wechat_public_account
+    - x_twitter
+  daily_topics:
+    - ai-and-control
+    - ai-and-identity
+    - ai-and-attention
+    - ai-and-work
+    - ai-and-suffering
+    - ai-and-freedom
+    - ai-and-judgement
+    - ai-and-meaning
+    - ai-and-civilisation
+    - ai-and-the-soul
+  content_rhythm: daily
+  style_notes:
+    - alan_watts_as_style_reference_only_not_corpus
+    - british_observer_voice
+    - short_judgments_over_academic_exposition
+    - 面向创业者/中小企业主，用短句，强节奏，有现实判断
+
+copyright_policy:
+  phase_one: public_domain_and_own_summaries_only
+  avoid:
+    - modern_translations_full_text
+    - alan_watts_full_books_transcripts
+    - SEP_full_pages
+    - contemporary_philosophy_books_full_text
+  always_check:
+    - russell_copyright
+    - wittgenstein_copyright
+    - modern_translations_copyright
+    - per_country_public_domain_rules

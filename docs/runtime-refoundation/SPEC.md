@@ -1,7 +1,16 @@
 # SPEC — ZUAEF Minimal Agent Runtime
 
-Status: normative  
+Status: normative for runtime work; runtime subset of the architecture North Star
+
 Version: 1.0
+
+Architecture authority: [`docs/architecture/NORTH_STAR.md`](../architecture/NORTH_STAR.md)
+Consolidation work order: [`docs/architecture/CONSOLIDATION_SPEC.md`](../architecture/CONSOLIDATION_SPEC.md)
+
+> This SPEC remains binding for the Agent runtime subset of ZUAEF: one minimal PydanticAI loop,
+> capability admission at the model boundary, and outcome-preserving trajectory minimality. It is not
+> the whole-system authority. Surface/control-plane/domain-ownership work follows the North Star and
+> the consolidation spec; this SPEC does not authorize a Runtime v2.
 
 ## 1. Executive decision
 

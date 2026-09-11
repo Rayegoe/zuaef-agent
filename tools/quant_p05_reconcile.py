@@ -40,10 +40,12 @@ from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).parent))
+_PLUGIN_ROOT = Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"
+if str(_PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PLUGIN_ROOT))
 
-import quant_core
-from quant_core import (
+from zuaef_quant import quant_core
+from zuaef_quant.quant_core import (
     Intent,
     MarketRules,
     ReplayEngine,  # noqa: F401 — re-exported role contract; engines run via run_engine
@@ -296,7 +298,7 @@ def attribute_pair(row: dict, *, trading_dates: list[date], blocked: list,
                 basis.append(
                     "same dates, same shares, no adjustment crossing: the qfq research face is an "
                     "additive adjustment (constant qfq-raw offset within a regime), so the same price "
-                    "move is a different percentage on each face; quant_core's raw face is the "
+                    "move is a different percentage on each face; the domain quant_core raw face is the "
                     "executable truth and is not modified for parity"
                 )
         else:
@@ -394,7 +396,12 @@ def main() -> int:
     parser.add_argument("--gen1", type=Path, default=Path("workspace/artifacts/quant/gen1"))
     args = parser.parse_args()
 
-    from quant_eval_qlib import build_intents, load_panel, run_engine, stage_qlib_csvs
+    from zuaef_quant.eval_sidecar import (
+        build_intents,
+        load_panel,
+        run_engine,
+        stage_qlib_csvs,
+    )
 
     cfg = load_config(args.config)
     spec = StrategySpec.from_config(load_config(args.strategy))

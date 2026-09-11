@@ -16,18 +16,17 @@ from importlib.metadata import EntryPoint
 from pathlib import Path
 
 from pydantic_ai import Agent
-from pydantic_ai.capabilities import ToolSearch
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
+from pydantic_ai.tools import ToolDefinition
 
 from zuaef_agent.composition import build_agent_from_snapshot, resolve_profile
 from zuaef_agent.config import AgentSettings
 from zuaef_agent.core import cjk_keywords_search_fn
 from zuaef_agent.models import CoreDeps
-from pydantic_ai.tools import ToolDefinition
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "plugins" / "zuaef-quant"))
-from zuaef_quant.toolset import make_toolset  # noqa: E402
+from zuaef_quant.toolset import make_toolset
 
 PROFILE = """\
 schema = 1
@@ -48,19 +47,33 @@ allow_capabilities = true
 code_mode = false
 """
 
-DEFERRED = {
+# P2.1-B: legacy broad/alias tools are implementation-compatible but must not
+# retain a resident model-visibility advantage over the narrow surface.
+LEGACY_DEFERRED = {
+    "get_trading_context",
+    "get_live_signals",
+    "get_analysis_watchlist",
+    "update_analysis_watchlist",
+}
+NARROW_DEFERRED = {
+    "get_market_context",
     "get_market_intelligence",
+    "get_signal_board",
+    "get_positions",
+    "get_validation_status",
+    "run_live_scan",
+    "manage_watchlist",
     "save_research_packet",
     "get_research_packet",
     "record_customer_evidence",
     "render_quant_business_artifact",
 }
+DEFERRED = LEGACY_DEFERRED | NARROW_DEFERRED
 RESIDENT_CORE = {
     "get_symbol_context",
-    "get_trading_context",
-    "get_live_signals",
-    "get_analysis_watchlist",
-    "update_analysis_watchlist",
+    "evaluate_strategy",
+    "record_decision_brief",
+    "record_trade_outcome",
 }
 
 
@@ -188,10 +201,23 @@ def test_initial_surface_keeps_core_resident_and_research_deferred(tmp_path, mon
     steps = _surface_steps(agent, [], tmp_path)
     first = steps[0]
     for name in RESIDENT_CORE:
-        assert name in first, f"core evidence tool {name} must stay resident"
+        assert name in first, f"semantic core tool {name} must stay resident"
     for name in DEFERRED:
-        assert name not in first, f"low-frequency tool {name} leaked into the initial surface"
+        assert name not in first, f"deferred tool {name} leaked into the initial surface"
     assert "search_tools" in first, "ToolSearch discovery must be available"
+
+
+def test_legacy_broad_tools_lose_runtime_visibility_not_call_compatibility(
+    tmp_path, monkeypatch
+):
+    """P2.1-B: the legacy broad/alias tools remain callable and tested, but
+    they must not beat the narrow surface through resident visibility."""
+    toolset = make_toolset(quant_python=Path("nonexistent"), workspace_root=tmp_path)
+    for name in LEGACY_DEFERRED:
+        assert toolset.tools[name].defer_loading is True, name
+        assert callable(toolset.tools[name].function), name
+    for name in RESIDENT_CORE:
+        assert toolset.tools[name].defer_loading is not True, name
 
 
 def test_chinese_query_reveals_deferred_research_tools(tmp_path, monkeypatch):
@@ -203,6 +229,14 @@ def test_chinese_query_reveals_deferred_research_tools(tmp_path, monkeypatch):
     assert "get_market_intelligence" in second, f"公告/新闻 query revealed: {second}"
     # resident tools stay visible after discovery
     assert "get_symbol_context" in second
+
+
+def test_market_wide_query_reveals_market_context(tmp_path, monkeypatch):
+    agent = _compose(tmp_path, monkeypatch)
+    steps = _surface_steps(
+        agent, [("search_tools", {"queries": ["今天为什么跌 A股 外盘 原油"]})], tmp_path
+    )
+    assert "get_market_context" in steps[1]
 
 
 def test_customer_evidence_discoverable_in_chinese(tmp_path, monkeypatch):
@@ -236,8 +270,11 @@ def test_cjk_search_scores_against_real_tool_definitions(tmp_path):
     ]
     ctx = None  # the CJK search fn never touches ctx
 
+    def discover_ranked(query: str) -> list[str]:
+        return list(cjk_keywords_search_fn(ctx, [query], defs))
+
     def discover(query: str) -> set[str]:
-        return set(cjk_keywords_search_fn(ctx, [query], defs))
+        return set(discover_ranked(query))
 
     assert discover("公告 新闻") == {"get_market_intelligence"}
     assert "save_research_packet" in discover("全面分析 研究报告")
@@ -245,6 +282,22 @@ def test_cjk_search_scores_against_real_tool_definitions(tmp_path):
     # resident domains stay discoverable through their own descriptions
     assert "update_analysis_watchlist" in discover("加入自选")
     assert "get_trading_context" in discover("持仓建议")
+
+    # P2 narrow semantic tools: the expected tool must be the top discovery
+    # result for the intent it owns.  ToolSearch is keyword overlap over the
+    # real descriptions, so this pins the user vocabulary as tool contract.
+    expected_top = {
+        "今天有什么机会 ready near": "get_signal_board",
+        "策略现在验证到什么程度": "get_validation_status",
+        "我现在持有什么": "get_positions",
+        "重新扫描今天": "run_live_scan",
+        "把海康威视加入观察": "manage_watchlist",
+    }
+    for query, tool_name in expected_top.items():
+        ranked = discover_ranked(query)
+        assert ranked, f"no tool discovered for {query!r}"
+        assert ranked[0] == tool_name, f"{query!r} ranked {ranked[:4]!r}"
+
     # plain quote vocabulary must not light up research/delivery tools
     plain = discover("普通股票报价请求")
     assert not plain & DEFERRED

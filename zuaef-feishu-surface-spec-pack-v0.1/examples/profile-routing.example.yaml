@@ -1,0 +1,23 @@
+# Conceptual only. Adapt to the existing zuaef-agent profile/router schema.
+
+surface_defaults:
+  feishu: general
+
+profile_aliases:
+  quant: quant-decision
+  research: research
+  coding: coding
+  writing: writing
+
+group_defaults:
+  "oc_quant_lab": quant-decision
+  "oc_research": research
+
+profile_access:
+  quant-decision:
+    allowed_surfaces:
+      - feishu
+    allowed_chat_types:
+      - group
+    allowed_channel_ids:
+      - "oc_quant_lab"

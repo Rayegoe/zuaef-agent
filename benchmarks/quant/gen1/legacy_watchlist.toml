@@ -2,9 +2,9 @@
 #
 # 这些股票是既有持仓/观察名单, 不是机会宇宙。它们只在以下位置出现:
 #   - 业务看板 "Legacy Holdings" 卡 (诊断: 同一套价值/质量评分 + 是否能独立入选候选池)
-#   - /api/watchlist (显式 watchlist 扫描, quant_live_scan.py --universe-file 本文件)
+#   - /api/watchlist (显式 watchlist 扫描, `zuaef_quant.scan_sidecar --universe-file` 本文件)
 # 它们永远不会静默成为活跃候选/触发宇宙 (spec 03 §1); 候选宇宙只来自
-# tools/quant_build_candidates.py 产出的 candidate pool handoff。
+# zuaef_quant.candidates_sidecar 产出的 candidate pool handoff。
 # 评分达标者可与全池同规则竞争入池 (如 002415 海康威视 2026-09-02 POOL_QUALIFIED)。
 schema = 1
 name = "legacy_watchlist"

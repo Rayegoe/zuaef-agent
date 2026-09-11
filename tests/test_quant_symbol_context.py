@@ -19,12 +19,12 @@ import pytest
 
 pytest.importorskip("pandas")
 
-sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
+sys.path.insert(0, str(Path(__file__).parents[1] / "plugins" / "zuaef-quant"))
 
 import pandas as pd
-import quant_core
-import quant_trading_monitor as mon
-from quant_core import StrategySpec
+import zuaef_quant.monitor as mon
+from zuaef_quant import quant_core
+from zuaef_quant.quant_core import StrategySpec
 
 TZ_SH = ZoneInfo("Asia/Shanghai")
 NOW = datetime(2026, 9, 2, 10, 0, tzinfo=TZ_SH)  # a Wednesday, in session

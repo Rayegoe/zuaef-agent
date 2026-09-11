@@ -11,12 +11,17 @@ Your goal is:
 Before changing code, read:
 
 1. repository `AGENTS.md`;
-2. `.agents/skills/zuaef-runtime-coach/SKILL.md`;
-3. `docs/runtime-refoundation/SPEC.md`;
-4. `docs/runtime-refoundation/BENCHMARKS.md`;
-5. `docs/runtime-refoundation/CAPABILITY_ADMISSION.md`;
-6. `docs/runtime-refoundation/DELETION.md`;
-7. `docs/runtime-refoundation/TASKS.md`.
+2. `docs/architecture/NORTH_STAR.md`;
+3. `.agents/skills/zuaef-runtime-coach/SKILL.md`;
+4. `docs/runtime-refoundation/SPEC.md`;
+5. `docs/runtime-refoundation/BENCHMARKS.md`;
+6. `docs/runtime-refoundation/CAPABILITY_ADMISSION.md`;
+7. `docs/runtime-refoundation/DELETION.md`;
+8. `docs/runtime-refoundation/TASKS.md`.
+
+If the work touches surfaces, deterministic operator control, command grammar, Gateway ownership or
+root-`tools/` domain ownership, also read `docs/architecture/CONSOLIDATION_SPEC.md`; that work follows
+the consolidation workstreams, not a Runtime v2 program.
 
 Then execute only the next unfinished task.
 

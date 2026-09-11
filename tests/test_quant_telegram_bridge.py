@@ -18,8 +18,9 @@ from zoneinfo import ZoneInfo
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
+sys.path.insert(0, str(Path(__file__).parents[1] / "plugins" / "zuaef-quant"))
 
-import quant_telegram_bridge as qb
+import zuaef_quant.bridge as qb
 from zuaef_telegram.client import TelegramError
 
 TZ_SH = ZoneInfo("Asia/Shanghai")

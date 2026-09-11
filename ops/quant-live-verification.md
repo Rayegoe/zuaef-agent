@@ -52,7 +52,7 @@ PY
 
 | # | 检查 | 命令 | 通过判据 |
 |---|---|---|---|
-| 2.1 | 会话进程拉起 | `export XDG_RUNTIME_DIR=/run/user/$(id -u); systemctl --user status zuaef-quant-monitor.service -n 6 --no-pager` | `quant_trading_monitor.py session` 进程在跑；无 Traceback |
+| 2.1 | 会话进程拉起 | `export XDG_RUNTIME_DIR=/run/user/$(id -u); systemctl --user status zuaef-quant-monitor.service -n 6 --no-pager` | `zuaef_quant.monitor session` 进程在跑；无 Traceback |
 | 2.2 | 采样循环 | `ps -o pid,etime,cmd -C python | grep monitor`；再等 ≥2 分钟看日志 | 同进程持续采样（非一次性） |
 | 2.3 | 心跳/行情 | 上述 journal 内可见周期输出（quotes/opportunity 状态） | 至少 3 个周期连续无异常 |
 | 2.4 | alerts 流 | `ls -la workspace/artifacts/quant/trading/`；`wc -l workspace/artifacts/quant/trading/alerts.jsonl`（不存在也正常，记录基准） | 文件存在或首次创建；有内容则记录行数基准 |
@@ -71,7 +71,7 @@ PY
 | 3.4 | bridge 游标 | `ls -la .zuaef-state/quant-bridge/` | cursor/投递日志存在；无堆积待投 |
 | 3.5 | Agent run（E1/E2 时） | `ls .zuaef-state/receipts | tail` | 有新 receipt；run 无 ERROR |
 | 3.6 | dashboard 实时 | `curl -s -m5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/` | 200 且页面行情刷新 |
-| 3.7 | 无 alert 情形 | 记录「无触发」即可，另跑：`cd ~/zuaef-agent && .venv/bin/python tools/quant_telegram_bridge.py --dry-run` | rc=0（投递管线本身健康） |
+| 3.7 | 无 alert 情形 | 记录「无触发」即可，另跑：`cd ~/zuaef-agent && .venv/bin/zuaef-quant bridge once --dry-run` | rc=0（投递管线本身健康） |
 
 ---
 
@@ -130,7 +130,7 @@ journalctl --user -u zuaef-quant-monitor -n 20 --no-pager
 
 # bridge 手动 tick / dry-run
 systemctl --user start zuaef-quant-bridge.service
-.venv/bin/python tools/quant_telegram_bridge.py --dry-run
+.venv/bin/zuaef-quant bridge once --dry-run
 
 # 连接级证据（不依赖 journal）
 ss -tnp 2>/dev/null | grep zuaef-agent

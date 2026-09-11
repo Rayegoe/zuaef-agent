@@ -1,0 +1,98 @@
+{
+  "tested_tree": "cf581e50b62e + local P0–P5.8 patches",
+  "model_env": "deepseek/deepseek-v4-flash-0731",
+  "surface": "GatewayService capture adapter",
+  "runs": [
+    {
+      "key": "canary2-positions",
+      "prompt": "我现在持有什么？",
+      "channel_id": "p58gw-canary2-positions",
+      "expected": [
+        "get_positions"
+      ],
+      "run_id": "b88b0553c949412eb8bad7ca3f99b974",
+      "wall_clock_s": 16.0,
+      "tool_sequence": [
+        "search_tools",
+        "get_positions"
+      ],
+      "expected_hit": true,
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "gateway_error": null,
+      "execution_state": "completed",
+      "model_requests": 3,
+      "last_outbound": "当前持仓为空：没有未关闭的持仓，也没有退警（EXIT_ALERT）记录。需要说明的是，这份持仓状态截止到 2026-09-04 收盘数据（最新市场数据日），请求日 2026-09-11 尚无当日数据——仓位状态本身不会因数据过期而改变，只是提醒你它对应的是 9 月 4 日的账本快照。"
+    },
+    {
+      "key": "canary4-live-scan",
+      "prompt": "重新扫描一下今天。",
+      "channel_id": "p58gw-canary4-live-scan",
+      "expected": [
+        "run_live_scan"
+      ],
+      "run_id": "31e309b4e52c4f3ea317913f36d0e998",
+      "wall_clock_s": 34.7,
+      "tool_sequence": [
+        "search_tools",
+        "run_live_scan"
+      ],
+      "expected_hit": true,
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "gateway_error": null,
+      "execution_state": "completed",
+      "model_requests": 3,
+      "last_outbound": "今天的扫描已经重跑完成：2026-09-11 收盘后（最新行情时间 15:15 前收）对当前 50 只候选股全部取到行情，数据质量校验通过（量能口径 PASS、无被抑制的触发），结果为空——没有股票达到买入触发条件，今天不产生 READY/NEAR，系统没有交易动作。\n\n扫描耗时约 1.3 秒，行情来源为腾讯批量行情。本次是收盘后的完整扫描，可以当作今天的确定结果：50 只均未同时满足\"5日回撤 + 量比≥1.8 + 收盘强度\"的入场条件；其中量比最高的是中国海油（2.25）、民生银行（1.85）、浙能电力（1.64），但都缺同步的回撤或强度条件，仅作参考，不构成机会。"
+    },
+    {
+      "key": "canary5a-watchlist-add",
+      "prompt": "把600519加入观察。",
+      "channel_id": "p58gw-canary-watchlist",
+      "expected": [
+        "manage_watchlist"
+      ],
+      "run_id": "48828a59666647bfac63e5892874e9a6",
+      "wall_clock_s": 22.7,
+      "tool_sequence": [
+        "search_tools",
+        "manage_watchlist"
+      ],
+      "expected_hit": true,
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "gateway_error": null,
+      "execution_state": "completed",
+      "model_requests": 3,
+      "last_outbound": "已把 600519 加入观察清单，同时完成了历史数据预热（缓存有效，历史覆盖到 9/11）。之后对它做分析就走自选/诊断口径，不会产生 READY/NEAR——自选关注不会进入算法候选池，也不会触发自动信号。需要的话随时可以对它做单只个股诊断。"
+    },
+    {
+      "key": "canary5b-watchlist-remove",
+      "prompt": "把600519移出观察。",
+      "channel_id": "p58gw-canary-watchlist",
+      "expected": [
+        "manage_watchlist"
+      ],
+      "run_id": "d89e137465674ee887305d9500564dc9",
+      "wall_clock_s": 9.6,
+      "tool_sequence": [
+        "search_tools",
+        "manage_watchlist"
+      ],
+      "expected_hit": true,
+      "legacy_broad_used": [],
+      "generic_escape_used": [],
+      "gateway_error": null,
+      "execution_state": "completed",
+      "model_requests": 3,
+      "last_outbound": "已把 600519 从观察清单移出，清单目前为空。需要说明的是，观察清单只是注意力列表，移入或移出都不影响自动候选池的判定，也不会产生或取消任何 READY/NEAR 信号——候选池由系统侧的冻结扫描独立决定。"
+    }
+  ],
+  "summary": {
+    "expected_hit": 4,
+    "legacy_broad_reads": 0,
+    "generic_escapes": 0,
+    "execution_failures": 0,
+    "total": 4
+  }
+}

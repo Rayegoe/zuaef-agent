@@ -228,3 +228,65 @@ def test_skill_md_mandates_targeted_pytest_before_local_commit():
     skill = ROOT / "plugins/zuaef-coding/zuaef_coding/skills/coding/SKILL.md"
     assert skill.is_file()
     assert "targeted pytest" in skill.read_text(encoding="utf-8")
+
+
+def test_always_on_profile_scope_guard_clauses(repo):
+    """Task Boundary Repair P1.1: out-of-scope business/market questions must
+    stop with zero repository or shell tool calls."""
+    lowered = str(bundle(repo).toolsets[0]._instructions).lower()
+    for clause in (
+        "before using any repository or shell tool",
+        "if it does not, make zero tool calls",
+        "do not reinterpret a business, market, writing",
+        "return a short profile-mismatch response and stop immediately",
+        "a business question under the coding profile is not a repository",
+        "business question under coding is not repository investigation",
+        "repo_run_command",
+        "search_knowledge",
+    ):
+        assert clause in lowered, clause
+
+
+def test_out_of_scope_market_request_has_zero_repo_tools_in_trajectory(repo):
+    """FunctionModel pin: the composed coding surface supports a direct
+    profile-mismatch answer with no repository tool call."""
+    b = bundle(repo)
+    seen_turns: list[set[str]] = []
+
+    async def scripted(messages, info):
+        names = {t.name for t in info.function_tools}
+        seen_turns.append(names)
+        # Tool availability is unchanged for normal work; the model simply
+        # must not consume it for this out-of-scope request.
+        assert "repo_run_command" in names
+        assert "repo_read_file" in names
+        return ModelResponse(
+            parts=[
+                TextPart(
+                    "当前是 coding profile，这个问题不需要代码/仓库工具。"
+                    "请切换到对应的市场分析 profile 后重试。"
+                )
+            ]
+        )
+
+    agent = Agent(
+        FunctionModel(scripted),
+        capabilities=list(b.capabilities),
+        toolsets=list(b.toolsets),
+    )
+    result = asyncio.run(
+        agent.run(
+            "分析a股大跌原因",
+            deps=CoreDeps(workspace_root=repo.parent, run_id="coding-scope-check"),
+        )
+    )
+    assert "coding profile" in result.output
+    assert "市场分析" in result.output
+    assert len(seen_turns) == 1
+    tool_calls = [
+        part.tool_name
+        for message in result.all_messages()
+        for part in getattr(message, "parts", [])
+        if getattr(part, "part_kind", "") == "tool-call"
+    ]
+    assert tool_calls == []

@@ -12,7 +12,7 @@ Type=simple
 WorkingDirectory=%h/zuaef-agent
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1
-ExecStart=%h/zuaef-agent/.venv/bin/python %h/zuaef-agent/tools/quant_serve.py --host 127.0.0.1 --port 8787
+ExecStart=%h/zuaef-agent/.venv/bin/zuaef-quant dashboard serve --host 127.0.0.1 --port 8787
 Restart=on-failure
 RestartSec=5
 

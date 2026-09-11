@@ -1,0 +1,47 @@
+{
+  "name": "zuaef-feishu-surface-spec-pack-v0.1",
+  "date_baseline": "2026-09-06",
+  "target": "Existing zuaef-agent runtime on OPi5",
+  "sdk": {
+    "package": "lark-channel-sdk",
+    "version": "1.4.0",
+    "release_date": "2026-08-31"
+  },
+  "hard_rules": [
+    "Feishu is a generic Surface",
+    "quant-decision is a profile, not a bot",
+    "quant-decision is Feishu group-only in v0.1",
+    "DM cannot activate quant-decision",
+    "no Quant business logic in Feishu adapter",
+    "reuse existing zuaef-agent runtime and session/profile/approval seams",
+    "use WebSocket long connection",
+    "one active Feishu worker per app"
+  ],
+  "files": [
+    "00_DECISION_AND_BOUNDARIES.md",
+    "01_PRD.md",
+    "02_ARCHITECTURE.md",
+    "03_RUNTIME_AND_SESSION_CONTRACT.md",
+    "04_FEISHU_SETUP_RUNBOOK.md",
+    "05_SECURITY_AND_RISK.md",
+    "06_IMPLEMENTATION_TASKS.md",
+    "07_ACCEPTANCE_TESTS.md",
+    "08_OPI5_DEPLOYMENT.md",
+    "09_CODEX_MASTER_PROMPT.md",
+    "10_UPSTREAM_SOURCES.md",
+    "README.md",
+    "examples/env.example",
+    "examples/forbidden_coupling_test.md",
+    "examples/interface_pseudocode.py",
+    "examples/profile-routing.example.yaml",
+    "examples/systemd.service.example",
+    "references/CARDS_CALLBACKS_SNAPSHOT.md",
+    "references/CHANNEL_SDK_1_4_0_NOTES.md",
+    "references/DEDUP_SNAPSHOT.md",
+    "references/FEISHU_CONSOLE_CHECKLIST.md",
+    "references/MARKDOWN_MEDIA_SNAPSHOT.md",
+    "references/MIGRATION_SNAPSHOT.md",
+    "references/QUICKSTART_SNAPSHOT.md",
+    "references/SECURITY_SNAPSHOT.md"
+  ]
+}

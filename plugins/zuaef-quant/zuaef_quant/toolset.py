@@ -1,4 +1,4 @@
-"""QuantToolset — the six model-visible deterministic tools.
+"""QuantToolset — the quant domain's model-visible deterministic tools.
 
 Boundary (spec pack 03 §4): the host owns validation, data, evaluator,
 market rules, costs and benchmark; the Agent owns interpretation and the
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import os
 import re
 import subprocess
 import tomllib
@@ -20,53 +21,15 @@ from pydantic_ai import FunctionToolset, RunContext
 from pydantic_ai.toolsets import AbstractToolset
 
 from zuaef_agent.models import CoreDeps
-from zuaef_agent.plugin_api import CompositionError
 
 from . import research as research_store
 from . import watchlist as watchlist_store
 from .freshness import derive_freshness, market_date_of, now_market
+from .runtime import package_parent, resolve_repo_root
 from .validation import compute_validation_accounting
 
-REPO_ROOT_ENV = "ZUAEF_QUANT_REPO_ROOT"
-TOOLS_DIR_ENV_MARKERS = ("tools/quant_eval_qlib.py", "benchmarks/quant/gen1/quant.toml")
-
-
-def resolve_repo_root() -> Path:
-    """Locate the repository holding the quant side-env scripts.
-
-    Resolution order: ``ZUAEF_QUANT_REPO_ROOT`` wins (explicit), then the
-    package position derives the repo root from ``__file__`` (editable
-    layouts: ``<repo>/plugins/zuaef-quant/zuaef_quant/``), then the current
-    directory must carry the quant tool markers. Loud failure otherwise —
-    never guess. The package-derived step makes plugin composition
-    independent of the process cwd (workers, worktrees, systemd services).
-    """
-    import os
-
-    configured = os.getenv(REPO_ROOT_ENV)
-    if configured:
-        return Path(configured).expanduser().resolve()
-    package = Path(__file__).resolve()
-    # editable: <repo>/plugins/zuaef-quant/zuaef_quant/toolset.py
-    candidate = package.parents[3]
-    if all((candidate / marker).exists() for marker in TOOLS_DIR_ENV_MARKERS):
-        return candidate
-    candidate = Path.cwd().resolve()
-    if all((candidate / marker).exists() for marker in TOOLS_DIR_ENV_MARKERS):
-        return candidate
-    raise CompositionError(
-        "quant plugin cannot locate the repository quant tooling; run the "
-        f"agent from the repo root or set {REPO_ROOT_ENV}"
-    )
-
-
+#: Repo/workspace resolution is owned by the stdlib-only runtime helper.
 REPO_ROOT = resolve_repo_root()
-TOOLS_DIR = REPO_ROOT / "tools"
-QUANT_EVAL_SCRIPT = TOOLS_DIR / "quant_eval_qlib.py"
-QUANT_SCAN_SCRIPT = TOOLS_DIR / "quant_live_scan.py"
-QUANT_MONITOR_SCRIPT = TOOLS_DIR / "quant_trading_monitor.py"
-QUANT_RENDER_SCRIPT = TOOLS_DIR / "quant_render_business_dashboard.py"
-QUANT_MARKET_INTEL_SCRIPT = TOOLS_DIR / "quant_market_intel.py"
 DEFAULT_BENCH_DIR = REPO_ROOT / "benchmarks" / "quant" / "gen1"
 EVAL_TIMEOUT_S = 1200
 SCAN_TIMEOUT_S = 300
@@ -75,6 +38,7 @@ RENDER_TIMEOUT_S = 120
 SYMBOL_CONTEXT_TIMEOUT_S = 120
 PREWARM_TIMEOUT_S = 300
 MKT_INTEL_TIMEOUT_S = 120
+MARKET_CONTEXT_TIMEOUT_S = 180
 GEN1_DIR = DEFAULT_BENCH_DIR
 
 #: Whitelisted StrategySpec keys (schema 1). Nothing else crosses the boundary.
@@ -255,20 +219,109 @@ def _resolve_last_scan_at(business_last_scan: Path, soak: list[dict]) -> str | N
     return max(candidates) if candidates else None
 
 
-def _run(script: Path, args: list[str], quant_python: Path, timeout: int) -> str:
+def _run_module(module: str, args: list[str], quant_python: Path, timeout: int) -> str:
+    """Run one domain-owned side-environment module (same authority as CLI)."""
+    env = os.environ.copy()
+    previous = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(package_parent()) + (
+        os.pathsep + previous if previous else ""
+    )
     proc = subprocess.run(
-        [str(quant_python), str(script), *args],
+        [str(quant_python), "-m", module, *args],
         capture_output=True,
         text=True,
         timeout=timeout,
         check=False,
         cwd=str(REPO_ROOT),
+        env=env,
     )
     if proc.returncode != 0:
         tail = (proc.stderr or proc.stdout)[-800:]
-        raise RuntimeError(f"quant side-env run failed ({script.name}): {tail}")
+        raise RuntimeError(f"quant sidecar run failed ({module}): {tail}")
     return proc.stdout
 
+
+def _read_trading_snapshot(workspace_root: Path) -> dict[str, Any]:
+    """Single deterministic read of the canonical trading artifacts.
+
+    Observe tools select a bounded block from this snapshot; the snapshot
+    itself never writes, never recomputes market state, and never invents a
+    value that the artifacts do not contain. Keeping one read path prevents
+    narrow tools from drifting away from the broad compatibility projection.
+    """
+    trading = workspace_root / "artifacts" / "quant" / "trading"
+    state = _read_json(trading / "state.json", {})
+    positions = _read_json(trading / "positions.json", {"open": [], "closed": []})
+    forward = _read_json(trading / "forward.json", {"observations": []})
+    soak = _read_jsonl_tail(trading / "soak.jsonl", 50)
+    alerts = _read_jsonl_tail(trading / "alerts.jsonl", 20)
+    events = [
+        {k: a.get(k) for k in ("ts", "type", "symbol", "what", "why", "price", "venue")}
+        for a in alerts
+    ]
+    now = now_market()
+    validation_accounting = compute_validation_accounting(
+        positions=positions,
+        forward=forward,
+        soak_rows=_read_jsonl(trading / "soak.jsonl"),
+        alerts=_read_jsonl(trading / "alerts.jsonl"),
+        as_of=now.date(),
+    )
+    last_scan_at = _resolve_last_scan_at(
+        workspace_root / "artifacts" / "quant" / "business" / "last_scan.json",
+        soak,
+    )
+    freshness = derive_freshness(
+        now=now,
+        latest_market_data_date=state.get("day"),
+        last_scan_at=last_scan_at,
+    )
+    return {
+        "trading_dir": trading,
+        "state": state,
+        "positions": positions,
+        "forward": forward,
+        "soak": soak,
+        "alerts": alerts,
+        "events": events,
+        "validation_accounting": validation_accounting,
+        "last_scan_at": last_scan_at,
+        "freshness": freshness,
+        "now": now,
+    }
+
+
+def _live_scan_payload(quant_python: Path) -> dict[str, Any]:
+    """Run the deterministic candidate-pool scan engine once and parse it.
+
+    Both ``get_live_signals`` (legacy-compatible evidence affordance) and
+    ``run_live_scan`` (explicit operator intent) call this function, and the
+    operator CLI executes ``zuaef_quant.scan_sidecar`` directly. There is one
+    scan implementation authority; the root tool path is only a legacy import
+    wrapper.
+    """
+    stdout = _run_module(
+        "zuaef_quant.scan_sidecar",
+        ["--max-triggers", "10"],
+        quant_python,
+        SCAN_TIMEOUT_S,
+    )
+    raw = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return {
+            "evidence_scope": "CANDIDATE_POOL",
+            "error": "candidate-pool scan returned unreadable output",
+            "raw_tail": stdout[-500:],
+        }
+    if not isinstance(data, dict):
+        return {
+            "evidence_scope": "CANDIDATE_POOL",
+            "error": "candidate-pool scan returned an unexpected payload",
+        }
+    data["evidence_scope"] = "CANDIDATE_POOL"
+    return data
 
 def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset[CoreDeps]:
     toolset: FunctionToolset[CoreDeps] = FunctionToolset()
@@ -325,8 +378,8 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         child_dir.mkdir(parents=True, exist_ok=True)
         strategy_path = child_dir / "strategy.toml"
         strategy_path.write_text(render_spec_toml(data), encoding="utf-8")
-        stdout = _run(
-            QUANT_EVAL_SCRIPT,
+        stdout = _run_module(
+            "zuaef_quant.eval_sidecar",
             ["--strategy", str(strategy_path), "--out", str(child_dir), "--window", window],
             quant_python,
             EVAL_TIMEOUT_S,
@@ -356,7 +409,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             ensure_ascii=False,
         )
 
-    @toolset.tool_plain
+    @toolset.tool_plain(defer_loading=True)
     def get_live_signals() -> str:
         """Scan the active candidate universe using current market quotes and
         return bounded triggers with their timestamps and scan latency.
@@ -365,13 +418,23 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         model never scans the whole market. An empty trigger list is a valid
         NO_TRADE answer; triggers are evidence, not orders.
         """
-        stdout = _run(
-            QUANT_SCAN_SCRIPT,
-            ["--max-triggers", "10"],
-            quant_python,
-            SCAN_TIMEOUT_S,
-        )
-        return stdout.strip().splitlines()[-1]
+        return json.dumps(_live_scan_payload(quant_python), ensure_ascii=False)
+
+    @toolset.tool_plain(defer_loading=True)
+    def run_live_scan() -> str:
+        """Explicitly run today's deterministic candidate-pool scan
+        (扫描/刷新/重新跑/今天信号/READY/NEAR): scan the resolved active
+        universe with the frozen strategy and return bounded triggers,
+        timestamps, scan metadata and latency.
+
+        This is the same scan engine behind get_live_signals and the
+        monitor/CLI. Use it when the user asks to refresh today's signals;
+        never fall back to shell, repo search or a hand-written script. An
+        empty trigger list is a valid NO_TRADE result, not an error.
+        """
+        data = _live_scan_payload(quant_python)
+        data.setdefault("evidence_scope", "CANDIDATE_POOL")
+        return json.dumps(data, ensure_ascii=False)
 
     @toolset.tool_plain
     def record_decision_brief(
@@ -468,7 +531,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         ]
         if notes.strip():
             args += ["--note", notes.strip()]
-        stdout = _run(QUANT_MONITOR_SCRIPT, args, quant_python, ACK_TIMEOUT_S)
+        stdout = _run_module("zuaef_quant.monitor", args, quant_python, ACK_TIMEOUT_S)
         ack = json.loads(stdout.strip() or "{}")
         return json.dumps(
             {
@@ -480,7 +543,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             ensure_ascii=False,
         )
 
-    @toolset.tool_plain
+    @toolset.tool_plain(defer_loading=True)
     def get_trading_context() -> str:
         """Read the bounded CURRENT trading context (持仓/交易状态/仓位)
         from the canonical M1 artifacts (workspace/artifacts/quant/trading/). Read-only projection:
@@ -493,41 +556,18 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         fact (freshness_status/freshness_reason plus the requested/data/scan
         dates): never infer data freshness from dates yourself and never
         interpret READY/NEAR as a current-day result unless
-        freshness_status is FRESH. Base every trading answer on this context
-        instead of memory; a stale context is a fact to report, not to
-        refresh by re-scanning.
+        freshness_status is FRESH. This is the broad mixed compatibility
+        projection: for a narrow READY/NEAR, holdings or validation question
+        prefer get_signal_board / get_positions / get_validation_status. Base
+        the answer on current tool facts instead of memory; a stale context
+        is a fact to report, not to refresh by re-scanning.
         """
-        trading = workspace_root / "artifacts" / "quant" / "trading"
-        state = _read_json(trading / "state.json", {})
-        positions = _read_json(trading / "positions.json", {"open": [], "closed": []})
-        forward = _read_json(trading / "forward.json", {"observations": []})
-        soak = _read_jsonl_tail(trading / "soak.jsonl", 50)
-        alerts = _read_jsonl_tail(trading / "alerts.jsonl", 20)
-        events = [
-            {k: a.get(k) for k in ("ts", "type", "symbol", "what", "why", "price", "venue")}
-            for a in alerts
-        ]
-        now = now_market()
-        # D2 Quant Evidence Accounting: strategy maturity is a ledger fact
-        # the model explains, never a prose estimate. The block keeps the
-        # position-lifecycle plane and the forward-observation plane
-        # explicitly separate (incident 505438f3 review).
-        validation_accounting = compute_validation_accounting(
-            positions=positions,
-            forward=forward,
-            soak_rows=_read_jsonl(trading / "soak.jsonl"),
-            alerts=_read_jsonl(trading / "alerts.jsonl"),
-            as_of=now.date(),
-        )
-        last_scan_at = _resolve_last_scan_at(
-            workspace_root / "artifacts" / "quant" / "business" / "last_scan.json",
-            soak,
-        )
-        freshness = derive_freshness(
-            now=now,
-            latest_market_data_date=state.get("day"),
-            last_scan_at=last_scan_at,
-        )
+        snapshot = _read_trading_snapshot(workspace_root)
+        state = snapshot["state"]
+        now = snapshot["now"]
+        freshness = snapshot["freshness"]
+        validation_accounting = snapshot["validation_accounting"]
+        last_scan_at = snapshot["last_scan_at"]
         return json.dumps(
             {
                 "present": bool(state),
@@ -537,13 +577,23 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                 "data_trust": state.get("data_trust") or "UNKNOWN",
                 "market_no_trade": state.get("market_no_trade"),
                 "system_unavailable": state.get("system_unavailable"),
-                "heartbeat_at": soak[-1].get("ts") if soak else None,
+                "heartbeat_at": snapshot["soak"][-1].get("ts") if snapshot["soak"] else None,
                 "last_scan_at": last_scan_at,
+                # Evidence scope is first-class: this projection intentionally
+                # merges two different scopes, so no single top-level scope may
+                # be claimed.  The per-field map is the authorizing boundary.
+                "evidence_scope": None,
+                "scope_map": {
+                    "ready": "CANDIDATE_POOL",
+                    "near": "CANDIDATE_POOL",
+                    "positions": "TRADING_ACCOUNT",
+                    "exit_alerts": "TRADING_ACCOUNT",
+                },
                 "ready": state.get("ready") or [],
                 "near": state.get("near") or [],
                 "exit_alerts": state.get("exit_alerts") or [],
-                "positions": positions.get("open") or [],
-                "recent_material_events": events,
+                "positions": snapshot["positions"].get("open") or [],
+                "recent_material_events": snapshot["events"],
                 "validation_accounting": validation_accounting,
                 # Freshness contract (Freshness Spec v0.1 §3): host-derived
                 # facts the model must read before any "today" claim.
@@ -563,6 +613,146 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                     "strategy profitability UNPROVEN (S3 frozen, PIT-contaminated universe)",
                     "READY/NEAR are deterministic facts from the frozen scan rules, not orders",
                     "READY/NEAR are current-day results only when freshness_status is FRESH",
+                    "ready/near are CANDIDATE_POOL evidence; positions/exit_alerts are TRADING_ACCOUNT evidence; neither is market-wide evidence",
+                ],
+            },
+            ensure_ascii=False,
+        )
+
+
+    # --- narrow semantic OBSERVE tools (Domain Surface Refoundation P2) -----
+    # These are intent-oriented projections over the same canonical trading
+    # artifacts as get_trading_context. They are deferred so the initial tool
+    # surface stays small; ToolSearch reveals the tools matching the user's
+    # vocabulary, and the narrow payload keeps the model from loading other
+    # scopes. get_trading_context remains resident as the legacy-compatible
+    # broad projection until the real-model canary retires it.
+
+    @toolset.tool_plain(defer_loading=True)
+    def get_signal_board() -> str:
+        """Read today's deterministic opportunity board (今天机会/
+        READY/NEAR/盯盘/信号板): candidate-pool readiness, scan freshness
+        and scan metadata only.
+
+        Discovery vocabulary: 机会 候选 信号 READY NEAR 盯盘 今天 扫描 新鲜度.
+        Evidence scope is CANDIDATE_POOL. READY/NEAR are deterministic scan
+        facts, not orders, and are current-day results only when
+        freshness_status is FRESH. Positions, holdings, validation and
+        market-wide context are deliberately not part of this payload.
+        """
+        snapshot = _read_trading_snapshot(workspace_root)
+        state = snapshot["state"]
+        freshness = snapshot["freshness"]
+        last_scan_at = snapshot["last_scan_at"]
+        return json.dumps(
+            {
+                "present": bool(state),
+                "evidence_scope": "CANDIDATE_POOL",
+                "as_of": state.get("as_of"),
+                "day": state.get("day"),
+                "market_state": state.get("status"),
+                "data_trust": state.get("data_trust") or "UNKNOWN",
+                "market_no_trade": state.get("market_no_trade"),
+                "system_unavailable": state.get("system_unavailable"),
+                "ready": state.get("ready") or [],
+                "near": state.get("near") or [],
+                "symbols_scanned": state.get("symbols_scanned"),
+                "last_scan_at": last_scan_at,
+                "requested_at": snapshot["now"].isoformat(),
+                "requested_market_date": freshness["requested_market_date"],
+                "latest_market_data_date": state.get("day"),
+                "last_scan_market_date": (
+                    market_date_of(last_scan_at).isoformat()
+                    if market_date_of(last_scan_at) is not None
+                    else None
+                ),
+                "freshness_status": freshness["freshness_status"],
+                "freshness_reason": freshness["freshness_reason"],
+                "limitations": [
+                    "READY/NEAR are CANDIDATE_POOL evidence from the frozen scan rules, not orders",
+                    "READY/NEAR are current-day results only when freshness_status is FRESH",
+                    "this board says nothing about the user's holdings; use get_positions for that",
+                ],
+            },
+            ensure_ascii=False,
+        )
+
+    @toolset.tool_plain(defer_loading=True)
+    def get_positions() -> str:
+        """Read the bounded current position state (当前持有/持仓/仓位/
+        成本/退警): open positions, their live host-projected fields and
+        exit alerts only.
+
+        Discovery vocabulary: 当前持有 持仓 仓位 成本 个股 退警 EXIT_ALERT.
+        Evidence scope is TRADING_ACCOUNT. This payload says nothing about
+        today's READY/NEAR candidate board; use get_signal_board for that.
+        """
+        snapshot = _read_trading_snapshot(workspace_root)
+        state = snapshot["state"]
+        positions_json = snapshot["positions"]
+        live_positions = state.get("positions")
+        if not isinstance(live_positions, list) or not live_positions:
+            live_positions = positions_json.get("open") or []
+        exit_alerts = state.get("exit_alerts")
+        if exit_alerts is None:
+            exit_alerts = [
+                p.get("symbol") for p in live_positions if p.get("state") == "EXIT_ALERT"
+            ]
+        freshness = snapshot["freshness"]
+        return json.dumps(
+            {
+                "present": bool(state) or bool(live_positions),
+                "evidence_scope": "TRADING_ACCOUNT",
+                "as_of": state.get("as_of"),
+                "day": state.get("day"),
+                "market_state": state.get("status"),
+                "data_trust": state.get("data_trust") or "UNKNOWN",
+                "positions": live_positions,
+                "exit_alerts": exit_alerts,
+                "last_scan_at": snapshot["last_scan_at"],
+                "requested_at": snapshot["now"].isoformat(),
+                "requested_market_date": freshness["requested_market_date"],
+                "latest_market_data_date": state.get("day"),
+                "freshness_status": freshness["freshness_status"],
+                "freshness_reason": freshness["freshness_reason"],
+                "limitations": [
+                    "positions are TRADING_ACCOUNT evidence; they do not authorise READY/NEAR claims",
+                    "a position in EXIT_ALERT remains OPEN until the human executes and records the close",
+                ],
+            },
+            ensure_ascii=False,
+        )
+
+    @toolset.tool_plain(defer_loading=True)
+    def get_validation_status() -> str:
+        """Read strategy-forward validation maturity (策略验证/验证进度/
+        forward evidence/样本/结算/交易天数/是否有效/PIT) only.
+
+        Discovery vocabulary: 策略 验证 进度 样本 结算 forward 有效性 PIT.
+        Evidence scope is TRADING_ACCOUNT. The payload is the ledger-derived
+        validation_accounting block plus the current PIT/profitability
+        limitations; it deliberately excludes READY/NEAR, positions and
+        market-wide context.
+        """
+        snapshot = _read_trading_snapshot(workspace_root)
+        state = snapshot["state"]
+        accounting = snapshot["validation_accounting"]
+        return json.dumps(
+            {
+                "present": bool(state) or bool(accounting.get("lifecycle")),
+                "evidence_scope": "TRADING_ACCOUNT",
+                "as_of": accounting.get("as_of") or state.get("as_of"),
+                "day": state.get("day"),
+                "market_state": state.get("status"),
+                "data_trust": state.get("data_trust") or "UNKNOWN",
+                "validation_accounting": accounting,
+                "strategy_profitability": "UNPROVEN",
+                "pit_status": "CONTAMINATED",
+                "pit_cause": "current CSI500 membership applied to all historical dates",
+                "limitations": [
+                    "settled means the full-horizon (d8) forward window exists; an EXIT_ALERT position is still open until the human executes and record_trade_outcome closes it",
+                    "zero settled observations means no forward evidence yet, never that the strategy has no effect",
+                    "PIT-contaminated universe: historical numbers describe only this sampled universe",
                 ],
             },
             ensure_ascii=False,
@@ -586,8 +776,8 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         try:
             # ``--state-dir`` precedes the subcommand (argparse, see
             # get_symbol_context).
-            stdout = _run(
-                QUANT_MONITOR_SCRIPT,
+            stdout = _run_module(
+                "zuaef_quant.monitor",
                 ["--state-dir", str(workspace_root / "artifacts" / "quant" / "trading"),
                  "prewarm-history", "--symbols", ",".join(symbols)],
                 quant_python,
@@ -602,7 +792,97 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             return {"error": "history prewarm returned unreadable output"}
         return data.get("prewarm") if isinstance(data.get("prewarm"), dict) else data
 
-    @toolset.tool
+    def _watchlist_update(
+        ctx: RunContext[CoreDeps], action: str, symbols: list[str]
+    ) -> dict[str, Any]:
+        """Shared host implementation for every watchlist write surface.
+
+        The legacy ``update_analysis_watchlist`` and the intent-oriented
+        ``manage_watchlist`` both delegate here; there is one write path and
+        one read-back verification, so "已加入" can never be claimed without
+        persisted state proving it.
+        """
+        scope = _analysis_scope(ctx)
+        if not scope:
+            return {
+                "error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"
+            }
+        try:
+            result = watchlist_store.update_symbols_in(
+                watchlist_store.scope_dir(workspace_root),
+                scope,
+                action,
+                symbols,
+                run_id=ctx.deps.run_id,
+            )
+        except watchlist_store.WatchlistError as exc:
+            return {"error": str(exc)}
+        # Write -> read-back: "已加入" may only be said after the persisted
+        # state itself proves the change; a write that did not stick is
+        # reported as a failure, never as success.
+        persisted = watchlist_store.read_symbols_in(
+            watchlist_store.scope_dir(workspace_root), scope
+        )
+        verified = all(
+            (s in persisted) if action == "add" else (s not in persisted)
+            for s in result["changed"]
+        )
+        result["verified"] = verified
+        if not verified:
+            result["error"] = "watchlist write did not persist; do not claim success"
+        if verified and action == "add" and result["changed"]:
+            result["history_prewarm"] = _prewarm_history(result["changed"])
+        result["note"] = "watchlist updated; analysis-only, never READY/NEAR"
+        return result
+
+    @toolset.tool(defer_loading=True)
+    def manage_watchlist(
+        ctx: RunContext[CoreDeps], action: str, symbols: list[str] | None = None
+    ) -> str:
+        """Manage THIS run's analysis watchlist (自选/观察/关注/加入/移除/
+        watchlist): one bounded action over user attention facts. action is
+        add | remove | list; symbols are 6-digit A-share codes (not required
+        for list). Local and reversible: it never places orders, never
+        changes the strategy and never adds anything to the candidate pool —
+        say that caveat back to the user when confirming. Newly added
+        symbols get a best-effort history prewarm; report watchlist and
+        prewarm facts separately.
+
+        Discovery vocabulary: 自选 观察 关注 加入 移除 watchlist.
+        """
+        normalized = str(action or "").strip().lower()
+        if normalized == "list":
+            scope = _analysis_scope(ctx)
+            if not scope:
+                return json.dumps(
+                    {"error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"},
+                    ensure_ascii=False,
+                )
+            current = watchlist_store.read_symbols_in(
+                watchlist_store.scope_dir(workspace_root), scope
+            )
+            return json.dumps(
+                {
+                    "scope": scope,
+                    "action": "list",
+                    "symbols": current,
+                    "count": len(current),
+                    "semantics": "analysis-only; never READY/NEAR; candidate pool untouched",
+                    "note": "positions are tracked separately by get_positions",
+                },
+                ensure_ascii=False,
+            )
+        if normalized not in ("add", "remove"):
+            return json.dumps(
+                {"error": "action must be add, remove or list"},
+                ensure_ascii=False,
+            )
+        return json.dumps(
+            _watchlist_update(ctx, normalized, [str(s) for s in (symbols or [])]),
+            ensure_ascii=False,
+        )
+
+    @toolset.tool(defer_loading=True)
     def get_analysis_watchlist(ctx: RunContext[CoreDeps]) -> str:
         """Read THIS run's analysis watchlist (自选清单/关注列表) — the
         user-curated attention list (scope = bound case, else this chat). Returns the symbols plus
@@ -630,52 +910,23 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             ensure_ascii=False,
         )
 
-    @toolset.tool
+    @toolset.tool(defer_loading=True)
     def update_analysis_watchlist(
         ctx: RunContext[CoreDeps], action: str, symbols: list[str]
     ) -> str:
         """Add or remove symbols in THIS run's analysis watchlist (加入自选/
         取消关注/关注列表: user attention facts). action is add/remove;
-        symbols are 6-digit A-share codes. Local and reversible: it never places orders, never changes
-        the strategy, and never adds anything to the candidate pool — say
-        that caveat back to the user when confirming. Invalid codes are
-        rejected with an error; report it instead of guessing. Newly added
-        symbols get a best-effort history prewarm; a prewarm failure means
-        history stays unavailable (the watchlist edit itself still
-        succeeded) — report the two facts separately."""
-        scope = _analysis_scope(ctx)
-        if not scope:
-            return json.dumps(
-                {"error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"},
-                ensure_ascii=False,
-            )
-        try:
-            result = watchlist_store.update_symbols_in(
-                watchlist_store.scope_dir(workspace_root),
-                scope,
-                action,
-                symbols,
-                run_id=ctx.deps.run_id,
-            )
-        except watchlist_store.WatchlistError as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-        # Write -> read-back: "已加入" may only be said after the persisted
-        # state itself proves the change; a write that did not stick is
-        # reported as a failure, never as success.
-        persisted = watchlist_store.read_symbols_in(
-            watchlist_store.scope_dir(workspace_root), scope
-        )
-        verified = all(
-            (s in persisted) if action == "add" else (s not in persisted)
-            for s in result["changed"]
-        )
-        result["verified"] = verified
-        if not verified:
-            result["error"] = "watchlist write did not persist; do not claim success"
-        if verified and action == "add" and result["changed"]:
-            result["history_prewarm"] = _prewarm_history(result["changed"])
-        result["note"] = "watchlist updated; analysis-only, never READY/NEAR"
-        return json.dumps(result, ensure_ascii=False)
+        symbols are 6-digit A-share codes. Legacy-compatible alias of
+        manage_watchlist(action=add|remove); prefer manage_watchlist for
+        natural-language watchlist management. Local and reversible: it never
+        places orders, never changes the strategy, and never adds anything to
+        the candidate pool — say that caveat back to the user when
+        confirming. Invalid codes are rejected with an error; report it
+        instead of guessing. Newly added symbols get a best-effort history
+        prewarm; a prewarm failure means history stays unavailable (the
+        watchlist edit itself still succeeded) — report the two facts
+        separately."""
+        return json.dumps(_watchlist_update(ctx, action, symbols), ensure_ascii=False)
 
     @toolset.tool
     def get_symbol_context(ctx: RunContext[CoreDeps], symbol: str) -> str:
@@ -697,19 +948,35 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         if scope:
             args += ["--scope", scope]
         try:
-            stdout = _run(QUANT_MONITOR_SCRIPT, args, quant_python, SYMBOL_CONTEXT_TIMEOUT_S)
+            stdout = _run_module("zuaef_quant.monitor", args, quant_python, SYMBOL_CONTEXT_TIMEOUT_S)
         except subprocess.TimeoutExpired:
             return json.dumps(
-                {"error": "symbol context fetch timed out; try again shortly"},
+                {
+                    "evidence_scope": "SINGLE_SYMBOL",
+                    "error": "symbol context fetch timed out; try again shortly",
+                },
                 ensure_ascii=False,
             )
         line = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
         try:
             data = json.loads(line)
         except ValueError:
-            return json.dumps({"error": "symbol context returned unreadable output"}, ensure_ascii=False)
-        if isinstance(data, dict) and data.get("error"):
-            return json.dumps(data, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "evidence_scope": "SINGLE_SYMBOL",
+                    "error": "symbol context returned unreadable output",
+                },
+                ensure_ascii=False,
+            )
+        if not isinstance(data, dict):
+            return json.dumps(
+                {
+                    "evidence_scope": "SINGLE_SYMBOL",
+                    "error": "symbol context returned an unexpected payload",
+                },
+                ensure_ascii=False,
+            )
+        data["evidence_scope"] = "SINGLE_SYMBOL"
         return json.dumps(data, ensure_ascii=False)
 
     @toolset.tool_plain(defer_loading=True)
@@ -725,24 +992,118 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         symbol = str(symbol).strip()
         limit = max(1, min(int(limit), 20))
         try:
-            stdout = _run(
-                QUANT_MARKET_INTEL_SCRIPT,
+            stdout = _run_module(
+                "zuaef_quant.market_intel",
                 ["--symbol", symbol, "--limit", str(limit)],
                 quant_python,
                 MKT_INTEL_TIMEOUT_S,
             )
         except subprocess.TimeoutExpired:
-            return json.dumps({"error": "market intelligence fetch timed out; try again shortly"},
-                              ensure_ascii=False)
+            return json.dumps(
+                {
+                    "evidence_scope": "SINGLE_SYMBOL_NEWS",
+                    "error": "market intelligence fetch timed out; try again shortly",
+                },
+                ensure_ascii=False,
+            )
         except RuntimeError as exc:
-            return json.dumps({"error": f"market intelligence unavailable: {str(exc)[-200:]}"},
-                              ensure_ascii=False)
+            return json.dumps(
+                {
+                    "evidence_scope": "SINGLE_SYMBOL_NEWS",
+                    "error": f"market intelligence unavailable: {str(exc)[-200:]}",
+                },
+                ensure_ascii=False,
+            )
         line = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
         try:
             data = json.loads(line)
         except ValueError:
-            return json.dumps({"error": "market intelligence returned unreadable output"},
-                              ensure_ascii=False)
+            return json.dumps(
+                {
+                    "evidence_scope": "SINGLE_SYMBOL_NEWS",
+                    "error": "market intelligence returned unreadable output",
+                },
+                ensure_ascii=False,
+            )
+        if not isinstance(data, dict):
+            return json.dumps(
+                {
+                    "evidence_scope": "SINGLE_SYMBOL_NEWS",
+                    "error": "market intelligence returned an unexpected payload",
+                },
+                ensure_ascii=False,
+            )
+        data["evidence_scope"] = "SINGLE_SYMBOL_NEWS"
+        return json.dumps(data, ensure_ascii=False)
+
+    @toolset.tool_plain(defer_loading=True)
+    def get_market_context() -> str:
+        """Bounded market-wide A-share evidence (A股/大盘/全市场): major
+        indices, 上涨/下跌 breadth, 成交额, 行业板块 leaders/laggards, 外盘
+        Asia indices, 原油, 利率/美债, 美元 and a bounded macro timeline.
+
+        Discovery vocabulary: A股 大盘 市场 全市场 今天 为什么 跌 大跌
+        暴跌 普跌 上涨 下跌 板块 行业 原因 宏观 外盘 亚洲股市 原油 利率
+        美债 美元 风险偏好.
+        Evidence scope is A_SHARE_MARKET_WIDE.  This host proves what happened
+        (OBSERVED); the model interprets why.  Not a crawler/browser.  Missing
+        data stays missing and the candidate pool/watchlist/positions are never
+        substituted for market-wide evidence."""
+        try:
+            stdout = _run_module(
+                "zuaef_quant.market_context",
+                [],
+                quant_python,
+                MARKET_CONTEXT_TIMEOUT_S,
+            )
+        except subprocess.TimeoutExpired:
+            return json.dumps(
+                {
+                    "as_of": None,
+                    "evidence_scope": "A_SHARE_MARKET_WIDE",
+                    "missing": ["market_context"],
+                    "limitations": ["market context fetch timed out; try again shortly"],
+                    "error": "market context fetch timed out",
+                },
+                ensure_ascii=False,
+            )
+        except (OSError, RuntimeError) as exc:
+            return json.dumps(
+                {
+                    "as_of": None,
+                    "evidence_scope": "A_SHARE_MARKET_WIDE",
+                    "missing": ["market_context"],
+                    "limitations": ["market context side environment unavailable"],
+                    "error": f"market context unavailable: {str(exc)[-200:]}",
+                },
+                ensure_ascii=False,
+            )
+        line = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
+        try:
+            data = json.loads(line)
+        except ValueError:
+            return json.dumps(
+                {
+                    "as_of": None,
+                    "evidence_scope": "A_SHARE_MARKET_WIDE",
+                    "missing": ["market_context"],
+                    "limitations": ["market context returned unreadable output"],
+                    "error": "market context returned unreadable output",
+                },
+                ensure_ascii=False,
+            )
+        if not isinstance(data, dict):
+            return json.dumps(
+                {
+                    "as_of": None,
+                    "evidence_scope": "A_SHARE_MARKET_WIDE",
+                    "missing": ["market_context"],
+                    "limitations": ["market context returned an unexpected payload"],
+                    "error": "market context returned an unexpected payload",
+                },
+                ensure_ascii=False,
+            )
+        data["evidence_scope"] = "A_SHARE_MARKET_WIDE"
         return json.dumps(data, ensure_ascii=False)
 
     # --- research artifacts (research service v0.2, T011/T012) --------------
@@ -863,8 +1224,8 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         delivery = workspace_root / "artifacts" / "quant" / "delivery"
         delivery.mkdir(parents=True, exist_ok=True)
         out = delivery / f"quant-business-{stamp}.html"
-        stdout = _run(
-            QUANT_RENDER_SCRIPT, ["--out", str(out)], quant_python, RENDER_TIMEOUT_S
+        stdout = _run_module(
+            "zuaef_quant.dashboard.render", ["--out", str(out)], quant_python, RENDER_TIMEOUT_S
         )
         summary = next((ln for ln in stdout.splitlines() if ln.startswith("OK ->")), stdout[-200:])
         return json.dumps(

@@ -17,7 +17,8 @@ Environment=PYTHONUNBUFFERED=1
 Environment=OMP_NUM_THREADS=4
 Environment=OPENBLAS_NUM_THREADS=4
 Environment=NUMEXPR_NUM_THREADS=4
-ExecStart=%h/zuaef-agent/.venv/bin/python %h/zuaef-agent/tools/quant_trading_monitor.py session --interval 45 --minutes 150 --exit-on-close
+Environment=PYTHONPATH=%h/zuaef-agent/plugins/zuaef-quant
+ExecStart=%h/zuaef-agent/.venv-quant/bin/python -m zuaef_quant.monitor session --interval 45 --minutes 150 --exit-on-close
 Restart=no
 TimeoutStopSec=20
 

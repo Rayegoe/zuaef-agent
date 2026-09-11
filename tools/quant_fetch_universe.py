@@ -20,9 +20,11 @@ import time
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+_PLUGIN_ROOT = Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"
+if str(_PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PLUGIN_ROOT))
 
-from quant_core import fetch_csi500_constituents, fetch_history
+from zuaef_quant.quant_core import fetch_csi500_constituents, fetch_history
 
 CACHE_DIR = Path("data/quant-cache")
 

@@ -25,6 +25,7 @@ members = [
     "zuaef-knowledge-worker",
     "zuaef-quant",
     "zuaef-telegram",
+    "zuaef-wechat-x",
     "zuaef-wordpress",
     "zuaef-writing-pack",
 ]
@@ -3678,6 +3679,17 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28" },
     { name = "pydantic-ai", specifier = ">=2.27,<3" },
 ]
+
+[[package]]
+name = "zuaef-wechat-x"
+version = "0.1.0"
+source = { editable = "plugins/zuaef-wechat-x" }
+dependencies = [
+    { name = "pydantic-ai" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic-ai", specifier = ">=2.38,<3" }]
 
 [[package]]
 name = "zuaef-wordpress"

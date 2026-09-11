@@ -250,3 +250,49 @@ Interpretation:
 
 Status: T006-B2 execution recorded; human blind quality/evidence verdict
 pending. Phase 2 remains open; T007 remains deferred.
+
+## ADR-RF-011 — Architecture North Star and consolidation phase
+
+Decision:
+- accept `docs/architecture/NORTH_STAR.md` as the broad architecture authority for
+  future ZUAEF changes: model owns semantic work, host owns mechanical work, and
+  ZUAEF owns Minimal Reality Binding between the task and real materials/actions;
+- keep `docs/runtime-refoundation/SPEC.md` binding for runtime work as the
+  model-boundary/runtime subset, not as the whole-system authority;
+- define the next phase as **Architecture Consolidation**, not Runtime v2,
+  Global Router, Domain Model, Workflow DSL, Command Framework, or Universal
+  State Layer;
+- scope the first consolidation phase to `docs/architecture/CONSOLIDATION_SPEC.md`
+  workstreams: `C1` shared Host Control Plane, `C2` command grammar, `C3`
+  Gateway shrink/domain-boundary repair, and `C4` Quant ownership migration out
+  of root `tools/`;
+- treat `T009 — Capability ledger` as the P0 prerequisite and require `T012` to
+  delete or demote superseded authority rather than leave parallel paths.
+
+Reason:
+- the `main@cf581e5` audit shows authority dispersion, not a missing super-runtime:
+  `plugins/zuaef-quant` delegates to root `tools/quant_*` (a Shadow Product
+  Layer), `GatewayService` is a ~48 KB God Object that knows a Quant artifact
+  path, Web Console independently re-implements operator inspection/action
+  semantics, and a shared deterministic Host Control Plane is absent;
+- Gateway + Web Console are approximately 68% of `src/zuaef_agent` Python bytes,
+  while runtime/composition/store/kernel code is about 130 KB; a large Runtime
+  rewrite would target the wrong layer;
+- real-incident pressure otherwise accumulates mechanisms, tests, docs, special
+  paths and surface handling until reliability increases while system
+  comprehensibility decreases.
+
+Evidence:
+- inventory baseline: 1232 tracked files, 328 Python files, 39
+  `src/zuaef_agent` Python files, 33 `tools/` scripts, 12 plugins, 13 profiles;
+- `src/zuaef_agent/gateway/service.py` is 47,998 bytes;
+- Gateway reads `artifacts/quant/briefs/last-reply.json`;
+- `plugins/zuaef-quant/zuaef_quant/toolset.py` resolves
+  `tools/quant_eval_qlib.py`, `tools/quant_live_scan.py` and
+  `tools/quant_trading_monitor.py`;
+- existing `T009` and `T012` already name capability authority and zombie
+  architecture as unfinished work.
+
+Status: accepted as working architecture authority; no runtime code changed and
+no consolidation workstream was started by this ADR. Next: execute
+`CONSOLIDATION_SPEC.md` in its defined order.

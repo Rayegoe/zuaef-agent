@@ -14,6 +14,9 @@ requires-python = ">=3.11"
 # carry a quant data stack.
 dependencies = ["pydantic>=2.10"]
 
+[project.scripts]
+zuaef-quant = "zuaef_quant.ops:main"
+
 [project.entry-points."zuaef.plugins"]
 quant = "zuaef_quant:create_plugin"
 

@@ -118,12 +118,12 @@ class TestRecordOutcome:
         func = toolset.tools["record_trade_outcome"].function
         captured = {}
 
-        def fake_run(script, args, quant_python, timeout):
-            captured["script"], captured["args"] = script, args
+        def fake_run(module, args, quant_python, timeout):
+            captured["module"], captured["args"] = module, args
             return json.dumps({"position": "p-0001", "symbol": "600519", "state": "HOLD", "venue": "paper"})
 
         import zuaef_quant.toolset as toolset_mod
-        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        monkeypatch.setattr(toolset_mod, "_run_module", fake_run)
         result = json.loads(func(
             symbol="600519", action="BUY", shares=100, price=1297.4,
             venue="paper", executed_at="2026-09-04T11:07:42+08:00", notes="paper entry",
@@ -149,12 +149,12 @@ class TestRecordOutcome:
         func = toolset.tools["record_trade_outcome"].function
         captured = {}
 
-        def fake_run(script, args, quant_python, timeout):
+        def fake_run(module, args, quant_python, timeout):
             captured["args"] = args
             return json.dumps({"closed": "p-0001", "pnl": 150.0, "venue": "real"})
 
         import zuaef_quant.toolset as toolset_mod
-        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        monkeypatch.setattr(toolset_mod, "_run_module", fake_run)
         result = json.loads(func(
             symbol="600519", action="SELL", shares=100, price=1320.0,
             venue="real", executed_at="2026-09-04T13:45:00+08:00",
@@ -166,11 +166,11 @@ class TestRecordOutcome:
         toolset, _ = self._toolset(tmp_path, monkeypatch)
         func = toolset.tools["record_trade_outcome"].function
 
-        def rejecting_run(script, args, quant_python, timeout):
+        def rejecting_run(module, args, quant_python, timeout):
             raise RuntimeError("canonical ack rejected the trade record: venue mismatch")
 
         import zuaef_quant.toolset as toolset_mod
-        monkeypatch.setattr(toolset_mod, "_run", rejecting_run)
+        monkeypatch.setattr(toolset_mod, "_run_module", rejecting_run)
         with pytest.raises(RuntimeError, match="venue mismatch"):
             func(symbol="600519", action="SELL", shares=100, price=10.0,
                  venue="real", executed_at="2026-09-04T13:45:00+08:00")
@@ -256,14 +256,14 @@ class TestRenderBusinessArtifact:
         func = toolset.tools["render_quant_business_artifact"].function
         captured = {}
 
-        def fake_run(script, args, quant_python, timeout):
-            captured["script"], captured["args"] = script, args
+        def fake_run(module, args, quant_python, timeout):
+            captured["module"], captured["args"] = module, args
             return "OK -> /tmp/x.html (90.2 KB, also y); decision=NO_TRADE real_records=5 m1=PARTIAL"
 
         import zuaef_quant.toolset as toolset_mod
-        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        monkeypatch.setattr(toolset_mod, "_run_module", fake_run)
         result = json.loads(func())
-        assert captured["script"].name == "quant_render_business_dashboard.py"
+        assert captured["module"] == "zuaef_quant.dashboard.render"
         assert "--out" in captured["args"]
         assert result["artifact"].startswith("artifacts/quant/delivery/quant-business-")
         assert not result["artifact"].startswith(str(env.workspace_root))
@@ -281,7 +281,7 @@ class TestEvaluateStrategy:
         call = toolset.tools["evaluate_strategy"]
         func = call.function if hasattr(call, "function") else call
 
-        def fake_run(script, args, quant_python, timeout):
+        def fake_run(module, args, quant_python, timeout):
             out_dir = Path(args[args.index("--out") + 1])
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / "evidence.json").write_text(json.dumps({
@@ -298,7 +298,7 @@ class TestEvaluateStrategy:
             return "{}"
 
         import zuaef_quant.toolset as toolset_mod
-        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        monkeypatch.setattr(toolset_mod, "_run_module", fake_run)
         result = json.loads(func(
             name="child_one", entry_pullback_max=-0.05, entry_volume_ratio_min=2.0
         ))
@@ -328,7 +328,7 @@ class TestOneEvaluationPerRound:
         toolset = bundle.capabilities[0].toolsets[0]
         func = toolset.tools["evaluate_strategy"].function
 
-        def fake_run(script, args, quant_python, timeout):
+        def fake_run(module, args, quant_python, timeout):
             out_dir = Path(args[args.index("--out") + 1])
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / "evidence.json").write_text(json.dumps({
@@ -339,7 +339,7 @@ class TestOneEvaluationPerRound:
             return "{}"
 
         import zuaef_quant.toolset as toolset_mod
-        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        monkeypatch.setattr(toolset_mod, "_run_module", fake_run)
         first = json.loads(func(name="guard_test_a"))
         assert first["intents"] == {"total": 0}
         with pytest.raises(RuntimeError, match="one evaluation per"):
@@ -353,7 +353,7 @@ class TestOneEvaluationPerRound:
         toolset = bundle.capabilities[0].toolsets[0]
         func = toolset.tools["evaluate_strategy"].function
 
-        def fake_run(script, args, quant_python, timeout):
+        def fake_run(module, args, quant_python, timeout):
             out_dir = Path(args[args.index("--out") + 1])
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / "evidence.json").write_text(json.dumps({
@@ -364,7 +364,7 @@ class TestOneEvaluationPerRound:
             return "{}"
 
         import zuaef_quant.toolset as toolset_mod
-        monkeypatch.setattr(toolset_mod, "_run", fake_run)
+        monkeypatch.setattr(toolset_mod, "_run_module", fake_run)
         result = json.loads(func(name="relpath_test"))
         assert not result["result_file"].startswith(str(env.workspace_root))
         assert result["result_file"].startswith("artifacts/quant/children/")
@@ -652,3 +652,163 @@ def test_instructions_carry_validation_accounting_contract():
     assert "Validation accounting" in text
     assert "validation_age_trading_days" in text
     assert "still OPEN until the human executes" in text
+
+
+# ---------------------------------------------------------------------------
+# Evidence scope is first-class (Task Boundary Repair P3)
+# ---------------------------------------------------------------------------
+
+
+def _quant_toolset(tmp_path: Path, monkeypatch):
+    from zuaef_quant.plugin import create_plugin
+
+    monkeypatch.delenv("ZUAEF_QUANT_PYTHON", raising=False)
+    monkeypatch.setenv("ZUAEF_QUANT_PYTHON", str(_fake_quant_python(tmp_path)))
+    env = _env(tmp_path)
+    bundle = create_plugin(env, {})
+    return bundle.capabilities[0].toolsets[0], env
+
+
+def test_candidate_and_symbol_tools_expose_evidence_scope(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import zuaef_quant.toolset as toolset_module
+
+    from zuaef_agent.models import CoreDeps
+
+    toolset, _ = _quant_toolset(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        toolset_module,
+        "_run_module",
+        lambda *a, **kw: json.dumps({"triggers": [], "universe_count": 50}),
+    )
+    live = json.loads(toolset.tools["get_live_signals"].function())
+    assert live["evidence_scope"] == "CANDIDATE_POOL"
+    assert live["universe_count"] == 50
+
+    monkeypatch.setattr(
+        toolset_module,
+        "_run_module",
+        lambda *a, **kw: json.dumps({"symbol": "600519", "quote": {}}),
+    )
+    ctx = SimpleNamespace(
+        deps=CoreDeps(
+            workspace_root=tmp_path,
+            run_id="r-scope",
+            bindings={"analysis_scope": "chat"},
+        )
+    )
+    symbol = json.loads(toolset.tools["get_symbol_context"].function(ctx, "600519"))
+    assert symbol["evidence_scope"] == "SINGLE_SYMBOL"
+
+    monkeypatch.setattr(
+        toolset_module,
+        "_run_module",
+        lambda *a, **kw: json.dumps({"symbol": "600550", "count": 0, "items": []}),
+    )
+    intel = json.loads(toolset.tools["get_market_intelligence"].function("600550"))
+    assert intel["evidence_scope"] == "SINGLE_SYMBOL_NEWS"
+
+
+def test_trading_context_exposes_scope_map_not_one_broad_claim(tmp_path, monkeypatch):
+    toolset, _ = _quant_toolset(tmp_path, monkeypatch)
+    data = json.loads(toolset.tools["get_trading_context"].function())
+    # The projection intentionally mixes candidate-pool and account scopes,
+    # so there is no valid single top-level scope.
+    assert data["evidence_scope"] is None
+    assert data["scope_map"] == {
+        "ready": "CANDIDATE_POOL",
+        "near": "CANDIDATE_POOL",
+        "positions": "TRADING_ACCOUNT",
+        "exit_alerts": "TRADING_ACCOUNT",
+    }
+
+
+def test_market_context_routes_to_side_env_and_is_market_wide(tmp_path, monkeypatch):
+    import zuaef_quant.toolset as toolset_module
+
+    toolset, _ = _quant_toolset(tmp_path, monkeypatch)
+    captured: dict = {}
+
+    def fake_run(module, args, quant_python, timeout):
+        captured["module"], captured["args"], captured["timeout"] = module, args, timeout
+        return json.dumps(
+            {
+                "as_of": "2026-09-11T15:05:00+08:00",
+                "evidence_scope": "A_SHARE_MARKET_WIDE",
+                "a_share": {"indices": [], "breadth": {}, "turnover": {}, "sectors": {}},
+                "external": {},
+                "news": [],
+                "missing": [],
+                "limitations": [],
+            }
+        )
+
+    monkeypatch.setattr(toolset_module, "_run_module", fake_run)
+    tool = toolset.tools["get_market_context"]
+    out = json.loads(tool.function())
+    assert captured["module"] == "zuaef_quant.market_context"
+    assert captured["args"] == []
+    assert out["evidence_scope"] == "A_SHARE_MARKET_WIDE"
+    assert tool.defer_loading is True
+
+    # CJK discovery vocabulary required by P2.4 must be present in the
+    # ToolSearch description (no hand-written keyword router).
+    description = tool.description or ""
+    for term in (
+        "A股", "大盘", "市场", "全市场", "今天", "为什么", "跌", "大跌",
+        "暴跌", "普跌", "上涨", "下跌", "板块", "行业", "原因", "宏观",
+        "外盘", "亚洲股市", "原油", "利率", "美债", "美元", "风险偏好",
+    ):
+        assert term in description, term
+
+
+def test_scope_invariant_instructions_and_market_recipe():
+    from zuaef_quant.plugin import QUANT_INSTRUCTIONS
+
+    assert "A claim's scope may never exceed the scope of the evidence supporting it." in QUANT_INSTRUCTIONS
+    assert "Prediction alignment is not causal validation." in QUANT_INSTRUCTIONS
+    assert "Previous assistant prose is not evidence." in QUANT_INSTRUCTIONS
+    assert "get_market_context exactly once" in QUANT_INSTRUCTIONS
+    assert "OBSERVED" in QUANT_INSTRUCTIONS
+    assert "INTERPRETATION" in QUANT_INSTRUCTIONS
+    assert "UNKNOWN" in QUANT_INSTRUCTIONS
+    skill = (
+        Path(__file__).parents[1]
+        / "plugins/zuaef-quant/skills/quant-research/SKILL.md"
+    ).read_text(encoding="utf-8")
+    assert "get_market_context` exactly once" in skill
+    assert "A claim's scope may never exceed the scope of the evidence supporting it." in skill
+    assert "A股普跌" in skill  # explicit forbidden overgeneralization
+
+
+def test_adversarial_scope_fixture_cannot_authorise_market_claim(tmp_path, monkeypatch):
+    """Gate C fixture: candidate pool 45/50 down, market-wide up 3000/down 1800.
+
+    The host surfaces the contradictory scopes as first-class fields; the
+    instructions and skill make "A股普跌" claimable only from market-wide
+    evidence.  Model wording itself is pinned by the real-model canary.
+    """
+    import zuaef_quant.toolset as toolset_module
+
+    toolset, _ = _quant_toolset(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        toolset_module,
+        "_run_module",
+        lambda *a, **kw: json.dumps(
+            {"triggers": [], "universe_count": 50, "down": 45, "up": 5}
+        ),
+    )
+    candidate = json.loads(toolset.tools["get_live_signals"].function())
+    assert candidate["evidence_scope"] == "CANDIDATE_POOL"
+
+    market_payload = {
+        "as_of": "2026-09-11T15:05:00+08:00",
+        "evidence_scope": "A_SHARE_MARKET_WIDE",
+        "a_share": {"breadth": {"up": 3000, "down": 1800}},
+    }
+    assert candidate["evidence_scope"] != market_payload["evidence_scope"]
+    assert market_payload["a_share"]["breadth"]["up"] > market_payload["a_share"]["breadth"]["down"]
+    assert candidate["down"] > candidate["up"]
+    # Host evidence does not claim market-wide direction from candidate data.
+    assert "evidence_scope" in candidate and candidate["evidence_scope"] == "CANDIDATE_POOL"

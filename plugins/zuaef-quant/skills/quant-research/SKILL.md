@@ -9,10 +9,70 @@ You are doing business research, not executing a fixed pipeline. Pick the
 evidence layers the question actually needs; a short factual question never
 loads this whole checklist.
 
+## Market-wide task recipe (A股大盘/全市场原因)
+
+Use this recipe for questions such as 今天为什么跌? / A股大跌原因? / 为什么普跌? /
+今天市场发生了什么? / 某板块为什么突然下跌?.  The default flow is:
+
+1. Call `get_market_context` exactly once.
+2. Inspect `missing`; any unavailable layer stays missing — never substitute
+   candidate-pool, watchlist or position data for market-wide evidence.
+3. Explain only `OBSERVED` facts from the returned evidence.
+4. Build an `INTERPRETATION` / causal chain and label it as interpretation.
+5. State `UNKNOWN` / unresolved links explicitly.
+6. Answer and END.
+
+Normally do not call `get_symbol_context`, `get_signal_board`,
+`get_live_signals`, `get_positions`, `record_decision_brief`,
+`record_trade_outcome`, `run_code` or `render_quant_business_artifact` for a
+market-wide question unless the user's question explicitly requires them.
+Do not append unrelated portfolio EXIT_ALERT facts unless the user asked
+what this means for their holdings.
+
+### Scope invariant
+
+A claim's scope may never exceed the scope of the evidence supporting it.
+`CANDIDATE_POOL` evidence can say "在当前候选池中，多数股票走弱", never
+"A股普跌", "整个市场风险偏好下降" or "券商板块领跌".  `SINGLE_SYMBOL`
+evidence can say "长江证券今天下跌", never "券商板块领跌".  Only
+`A_SHARE_MARKET_WIDE` (or clearly sourced external market-wide evidence with
+source and time) can support a whole-market claim.
+
+### Response layering
+
+Use three visible layers for market-cause analysis:
+
+- OBSERVED: direct fields from the evidence packet.
+- INTERPRETATION: the possible causal chain, clearly framed as judgement.
+- UNKNOWN: what the evidence cannot prove (for example, price co-movement
+  alone cannot prove a single news event was the only cause).
+
+Prediction alignment is not causal validation: a direction match means only
+"与该假设方向一致", not "因此因果关系成立".  Previous assistant prose and
+conversation memory are not evidence.
+
+## Narrow intent routing (use before loading a broad context)
+
+Match the question to the narrow tool before opening a broad projection:
+
+- today's READY/NEAR board -> `get_signal_board`
+- current holdings / exit alerts -> `get_positions`
+- strategy validation maturity / PIT status -> `get_validation_status`
+- explicit rescan/refresh -> `run_live_scan`
+- watchlist view/add/remove -> `manage_watchlist`
+- single-symbol quote/diagnosis -> `get_symbol_context`
+
+`get_trading_context` is the broad legacy-compatible projection. Use it only
+when the question genuinely combines several scopes, not as the default for a
+narrow intent. `get_live_signals` remains scan evidence compatibility; prefer
+`run_live_scan` when the user explicitly asks to refresh/rerun.
+
 ## Evidence hierarchy (what beats what)
 
-1. Canonical trade/market state — get_trading_context, get_symbol_context
-   (host facts: quote, freshness, market rules, S3 distances, positions).
+1. Canonical trade/market state — get_signal_board, get_positions,
+   get_validation_status, get_symbol_context, get_trading_context
+   (host facts: readiness/freshness, holdings/exit alerts, validation
+   maturity, quote, market rules, S3 distances).
 2. Structured official evidence — get_market_intelligence (notices, company
    news, fundamentals from structured feeds).
 3. Structured public evidence — Harness WebSearch/WebFetch results with URLs.
@@ -27,7 +87,8 @@ loads this whole checklist.
 - History/trend/volume: hydrated history; CodeMode statistics when the
   question needs more than eyes on numbers.
 - Strategy context: S3 clause distances when the symbol carries history.
-- Portfolio context: get_trading_context (positions), watchlist membership.
+- Portfolio context: get_positions (holdings/exit alerts); watchlist
+  membership via manage_watchlist(action="list") or get_analysis_watchlist.
 - Structured finance evidence: get_market_intelligence.
 - Open web research — only when open-ended questions make it materially
   useful (why did it move, industry/policy context): Harness WebSearch /
@@ -65,9 +126,10 @@ it in stable-sounding probability language.
 ## Validation accounting (never estimate maturity in prose)
 
 Strategy maturity numbers (validation age, observation/settlement counts,
-entries, exits) come only from get_trading_context's
-`validation_accounting` block — quote them, never sum them up yourself
-("约三周多" is a defect). Lead with `validation_age_trading_days`
+entries, exits) come only from get_validation_status's
+`validation_accounting` block (the same ledger block exposed by the broad
+`get_trading_context` compatibility projection) — quote them, never sum them
+up yourself ("约三周多" is a defect). Lead with `validation_age_trading_days`
 (measured in-session scan days; calendar days are secondary context).
 Keep the two planes separate in wording: a position in EXIT_ALERT is
 still OPEN until the human executes and the ack closes it; an observation

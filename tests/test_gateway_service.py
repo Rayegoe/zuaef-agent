@@ -1577,3 +1577,98 @@ def test_twelve_turn_run_with_recorded_brief_still_delivers(tmp_path: Path, monk
     assert "预算上限" in text
     assert "已落盘的决策结论" in text
     assert "002415：WATCH（s3_longer_hold）" in text
+
+
+def test_fast_persist_skips_run_progress_and_preserves_session_state(
+    tmp_path: Path, monkeypatch
+):
+    """Gate D: explicit persist is one deterministic KnowledgeStore write.
+
+    It must be evaluated before run_id allocation and before the progress
+    watchdog, and it must not mutate session state.
+    """
+    surface = FakeSurface()
+    model_turns: list[int] = []
+
+    def never_model(messages, info):
+        model_turns.append(1)
+        raise AssertionError("fast persist must not call the model")
+
+    service = _service(tmp_path, monkeypatch, surface, never_model)
+    before = _ensure_session(service).model_copy(
+        update={
+            "active_run_id": "active-before",
+            "last_terminal_run_id": "terminal-before",
+        }
+    )
+    service.store.save_session(before)
+
+    def fail_start_run(envelope, session):
+        raise AssertionError("fast persist must not allocate/run an agent run")
+
+    monkeypatch.setattr(service, "_start_run", fail_start_run)
+
+    content = (
+        "中东冲突 / 能源供应风险 → 原油暴涨 → 全球通胀预期重新抬头 → "
+        "美债收益率飙升 / 加息预期增强 → 全球股票估值承压 → "
+        "亚洲股市普跌 → A股在自身缩量、存量博弈状态下放大下跌。"
+    )
+    service.handle(_envelope(f"{content}————记录下来"))
+
+    after = _session(service)
+    assert after.active_run_id == "active-before"
+    assert after.last_terminal_run_id == "terminal-before"
+    assert after.paused_run_id is None
+    assert after.conversation_id == before.conversation_id
+    assert after.profile == before.profile
+    assert model_turns == []
+    assert len(surface.texts) == 1
+    assert "已记录" in surface.last_text()
+    assert service._progress_stops == {}
+
+    docs = list((tmp_path / "workspace" / "knowledge").rglob("*.md"))
+    note_docs = [p for p in docs if p.name != "index.md"]
+    assert len(note_docs) == 1
+    text = note_docs[0].read_text(encoding="utf-8")
+    assert content in text
+    assert "来源：用户原文" in text
+    assert "验证状态：not_requested" in text
+    assert "hypotheses/" not in str(note_docs[0])
+
+
+def test_ambiguous_persist_falls_through_to_agent_run(tmp_path: Path, monkeypatch):
+    surface = FakeSurface()
+    calls: list[int] = []
+
+    def model_fn(messages, info):
+        calls.append(1)
+        return _final(outcome="agent path handled the reference")
+
+    service = _service(tmp_path, monkeypatch, surface, model_fn)
+    service.handle(_envelope("把刚才那个记下来"))
+
+    assert calls == [1]
+    assert "agent path handled the reference" in surface.last_text()
+    assert not (tmp_path / "workspace" / "knowledge").exists() or not list(
+        (tmp_path / "workspace" / "knowledge").rglob("notes/**/*.md")
+    )
+
+
+def test_compound_persist_request_falls_through_to_agent_run(
+    tmp_path: Path, monkeypatch
+):
+    surface = FakeSurface()
+    calls: list[int] = []
+
+    def model_fn(messages, info):
+        calls.append(1)
+        return _final(outcome="agent path handled the compound request")
+
+    service = _service(tmp_path, monkeypatch, surface, model_fn)
+    service.handle(_envelope("把这段记录下来，然后帮我验证这条因果链是否成立。"))
+
+    assert calls == [1]
+    assert "agent path handled the compound request" in surface.last_text()
+    assert not (tmp_path / "workspace" / "knowledge").exists() or not list(
+        (tmp_path / "workspace" / "knowledge").rglob("notes/**/*.md")
+    )

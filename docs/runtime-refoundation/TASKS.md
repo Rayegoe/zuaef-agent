@@ -1,5 +1,13 @@
 # TASKS — Coding Agent Work Queue
 
+> Architecture authority note (2026-09-11): the broad boundary is
+> [`docs/architecture/NORTH_STAR.md`](../architecture/NORTH_STAR.md), and the current architecture
+> work order is [`docs/architecture/CONSOLIDATION_SPEC.md`](../architecture/CONSOLIDATION_SPEC.md).
+> This file remains the runtime-refoundation evidence backlog; it does not authorize expanding system
+> layers to solve surface/control/ownership problems. `T009` must use the North Star ownership
+> boundaries when classifying capability authority, and `T012` must delete or demote superseded
+> authority rather than preserve parallel paths.
+
 Rule: execute in order. Do not pre-build later phases.
 
 Every task is a failure hypothesis, not a contract. Before executing a task,

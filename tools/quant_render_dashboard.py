@@ -301,7 +301,7 @@ ARTIFACT_MAP = [
     ("workspace/artifacts/quant/p0-data-proof-2026-08-28.log", "P0 真实数据证明日志"),
     ("data/quant-cache/", "行情缓存+sidecar、qlib bin 库 (gitignored 可重建)"),
     (".venv-quant/", "Python 3.12 侧环境 akshare+pyqlib (gitignored)"),
-    ("tools/quant/upstream/dump_bin.py", "vendored qlib 上游脚本 (已审计 commit, MIT)"),
+    ("plugins/zuaef-quant/zuaef_quant/dump_bin.py", "vendored qlib 上游脚本 (已审计 commit, MIT)"),
     ("tests/test_quant_replay.py", "14 个防伪 alpha 测试"),
     ("tests/test_quant_plugin.py", "16 个插件契约测试"),
 ]
@@ -314,9 +314,9 @@ COMMANDS = [
     ),
     (
         "基线评估 (不经 Agent)",
-        ".venv-quant/bin/python tools/quant_eval_qlib.py --config benchmarks/quant/gen1/quant.toml --strategy benchmarks/quant/gen1/strategy.toml --out workspace/artifacts/quant/gen1 --window research",
+        ".venv-quant/bin/python -m zuaef_quant.eval_sidecar --config benchmarks/quant/gen1/quant.toml --strategy benchmarks/quant/gen1/strategy.toml --out workspace/artifacts/quant/gen1 --window research",
     ),
-    ("实时扫描 (无 LLM)", "uv run --group quant python tools/quant_live_scan.py"),
+    ("实时扫描 (无 LLM)", "zuaef-quant scan"),
     (
         "日常决策 (经 Agent)",
         '.venv/bin/zuaef-agent run --profile quant-decision --request-limit 10 --tool-calls-limit 12 "..."',
@@ -872,7 +872,7 @@ async function pollScan(){
     drawLive(s);
     $('live-status').style.color = 'var(--green)';
   }catch(e){
-    $('live-status').innerHTML = '实时服务未连接 — 启动: python3 tools/quant_serve.py (显示静态快照)';
+    $('live-status').innerHTML = '实时服务未连接 — 启动: zuaef-quant dashboard serve (显示静态快照)';
     $('live-status').style.color = 'var(--amber)';
   }
 }
@@ -932,7 +932,7 @@ TEMPLATE = """<!DOCTYPE html>
   </div>
 
   <div class="card" style="margin-top:16px">
-    <h2>实时行情 <span class="cnt">自选宇宙 · 每 60s 自动刷新 · 数据源 tools/quant_serve.py /api/scan</span></h2>
+    <h2>实时行情 <span class="cnt">自选宇宙 · 每 60s 自动刷新 · 数据源 zuaef_quant.dashboard.serve /api/scan</span></h2>
     <div class="mut" id="live-status" style="font-size:12px;margin-bottom:8px">连接实时服务中…</div>
     <div style="overflow-x:auto"><table>
       <thead><tr><th>代码</th><th>名称</th><th style="text-align:right">现价</th><th style="text-align:right">昨收</th>

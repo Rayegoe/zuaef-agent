@@ -1,6 +1,6 @@
 # ZUAEF-ASHARE-001 · candidates_policy.toml — 候选发现 v1 政策 (阈值在政策, 不在代码)
 #
-# 消费者: tools/quant_build_candidates.py (--policy 本文件)。
+# 消费者: zuaef_quant.candidates_sidecar (--policy 本文件)。
 # 本文件只定义确定性阈值/权重; 候选排名不是买入建议, 盈利能力仍未证明。
 # 任何阈值调整都是一次策略研究变更, 须留下记录, 不做隐藏调参。
 

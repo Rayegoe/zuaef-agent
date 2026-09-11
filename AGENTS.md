@@ -4,6 +4,29 @@
 
 Own the user outcome with the smallest reliable agent loop. Business behavior is composed through capabilities, toolsets, and deferred skills.
 
+## Architecture North Star (read before architectural work)
+
+ZUAEF exists to connect the model to task reality. It does not re-implement model intelligence or upstream Harness execution.
+
+> Model owns intelligence. Harness owns execution. ZUAEF owns Minimal Reality Binding: the thinnest reliable connection between a concrete task, the reality materials the model must see, and the real actions available in the environment.
+
+Authoritative context:
+
+- `docs/architecture/NORTH_STAR.md` — full North Star, six principles, current-state audit, and admission test.
+- `docs/architecture/CONSOLIDATION_SPEC.md` — current consolidation work order: Host Control Plane, command grammar, Gateway ownership, Quant ownership.
+- `docs/domain-surface/SPEC.md` — domain semantic-surface rules: `Intent -> Semantic Affordance -> Reality`; "More affordances. Less machinery."
+- `docs/domain-surface/P3_QUANT_CANARY_REPORT.md` — real-model P3 surface evidence; `docs/domain-surface/P4_ENGINE_CONSOLIDATION_REPORT.md` — P4 engine consolidation; `docs/domain-surface/P5_OPERATOR_SURFACE_REPORT.md` — P5 deterministic operator surface; `docs/domain-surface/P5_8_PRODUCTION_AUTHORITY_REPORT.md` — monitor/bridge production authority moved into `zuaef_quant` (P6–P7 remain gated).
+
+Hard constraints:
+
+- No Runtime v2, global router, domain model, workflow DSL, command framework, or universal state layer.
+- Semantic judgment stays with the model. Mechanical control stays deterministic and does not start a model request.
+- One behavior has one production authority. Surfaces must not independently interpret run state.
+- A domain product belongs to its domain owner. Root `tools/` is development/ops tooling, not a second product runtime.
+- Commands are deterministic host control. Natural language is semantic work.
+- Every new model turn, tool, capability, field, state, gate, command family, or service boundary must name the reproduced failure or external contract that requires it.
+- Every architecture PR must state which previous authority it demotes or deletes.
+
 ## Architecture boundaries
 
 - Keep one core Agent. Do not create an agent registry or one agent class per business domain.
@@ -14,7 +37,8 @@ Own the user outcome with the smallest reliable agent loop. Business behavior is
 - Full oversized tool outputs belong under `.zuaef-state/tool-results/`; pass a handle/preview to the model and retrieve progressively.
 - Durable step/tool-effect facts belong to Harness `StepPersistence`; `RunReceipt` is only an index, never a second source of truth.
 - External writes and destructive actions use PydanticAI native approval. Never interpret model intent as authorization.
-- Surface/Gateway is an external interaction layer. It may own transport, authorization, session bindings, host-grounded interaction projection and approval presentation, but must not implement agent execution, business policy, approval semantics, durable execution truth or receipts.
+- Surface/Gateway is an external interaction layer. It may own transport, authorization, platform-specific presentation and approval presentation, but must not implement agent execution, business policy, approval semantics, durable execution truth or receipts. Deterministic operator control (session/run/context binding, approval settlement, artifact listing/export, health, configuration inspection) belongs to the shared Host Control Plane and must not be re-implemented per surface.
+- A domain product belongs to its domain owner/distribution. Root `tools/` is not a second product layer; existing exceptions are migration debt defined in `docs/architecture/CONSOLIDATION_SPEC.md`.
 - Do not add a vector database until lexical/file navigation is measurably insufficient.
 - Do not add a graph runtime, custom state machine, long-term-memory service, multi-agent team, custom event bus, custom steering runtime, or custom durable runtime without a measured failure that requires it.
 
@@ -115,7 +139,7 @@ Finding a possible improvement does not authorize implementing it.
 
 ## Runtime re-foundation routing
 
-For Agent runtime, capability composition, WCASE, context, continuation, planning, memory, skills, tool-surface, or runtime complexity work, the authoritative engineering coach is:
+The broad architecture boundary is `docs/architecture/NORTH_STAR.md`; the current architecture work order is `docs/architecture/CONSOLIDATION_SPEC.md`. For Agent runtime, capability composition, WCASE, context, continuation, planning, memory, skills, tool-surface, or runtime complexity work, the authoritative engineering coach is:
 
 - `.agents/skills/zuaef-runtime-coach/SKILL.md`
 - `docs/runtime-refoundation/SPEC.md`
@@ -136,6 +160,24 @@ For runtime re-foundation work:
 6. do not add Harness capabilities without admission evidence;
 7. delete or quarantine superseded production authority.
 
+## Architecture consolidation routing
+
+For the Host Control Plane, command grammar, Gateway ownership, profile namespace, or root-`tools/`
+domain-ownership work defined in `docs/architecture/CONSOLIDATION_SPEC.md`, that spec is the work
+order and `docs/architecture/NORTH_STAR.md` is the admission standard. Do not turn consolidation work
+into a Runtime v2 program, and do not start a runtime experiment from `TASKS.md` unless the
+consolidation change actually touches the model boundary. Keep workstreams (C1–C4) separate; each
+change must move a behavior from an old owner to a new owner and delete or demote the old authority.
+
+## Domain semantic surface routing
+
+For domain-visible tool coverage, tool naming, progressive disclosure, operator parity, or moving a
+domain engine out of root `tools/`, read `docs/domain-surface/SPEC.md` and its
+`QUANT_INTENT_MATRIX.md` / `QUANT_AUTHORITY_MAP.md` before changing code. The operating rule is
+`Intent -> Semantic Affordance -> Reality`. Do not add a Global Intent Router, Domain Model,
+Workflow DSL, generic domain base class, action registry or command framework. Do not move a
+domain's 500 KB implementation before a real-model canary proves the new semantic interface.
+
 ## Supervisor-launched worker authority
 
 When a worker is launched from a merged `.supervisor/NEXT.md`, that exact
@@ -154,8 +196,9 @@ next task.
 - New files under `tools/`, `tests/`, `plugins/`, `profiles/` MUST be added to
   `BUILD_MANIFEST.json` (covers-all contract); changed pinned files get
   surgical entry updates — never regenerate the whole manifest.
-- Canonical trading-ledger writes go through `tools/quant_trading_monitor.py`
-  only (per-transaction `.ledger.lock` serializes cycle vs ack-CLI writes).
+- Canonical trading-ledger writes go through `zuaef_quant.monitor` only
+  (per-transaction `.ledger.lock` serializes cycle vs ack-CLI writes);
+  systemd runs it as `.venv-quant/bin/python -m zuaef_quant.monitor session`.
   Never write `workspace/artifacts/quant/trading/**` from anything else.
 - Domain truth for quant work: `zuaef-quant-spec-v3.1-20260905/00_SOURCE_OF_TRUTH.md`
   (current authority), `docs/quant/README.md` (ops runbook), knowledge node

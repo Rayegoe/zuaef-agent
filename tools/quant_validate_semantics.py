@@ -47,11 +47,13 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+_PLUGIN_ROOT = Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"
+if str(_PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PLUGIN_ROOT))
 
 import pandas as pd
-from quant_core import TZ_SHANGHAI, history_cache_is_current, read_cache
-from quant_live_scan import (
+from zuaef_quant.quant_core import TZ_SHANGHAI, history_cache_is_current, read_cache
+from zuaef_quant.scan_sidecar import (
     ACTIVE_SYMBOLS_PATH,
     fetch_batch_quotes,
     load_active_symbols,

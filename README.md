@@ -6,7 +6,46 @@ A deliberately thin PydanticAI core: one outcome-owning agent, explicit Capabili
 
 Keep the loop thin, but make long-running work inspectable and recoverable enough to trust: **spill oversized tool results, persist step/tool-effect facts, require native approval for external/destructive effects, and write one machine-readable receipt per run.**
 
-## Architecture
+## Architecture North Star
+
+> Model owns intelligence. Harness owns execution. ZUAEF owns Minimal Reality Binding: the thinnest reliable connection between a concrete task, the reality materials the model must see, and the real actions available in the environment.
+
+Future changes are admission-tested against the six principles, current-state audit and ownership
+rules in [`docs/architecture/NORTH_STAR.md`](docs/architecture/NORTH_STAR.md). The bounded next phase
+is not Runtime v2; it is the consolidation sequence in
+[`docs/architecture/CONSOLIDATION_SPEC.md`](docs/architecture/CONSOLIDATION_SPEC.md):
+
+```text
+C1  one deterministic Host Control Plane
+C2  command grammar over that control plane
+C3  Gateway shrink and domain-boundary repair
+C4  Quant operational authority returns to zuaef-quant
+```
+
+Target system layers:
+
+```text
+Surfaces (CLI / Telegram / Feishu / Web / API)
+    -> Host Control Plane (deterministic)
+    -> Profile Composition (context + capability binding)
+    -> one PydanticAI Agent Runtime
+    -> Domain Adapters (Toolset / Skill / Capability)
+    -> Real World
+```
+
+Commands are deterministic host control. Natural language is semantic work. Core CLI does not
+register domain command trees; deterministic domain operations belong to the domain deployment.
+
+Domain capability coverage follows [`docs/domain-surface/SPEC.md`](docs/domain-surface/SPEC.md):
+`Intent -> Semantic Affordance -> Reality`, *More affordances. Less machinery.* Quant's current
+intent matrix and authority inventory are tracked in
+[`docs/domain-surface/QUANT_INTENT_MATRIX.md`](docs/domain-surface/QUANT_INTENT_MATRIX.md) and
+[`docs/domain-surface/QUANT_AUTHORITY_MAP.md`](docs/domain-surface/QUANT_AUTHORITY_MAP.md).
+
+## Current runtime architecture (implemented)
+
+> The diagram below describes the current implementation, not the target authority. The target
+> ownership model and admission rules are in `docs/architecture/NORTH_STAR.md`.
 
 ```text
 User Surfaces
@@ -487,9 +526,24 @@ durable conclusions go through the existing Knowledge write path.
 
 ## Next
 
-The shared seam is now proven on two business slices: writing (task-local
-composition, external ACE engine) and EMTB budget (`extra_toolsets` through
-`build_agent`). The remaining open question from v1.1 is unchanged: is the core
-generic enough for a third slice without touching core? Candidates: a
-Hardware Scout / WordPress adapter (business adapter swap, no new machinery), or
-a second runtime through the same seam.
+The next phase is **architecture consolidation**, not Runtime v2 and not another
+horizontal capability layer. The bounded work order is
+[`docs/architecture/CONSOLIDATION_SPEC.md`](docs/architecture/CONSOLIDATION_SPEC.md):
+
+- `C1` establish the shared deterministic Host Control Plane;
+- `C2` make commands a small noun/verb grammar over that control plane;
+- `C3` shrink `GatewayService` to transport/adapter responsibilities and remove
+  domain filesystem conventions;
+- `C4` return Quant operational authority from root `tools/` to `zuaef-quant`.
+
+Production and experimental profile separation, thin-core packaging, Web Console
+packaging demotion, root-history relocation and Zombie Architecture deletion
+remain on the North Star priority table, but are explicitly deferred until the
+first four workstreams restore ownership clarity.
+
+Quant's domain-layer slice follows
+[`docs/domain-surface/SPEC.md`](docs/domain-surface/SPEC.md): the narrow
+semantic tools were added first, the P2.1 discovery-bias closure is in place,
+and the real-model P3 canary passed (`P3_FULL_PASS`, see
+[`docs/domain-surface/P3_QUANT_CANARY_REPORT.md`](docs/domain-surface/P3_QUANT_CANARY_REPORT.md)).
+P4 engine consolidation is authorized; P5–P7 remain gated.

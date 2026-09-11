@@ -13,14 +13,20 @@ import copy
 import json
 import math
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 from statistics import mean
 
 import pandas as pd
-import quant_trading_monitor as monitor
-from quant_core import StrategySpec, load_config
-from quant_live_scan import timing_from_quote_hist
+
+_PLUGIN_ROOT = Path(__file__).resolve().parents[1] / "plugins" / "zuaef-quant"
+if str(_PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PLUGIN_ROOT))
+
+from zuaef_quant import monitor
+from zuaef_quant.quant_core import StrategySpec, load_config
+from zuaef_quant.scan_sidecar import timing_from_quote_hist
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACT_ROOT = ROOT / "workspace/artifacts/quant/v31"

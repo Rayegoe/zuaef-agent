@@ -1,11 +1,11 @@
 # ZUAEF-ASHARE-001 · universe.toml — 不再是默认活跃宇宙
 #
-# 历史备注: 本文件曾是实时扫描 (quant_live_scan.py) 的隐式默认宇宙
+# 历史备注: 本文件曾是实时扫描 (`zuaef_quant.scan_sidecar`) 的隐式默认宇宙
 # (user_watchlist 四只自选股)。自 business-dashboard 变更起 (spec 03 §1),
 # 这四只被认定为 legacy 持仓而非机会宇宙, 已迁移到
 # benchmarks/quant/gen1/legacy_watchlist.toml。
 #
-# 现在的宇宙解析优先级 (quant_live_scan.py):
+# 现在的宇宙解析优先级 (`zuaef_quant.scan_sidecar`):
 #   1. --universe-file <path> (显式指定, 本文件仍可作为显式 watchlist 输入)
 #   2. data/quant-cache/candidates/active_symbols.json (候选池 handoff)
 #   3. 冻结 37 只 CSI500 子集 (兼容回退)
