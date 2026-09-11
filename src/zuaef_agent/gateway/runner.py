@@ -68,6 +68,9 @@ class GatewayConfig:
     run_ack: bool = True
     run_progress_seconds: int = 25
     run_progress_seconds_2: int = 50
+    # Feishu artifacts loop (spec pack 08): send receipt-listed artifacts of
+    # completed runs automatically after the terminal text.
+    auto_artifacts: bool = False
 
 
 def _env_int(name: str, default: int) -> int:
@@ -137,6 +140,7 @@ def load_gateway_config(args: Any) -> GatewayConfig:
         run_ack=_env_bool("ZUAEF_RUN_ACK", True),
         run_progress_seconds=_env_int("ZUAEF_RUN_PROGRESS_SECONDS", 25),
         run_progress_seconds_2=_env_int("ZUAEF_RUN_PROGRESS_SECONDS_2", 50),
+        auto_artifacts=_env_bool("ZUAEF_GATEWAY_AUTO_ARTIFACTS", False),
     )
 
 
@@ -272,6 +276,7 @@ def run_gateway(
         run_progress_seconds=float(config.run_progress_seconds),
         run_progress_seconds_2=float(config.run_progress_seconds_2),
         routing_policy=_routing_policy(config),
+        auto_artifacts=config.auto_artifacts,
     )
 
     # Restart recovery: reconcile routing state against the ReceiptStore.

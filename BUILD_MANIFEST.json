@@ -938,8 +938,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 5033,
-      "sha256": "b53ea2096cdebf95c31a9118869c06645f789eb5b28fc0adf6e4990852018226"
+      "bytes": 5627,
+      "sha256": "2185da9457ca4cf84c29a600be621e7efc10d02ac7ac33989f77bbe9019c0a75"
     },
     {
       "path": ".gitignore",
@@ -1698,8 +1698,8 @@
     },
     {
       "path": "pyproject.toml",
-      "bytes": 3968,
-      "sha256": "8442daa8d4e44272ae130612ebe0d6f7deed7e6475ff9387d4f3815b2d6ae28f"
+      "bytes": 4134,
+      "sha256": "eab1e282cfbea95b3a09c52b3adca3534c9f619f188ef4fb221ab3801ff562b1"
     },
     {
       "path": "spec/SPEC.md",
@@ -1798,13 +1798,13 @@
     },
     {
       "path": "src/zuaef_agent/gateway/runner.py",
-      "bytes": 12670,
-      "sha256": "3cab8a6f9a8604260a24ff0c737b966afbef5a8ad27f6be67049f29c72d4af48"
+      "bytes": 12959,
+      "sha256": "e45758b7a2bb11b090538241cccc320d6a5426a11eff086f59bafb054095e27d"
     },
     {
       "path": "src/zuaef_agent/gateway/service.py",
-      "bytes": 45351,
-      "sha256": "61fb8bc63f3d6df8a531928073ab7382ccb10939d09bb7bad944f0361fd320d4"
+      "bytes": 47998,
+      "sha256": "501b5f2536a5fef3db9489f7f8476f5d8c09cb238a5b4a51bbef71dde8cfba7b"
     },
     {
       "path": "src/zuaef_agent/gateway/store.py",
@@ -2578,8 +2578,8 @@
     },
     {
       "path": "uv.lock",
-      "bytes": 618835,
-      "sha256": "d50485bee39fabdb3e9082c5446fea6c3b664b1ade6f766b0c570751542bfa59"
+      "bytes": 619518,
+      "sha256": "1c99ab57f71efe7ddaa974f8a74074c6a6b68ab105d2600f3a67500a486d6b73"
     },
     {
       "path": "workspace/knowledge/index.md",
@@ -2665,6 +2665,161 @@
       "path": "plugins/zuaef-coding/zuaef_coding/skills/coding/SKILL.md",
       "bytes": 1864,
       "sha256": "aed45c6d81907884b81c2bf512257c59598ffb777d7dafa1610b50a2105ffecf"
+    },
+    {
+      "path": "tests/test_artifacts_plugin.py",
+      "bytes": 4659,
+      "sha256": "ba921ac033e0279371867da77ccf59f79d1e0cb615a6965ee864bc7cba99c6e1"
+    },
+    {
+      "path": "profiles/general-knowledge-worker-artifacts.toml",
+      "bytes": 770,
+      "sha256": "3dbba169620e0d6909ceaaf7362f39b5b1aeac045c7a6f2945a8e3468395f511"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/__init__.py",
+      "bytes": 557,
+      "sha256": "f39349557b5a3e86e7d1374a446aacf28133abef3a0f2a4f1125c9729900cbd5"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/plugin.py",
+      "bytes": 4660,
+      "sha256": "f142787e9d2815c35a6bf57670c229bb8b09170e2ab18510b4b61c9c985f900f"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/contracts.py",
+      "bytes": 2427,
+      "sha256": "5b1736a887de4ae0d0dff7dad35ae50809dffbb2348599f8068f51c8514abd14"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/capabilities/__init__.py",
+      "bytes": 914,
+      "sha256": "12782b6ad9ec567905e7a1100a294e7b060c29c3fb16b97ab23f5768c820baec"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/guidance/docx.md",
+      "bytes": 1488,
+      "sha256": "370c0f3199987c96f7cc8050a239231cc01ba4d32481f749322a8f86c866b11e"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/guidance/pdf.md",
+      "bytes": 1139,
+      "sha256": "ccc810ff8a3d913e13d048c0c9d14ab907ff25e62587fd026d01b9a41e182401"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/guidance/slides.md",
+      "bytes": 1284,
+      "sha256": "0638ccd09ed80d012528820a778deb5208af874b5a54f9119dcbb3035fc4dc4e"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/guidance/spreadsheet.md",
+      "bytes": 1575,
+      "sha256": "86b11a1256d8fd98fe787de80414e15945524ede846a64dce6f70aa98adc8982"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/paths.py",
+      "bytes": 8700,
+      "sha256": "f5d6eb492860115fdd440138b11f94227be8a6cdf2fdc60b4d4ead1ce2c282a7"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/process.py",
+      "bytes": 7616,
+      "sha256": "9cef467abe1933b379da552914ff3a98c9fc7f17df024da3981304faa45ace85"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/qa.py",
+      "bytes": 7901,
+      "sha256": "3a941f29bac56dc314b25dd53e6b022555ea066945c617a3a6a559aa01bd7627"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/guidance.py",
+      "bytes": 654,
+      "sha256": "1d643df3437d749a54964ca2b5d57042eff2184ca69fe0d726cfe73bfda78278"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/capabilities/docx.py",
+      "bytes": 8738,
+      "sha256": "696802fe7f0d94e039b3332dab97d049d43b7c509aa79b233c2728515e3d48d1"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/capabilities/pdf.py",
+      "bytes": 12662,
+      "sha256": "4e22872d605071cee8892490416fc8ca6e114f7fbe2b63c32b73dc411d08ce77"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/capabilities/slides.py",
+      "bytes": 8598,
+      "sha256": "c6514621ecb24b3c60d0864bcb22c681a1c223856595e5e133773fca9e40116a"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/capabilities/spreadsheet.py",
+      "bytes": 12788,
+      "sha256": "4be407eb214394e37f4d8aacfada9f880d450eb80ae08307a1065e5fd573253f"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/engines/__init__.py",
+      "bytes": 166,
+      "sha256": "1fab446fb65052befaa7355f2dc6b005259de3996658763e7d91fa34426e3970"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/engines/errors.py",
+      "bytes": 352,
+      "sha256": "01ca3765c86a9f2a32476c76913473af80d5b7be7ea621827ff208c90132cd04"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/engines/docx_engine.py",
+      "bytes": 20447,
+      "sha256": "4f7ac8c46959a19c86e01fcad97dcb48f2ede8d568e709fe6f8267447dd80776"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/engines/pdf_engine.py",
+      "bytes": 6435,
+      "sha256": "fc341535ab9dedb89eb72b164c8b02fd6c1d13fb76b6b10d76eed33db9c0c170"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/engines/slides_engine.py",
+      "bytes": 20700,
+      "sha256": "5eee1188121a22a26b1ef900e4992f5b4cb4a1c508d653e9d55830e52f92a9bc"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/zuaef_artifacts/engines/spreadsheet_engine.py",
+      "bytes": 18556,
+      "sha256": "8d58e2c3f8cced196362b1d08f2d99e7b6d436e615689909167705ad56b73854"
+    },
+    {
+      "path": "tests/test_artifacts_paths.py",
+      "bytes": 8219,
+      "sha256": "f10dcd42ae5404922c621480c6971307c57920ebbed97fadd3990f0ba6175df2"
+    },
+    {
+      "path": "tests/test_artifacts_docx_pdf.py",
+      "bytes": 10399,
+      "sha256": "e7351baba24eda821e415ca559d0229f09daee0cc166489b9939519d99048716"
+    },
+    {
+      "path": "tests/test_artifacts_slides_spreadsheet.py",
+      "bytes": 12035,
+      "sha256": "5d09ce51245aa44e7a9f7981776f8ba9e430dc5c3589ad02fcc668d8ad92a1e5"
+    },
+    {
+      "path": "plugins/zuaef-artifacts/pyproject.toml",
+      "bytes": 572,
+      "sha256": "cda426bbae26e9640f5a6000a19208092b4de2bd79e3c2e4c40d9418f22a135b"
+    },
+    {
+      "path": "tests/test_artifacts_routing.py",
+      "bytes": 8321,
+      "sha256": "0ea3fb0c07e056097afa09216399eeb788647a34250bdc0e718a6eb05a0a7a6d"
+    },
+    {
+      "path": "tests/test_gateway_auto_artifacts.py",
+      "bytes": 9042,
+      "sha256": "e0c91a2e9a414717841c2bfddcb51c1a5f2405293d23c7d6e0d798cbbcfa8c02"
+    },
+    {
+      "path": "IMPLEMENTATION_REPORT.md",
+      "bytes": 22143,
+      "sha256": "69fa89c401d639a1c4d446b7712b18f6a51d037579256b8b99574a4d62d7d995"
     }
   ]
 }

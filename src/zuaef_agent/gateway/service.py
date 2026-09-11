@@ -152,6 +152,7 @@ class GatewayService:
         run_ack: bool = True,
         run_progress_seconds: float = 25.0,
         run_progress_seconds_2: float = 50.0,
+        auto_artifacts: bool = False,
     ):
         self.settings = settings
         self.store = store
@@ -163,6 +164,11 @@ class GatewayService:
         self.allowed_user_ids = allowed_user_ids
         self.routing = routing_policy or RoutingPolicy()
         self.receipts = ReceiptStore(settings.state_root)
+        # Feishu artifacts loop (spec pack 08): when enabled, a settled
+        # completed run's receipt-listed artifacts are sent automatically —
+        # same containment/size rules as the manual /artifacts command,
+        # which stays as recovery. Transport-only: no format policy here.
+        self.auto_artifacts = auto_artifacts
         # Natural chat bridging: one state-composed acknowledgment at
         # acceptance, plus arithmetic-backoff mid-run checkpoint lines
         # (25s, 50s, 100s, 175s, ... from the two seed configs) composed
@@ -331,6 +337,7 @@ class GatewayService:
                 outcome, reply_artifact=self._reply_artifact_text(outcome.receipt)
             ),
         )
+        self._auto_deliver_artifacts(session, outcome.receipt)
 
     def _reply_artifact_text(self, receipt: RunReceipt) -> str | None:
         """Terminal Delivery Guard (incidents 9c1c9abb / 77c45d0e): a run that
@@ -533,6 +540,7 @@ class GatewayService:
                 outcome, reply_artifact=self._reply_artifact_text(outcome.receipt)
             ),
         )
+        self._auto_deliver_artifacts(session, outcome.receipt)
 
     def _reject_callback(
         self, callback_id: str | None, session: SessionBinding, message: str
@@ -1035,6 +1043,7 @@ class GatewayService:
                 outcome, reply_artifact=self._reply_artifact_text(outcome.receipt)
             ),
         )
+        self._auto_deliver_artifacts(session, outcome.receipt)
 
     def _cmd_artifacts(self, session: SessionBinding) -> None:
         if not session.last_terminal_run_id:
@@ -1044,6 +1053,19 @@ class GatewayService:
         if receipt is None:
             self._send_text(session, "No receipt found for the last run.")
             return
+        self._send_receipt_artifacts(session, receipt)
+
+    def _send_receipt_artifacts(
+        self, session: SessionBinding, receipt: RunReceipt
+    ) -> None:
+        """One generic receipt-aware artifact send loop (spec pack 08).
+
+        Shared by the manual ``/artifacts`` recovery command and automatic
+        terminal delivery: containment inside the workspace, existing file,
+        size within the surface limit — the same checks for both paths, no
+        duplication. Oversize/nonexistent/outside-workspace entries are
+        never uploaded; a text notice is sent instead.
+        """
         verified = receipt.artifact_facts
         if not verified:
             self._send_text(session, "No artifact byte facts.")
@@ -1062,6 +1084,42 @@ class GatewayService:
                 )
             else:
                 self._send_text(session, f"{artifact.path} ({artifact.size} bytes)")
+
+    def _auto_deliver_artifacts(
+        self, session: SessionBinding, receipt: RunReceipt
+    ) -> None:
+        """Automatic terminal artifact delivery (spec pack 08, H3/H5/H6).
+
+        Enabled deployments send the settled run's eligible artifacts right
+        after the terminal text — no second user command. Delivery runs only
+        for completed runs; a send failure is logged and reported as a short
+        transport warning and never rewrites the settled execution truth.
+        """
+        if not self.auto_artifacts or receipt.execution_state != "completed":
+            return
+        if not receipt.artifact_facts:
+            return
+        try:
+            self._send_receipt_artifacts(session, receipt)
+        except Exception as exc:  # noqa: BLE001 - transport-only, never fatal
+            logger.error(
+                "automatic artifact delivery failed for run %s: %s",
+                receipt.run_id,
+                exc,
+            )
+            try:
+                self._send_text(
+                    session,
+                    render_error(
+                        "Artifact delivery failed — use /artifacts to retry."
+                    ),
+                )
+            except Exception as exc:  # noqa: BLE001 - even the notice is best-effort
+                logger.warning(
+                    "artifact failure notice not delivered for run %s: %s",
+                    receipt.run_id,
+                    exc,
+                )
 
     # ── restart recovery ────────────────────────────────────────────────────
 

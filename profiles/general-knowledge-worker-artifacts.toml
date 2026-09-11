@@ -1,0 +1,40 @@
+schema = 1
+name = "general-knowledge-worker-artifacts"
+
+[generalist]
+web_search = false
+web_fetch = false
+tool_search = true
+memory = true
+conversation_search = true
+context_controls = true
+subagents = true
+shell = false
+repo_context = false
+
+[[plugins]]
+id = "knowledge-worker"
+allow_capabilities = true
+defer_tools = false
+
+[plugins.config]
+search_results = 6
+search_mode = "highlights"
+page_chars = 12000
+research_enabled = true
+research_effort = "standard"
+finance_effort = "deep"
+document_chunk_chars = 12000
+document_max_bytes = 25000000
+output_language = "zh-CN"
+
+[[plugins]]
+id = "artifacts"
+allow_capabilities = true
+defer_tools = false
+
+[plugins.config]
+max_input_bytes = 25000000
+max_output_bytes = 25000000
+process_timeout_seconds = 120
+render_max_pages = 8

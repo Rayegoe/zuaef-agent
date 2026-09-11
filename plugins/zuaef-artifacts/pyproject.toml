@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zuaef-artifacts"
+version = "0.1.0"
+description = "Native artifact production for ZUAEF: DOCX, PDF, Slides, and Spreadsheet creation/revision under workspace/artifacts."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic-ai>=2.38,<3",
+  "python-docx>=1.1",
+  "pypdf>=5",
+  "openpyxl>=3.1",
+  "python-pptx>=1.0",
+]
+
+[project.entry-points."zuaef.plugins"]
+artifacts = "zuaef_artifacts.plugin:build_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["zuaef_artifacts"]
