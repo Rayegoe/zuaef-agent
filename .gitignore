@@ -23,3 +23,6 @@ data/
 
 # installer backups
 .env.bak-*
+
+# Local OpenAI skills reference tree downloaded for inspection; never shipped.
+oai-skills/
