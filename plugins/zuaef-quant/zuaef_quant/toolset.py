@@ -298,7 +298,14 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             ensure_ascii=False,
         )
 
-    @toolset.tool_plain(defer_loading=True)
+    # --- narrow semantic OBSERVE tools (Domain Surface Refoundation P2;
+    # post-P7 R2.3: the five daily-operator intents are RESIDENT so a narrow
+    # question routes directly instead of paying a discovery model request
+    # per turn; the low-frequency research/delivery tail stays deferred) ----
+    # These intent-oriented projections read the canonical trading artifacts.
+    # Each payload keeps unrelated evidence scopes out of the model context.
+
+    @toolset.tool_plain
     def run_live_scan(recalculate_latest: bool = False) -> str:
         """Explicitly run today's deterministic candidate-pool scan
         (扫描/刷新/重新跑/今天信号/READY/NEAR): scan the resolved active
@@ -559,7 +566,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
     # reveals the tool matching the user's vocabulary, and each payload keeps
     # unrelated evidence scopes out of the model context.
 
-    @toolset.tool_plain(defer_loading=True)
+    @toolset.tool_plain
     def get_signal_board() -> str:
         """Read today's deterministic opportunity board (今天机会/
         READY/NEAR/盯盘/信号板): candidate-pool readiness, scan freshness,
@@ -616,7 +623,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             ensure_ascii=False,
         )
 
-    @toolset.tool_plain(defer_loading=True)
+    @toolset.tool_plain
     def get_positions() -> str:
         """Read the bounded current position state (当前持有/持仓/仓位/
         成本/退警): open positions, their live host-projected fields and
@@ -662,7 +669,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             ensure_ascii=False,
         )
 
-    @toolset.tool_plain(defer_loading=True)
+    @toolset.tool_plain
     def get_validation_status() -> str:
         """Read strategy-forward validation maturity (策略验证/验证进度/
         forward evidence/样本/结算/交易天数/是否有效/PIT) only.
@@ -773,7 +780,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         result["note"] = "watchlist updated; analysis-only, never READY/NEAR"
         return result
 
-    @toolset.tool(defer_loading=True)
+    @toolset.tool
     def manage_watchlist(
         ctx: RunContext[CoreDeps], action: str, symbols: list[str] | None = None
     ) -> str:

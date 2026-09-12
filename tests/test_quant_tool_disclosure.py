@@ -3,9 +3,12 @@
 Low-frequency research/delivery tools (market intelligence, research packets,
 customer evidence, business-artifact rendering) are marked ``defer_loading``
 so their schemas stay out of every prompt; the released ToolSearch capability
-(the CJK keywords strategy) reveals them on demand. Core evidence tools stay
-resident (spec 06 §2). Chinese discovery queries must work; a plain quote
-request must not light up the research/delivery domain.
+(the CJK keywords strategy) reveals them on demand. Core evidence tools and
+the five daily-operator narrow intents stay resident (spec 06 §2; post-P7
+R2.3 moved the narrow five to resident so a narrow question routes directly
+instead of paying a discovery model request every turn). Chinese discovery
+queries must work; a plain quote request must not light up the
+research/delivery domain.
 """
 
 from __future__ import annotations
@@ -54,14 +57,19 @@ code_mode = false
 LEGACY_DEFERRED = {
     "get_trading_context",
 }
-NARROW_DEFERRED = {
-    "get_market_context",
-    "get_market_intelligence",
+# Post-P7 R2.3: the five daily-operator narrow intents are RESIDENT — every
+# benchmarked narrow turn paid a full discovery model request before reaching
+# the tool, which the direct surface removes.
+RESIDENT_NARROW = {
     "get_signal_board",
     "get_positions",
     "get_validation_status",
     "run_live_scan",
     "manage_watchlist",
+}
+NARROW_DEFERRED = {
+    "get_market_context",
+    "get_market_intelligence",
     "save_research_packet",
     "get_research_packet",
     "record_customer_evidence",
@@ -199,8 +207,8 @@ def test_initial_surface_keeps_core_resident_and_research_deferred(tmp_path, mon
     agent = _compose(tmp_path, monkeypatch)
     steps = _surface_steps(agent, [], tmp_path)
     first = steps[0]
-    for name in RESIDENT_CORE:
-        assert name in first, f"semantic core tool {name} must stay resident"
+    for name in RESIDENT_CORE | RESIDENT_NARROW:
+        assert name in first, f"narrow/core tool {name} must stay resident"
     for name in DEFERRED:
         assert name not in first, f"deferred tool {name} leaked into the initial surface"
     assert "search_tools" in first, "ToolSearch discovery must be available"

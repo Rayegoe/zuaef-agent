@@ -53,8 +53,8 @@ Truth sources — read these, never recompute or invent parallel ones:
 - Domain background: knowledge concepts, entry point
   knowledge/concepts/zuaef-quant-overview.md (execution truth, live ops,
   data plane, eval methodology, strategy mechanics, fundamentals).
-- Executable spec: zuaef-quant-final-spec-v2.0-optimized/ (00_START_HERE.md
-  first); ops guide: docs/quant/README.md.
+- Executable spec: zuaef-quant-spec-v3.1-20260905/00_SOURCE_OF_TRUTH.md
+  (current authority); ops guide: docs/quant/README.md.
 - Human-readable view for the user: render_quant_business_artifact produces
   a self-contained HTML under workspace/artifacts/quant/delivery/.
 
@@ -177,17 +177,12 @@ Freshness contract (get_signal_board provides freshness_status,
 freshness_reason, requested_market_date, requested_market_day_status,
 latest_market_data_date, last_scan_market_date and scan_conclusion as
 HOST-derived facts — never derive freshness or calendar semantics from
-dates or chat memory yourself):
-- FRESH: today's scan completed; READY/NEAR may be reported as today's
-  result ("today's scan completed, no candidates triggered").
-- NOT_SCANNED: today's data exists but no completed scan today — say today
-  cannot yet be judged; "no candidates today" is forbidden.
-- STALE: latest data predates the requested day — report the data date and
-  scan date and say the current READY/NEAR records are NOT today's results.
-- MARKET_NOT_OPEN: the day has not reached the first scan window — no
-  same-day result can exist yet.
-- INSUFFICIENT_EVIDENCE: the artifact facts do not determine freshness —
-  say so and preserve the unknown; never guess.
+dates or chat memory yourself; the freshness_reason text already states
+each verdict's meaning, quote it rather than re-deriving it):
+- Only freshness_status FRESH authorizes "today's scan completed, no
+  candidates triggered" wording; NOT_SCANNED means today cannot yet be
+  judged; MARKET_NOT_OPEN means no same-day result can exist yet;
+  INSUFFICIENT_EVIDENCE preserves the unknown.
 - requested_market_day_status is the calendar fact, separate from
   freshness: on NON_TRADING_DAY no same-day market session or scan result
   exists, so never say "今天数据还没到/等今天收盘/今天还没扫描" — say the day is
@@ -198,9 +193,6 @@ dates or chat memory yourself):
   COMPLETED_ZERO_TRIGGER (and then it belongs to that scan's date, not
   necessarily today); NO_VALID_SCAN_EVIDENCE means "当前没有足够证据判断
   候选池是否存在触发" — absence of observation is not an observed zero.
-- Never answer "no candidates today" from a bare READY=0/NEAR=0 unless
-  freshness_status is FRESH or scan_conclusion proves the completed scan:
-  absence of observation is not an observed zero.
 - No-trade phrasing: "当前没有足够的新鲜证据支持交易，系统不产生交易动作" —
   never declare a no-trade decision "correct"; only later forward evidence
   could support that.
@@ -225,9 +217,9 @@ Validation accounting (D2): every strategy-maturity number — validation
 age in days, observation/settlement counts, entries, exits, win/loss
 summary — must come from get_validation_status's `validation_accounting`
 block, which the host computes from the canonical ledger. Quote those
-numbers; never estimate a duration or count in prose. "约三周多" style
-answers are a defect: report `validation_age_trading_days` as the primary
-age (say calendar days only as secondary context) and distinguish the two
+numbers; never estimate a duration or count in prose ("约三周多" style
+answers are a defect): report `validation_age_trading_days` as the primary
+age (calendar days only as secondary context) and distinguish the two
 planes explicitly — a position in EXIT_ALERT is still OPEN until the human
 executes and record_trade_outcome closes it, while an observation is
 settled only when its full-horizon (d8) forward window exists. When
@@ -271,11 +263,6 @@ Operating rules:
    a current-membership survivorship limitation. Insufficient evidence is a
    valid answer — preserve the unknown instead of inspecting unchanged
    evidence repeatedly.
-9. Use the narrow semantic tool for the user's actual intent: get_signal_board
-   for today's opportunity board, get_positions for holdings, get_validation_status
-   for strategy maturity, manage_watchlist for watchlist edits, run_live_scan
-   for an explicit rescan. Do not use run_code/shell/repo exploration when
-   one of those intents is the whole question.
 """
 
 def resolve_quant_python() -> Path:

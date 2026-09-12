@@ -169,8 +169,9 @@ def test_observe_tools_are_bounded_to_one_evidence_scope(tmp_path, monkeypatch):
 def test_new_semantic_tools_and_legacy_compatibility_share_deferred_discovery(
     tmp_path, monkeypatch
 ):
-    """P2.1-B: legacy tools keep implementation/test compatibility but no
-    longer gain resident visibility over the narrow semantic surface."""
+    """Post-P7 R2.3: the five daily-operator narrow tools are RESIDENT so a
+    narrow question routes directly with no discovery request; the retained
+    legacy fallback stays deferred behind ToolSearch."""
     toolset, _ = _toolset(tmp_path, monkeypatch)
     for name in (
         "get_signal_board",
@@ -179,7 +180,7 @@ def test_new_semantic_tools_and_legacy_compatibility_share_deferred_discovery(
         "run_live_scan",
         "manage_watchlist",
     ):
-        assert toolset.tools[name].defer_loading is True, name
+        assert toolset.tools[name].defer_loading is not True, name
         assert callable(toolset.tools[name].function), name
     for legacy in (
         "get_trading_context",
