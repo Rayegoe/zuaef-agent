@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0",
+  "recorded_at": "2026-09-12",
+  "spec": "ZUAEF Quant Post-P7 Production Reliability Closure Spec v0.1",
+  "r1_commit": "55b8f26",
+  "model": "deepseek/deepseek-v4-flash-0731 (production .env)",
+  "conditions": "isolated workspaces seeded with controlled Friday-end facts (day=2026-09-11, symbols_scanned=50, data_trust=PASS, zero triggers); real wall clock Saturday 2026-09-12; fresh sessions unless noted",
+  "r1_market_date_canaries": [
+    {
+      "key": "M1",
+      "prompt": "今天有什么机会？",
+      "run_id": "a73d13fc49ec423e9a222cdfe4e98617",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_sequence": ["search_tools", "get_signal_board"],
+      "input_tokens": 44030,
+      "output_tokens": 731,
+      "cache_read_tokens": 15104,
+      "largest_input_tokens": 15720,
+      "verdict": "PASS — stated non-trading day, named 2026-09-11 as latest valid day, attributed zero triggers to the completed Friday scan, no wait-for-close wording"
+    },
+    {
+      "key": "M2",
+      "prompt": "重新扫描一下今天。",
+      "run_id": "6aa188bd5a9749fbb4cb7891cf959e12",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_sequence": ["search_tools", "run_live_scan"],
+      "input_tokens": 44220,
+      "output_tokens": 511,
+      "cache_read_tokens": 28416,
+      "largest_input_tokens": null,
+      "verdict": "PASS — run_live_scan returned the NON_TRADING_DAY refusal (scan_executed=false, no sidecar execution); answer stated the previous trading day is never presented as a same-day scan"
+    },
+    {
+      "key": "M3",
+      "prompt": "那就用最新有效行情重新算一下。",
+      "run_id": "e43ec467d92046b683fa1403a8b4da55",
+      "execution_state": "completed",
+      "requests": 4,
+      "tool_sequence": ["search_tools", "run_live_scan", "read_tool_result"],
+      "input_tokens": 65949,
+      "output_tokens": 2602,
+      "cache_read_tokens": 53504,
+      "largest_input_tokens": null,
+      "verdict": "PASS — model passed recalculate_latest=true, real scan sidecar ran over Friday quotes, answer labeled the run a diagnostic recalculation of 2026-09-11 data, not a same-day scan"
+    }
+  ],
+  "r2_context_benchmarks": {
+    "before_fix": {
+      "note": "every narrow turn paid search_tools discovery first: 3 requests per narrow intent",
+      "fresh": [
+        {"key": "B1", "prompt": "我现在持有什么？", "run_id": "ff94b3a2c7614bf0bf2f42ed07797f3c", "requests": 3, "tool_sequence": ["search_tools", "get_positions"], "input_tokens": 43222, "largest_input_tokens": 15240, "cache_read_tokens": 27904},
+        {"key": "B2", "prompt": "这套策略现在验证到什么程度？", "run_id": "93c3be4dfcca406084871ad0e70e9950", "requests": 3, "tool_sequence": ["search_tools", "get_validation_status"], "input_tokens": 44865, "largest_input_tokens": 16157, "cache_read_tokens": 28672},
+        {"key": "B3", "prompt": "今天有什么机会？", "run_id": "a73d13fc49ec423e9a222cdfe4e98617", "requests": 3, "tool_sequence": ["search_tools", "get_signal_board"], "input_tokens": 44030, "largest_input_tokens": 15720, "cache_read_tokens": 15104}
+      ],
+      "long_session_6_turns_file": "reproduced pre-fix in /tmp harness; per-turn input: turn1 125367, turn2 45540, turn3 47502, turn4 46765, turn5 47471, turn6 49622; narrow turns 3 requests each"
+    },
+    "after_fix": {
+      "note": "narrow five tools resident: 2 requests per narrow intent, direct routing",
+      "fresh": [
+        {"key": "B1", "run_id": "e74cd67dd42749ef92c19c8bd1307e6d", "requests": 2, "tool_sequence": ["get_positions"], "input_tokens": 28008, "largest_input_tokens": 14152},
+        {"key": "B2", "run_id": "da77658d0d7e431e8cff10237dc5916a", "requests": 2, "tool_sequence": ["get_validation_status"], "input_tokens": 28340, "largest_input_tokens": 14481},
+        {"key": "B3", "run_id": "6413ff5ae9414df39a09af237cbf12b8", "requests": 2, "tool_sequence": ["get_signal_board"], "input_tokens": 28149, "largest_input_tokens": 14293}
+      ],
+      "long_session_6_turns": [
+        {"turn": 1, "prompt": "全面分析002415。", "run_id": "2c8c64267f1b41c680106ef84cff4e77", "requests": 5, "input_tokens": 100128, "tool_sequence": ["load_capability", "get_symbol_context", "manage_watchlist", "search_tools", "get_positions", "get_validation_status", "search_tools", "get_research_packet", "get_market_intelligence", "save_research_packet"]},
+        {"turn": 2, "prompt": "今天有什么机会？", "run_id": "d8cf302e00314619a292c6dd7b22ca68", "requests": 2, "input_tokens": 30330, "tool_sequence": ["get_signal_board"]},
+        {"turn": 3, "prompt": "重新扫描一下今天。", "run_id": "cb8d0353b4894b1d84b3dcdc0b22f72f", "requests": 2, "input_tokens": 30538, "tool_sequence": ["run_live_scan"]},
+        {"turn": 4, "prompt": "我现在持有什么？", "run_id": "88f366261e4742d8945d2fabade9d467", "requests": 2, "input_tokens": 31026, "tool_sequence": ["get_positions"]},
+        {"turn": 5, "prompt": "有没有退出提醒？", "run_id": "fb282effee6a4b699e4af37609f782f6", "requests": 2, "input_tokens": 31560, "tool_sequence": ["get_positions"]},
+        {"turn": 6, "prompt": "这套策略验证到什么程度？", "run_id": "02be04567e7a4207bff20146260d2b9b", "requests": 2, "input_tokens": 32066, "tool_sequence": ["get_validation_status"]}
+      ]
+    },
+    "reference_continuity_and_current_fact": {
+      "turn1": {"prompt": "002415现在怎么样？", "run_id": "5e3abe7456544f6aa3bc0e47d6c23414", "requests": 2, "input_tokens": 28767, "tool_sequence": ["get_symbol_context"]},
+      "turn2": {"prompt": "把它加入观察。", "run_id": "d89362f8c58d45b082f51c416a797dc0", "requests": 2, "input_tokens": 28870, "tool_sequence": ["manage_watchlist"]},
+      "verified": "它 resolved to 002415; scoped watchlist artifact persisted 002415 (verified by read-back); market facts came from a fresh get_symbol_context call, not conversation prose"
+    }
+  },
+  "context_component_measurements": {
+    "quant_instructions_chars": {"before": 15086, "after": 14246},
+    "capability_instructions_total_chars": {"before": 16615, "after": 15775},
+    "tool_description_chars": {"before": {"resident": 7724, "deferred": 6368}, "after": {"resident": 10480, "deferred": 3612}},
+    "message_history_per_request": "long-session narrow turn final request carried 12 messages, 5323 chars total; fresh narrow run final request 4006 chars",
+    "current_tool_result_chars": "<= 1649 per run (bounded payloads)",
+    "unattributed_residual": "the remainder of the ~15.7k-token single-request floor (harness system-prompt assembly, request framing, provider accounting) is not decomposable from existing receipts and is reported as residual, not inferred"
+  },
+  "pre_existing_test_failures_documented": [
+    "tests/test_quant_v31.py and tests/test_quant_hydration.py require pandas, absent from the main .venv (collection error; identical on the pre-change tree)",
+    "tests/test_quant_research.py::TestMarketIntelAdapter::test_bounded_items_with_source_and_time fails identically on the pre-change tree"
+  ]
+}
