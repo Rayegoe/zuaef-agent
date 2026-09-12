@@ -253,7 +253,7 @@ Live Decision Product    FIRST PROOF PASS(交互式;watcher 有意未建)
 ### P3 — QuantDecision 接入 ZUAEF ✅
 
 - `plugins/zuaef-quant`(workspace 成员,`zuaef.plugins` 入口点 `quant`):轻量 `Capability(id="quant-decision")` + 领域指令(证据层级/真相来源/报告语义/操作守则)+ 确定性工具,**Core 零业务改动**。重活在侧环境 subprocess 执行,插件包自身不背 akshare/qlib。
-- 工具:`evaluate_strategy`(纯数值参数、白名单校验、返回有界证据)/ `get_live_signals`(确定性扫描,LLM 永不扫全市场)/ `get_market_context`(bounded market-wide 证据,`defer_loading`,替代候选池外推全市场)/ `record_decision_brief`(六种 action 枚举,实测 signal→brief 延迟)/ `record_trade_outcome`(canonical ack,仅记录人类已成交事实、不下单;venue=paper/real;Phase 1 仅全仓平仓)/ `get_trading_context`(只读 canonical trading 上下文,不重算市况、不重推触发)/ `render_quant_business_artifact`(确定性渲染业务 HTML 到 `artifacts/quant/delivery/`)。
+- 工具:`evaluate_strategy`(纯数值参数、白名单校验、返回有界证据)/ `run_live_scan`(确定性扫描,LLM 永不扫全市场)/ `get_market_context`(bounded market-wide 证据,`defer_loading`,替代候选池外推全市场)/ `record_decision_brief`(六种 action 枚举,实测 signal→brief 延迟)/ `record_trade_outcome`(canonical ack,仅记录人类已成交事实、不下单;venue=paper/real;Phase 1 仅全仓平仓)/ `get_trading_context`(只读 canonical trading 上下文,不重算市况、不重推触发)/ `render_quant_business_artifact`(确定性渲染业务 HTML 到 `artifacts/quant/delivery/`)。
 - **真实失败③:首个版本让模型提交整段 TOML 字符串,弱模型不会调** → 改为普通数值参数(默认值即基线),一次工具调用即可完成 mutation。
 - Profile `profiles/quant-decision.toml`(`allow_capabilities = true`);22 个插件契约测试(白名单越界、canonical ack 路由与宿主拒绝原样透传、get_trading_context 只读投影、渲染落点等)。
 
@@ -306,7 +306,7 @@ zuaef-quant Plugin                     ← plugins/zuaef-quant(workspace 成员,
 QuantDecision Capability               ← 10 条稳定领域指令 + 1 个 QuantToolset
       │
       ├── evaluate_strategy            ─┐
-      ├── get_live_signals              ├─ subprocess(.venv-quant/bin/python)
+      ├── run_live_scan                 ├─ subprocess(.venv-quant/bin/python)
       ├── record_decision_brief        ─┤     ↑ 隔离:重依赖永不进 Agent 环境
       └── record_trade_outcome(纯本地)─┘
                 │
@@ -430,7 +430,7 @@ ZUAEF_QUANT_PYTHON=$PWD/.venv-quant/bin/python \
 ZUAEF_QUANT_REPO_ROOT=$PWD \
 .venv/bin/zuaef-agent run \
   --profile quant-decision --request-limit 10 --tool-calls-limit 12 \
-  "Live decision check for the A-share active strategy. FIRST tool call: get_live_signals(). Then: (1) decide the verdict NO_TRADE or ENTER_CANDIDATE strictly from the returned trigger evidence (empty trigger list means NO_TRADE — do not force a candidate); (2) call record_decision_brief once with decision_id 'brief-live-<unixseconds>', the signal timestamp and strategy name from the scan output, your why/invalidation/expected_holding, and the raw trigger facts (or 'none'); (3) stop. No other tools, no file writes."
+  "Run today's deterministic live scan using run_live_scan. From that returned trigger evidence: (1) decide the verdict NO_TRADE or ENTER_CANDIDATE strictly from the scan's trigger facts (empty trigger list means NO_TRADE — do not force a candidate); (2) call record_decision_brief once with decision_id 'brief-live-<unixseconds>', the signal timestamp and strategy name from the scan output, your why/invalidation/expected_holding, and the raw trigger facts (or 'none'); (3) stop. Do not run another scan. No other tools, no file writes, no repo/shell/run_code."
 ```
 
 只想快速看盘而不起 Agent(不产生 brief,不消耗模型):

@@ -1,7 +1,7 @@
 # zuaef-quant
 
 ZUAEF-ASHARE-001 P3: QuantDecision capability. Deterministic tools
-(evaluate_strategy / get_live_signals / run_live_scan / get_market_context /
+(evaluate_strategy / run_live_scan / get_market_context /
 get_signal_board / get_positions / get_validation_status / manage_watchlist /
 record_decision_brief / record_trade_outcome / get_trading_context /
 render_quant_business_artifact, plus deferred research tools) over the frozen

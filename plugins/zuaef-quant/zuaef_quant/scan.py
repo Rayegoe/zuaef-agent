@@ -36,8 +36,8 @@ def entry_trigger(
     ``pullback`` and ``ratio`` come from the date-aligned timing adapter
     (quote day T vs cached sessions strictly before T); ``strength`` is the
     quote's absolute change (price - prev_close). This exact boolean is the
-    one production decision shared by ``run_live_scan`` / ``get_live_signals``
-    and the monitor's READY layer.
+    one production decision shared by ``run_live_scan`` and the monitor's
+    READY layer.
     """
     return bool(
         pullback <= entry_pullback_max

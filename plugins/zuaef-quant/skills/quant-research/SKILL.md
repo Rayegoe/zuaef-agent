@@ -23,7 +23,7 @@ Use this recipe for questions such as 今天为什么跌? / A股大跌原因? / 
 6. Answer and END.
 
 Normally do not call `get_symbol_context`, `get_signal_board`,
-`get_live_signals`, `get_positions`, `record_decision_brief`,
+`get_positions`, `record_decision_brief`,
 `record_trade_outcome`, `run_code` or `render_quant_business_artifact` for a
 market-wide question unless the user's question explicitly requires them.
 Do not append unrelated portfolio EXIT_ALERT facts unless the user asked
@@ -64,8 +64,8 @@ Match the question to the narrow tool before opening a broad projection:
 
 `get_trading_context` is the broad legacy-compatible projection. Use it only
 when the question genuinely combines several scopes, not as the default for a
-narrow intent. `get_live_signals` remains scan evidence compatibility; prefer
-`run_live_scan` when the user explicitly asks to refresh/rerun.
+narrow intent. When the user explicitly asks to refresh/rerun, use
+`run_live_scan`.
 
 ## Evidence hierarchy (what beats what)
 

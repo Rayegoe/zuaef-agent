@@ -1,9 +1,9 @@
 """Narrow Intent -> Semantic Tool -> Reality tests (Domain Surface Refoundation P2).
 
 These pin the first semantic-surface slice before any internal Quant engine
-migration: each tool is bounded to one evidence scope, run_live_scan and
-get_live_signals call the same scan engine, and manage_watchlist is one
-verified write path shared with the legacy alias.
+migration: each tool is bounded to one evidence scope, run_live_scan runs
+the shared deterministic scan engine, and manage_watchlist is one verified
+write path.
 """
 
 from __future__ import annotations
@@ -182,13 +182,12 @@ def test_new_semantic_tools_and_legacy_compatibility_share_deferred_discovery(
         assert callable(toolset.tools[name].function), name
     for legacy in (
         "get_trading_context",
-        "get_live_signals",
     ):
         assert toolset.tools[legacy].defer_loading is True, legacy
         assert callable(toolset.tools[legacy].function), legacy
 
 
-def test_run_live_scan_and_get_live_signals_share_the_same_engine(tmp_path, monkeypatch):
+def test_run_live_scan_runs_the_shared_scan_engine(tmp_path, monkeypatch):
     import zuaef_quant.toolset as toolset_module
 
     toolset, _ = _toolset(tmp_path, monkeypatch)
@@ -199,14 +198,11 @@ def test_run_live_scan_and_get_live_signals_share_the_same_engine(tmp_path, monk
         return json.dumps({"triggers": [{"symbol": "601799"}], "universe_count": 50})
 
     monkeypatch.setattr(toolset_module, "_run_module", fake_run_module)
-    signals = json.loads(toolset.tools["get_live_signals"].function())
     scan = json.loads(toolset.tools["run_live_scan"].function())
-    assert len(calls) == 2
-    assert calls[0] == calls[1]
+    assert len(calls) == 1
     assert calls[0][0] == "zuaef_quant.scan_sidecar"
-    assert signals["evidence_scope"] == "CANDIDATE_POOL"
     assert scan["evidence_scope"] == "CANDIDATE_POOL"
-    assert signals["triggers"] == scan["triggers"] == [{"symbol": "601799"}]
+    assert scan["triggers"] == [{"symbol": "601799"}]
 
 
 def test_manage_watchlist_is_one_verified_write_interface(tmp_path, monkeypatch):

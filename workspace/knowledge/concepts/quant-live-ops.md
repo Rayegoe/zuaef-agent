@@ -60,13 +60,13 @@ ZUAEF_QUANT_PYTHON=$PWD/.venv-quant/bin/python \
 ZUAEF_QUANT_REPO_ROOT=$PWD \
 .venv/bin/zuaef-agent run \
   --profile quant-decision --request-limit 10 --tool-calls-limit 12 \
-  "Live decision check for the A-share active strategy. FIRST tool call: get_live_signals()..."
+  "Run today's deterministic live scan using run_live_scan. From that returned trigger evidence: decide the verdict NO_TRADE or ENTER_CANDIDATE strictly from the scan's trigger facts; call record_decision_brief once with decision_id 'brief-live-<unixseconds>'...; stop. Do not run another scan."
 ```
 
-形状：先 `get_live_signals()` → 严格按触发证据判定 **NO_TRADE / ENTER_CANDIDATE**（空触发=NO_TRADE，
+形状：先 `run_live_scan()`（今天的一次确定性扫描）→ 严格按触发证据判定 **NO_TRADE / ENTER_CANDIDATE**（空触发=NO_TRADE，
 不许硬凑候选）→ 调一次 `record_decision_brief`（decision_id `brief-live-<unixseconds>`、
 signal timestamp、strategy name、why/invalidation/expected_holding、raw trigger facts 或 'none'）→ 停止。
-**不调其他工具、不写文件。**
+**不重复扫描、不调其他工具、不写文件。**
 
 ## M1 交易时段循环（v0.1，spec v2.0-optimized M1；2026-09-04 增补）
 

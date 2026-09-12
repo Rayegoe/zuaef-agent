@@ -31,7 +31,7 @@ to one of these resources.
 | `plugins/zuaef-quant/zuaef_quant/quant_core.py` (lines 72–165) | History fetch + cache + rules | `fetch_history(symbol, adjust, start_date=20180101)`; cache key `<symbol>_<qfq | raw>`; sidecar meta;`fetch_csi500_constituents` (CSIndex 000905) |
 | `plugins/zuaef-quant/zuaef_quant/eval_sidecar.py` | Eval pipeline universe usage | rewrites `csi500_subset.txt` from meta; reads symbols from meta |
 | `tools/quant_fetch_universe.py` | Universe builder | stride sampling of sorted CSI500 codes; ST & insufficient-lookback exclusion |
-| `plugins/zuaef-quant/zuaef_quant/toolset.py` (lines 29–271) | Plugin tools | `_run` subprocess isolation; evaluate_strategy/get_live_signals/record_decision_brief/record_trade_outcome |
+| `plugins/zuaef-quant/zuaef_quant/toolset.py` | Plugin tools | `_run_module` subprocess isolation; evaluate_strategy/run_live_scan/record_decision_brief/record_trade_outcome |
 
 ## Resources partially observed
 

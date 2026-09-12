@@ -60,7 +60,7 @@ ZUAEF Agent Core（业务域中立，零量化改动）
   └─ zuaef-quant Plugin（plugins/zuaef-quant，入口点 quant，allow_capabilities = true）
        └─ QuantDecision Capability（领域指令 + QuantToolset，6 个确定性工具）
             ├─ evaluate_strategy                  ┐
-            ├─ get_live_signals                   ┼─ subprocess 隔离（.venv-quant Python 3.12）
+            ├─ run_live_scan                      ┼─ subprocess 隔离（.venv-quant Python 3.12）
             ├─ record_decision_brief              │
             ├─ record_trade_outcome               │（canonical ack：仅记录事实，不下单）
             ├─ get_trading_context                ├─ 只读 canonical trading 上下文（artifacts/quant/trading/）

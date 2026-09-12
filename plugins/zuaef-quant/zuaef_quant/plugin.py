@@ -1,7 +1,7 @@
 """``zuaef-quant`` plugin factory (ZUAEF-ASHARE-001 P3).
 
 Exposes the QuantDecision capability over the existing plugin composition
-ABI: model-visible deterministic tools (evaluate_strategy, get_live_signals,
+ABI: model-visible deterministic tools (evaluate_strategy,
 run_live_scan, get_market_context, get_signal_board, get_positions,
 get_validation_status, manage_watchlist, record_decision_brief,
 record_trade_outcome, get_trading_context, render_quant_business_artifact
@@ -115,7 +115,7 @@ has proven — it never fabricates market facts):
   price-limit status, membership, position, watchlist or trigger state,
   obtain the corresponding host evidence IN THE CURRENT RUN via
   get_symbol_context / get_signal_board / get_positions /
-  get_validation_status / get_trading_context / get_live_signals.
+  get_validation_status / get_trading_context.
   Conversation memory is not evidence; yesterday's tool call is not
   today's evidence.
 - Distinguish the three layers in your head, never blur them in the reply:
@@ -159,7 +159,7 @@ Market-wide questions (今天为什么跌? A股大跌原因? 为什么普跌? �
   candidate pool, watchlist or positions for market-wide evidence.
 - Explain OBSERVED facts first, then present INTERPRETATION / causal chain as
   interpretation, and name UNKNOWN links explicitly.
-- Do not call get_symbol_context, get_live_signals, record_decision_brief,
+- Do not call get_symbol_context, record_decision_brief,
   record_trade_outcome, run_code or render_quant_business_artifact unless the
   user's question explicitly requires them.
 - Never append unrelated portfolio EXIT_ALERT lines. get_trading_context is
@@ -234,12 +234,13 @@ Operating rules:
 3. Never generate or execute arbitrary strategy Python; supply numeric
    strategy parameters only.
 4. Never claim an opportunity without deterministic trigger evidence from
-   get_live_signals, or from run_live_scan when the user explicitly asks to
-   refresh/rerun today's scan. NO_TRADE is always a valid answer. When the
-   user says 重新扫描/刷新今天/跑一下候选池, use run_live_scan; never fall
-   back to shell, repo search or a hand-written script for a scan.
-5. Decision Briefs: use get_live_signals (or the explicit-rescan result from
-   run_live_scan) for triggers, decide
+   run_live_scan (the explicit fresh scan). For reading the current
+   opportunity board without a fresh scan, use get_signal_board. NO_TRADE is
+   always a valid answer. When the user says 重新扫描/刷新今天/跑一下候选池,
+   use run_live_scan; never fall back to shell, repo search or a hand-written
+   script for a scan.
+5. Decision Briefs: use the fresh scan evidence from run_live_scan for
+   triggers, decide
    NO_TRADE / WATCH / ENTER_CANDIDATE / HOLD / REDUCE / EXIT, and persist
    via record_decision_brief. ENTER_CANDIDATE is a candidate, never an
    order; the user decides whether to act.
@@ -318,7 +319,6 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
         tools={
             "get_trading_context": True,
             "get_symbol_context": True,
-            "get_live_signals": True,
             "evaluate_strategy": True,
         },
         mount=MountDir(virtual_path="/quant-cache", host_path=str(cache_root), mode="read-only"),

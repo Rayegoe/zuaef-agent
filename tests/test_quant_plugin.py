@@ -97,7 +97,7 @@ class TestPluginFactory:
         assert bundle.capabilities[0].id == "quant-decision"
         toolset = bundle.capabilities[0].toolsets[0]
         tools = set(toolset.tools.keys()) if hasattr(toolset, "tools") else set()
-        assert {"evaluate_strategy", "get_live_signals", "record_trade_outcome"} <= tools
+        assert {"evaluate_strategy", "run_live_scan", "record_trade_outcome"} <= tools
 
     def test_resolve_quant_python_prefers_env(self, tmp_path, monkeypatch):
         fake = _fake_quant_python(tmp_path)
@@ -479,11 +479,10 @@ class TestCodeModeSandbox:
         sandboxed = [c for c in bundle.capabilities if isinstance(c, CodeMode)]
         assert len(sandboxed) == 1
         mode = sandboxed[0]
-        # the four evidence tools are sandboxed as callables; the rest of the
+        # the three evidence tools are sandboxed as callables; the rest of the
         # agent's surface (native tools) stays untouched
         assert mode.tools == {
             "get_trading_context": True, "get_symbol_context": True,
-            "get_live_signals": True,
             "evaluate_strategy": True,
         }
         mounts = mode.mount if isinstance(mode.mount, list) else [mode.mount]
@@ -682,7 +681,7 @@ def test_candidate_and_symbol_tools_expose_evidence_scope(tmp_path, monkeypatch)
         "_run_module",
         lambda *a, **kw: json.dumps({"triggers": [], "universe_count": 50}),
     )
-    live = json.loads(toolset.tools["get_live_signals"].function())
+    live = json.loads(toolset.tools["run_live_scan"].function())
     assert live["evidence_scope"] == "CANDIDATE_POOL"
     assert live["universe_count"] == 50
 
@@ -799,7 +798,7 @@ def test_adversarial_scope_fixture_cannot_authorise_market_claim(tmp_path, monke
             {"triggers": [], "universe_count": 50, "down": 45, "up": 5}
         ),
     )
-    candidate = json.loads(toolset.tools["get_live_signals"].function())
+    candidate = json.loads(toolset.tools["run_live_scan"].function())
     assert candidate["evidence_scope"] == "CANDIDATE_POOL"
 
     market_payload = {

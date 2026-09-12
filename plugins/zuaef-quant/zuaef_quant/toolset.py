@@ -184,11 +184,10 @@ def _run_module(module: str, args: list[str], quant_python: Path, timeout: int) 
 def _live_scan_payload(quant_python: Path) -> dict[str, Any]:
     """Run the deterministic candidate-pool scan engine once and parse it.
 
-    Both ``get_live_signals`` (legacy-compatible evidence affordance) and
-    ``run_live_scan`` (explicit operator intent) call this function, and the
-    operator CLI executes ``zuaef_quant.scan_sidecar`` directly. There is
-    one scan implementation authority: production scan runs this domain
-    module in the quant side environment.
+    ``run_live_scan`` calls this function, and the operator CLI executes
+    ``zuaef_quant.scan_sidecar`` directly. There is one scan implementation
+    authority: production scan runs this domain module in the quant side
+    environment.
     """
     stdout = _run_module(
         "zuaef_quant.scan_sidecar",
@@ -300,25 +299,14 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         )
 
     @toolset.tool_plain(defer_loading=True)
-    def get_live_signals() -> str:
-        """Scan the active candidate universe using current market quotes and
-        return bounded triggers with their timestamps and scan latency.
-        Universe resolution is deterministic (candidate-pool handoff first,
-        frozen CSI500 subset as compatibility fallback; never empty). The
-        model never scans the whole market. An empty trigger list is a valid
-        NO_TRADE answer; triggers are evidence, not orders.
-        """
-        return json.dumps(_live_scan_payload(quant_python), ensure_ascii=False)
-
-    @toolset.tool_plain(defer_loading=True)
     def run_live_scan() -> str:
         """Explicitly run today's deterministic candidate-pool scan
         (扫描/刷新/重新跑/今天信号/READY/NEAR): scan the resolved active
         universe with the frozen strategy and return bounded triggers,
         timestamps, scan metadata and latency.
 
-        This is the same scan engine behind get_live_signals and the
-        monitor/CLI. Use it when the user asks to refresh today's signals;
+        This is the same scan engine the monitor and the operator CLI use.
+        Use it when the user asks to refresh today's signals;
         never fall back to shell, repo search or a hand-written script. An
         empty trigger list is a valid NO_TRADE result, not an error.
         """
@@ -342,9 +330,10 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         and return the measured signal→brief latency.
 
         action must be NO_TRADE | WATCH | ENTER_CANDIDATE | HOLD | REDUCE |
-        EXIT. ENTER_CANDIDATE is never an order. signal_timestamp must be the
-        timestamp returned by get_live_signals, so the host can measure
-        end-to-end decision latency. decision_id must be unique, e.g.
+        EXIT. ENTER_CANDIDATE is never an order. signal_timestamp must come
+        from the current run's authoritative fresh scan evidence (the
+        run_live_scan result), so the host can measure end-to-end decision
+        latency. decision_id must be unique, e.g.
         'brief-20260902-1430-600519'.
         """
         actions = {"NO_TRADE", "WATCH", "ENTER_CANDIDATE", "HOLD", "REDUCE", "EXIT"}

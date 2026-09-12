@@ -49,10 +49,10 @@ code_mode = false
 
 # P2.1-B: legacy broad/alias tools are implementation-compatible but must not
 # retain a resident model-visibility advantage over the narrow surface.
-# P7.1 retired the watchlist aliases; the two broad tools retire in P7.2/P7.3.
+# P7.1 retired the watchlist aliases and P7.2 retired get_live_signals;
+# get_trading_context retires in P7.3.
 LEGACY_DEFERRED = {
     "get_trading_context",
-    "get_live_signals",
 }
 NARROW_DEFERRED = {
     "get_market_context",
