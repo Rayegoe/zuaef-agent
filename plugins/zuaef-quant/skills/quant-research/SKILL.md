@@ -88,7 +88,7 @@ narrow intent. `get_live_signals` remains scan evidence compatibility; prefer
   question needs more than eyes on numbers.
 - Strategy context: S3 clause distances when the symbol carries history.
 - Portfolio context: get_positions (holdings/exit alerts); watchlist
-  membership via manage_watchlist(action="list") or get_analysis_watchlist.
+  membership via manage_watchlist(action="list").
 - Structured finance evidence: get_market_intelligence.
 - Open web research — only when open-ended questions make it materially
   useful (why did it move, industry/policy context): Harness WebSearch /

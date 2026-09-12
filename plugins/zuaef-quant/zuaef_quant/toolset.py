@@ -685,12 +685,11 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
     def _watchlist_update(
         ctx: RunContext[CoreDeps], action: str, symbols: list[str]
     ) -> dict[str, Any]:
-        """Shared host implementation for every watchlist write surface.
+        """Shared host implementation for the watchlist write surface.
 
-        The legacy ``update_analysis_watchlist`` and the intent-oriented
-        ``manage_watchlist`` both delegate here; there is one write path and
-        one read-back verification, so "已加入" can never be claimed without
-        persisted state proving it.
+        ``manage_watchlist`` (add/remove) delegates here; there is one write
+        path and one read-back verification, so "已加入" can never be claimed
+        without persisted state proving it.
         """
         scope = _analysis_scope(ctx)
         if not scope:
@@ -771,52 +770,6 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
             _watchlist_update(ctx, normalized, [str(s) for s in (symbols or [])]),
             ensure_ascii=False,
         )
-
-    @toolset.tool(defer_loading=True)
-    def get_analysis_watchlist(ctx: RunContext[CoreDeps]) -> str:
-        """Read THIS run's analysis watchlist (自选清单/关注列表) — the
-        user-curated attention list (scope = bound case, else this chat). Returns the symbols plus
-        the three-tier semantics: watchlist symbols get on-demand diagnosis
-        and monitoring but NEVER enter the candidate pool or produce
-        READY/NEAR; the candidate pool is algorithm-owned.
-        """
-        scope = _analysis_scope(ctx)
-        if not scope:
-            return json.dumps(
-                {"error": "no analysis scope is bound to this run (host must provide the analysis_scope binding)"},
-                ensure_ascii=False,
-            )
-        symbols = watchlist_store.read_symbols_in(
-            watchlist_store.scope_dir(workspace_root), scope
-        )
-        return json.dumps(
-            {
-                "scope": scope,
-                "symbols": symbols,
-                "count": len(symbols),
-                "semantics": "analysis-only; never READY/NEAR; candidate pool untouched",
-                "note": "positions are tracked separately in get_trading_context",
-            },
-            ensure_ascii=False,
-        )
-
-    @toolset.tool(defer_loading=True)
-    def update_analysis_watchlist(
-        ctx: RunContext[CoreDeps], action: str, symbols: list[str]
-    ) -> str:
-        """Add or remove symbols in THIS run's analysis watchlist (加入自选/
-        取消关注/关注列表: user attention facts). action is add/remove;
-        symbols are 6-digit A-share codes. Legacy-compatible alias of
-        manage_watchlist(action=add|remove); prefer manage_watchlist for
-        natural-language watchlist management. Local and reversible: it never
-        places orders, never changes the strategy, and never adds anything to
-        the candidate pool — say that caveat back to the user when
-        confirming. Invalid codes are rejected with an error; report it
-        instead of guessing. Newly added symbols get a best-effort history
-        prewarm; a prewarm failure means history stays unavailable (the
-        watchlist edit itself still succeeded) — report the two facts
-        separately."""
-        return json.dumps(_watchlist_update(ctx, action, symbols), ensure_ascii=False)
 
     @toolset.tool
     def get_symbol_context(ctx: RunContext[CoreDeps], symbol: str) -> str:

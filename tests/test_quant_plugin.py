@@ -479,11 +479,11 @@ class TestCodeModeSandbox:
         sandboxed = [c for c in bundle.capabilities if isinstance(c, CodeMode)]
         assert len(sandboxed) == 1
         mode = sandboxed[0]
-        # the five evidence tools are sandboxed as callables; the rest of the
+        # the four evidence tools are sandboxed as callables; the rest of the
         # agent's surface (native tools) stays untouched
         assert mode.tools == {
             "get_trading_context": True, "get_symbol_context": True,
-            "get_live_signals": True, "get_analysis_watchlist": True,
+            "get_live_signals": True,
             "evaluate_strategy": True,
         }
         mounts = mode.mount if isinstance(mode.mount, list) else [mode.mount]

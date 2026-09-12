@@ -183,8 +183,6 @@ def test_new_semantic_tools_and_legacy_compatibility_share_deferred_discovery(
     for legacy in (
         "get_trading_context",
         "get_live_signals",
-        "get_analysis_watchlist",
-        "update_analysis_watchlist",
     ):
         assert toolset.tools[legacy].defer_loading is True, legacy
         assert callable(toolset.tools[legacy].function), legacy

@@ -49,11 +49,10 @@ code_mode = false
 
 # P2.1-B: legacy broad/alias tools are implementation-compatible but must not
 # retain a resident model-visibility advantage over the narrow surface.
+# P7.1 retired the watchlist aliases; the two broad tools retire in P7.2/P7.3.
 LEGACY_DEFERRED = {
     "get_trading_context",
     "get_live_signals",
-    "get_analysis_watchlist",
-    "update_analysis_watchlist",
 }
 NARROW_DEFERRED = {
     "get_market_context",
@@ -280,7 +279,7 @@ def test_cjk_search_scores_against_real_tool_definitions(tmp_path):
     assert "save_research_packet" in discover("全面分析 研究报告")
     assert "record_customer_evidence" in discover("客户说")
     # resident domains stay discoverable through their own descriptions
-    assert "update_analysis_watchlist" in discover("加入自选")
+    assert "manage_watchlist" in discover("加入自选")
     assert "get_trading_context" in discover("持仓建议")
 
     # P2 narrow semantic tools: the expected tool must be the top discovery

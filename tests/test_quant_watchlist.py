@@ -314,24 +314,24 @@ class TestWatchlistTools:
     def test_scope_binding_reaches_the_tool(self, tmp_path):
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
-        data = json.loads(toolset.tools["get_analysis_watchlist"].function(ctx))
+        data = json.loads(toolset.tools["manage_watchlist"].function(ctx, "list"))
         assert data["scope"] == "oc_group_a"
         assert data["symbols"] == []
 
     def test_without_scope_binding_fails_closed(self, tmp_path):
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {})
-        data = json.loads(toolset.tools["get_analysis_watchlist"].function(ctx))
+        data = json.loads(toolset.tools["manage_watchlist"].function(ctx, "list"))
         assert "error" in data and "analysis_scope" in data["error"]
-        update = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"]))
+        update = json.loads(toolset.tools["manage_watchlist"].function(ctx, "add", ["600460"]))
         assert "error" in update
 
     def test_update_tool_writes_scoped_state(self, tmp_path):
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
-        data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460", "x"]))
+        data = json.loads(toolset.tools["manage_watchlist"].function(ctx, "add", ["600460", "x"]))
         assert "6 digits" in data["error"]  # invalid code rejected, nothing written
-        data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"]))
+        data = json.loads(toolset.tools["manage_watchlist"].function(ctx, "add", ["600460"]))
         assert data["changed"] == ["600460"] and data["count"] == 1
         assert data["verified"] is True  # write was confirmed by read-back
         # the run id is recorded for audit
@@ -340,8 +340,8 @@ class TestWatchlistTools:
         )
         assert payload["updated_by_run"] == "run-watch-1"
         # another scope never sees it
-        other = json.loads(toolset.tools["get_analysis_watchlist"].function(
-            _deps(tmp_path, {"analysis_scope": "oc_group_b"})))
+        other = json.loads(toolset.tools["manage_watchlist"].function(
+            _deps(tmp_path, {"analysis_scope": "oc_group_b"}), "list"))
         assert other["symbols"] == []
 
     def test_add_prewarms_history_for_new_symbols(self, tmp_path, monkeypatch):
@@ -357,7 +357,7 @@ class TestWatchlistTools:
         monkeypatch.setattr(toolset_module, "_run_module", fake_run)
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
-        data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"]))
+        data = json.loads(toolset.tools["manage_watchlist"].function(ctx, "add", ["600460"]))
         assert data["verified"] is True
         assert data["history_prewarm"]["600460"]["status"] == "hydrated"
         args = captured["args"]
@@ -373,7 +373,7 @@ class TestWatchlistTools:
         monkeypatch.setattr(toolset_module, "_run_module", failing_run)
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
-        data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"]))
+        data = json.loads(toolset.tools["manage_watchlist"].function(ctx, "add", ["600460"]))
         # the watchlist edit itself succeeded; hydration failure is separate evidence
         assert data["verified"] is True and data["changed"] == ["600460"]
         assert "error" in data["history_prewarm"]
@@ -394,10 +394,10 @@ class TestWatchlistTools:
         monkeypatch.setattr(toolset_module, "_run_module", fake_run)
         toolset = _toolset(tmp_path)
         ctx = _deps(tmp_path, {"analysis_scope": "oc_group_a"})
-        toolset.tools["update_analysis_watchlist"].function(ctx, "add", ["600460"])
+        toolset.tools["manage_watchlist"].function(ctx, "add", ["600460"])
         assert calls, "add must prewarm"
         calls.clear()
-        data = json.loads(toolset.tools["update_analysis_watchlist"].function(ctx, "remove", ["600460"]))
+        data = json.loads(toolset.tools["manage_watchlist"].function(ctx, "remove", ["600460"]))
         assert data["verified"] is True
         assert not calls
         assert "history_prewarm" not in data

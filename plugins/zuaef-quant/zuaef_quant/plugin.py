@@ -63,8 +63,7 @@ Three-tier stock universe (never merge these layers):
   READY/NEAR. Users cannot add symbols to it by chat; universe changes are
   a host-side selection process.
 - Analysis watchlist: user attention facts via manage_watchlist
-  (action=add|remove|list; legacy aliases get_analysis_watchlist /
-  update_analysis_watchlist for add/remove). Scope is host-bound per case or
+  (action=add|remove|list). Scope is host-bound per case or
   chat — you never see or claim another group's list.
 - Positions: open holdings and exit alerts via get_positions (the broad
   get_trading_context remains available for a combined legacy view).
@@ -320,7 +319,6 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
             "get_trading_context": True,
             "get_symbol_context": True,
             "get_live_signals": True,
-            "get_analysis_watchlist": True,
             "evaluate_strategy": True,
         },
         mount=MountDir(virtual_path="/quant-cache", host_path=str(cache_root), mode="read-only"),
