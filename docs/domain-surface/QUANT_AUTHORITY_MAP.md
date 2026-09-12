@@ -57,7 +57,7 @@ plugin modules.
 | `tools/quant_render_dashboard.py` | DIAGNOSTIC / OBSERVATION RENDERER | none |
 | `tools/quant_v31.py` | BENCHMARK / REPLAY | none |
 | `tools/quant_validate_semantics.py` | AUDIT / DATA-SEMANTICS GATE | none; consumes scan artifacts, does not own runtime |
-| `tools/quant_daily.sh` | OPERATOR CONVENIENCE SCRIPT | none; delegates to Agent/operator modules |
+| `tools/quant_daily.sh` | DELETED (P6 closure) | zero production/deployment caller; superseded by M1 monitor + bridge + the Agent §5.2 path |
 | `tools/quant/upstream/dump_bin.py` | DELETED | vendored code now owns its single copy at `plugins/zuaef-quant/zuaef_quant/dump_bin.py` |
 
 The current production direction is:

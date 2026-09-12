@@ -1,0 +1,47 @@
+{
+  "tested_tree": "P6 closure working tree (quant_daily.sh deleted; ops neutral; trading.read_trading_snapshot authority; runtime-owned quant-python resolution)",
+  "recorded_at_utc": "2026-09-12T04:45:00+00:00",
+  "semantic_smoke_surface": "zuaef-agent run --profile quant-decision (real model deepseek/deepseek-v4-flash-0731; isolated /tmp workspaces; model surface unchanged by the closure)",
+  "semantic_runs": [
+    {
+      "key": "positions",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_sequence": ["search_tools", "get_positions"],
+      "legacy_broad_substitution": false,
+      "generic_escape": false,
+      "error": null
+    },
+    {
+      "key": "explicit_scan",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_sequence": ["search_tools", "run_live_scan"],
+      "legacy_broad_substitution": false,
+      "generic_escape": false,
+      "error": null
+    },
+    {
+      "key": "market_wide",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_sequence": ["search_tools", "get_market_context"],
+      "legacy_broad_substitution": false,
+      "generic_escape": false,
+      "error": null
+    }
+  ],
+  "incident_found_by_smoke": {
+    "summary": "First explicit_scan attempt failed: runtime.resolve_quant_python() applied Path.resolve() to the ZUAEF_QUANT_PYTHON env value; a symlinked uv venv interpreter (.venv-quant/bin/python -> base cpython) lost its pyvenv.cfg context and could not import pandas. The old plugin resolver never resolved the path, so the closure wiring surfaced a real regression in the runtime resolver (and a latent one for dashboard/serve.py with ZUAEF_QUANT_PYTHON set).",
+    "fix": "runtime.resolve_quant_python() now applies expanduser() only, never resolve(); verified by the clean explicit_scan rerun above",
+    "failed_attempts": 1,
+    "clean_reruns_after_fix": 2
+  },
+  "operator_smoke": {
+    "zuaef-quant status": "exit 0; snapshot read via zuaef_quant.trading.read_trading_snapshot",
+    "zuaef-quant scan": "exit 0; 50/50 quotes; READY 0; volume semantics PASS",
+    "zuaef-quant monitor once": "exit 0; MARKET_CLOSED tick, 0 symbols, 0 events",
+    "zuaef-quant dashboard render": "exit 0; docs/quant/business.html re-rendered",
+    "zuaef-quant bridge once --dry-run": "exit 0; Bridge tick completed"
+  }
+}

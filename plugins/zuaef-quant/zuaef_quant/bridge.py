@@ -2,8 +2,10 @@
 quant notifications (ZUAEF Quant Phase 2 v0.1, spec §8).
 
 A host-side ONE-SHOT consumer (systemd timer ticks it; each run reads, acts,
-exits — no long-lived process to go half-dead). P5.8 owns this implementation in the domain package; the root
-tools script is only a compatibility wrapper. It consumes the monitor's
+exits — no long-lived process to go half-dead). P5.8 owns this implementation
+in the domain package; the P6 retirement deleted the root tools script, so
+production runs this module directly (``zuaef-quant bridge once``). It
+consumes the monitor's
 durable alert stream (workspace/artifacts/quant/trading/alerts.jsonl) and:
 
 - E1 NEW_READY / E2 POSITION_EXIT_ALERT -> one quant-decision Agent run

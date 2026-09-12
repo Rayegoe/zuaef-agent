@@ -337,8 +337,9 @@ Verify from a workstation:
   ssh -L 8765:127.0.0.1:8765 -L 8787:127.0.0.1:8787 orangepi@<TAILSCALE_IP>
 
 Notes
-  - Do NOT schedule quant_daily.sh anymore: M1 monitor + bridge is the single
-    decision path (otherwise two competing decision paths).
+  - quant_daily.sh was deleted in the P6 closure; do not reintroduce a root
+    daily shell workflow: M1 monitor + bridge is the single decision path
+    (otherwise two competing decision paths).
   - Keep 8765/8787 loopback; dashboard serve POSTs are loopback-enforced.
   - ops/systemd supervisor-sync units are x86-host artifacts (hardcoded codex
     x64 path) — not part of this package.

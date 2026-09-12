@@ -26,9 +26,11 @@ NOW = _dt.datetime(2026, 9, 11, 15, 0, tzinfo=TZ)
 
 
 def _toolset(tmp_path: Path, monkeypatch):
-    import zuaef_quant.toolset as toolset_module
+    import zuaef_quant.trading as trading_module
 
-    monkeypatch.setattr(toolset_module, "now_market", lambda: NOW)
+    # read_trading_snapshot (the P6-closure projection authority in
+    # zuaef_quant.trading) is the sole now_market consumer for context reads.
+    monkeypatch.setattr(trading_module, "now_market", lambda: NOW)
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
     return (

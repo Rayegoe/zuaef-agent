@@ -102,7 +102,7 @@ class TestPluginFactory:
     def test_resolve_quant_python_prefers_env(self, tmp_path, monkeypatch):
         fake = _fake_quant_python(tmp_path)
         monkeypatch.setenv("ZUAEF_QUANT_PYTHON", str(fake))
-        assert resolve_quant_python(tmp_path) == fake
+        assert resolve_quant_python() == fake.resolve()
 
 
 class TestRecordOutcome:

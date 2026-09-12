@@ -546,4 +546,8 @@ Quant's domain-layer slice follows
 semantic tools were added first, the P2.1 discovery-bias closure is in place,
 and the real-model P3 canary passed (`P3_FULL_PASS`, see
 [`docs/domain-surface/P3_QUANT_CANARY_REPORT.md`](docs/domain-surface/P3_QUANT_CANARY_REPORT.md)).
-P4 engine consolidation is authorized; P5–P7 remain gated.
+P4 engine consolidation, P5/P5.8/P5.9 and P6 are executed; the P6 closure
+deleted the last root product workflow and removed the operator layer's
+reverse dependencies on the model-facing layers. P7 (legacy model-tool
+retirement) is READY but not started (see
+[`docs/domain-surface/P6_CLOSURE_REPORT.md`](docs/domain-surface/P6_CLOSURE_REPORT.md)).

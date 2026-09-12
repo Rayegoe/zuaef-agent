@@ -47,8 +47,9 @@ and raw matrix evidence [`P4_QUANT_CANARY_RESULTS.json`](./P4_QUANT_CANARY_RESUL
 P4 reported one non-blocking model-side discovery observation (an extra
 `get_trading_context` read in one Canary 1 attempt; expected narrow tool still
 reached, no generic escape or substitution). P5 has since been executed (see
-below); P6 (Shadow Product Layer retirement) and P7 (legacy tool deletion)
-remain separately gated. P4 did not redesign Runtime or introduce a Domain
+below); P6 (Shadow Product Layer retirement) is executed and closed; P7
+(legacy tool deletion) is READY but not started. P4 did not redesign Runtime
+or introduce a Domain
 Framework / Action Registry / Workflow DSL.
 
 P5 (deterministic operator surface) is now implemented: `zuaef-quant status |
@@ -68,7 +69,10 @@ and [`P5_9_PRODUCTION_AUTHORITY_REPORT.md`](./P5_9_PRODUCTION_AUTHORITY_REPORT.m
 P6 has since retired the zero-caller compatibility wrappers; `tools/` now
 contains developer/audit/benchmark tooling only (see
 [`P6_SHADOW_LAYER_RETIREMENT_REPORT.md`](./P6_SHADOW_LAYER_RETIREMENT_REPORT.md)).
-P7 remains gated on legacy model-tool retirement.
+The P6 closure then deleted the last root product workflow (`quant_daily.sh`)
+and removed the operator layer's reverse dependencies on the model-facing
+layers (see [`P6_CLOSURE_REPORT.md`](./P6_CLOSURE_REPORT.md)). P7 (legacy
+model-tool retirement) is READY but not started.
 
 ---
 
@@ -497,8 +501,8 @@ Do not optimize for one tool call. `分析今天大跌并说明对持仓影响` 
 | P3 | Real-model surface canary over the intent matrix |
 | P4 | **Executed** — consolidate domain engines behind the P3-proven interface (report + raw canary evidence) |
 | P5 / P5.8 | **Executed** — operator CLI plus monitor/bridge/scan/core production authority moved into `zuaef_quant` |
-| P6 | Retire the Shadow Product Layer in root `tools/` |
-| P7 | Retire legacy model tools once the new surface is stable |
+| P6 | **Executed + closed** — Shadow Product Layer retired; root daily workflow deleted; operator layer neutral (closure report) |
+| P7 | READY (not started) — retire legacy model tools using the P7 caller baseline in `P6_CLOSURE_REPORT.md` |
 
 P2 must not move 500 KB of Quant code first. Prove the interface, then refactor the implementation.
 

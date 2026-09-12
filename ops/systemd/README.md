@@ -94,5 +94,6 @@ Notes:
 
 - `zuaef-supervisor-sync.{service,timer}` — x86-host artifacts with a hardcoded
   codex-x64 binary path; not part of the ARM node package.
-- `quant_daily.sh` — superseded by M1 monitor + bridge; scheduling it again
-  would create two competing decision paths.
+- `quant_daily.sh` — deleted in the P6 closure (superseded by M1 monitor +
+  bridge); do not reintroduce a root daily shell workflow — it would create
+  two competing decision paths.

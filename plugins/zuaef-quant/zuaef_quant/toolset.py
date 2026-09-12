@@ -24,9 +24,9 @@ from zuaef_agent.models import CoreDeps
 
 from . import research as research_store
 from . import watchlist as watchlist_store
-from .freshness import derive_freshness, market_date_of, now_market
+from .freshness import market_date_of
 from .runtime import package_parent, resolve_repo_root
-from .validation import compute_validation_accounting
+from .trading import read_trading_snapshot
 
 #: Repo/workspace resolution is owned by the stdlib-only runtime helper.
 REPO_ROOT = resolve_repo_root()
@@ -159,66 +159,6 @@ def _slug(name: str) -> str:
     return re.sub(r"[^a-z0-9_]", "_", name)
 
 
-def _read_json(path: Path, default):
-    """Tolerant canonical-artifact read: absent/corrupt -> the default, never
-    a fabricated business state."""
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return default
-
-
-def _read_jsonl_tail(path: Path, limit: int) -> list[dict]:
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return []
-    rows = []
-    for line in lines[-limit:]:
-        try:
-            rows.append(json.loads(line))
-        except ValueError:
-            continue
-    return rows
-
-
-def _read_jsonl(path: Path) -> list[dict]:
-    """Full append-only stream read for ledger accounting (soak/alerts are
-    bounded by market days, ~hundreds of bytes per row)."""
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return []
-    rows = []
-    for line in lines:
-        try:
-            rows.append(json.loads(line))
-        except ValueError:
-            continue
-    return rows
-
-
-def _resolve_last_scan_at(business_last_scan: Path, soak: list[dict]) -> str | None:
-    """Timestamp of the last completed scan, from canonical artifacts.
-
-    ``business/last_scan.json`` is the business scan pipeline's own metadata
-    record; soak records that actually scanned symbols are the monitor's
-    session-side evidence. Both writers use ``+08:00`` ISO stamps, so the
-    newer one is the lexicographic max. ``None`` means no scan evidence is
-    visible — freshness treats that honestly (STALE does not depend on it),
-    never as "no scan ever happened".
-    """
-    candidates = []
-    business = _read_json(business_last_scan, {})
-    if isinstance(business.get("as_of"), str):
-        candidates.append(business["as_of"])
-    for record in reversed(soak):
-        if (record.get("symbols") or 0) > 0 and isinstance(record.get("ts"), str):
-            candidates.append(record["ts"])
-            break
-    return max(candidates) if candidates else None
-
-
 def _run_module(module: str, args: list[str], quant_python: Path, timeout: int) -> str:
     """Run one domain-owned side-environment module (same authority as CLI)."""
     env = os.environ.copy()
@@ -241,64 +181,14 @@ def _run_module(module: str, args: list[str], quant_python: Path, timeout: int) 
     return proc.stdout
 
 
-def _read_trading_snapshot(workspace_root: Path) -> dict[str, Any]:
-    """Single deterministic read of the canonical trading artifacts.
-
-    Observe tools select a bounded block from this snapshot; the snapshot
-    itself never writes, never recomputes market state, and never invents a
-    value that the artifacts do not contain. Keeping one read path prevents
-    narrow tools from drifting away from the broad compatibility projection.
-    """
-    trading = workspace_root / "artifacts" / "quant" / "trading"
-    state = _read_json(trading / "state.json", {})
-    positions = _read_json(trading / "positions.json", {"open": [], "closed": []})
-    forward = _read_json(trading / "forward.json", {"observations": []})
-    soak = _read_jsonl_tail(trading / "soak.jsonl", 50)
-    alerts = _read_jsonl_tail(trading / "alerts.jsonl", 20)
-    events = [
-        {k: a.get(k) for k in ("ts", "type", "symbol", "what", "why", "price", "venue")}
-        for a in alerts
-    ]
-    now = now_market()
-    validation_accounting = compute_validation_accounting(
-        positions=positions,
-        forward=forward,
-        soak_rows=_read_jsonl(trading / "soak.jsonl"),
-        alerts=_read_jsonl(trading / "alerts.jsonl"),
-        as_of=now.date(),
-    )
-    last_scan_at = _resolve_last_scan_at(
-        workspace_root / "artifacts" / "quant" / "business" / "last_scan.json",
-        soak,
-    )
-    freshness = derive_freshness(
-        now=now,
-        latest_market_data_date=state.get("day"),
-        last_scan_at=last_scan_at,
-    )
-    return {
-        "trading_dir": trading,
-        "state": state,
-        "positions": positions,
-        "forward": forward,
-        "soak": soak,
-        "alerts": alerts,
-        "events": events,
-        "validation_accounting": validation_accounting,
-        "last_scan_at": last_scan_at,
-        "freshness": freshness,
-        "now": now,
-    }
-
-
 def _live_scan_payload(quant_python: Path) -> dict[str, Any]:
     """Run the deterministic candidate-pool scan engine once and parse it.
 
     Both ``get_live_signals`` (legacy-compatible evidence affordance) and
     ``run_live_scan`` (explicit operator intent) call this function, and the
-    operator CLI executes ``zuaef_quant.scan_sidecar`` directly. There is one
-    scan implementation authority; the root tool path is only a legacy import
-    wrapper.
+    operator CLI executes ``zuaef_quant.scan_sidecar`` directly. There is
+    one scan implementation authority: production scan runs this domain
+    module in the quant side environment.
     """
     stdout = _run_module(
         "zuaef_quant.scan_sidecar",
@@ -562,7 +452,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         the answer on current tool facts instead of memory; a stale context
         is a fact to report, not to refresh by re-scanning.
         """
-        snapshot = _read_trading_snapshot(workspace_root)
+        snapshot = read_trading_snapshot(workspace_root)
         state = snapshot["state"]
         now = snapshot["now"]
         freshness = snapshot["freshness"]
@@ -640,7 +530,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         freshness_status is FRESH. Positions, holdings, validation and
         market-wide context are deliberately not part of this payload.
         """
-        snapshot = _read_trading_snapshot(workspace_root)
+        snapshot = read_trading_snapshot(workspace_root)
         state = snapshot["state"]
         freshness = snapshot["freshness"]
         last_scan_at = snapshot["last_scan_at"]
@@ -687,7 +577,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         Evidence scope is TRADING_ACCOUNT. This payload says nothing about
         today's READY/NEAR candidate board; use get_signal_board for that.
         """
-        snapshot = _read_trading_snapshot(workspace_root)
+        snapshot = read_trading_snapshot(workspace_root)
         state = snapshot["state"]
         positions_json = snapshot["positions"]
         live_positions = state.get("positions")
@@ -734,7 +624,7 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         limitations; it deliberately excludes READY/NEAR, positions and
         market-wide context.
         """
-        snapshot = _read_trading_snapshot(workspace_root)
+        snapshot = read_trading_snapshot(workspace_root)
         state = snapshot["state"]
         accounting = snapshot["validation_accounting"]
         return json.dumps(

@@ -1,7 +1,7 @@
 """Bounded market-wide context adapter (ZUAEF Task Boundary Repair v0.1).
 
-Production authority lives here (P5.9-A).  The historical root script is a
-thin compatibility wrapper only; production calls this module directly in the
+Production authority lives here (P5.9-A); the P6 retirement deleted the
+historical root script, and production calls this module directly in the
 quant side environment.
 
 

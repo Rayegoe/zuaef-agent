@@ -943,13 +943,13 @@
     },
     {
       "path": ".gitignore",
-      "bytes": 805,
-      "sha256": "90f72561dc9a0fba544e3c88b2fce17ca6229e6dcfa2a1419feca5ae0b34092d"
+      "bytes": 897,
+      "sha256": "f0cebfd110a2491fc4953d9e67039d7d760d42e705b184cf6d9f798f6c476d55"
     },
     {
       "path": "AGENTS.md",
-      "bytes": 15204,
-      "sha256": "45938359c27831a4666007b6abb868986dd23222204dde7a51ec7b40c98e939c"
+      "bytes": 15378,
+      "sha256": "31ed36b98cc89951f6a4eb0c5f6bf99200689e7c66ce7d2705060010af62cf7c"
     },
     {
       "path": "CHANGELOG.md",
@@ -978,8 +978,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 25691,
-      "sha256": "42c57f9070857e4fa5468368b17a4ac64736985d8d8ad449af13125c7f38888c"
+      "bytes": 25978,
+      "sha256": "39150497288fd04461497e6fa2626ecb8cf030546f548bca99447773407c2142"
     },
     {
       "path": "REFACTOR_NOTES.md",
@@ -1703,8 +1703,8 @@
     },
     {
       "path": "tests/test_quant_freshness.py",
-      "bytes": 14374,
-      "sha256": "a87202ad6f9975ffc4f0870e47692b44f8880c0c2250d5bf15b76606d9f38cb9"
+      "bytes": 14520,
+      "sha256": "8c865b5414a478bf79bb4562aada2c546274a2b8863bdbca6fe3863cc6bf3680"
     },
     {
       "path": "tests/test_quant_hydration.py",
@@ -1723,13 +1723,13 @@
     },
     {
       "path": "tests/test_quant_plugin.py",
-      "bytes": 36609,
-      "sha256": "e4ef5cf4cf021f66f9a06de13f632fe0049df7a61bd71c45e50fcd3db1007c6b"
+      "bytes": 36611,
+      "sha256": "15eea20a0041c1a7f1e671b924543bb5ea454fb3826831b8c9012d847b08fb2e"
     },
     {
       "path": "tests/test_quant_production_authority.py",
-      "bytes": 5385,
-      "sha256": "2ae51a1293a28c0ee634b38e0813e8903857373a041499f1d26b7b74e428b738"
+      "bytes": 7866,
+      "sha256": "66ff7205b9f81311389ac84af1b19a781ff19329771ba44acc6e923e7741c2cb"
     },
     {
       "path": "tests/test_quant_replay.py",
@@ -1748,8 +1748,8 @@
     },
     {
       "path": "tests/test_quant_semantic_surface.py",
-      "bytes": 9199,
-      "sha256": "d12c877188fcbd4ad138da431bb6243f1ce17f223b40988c9093630c492688b1"
+      "bytes": 9345,
+      "sha256": "abcca47760256249ba450da7d2a83a01eb3ed75ffe7dac4fdb5c9ecd0ab7715f"
     },
     {
       "path": "tests/test_quant_symbol_context.py",
@@ -2208,13 +2208,13 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/bridge.py",
-      "bytes": 21509,
-      "sha256": "53892212907254c910fbabdd47bfc9ebaf031af9c42d5114fd0270488075f3fa"
+      "bytes": 21574,
+      "sha256": "83f155706f997311eeb1d304a0ec9e56c85e7fbd11bb8092eecb93b66740f35c"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/candidates_sidecar.py",
-      "bytes": 54062,
-      "sha256": "9608f56aab2701d2ef354402f365e6f2983a7c724c9d1f31b21eb1cc39c6f3ec"
+      "bytes": 54052,
+      "sha256": "f692a40ee95d4de55de3b0a1f876f76911c1d57e186c2cfd9f6bb1ff0553cea5"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/continuity.py",
@@ -2253,8 +2253,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/market_context.py",
-      "bytes": 28384,
-      "sha256": "b36f09e71a4a0defd7ab0420f0622f9081138689dc2ae0a238e5c768e1b67c4b"
+      "bytes": 28376,
+      "sha256": "bea6a5f542456bf12b5d2855a93a1e007d3d37a5d7d3976fb49971d704b3f97b"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/market_intel.py",
@@ -2268,13 +2268,13 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/ops.py",
-      "bytes": 22771,
-      "sha256": "b554dcbaa8ed76d27694d7a7acfbeb969087b87a86d69a4e83a2b1940d1aa768"
+      "bytes": 22992,
+      "sha256": "f6e214db98e6b3c9d9e4cb5c912e4256f71477a3f1187a0d7a78f51a668cddbe"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/plugin.py",
-      "bytes": 18975,
-      "sha256": "123f9d1d9c0f375f95f674edc054fb3bb06c98638ce31a9b6032a3d43d6a0be0"
+      "bytes": 19029,
+      "sha256": "760cb4fdf3ec9e2c3d7e660b2fad1e988f25f6021f29b58fd1d7b30f642f3a81"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/quant_core.py",
@@ -2288,8 +2288,8 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/runtime.py",
-      "bytes": 2920,
-      "sha256": "75a06f2a9d6e17ee5037e7156b0b81f840a51d59c0b986f3b4c2fda4412983c7"
+      "bytes": 3198,
+      "sha256": "a03d627930ee4f4bbd852c61f532048e53fd4247a063736abb8daa30136b45d2"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/scan.py",
@@ -2303,13 +2303,13 @@
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/toolset.py",
-      "bytes": 55702,
-      "sha256": "0d45f8a89cf4c8776efa5d0d57111437bd36f2261f057ebf416773a2e8e1adcf"
+      "bytes": 51753,
+      "sha256": "b23421971455339045e06caebe15b87ca84e3a2560c31c0ad9bdcd6e11e413f5"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/trading.py",
-      "bytes": 1618,
-      "sha256": "97debdc776059b34f3b338185783d905e8569ce4649bf445e6dc3289ab965150"
+      "bytes": 6211,
+      "sha256": "83d545cbd8fb248749273e9b760690dd472955995f4bc649c3dcd3f7a040965e"
     },
     {
       "path": "plugins/zuaef-quant/zuaef_quant/validation.py",

@@ -434,7 +434,8 @@ The domain-level requirements and intent/authority evidence are maintained in
 [`../domain-surface/SPEC.md`](../domain-surface/SPEC.md) and its
 `QUANT_INTENT_MATRIX.md` / `QUANT_AUTHORITY_MAP.md`. The P3 real-model canary
 has passed (`P3_FULL_PASS`), so C4's interface premise is established; the
-engine migration still follows the P4/P5/P6 gating in the domain-surface spec.
+engine migration followed the P4/P5/P6 gating in the domain-surface spec (all
+executed).
 
 Current status: P4 engine consolidation, P5 deterministic operator surface, P5.8
 monitor/bridge/scan/quant-core extraction and P5.9 production-authority completion
@@ -444,7 +445,11 @@ are executed (`docs/domain-surface/P4_ENGINE_CONSOLIDATION_REPORT.md`,
 P6 has retired the zero-caller root compatibility wrappers: production runtime
 authority is entirely in `zuaef_quant`, while root `tools/` retains only genuine
 audit/benchmark/diagnostic/developer tooling. See
-`docs/domain-surface/P6_SHADOW_LAYER_RETIREMENT_REPORT.md`.
+`docs/domain-surface/P6_SHADOW_LAYER_RETIREMENT_REPORT.md`. The P6 closure then
+deleted the last root product workflow (`quant_daily.sh`) and removed the
+operator layer's reverse dependencies on the model-facing layers
+(`docs/domain-surface/P6_CLOSURE_REPORT.md`); P7 (legacy model-tool retirement)
+is READY but not started.
 
 ### 9.1 Current evidence
 

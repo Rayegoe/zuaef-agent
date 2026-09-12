@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Status | P2 + P2.1 implemented; P3 real-model canary PASS; P4 engine consolidation executed (see `P4_ENGINE_CONSOLIDATION_REPORT.md`) |
+| Status | P2 + P2.1 implemented; P3 real-model canary PASS; P4 engine consolidation executed (see `P4_ENGINE_CONSOLIDATION_REPORT.md`); P5/P6 executed and P6 closed (see `P6_CLOSURE_REPORT.md`); P7 READY, not started |
 | Baseline | local working tree @ `cf581e5` plus P0–P4 patches |
-| Date | 2026-09-11 |
+| Date | 2026-09-12 |
 
 This matrix records real user intents and the semantic surface that answers them. It is an
 engineering checklist, not an ontology, runtime schema or workflow definition. A row without a real
@@ -83,4 +83,5 @@ Result: `P3_FULL_PASS`.
 P4 engine consolidation has now been executed: the expected semantic tools remain unchanged,
 the P4 real-model matrix re-verified them (expected tool 9/9, zero generic escapes), and the
 one non-blocking Canary 1 extra legacy read is recorded in `P4_ENGINE_CONSOLIDATION_REPORT.md`.
-P5/P6/P7 remain gated.
+P5 and P6 have since been executed (P6 closed by the pre-P7 boundary cleanup,
+see `P6_CLOSURE_REPORT.md`); P7 is READY but not started.

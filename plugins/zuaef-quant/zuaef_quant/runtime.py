@@ -69,5 +69,9 @@ def resolve_quant_python() -> Path:
     """
     configured = os.getenv(QUANT_PYTHON_ENV)
     if configured:
-        return Path(configured).expanduser().resolve()
+        # expanduser only — never resolve(): a symlinked venv interpreter
+        # (e.g. uv's .venv-quant/bin/python -> base cpython) loses its
+        # pyvenv.cfg context when resolved, and the bare base interpreter
+        # cannot import the venv's site-packages (pandas/akshare).
+        return Path(configured).expanduser()
     return resolve_repo_root() / QUANT_PYTHON_DEFAULT

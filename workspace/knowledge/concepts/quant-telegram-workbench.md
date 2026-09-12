@@ -13,7 +13,7 @@ sources:
   title: v3.1 spec pack — Source of Truth（当前权威）
   evidence: "Trading Workbench / loopback write adapters / six-tool capability / Telegram document delivery / one-shot bridge + systemd timer 均 IMPLEMENTED；proactive 链 = IMPLEMENTED_NOT_PROVEN"
 - id: sources/zuaef-quant
-  resource: tools/quant_telegram_bridge.py
+  resource: plugins/zuaef-quant/zuaef_quant/bridge.py
   title: Quant Telegram event bridge (oneshot)
   evidence: "byte-offset cursor + delivered_ids；ordered line-by-line checkpoint-after-delivery；E1/E2 Agent run + delivery-authority guard；E3/E4/E5 确定性文案；SYSTEM_RECOVERED 确定性证据规则；T10 日报复用 load_real_trend"
 - id: sources/zuaef-quant
@@ -25,7 +25,7 @@ sources:
   title: send_artifact_to_supervisor — host-scoped operator self-delivery
   evidence: "固定收件人（无 recipient 参数）；resolve()+is_relative_to(delivery_root)+扩展名白名单+≤20MB；无 approval；客户审批边界不动"
 - id: sources/zuaef-quant
-  resource: tools/quant_trading_monitor.py
+  resource: plugins/zuaef-quant/zuaef_quant/monitor.py
   title: M1 monitor — canonical ledger file lock + CLI ack alerts carry ts
   evidence: ".ledger.lock fcntl 序列化并发写；POSITION_OPENED/CLOSED/HUMAN_SKIP 告警含 ts（事件契约）"
 generated:
@@ -44,18 +44,18 @@ READY/EXIT 等确定性状态，也永远不是投递权威。
 ## 系统地图（谁连谁）
 
 ```text
-Market/Data ──> quant_trading_monitor (M1, 45s)          # 确定性扫描 + 机会状态机
+Market/Data ──> zuaef_quant.monitor (M1, 45s)             # 确定性扫描 + 机会状态机
                   │  写 canonical truth（.ledger.lock 串行化）
                   ▼
    workspace/artifacts/quant/trading/                     # state/positions/opportunities/
                   │                                       # alerts.jsonl/soak.jsonl/forward.json
-                  ├────────────> quant_render_business_dashboard（静态 business.html + /api/quant/now）
+                  ├────────────> zuaef_quant.dashboard.render（静态 business.html + /api/quant/now）
                   ├────────────> get_trading_context（模型只读上下文，含 freshness 5 态）
                   ▼
    alerts.jsonl（durable 事件流）
                   │
                   ▼
-   quant_telegram_bridge（oneshot，systemd timer 45s）
+   zuaef_quant.bridge（oneshot，systemd timer 45s）
                   │  byte 游标 + delivered_ids（源 reset 安全）
                   ├─ E1 NEW_READY / E2 POSITION_EXIT_ALERT ─> start_profile_run("quant-decision")
                   │        （interpretation-only：prompt 硬约束 + receipt 守卫）

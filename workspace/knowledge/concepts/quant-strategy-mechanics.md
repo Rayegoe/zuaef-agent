@@ -24,7 +24,7 @@ sources:
   title: Spec v2.0 global strategy
   evidence: "M1 monitoring near-band; frozen entry clauses; exit rules"
 - id: sources/zuaef-quant
-  resource: tools/quant_trading_monitor.py
+  resource: plugins/zuaef-quant/zuaef_quant/monitor.py
   title: M1 trading monitor
   evidence: "WATCH/NEAR/READY/INVALIDATED lifecycle; EXECUTED via ack-buy"
 - id: sources/zuaef-quant
@@ -53,7 +53,7 @@ Strategy = Universe + Entry + Exit + Holding + Risk boundary + Position sizing
 - **禁止任意 Python**；评估器按白名单校验（插件 `validate_spec`，越界报错）。
 - 表达式复用 Qlib 已验证算子（`Ref`/`Mean`），不发明通用量化 DSL。
 
-## M1 机会生命周期（spec v2.0-optimized M1 §6；tools/quant_trading_monitor.py）
+## M1 机会生命周期（spec v2.0-optimized M1 §6；zuaef_quant.monitor）
 
 同一冻结策略在交易时段以状态机落地，入场/退出条款不被改写：
 

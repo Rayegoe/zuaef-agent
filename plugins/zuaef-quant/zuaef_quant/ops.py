@@ -51,7 +51,7 @@ class OperatorError(RuntimeError):
 
 
 # ---------------------------------------------------------------------------
-# deployment environment helpers (reuse the plugin's existing resolution)
+# deployment environment helpers (stdlib-only runtime resolution)
 # ---------------------------------------------------------------------------
 
 
@@ -75,9 +75,16 @@ def _workspace_root() -> Path:
 
 
 def _quant_python() -> Path:
-    from .plugin import resolve_quant_python
+    from .runtime import resolve_quant_python
 
-    return resolve_quant_python(_workspace_root())
+    path = resolve_quant_python()
+    if not path.is_file():
+        raise OperatorError(
+            "quant side environment missing: "
+            f"{path} not found (set ZUAEF_QUANT_PYTHON to the python that "
+            "has akshare/qlib installed)"
+        )
+    return path
 
 
 def _side_env() -> dict[str, str]:
@@ -142,9 +149,9 @@ def _emit(args: argparse.Namespace, payload: dict[str, Any], lines: list[str]) -
 
 
 def _trading_snapshot() -> dict[str, Any]:
-    from .toolset import _read_trading_snapshot
+    from .trading import read_trading_snapshot
 
-    return _read_trading_snapshot(_workspace_root())
+    return read_trading_snapshot(_workspace_root())
 
 
 def _bounded_validation(accounting: dict[str, Any]) -> dict[str, Any]:

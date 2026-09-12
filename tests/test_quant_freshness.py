@@ -201,9 +201,11 @@ def _toolset(tmp_path: Path, monkeypatch, now: _dt.datetime):
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     bundle = create_plugin(_plugin_env(tmp_path), {})
     toolset = bundle.capabilities[0].toolsets[0]
-    import zuaef_quant.toolset as toolset_mod
+    import zuaef_quant.trading as trading_mod
 
-    monkeypatch.setattr(toolset_mod, "now_market", lambda: now)
+    # read_trading_snapshot (the P6-closure projection authority in
+    # zuaef_quant.trading) is the sole now_market consumer for context reads.
+    monkeypatch.setattr(trading_mod, "now_market", lambda: now)
     return toolset
 
 

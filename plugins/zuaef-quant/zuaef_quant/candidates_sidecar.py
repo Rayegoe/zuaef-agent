@@ -2,8 +2,8 @@
 
 Production authority for candidate discovery/ranking lives here.  This is a
 domain production pipeline, not a developer script: the Agent/operator calls
-this module in the quant side environment; the historical root script is a
-thin compatibility wrapper only.
+this module in the quant side environment (the P6 retirement deleted the
+historical root script).
 
 Builds the candidate pool behind docs/quant/business.html (spec pack
 "Quant Business Dashboard + Candidate Discovery v1.0", T003/T004):

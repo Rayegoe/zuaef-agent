@@ -20,7 +20,7 @@ sources:
   title: Quant-decision profile
   evidence: "plugin quant; allow_capabilities = true"
 - id: sources/zuaef-quant
-  resource: tools/quant_trading_monitor.py
+  resource: plugins/zuaef-quant/zuaef_quant/monitor.py
   title: M1 live trading monitor CLI
   evidence: "once/session/ack-buy/ack-sell/status; --state-dir; MARKET_CLOSED/SYSTEM_UNAVAILABLE/NO_TRADE"
 - id: sources/zuaef-quant
@@ -28,7 +28,7 @@ sources:
   title: P0.5 reconcile CLI
   evidence: "--config benchmarks/quant/gen1/quant.toml; attribution classes"
 - id: sources/zuaef-quant
-  resource: tools/quant_telegram_bridge.py
+  resource: plugins/zuaef-quant/zuaef_quant/bridge.py
   title: Quant Telegram event bridge (oneshot + systemd timer)
   evidence: "E1/E2 Agent run；E3/E4/E5 确定性；游标+delivered_ids；checkpoint-after-delivery"
 - id: sources/zuaef-quant
@@ -73,16 +73,16 @@ signal timestamp、strategy name、why/invalidation/expected_holding、raw trigg
 交易时段内的连续盯盘由确定性循环接管（Agent 不轮询；实质变化才进告警流）：
 
 ```bash
-# 交易时段内连续盯盘（30–60s 间隔）
-.venv/bin/python tools/quant_trading_monitor.py session --interval 45
+# 交易时段内连续盯盘（30–60s 间隔；P6 起生产路径为 zuaef_quant.monitor 模块）
+PYTHONPATH=$PWD/plugins/zuaef-quant .venv-quant/bin/python -m zuaef_quant.monitor session --interval 45
 # 单次扫描（等价于一次循环节拍，退出码报告机会状态）
-.venv/bin/python tools/quant_trading_monitor.py once
+PYTHONPATH=$PWD/plugins/zuaef-quant .venv-quant/bin/python -m zuaef_quant.monitor once
 # 用户成交确认（EXECUTED，唯一置位路径；价格/股数由用户给出）
-.venv/bin/python tools/quant_trading_monitor.py ack-buy --symbol 600000 --price 10.5 --shares 500
+PYTHONPATH=$PWD/plugins/zuaef-quant .venv-quant/bin/python -m zuaef_quant.monitor ack-buy --symbol 600000 --price 10.5 --shares 500
 # 持仓平仓确认
-.venv/bin/python tools/quant_trading_monitor.py ack-sell --symbol 600000 --price 10.9 --shares 500
+PYTHONPATH=$PWD/plugins/zuaef-quant .venv-quant/bin/python -m zuaef_quant.monitor ack-sell --symbol 600000 --price 10.9 --shares 500
 # 当前状态一览
-.venv/bin/python tools/quant_trading_monitor.py status
+PYTHONPATH=$PWD/plugins/zuaef-quant .venv-quant/bin/python -m zuaef_quant.monitor status
 ```
 
 - 机会生命周期 **WATCH → NEAR → READY → INVALIDATED**；`EXECUTED` 只能由 `ack-buy` 置位
@@ -111,7 +111,7 @@ Qlib 局限/引擎 bug/无法解释）；任何无法解释的残留 = P0.5 失�
 ## 快速看盘（不起 Agent）
 
 ```bash
-uv run --group quant python tools/quant_live_scan.py
+.venv/bin/zuaef-quant scan
 ```
 
 ## 记录动作：每日一行观察日志
@@ -149,7 +149,7 @@ B=Agent 有权 WATCH/NO_TRADE；比较期望值、回撤、坏交易剔除率、
 | EastMoney / SSL EOF | 正常（本网络被拒）；数据面已走腾讯/新浪/CSIndex |
 | 历史抓取偶发失败 | 腾讯限流；引擎内已有界重试，重跑即可 |
 | side environment missing | 确认 `.venv-quant/bin/python` 存在或设 `ZUAEF_QUANT_PYTHON` |
-| cannot locate repository tooling | 从仓库根运行或设 `ZUAEF_QUANT_REPO_ROOT` |
+| required command is unavailable | 依赖的可执行/侧环境缺失;确认 `.venv-quant/bin/python` 与 `.venv/bin/zuaef-quant` |
 | profile not found | 重装 profile（§5.1 第 3 步） |
 | evaluate_strategy already ran this round | 一轮守卫生效（设计行为），写完 Result 即结束 |
 | manifest 完整性失败 | `python tools/regen_manifest.py` |
@@ -163,7 +163,7 @@ B=Agent 有权 WATCH/NO_TRADE；比较期望值、回撤、坏交易剔除率、
 
 ```bash
 # M1 monitor（开盘前后手动起，会话结束自动退；--exit-on-close 到 15:00 收）
-.venv/bin/python tools/quant_trading_monitor.py session --interval 45 --exit-on-close
+PYTHONPATH=$PWD/plugins/zuaef-quant .venv-quant/bin/python -m zuaef_quant.monitor session --interval 45 --exit-on-close
 
 # Telegram 事件桥（oneshot + timer，45s 一 tick；tick 内含 Agent run 时 systemd 自动不重叠）
 cp ops/systemd/zuaef-quant-bridge.{service,timer} ~/.config/systemd/user/

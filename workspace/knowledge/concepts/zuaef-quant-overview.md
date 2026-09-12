@@ -28,7 +28,7 @@ sources:
   title: Program status (frozen 2026-09-02)
   evidence: "P5.5 ENGINEERING FREEZE; proof table"
 - id: sources/zuaef-quant
-  resource: tools/quant_trading_monitor.py
+  resource: plugins/zuaef-quant/zuaef_quant/monitor.py
   title: M1 Live Trading Loop v0.1
   evidence: "session loop; opportunity lifecycle; ack-buy/ack-sell; state dir"
 - id: sources/zuaef-quant

@@ -62,7 +62,7 @@ data/quant-cache/
 **唯一权威来源：`data/quant-cache/universe/csi500_subset.meta.json` → `symbols` 数组**
 （当前 37 只，来自 CSI500 今日成分排序后 stride=10 采样，`selection` 字段记录）。
 
-- `tools/quant_live_scan.py`（88–91 行）和 `tools/quant_eval_qlib.py`（232–235 行）直接读它；
+- `zuaef_quant.scan_sidecar` 与 `zuaef_quant.eval_sidecar` 直接读它;
   评估时 qlib 工具列表 `csi500_subset.txt` 由 eval 脚本自动重写（82 行）。
 - 生成器 `tools/quant_fetch_universe.py`：`uv run --group quant python tools/quant_fetch_universe.py [--size N] [--stride S]`
   从 CSI500 成分采样；排除 ST 名称与 `--min-first-bar`（默认 2018-06-30）之前无足够回溯的股票。
@@ -73,8 +73,8 @@ data/quant-cache/
 
 - `ZUAEF_QUANT_PYTHON`：侧环境解释器（默认 `.venv-quant/bin/python`）
 - `ZUAEF_QUANT_REPO_ROOT`：仓库根（Agent 须从仓库根运行）
-- 缺失即响亮组合错误（"quant plugin side environment missing" / "cannot locate repository quant tooling"），
-  绝不静默降级。
+- 缺失即响亮失败（"quant plugin side environment missing" / operator 侧
+  "required command is unavailable: ..."），绝不静默降级。
 
 ## 已知限制（诚实记录，README §4）
 

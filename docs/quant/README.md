@@ -352,7 +352,7 @@ validate spec(白名单数值字段;任意 Python 永不越过边界)
 | `data/quant-cache/candidates/active_symbols.json` | 候选池 → live scan 的确定性 handoff(gitignored) |
 | `zuaef_quant.candidates_sidecar` | 生产候选发现(CSI300∪CSI500 → 评分 → 行业封顶) |
 | `zuaef_quant.dashboard.render` | 业务页渲染器(纯 stdlib,operator app) |
-| `workspace/artifacts/quant/business/last_scan.json` | 最近一次活跃宇宙扫描快照(quant_daily.sh 落盘) |
+| `workspace/artifacts/quant/business/last_scan.json` | 活跃宇宙扫描快照(pre-M1 一键脚本遗留;现行 scan 证据走 monitor soak 记录与 `zuaef-quant scan` 输出) |
 | `benchmarks/quant/gen1/STATUS.md` | 四行证明状态 + 冻结决策 + 已知局限 |
 | `benchmarks/quant/gen1/OBSERVATION_LOG.md` | 观察模式每日一行日志 |
 | `workspace/artifacts/quant/gen1/` | 基线评估工件(evidence/trades/equity/result) |
@@ -511,7 +511,7 @@ active_candidates         data/quant-cache/candidates/active_symbols.json
 关键规则:
 
 - **候选排名不是买入建议**——它只是"值得研究/关注"的注意力排序;实际动作仍需确定性触发 + Agent 判定 + 人工决策。
-- 空/失败宇宙必须响亮失败:空 `active_symbols.json` 会让 `quant_daily.sh` 与 `/api/scan` 报错,绝不能把 `0 scanned / 0 trigger` 当成合法的 `NO_TRADE` 市场结论。
+- 空/失败宇宙必须响亮失败:空 `active_symbols.json` 会让 `zuaef-quant scan` 与 `/api/scan` 报错,绝不能把 `0 scanned / 0 trigger` 当成合法的 `NO_TRADE` 市场结论。
 - 评分每个成分都透明(原始指标 + 百分位 + 缺失字段 + 理由 + 红旗),权重与阈值全部在 `benchmarks/quant/gen1/candidates_policy.toml`,不在代码里。负 PE 按缺失处理,不是"很便宜"。
 - top30 内每个一级行业最多 4 只;行业数据缺失时如实标记 `unknown`,不假装分散。
 - essential coverage < 80% ⇒ 快照 `DEGRADED`,页面挂 `DATA DEGRADED` 横幅,不声称 A 级完整。
@@ -601,7 +601,7 @@ uv run --group quant python tools/quant_fetch_universe.py
 # 本地看板服务(loopback; / 业务页, /engineering 工程页)
 .venv/bin/zuaef-quant dashboard serve
 
-# 日常决策(经 Agent,见 §5.2; 一键版 bash tools/quant_daily.sh)
+# 日常决策(经 Agent,见 §5.2)
 
 # 测试
 uv run pytest -q                                                  # 默认套件(836)
@@ -615,7 +615,7 @@ uv run --group quant pytest tests/test_quant_replay.py tests/test_quant_plugin.p
 | `EastMoney / SSL EOF / RemoteDisconnected` | 本网络对 EastMoney 被拒 | 正常;数据面已是腾讯/新浪/CSIndex。若腾讯报价也失败,检查 `qt.gtimg.cn` 可达性 |
 | 历史抓取偶发 SSL 失败 | 腾讯限流 | 引擎内已有有界重试(2s/8s);重跑即可 |
 | `quant plugin side environment missing` | 侧环境不存在或路径错 | 确认 `.venv-quant/bin/python` 存在,或设 `ZUAEF_QUANT_PYTHON` 绝对路径 |
-| `quant plugin cannot locate the repository quant tooling` | agent 不在仓库根运行 | 从仓库根运行,或设 `ZUAEF_QUANT_REPO_ROOT` |
+| `required command is unavailable: <cmd>` | 依赖的可执行/侧环境缺失 | 确认 `.venv-quant/bin/python` 与 `.venv/bin/zuaef-quant` 存在 |
 | `profile not found` | profile 未安装 | 见 §5.1 第 3 步 |
 | `evaluate_strategy already ran this round` | 一轮守卫生效(设计行为) | 写完 Strategy Result 即结束任务 |
 | Agent run `execution_state: failed` 但产物已落盘 | 撞 tool-call limit(探索过头) | 检查产物;prompt 已收紧;必要时再降 limit |

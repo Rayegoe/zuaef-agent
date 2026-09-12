@@ -1,6 +1,8 @@
 # Source node: ZUAEF-ASHARE-001 (zuaef-quant) project corpus
 
 Observed 2026-09-02; supplemented 2026-09-04 (M1 monitor, P0.5 reconcile, spec v2.0-optimized).
+Resource paths updated 2026-09-12 after the P6 wrapper retirement — same content, now under
+`plugins/zuaef-quant/zuaef_quant/` (root wrapper paths below no longer exist).
 All resources are in-repo files; evidence locators below are file paths + section/line
 references. Nothing in this corpus is inferred — every claim in the concept nodes traces
 to one of these resources.
@@ -12,7 +14,7 @@ to one of these resources.
 | `zuaef-quant-final-spec-v2.0-optimized/00_START_HERE.md` | Final spec v2.0 entry (executable contract) | Status FINAL/EXECUTABLE; verified baseline main 2026-09-03; reads 00_GLOBAL_STRATEGY first; replaces v1.1/v1.2; not a platform reconstruction |
 | `zuaef-quant-final-spec-v2.0-optimized/02_AGENT_AND_HARNESS.md` | Agent participation + live decision harness | deterministic layer vs Agent layer; Decision Mode A–E triggers; Research Mode; Agent never the polling loop |
 | `zuaef-quant-final-spec-v2.0-optimized/03_DATA_EXECUTION_TRUTH.md` | Data + execution truth (spec v2.0) | P0.5 dual-engine reconciliation; market rule differences |
-| `tools/quant_trading_monitor.py` | M1 live trading monitor v0.1 | once/session/ack-buy/ack-sell/status; WATCH→NEAR→READY→INVALIDATED; EXECUTED only via ack-buy; workspaces/artifacts/quant/trading/; MARKET_CLOSED/SYSTEM_UNAVAILABLE/NO_TRADE |
+| `plugins/zuaef-quant/zuaef_quant/monitor.py` | M1 live trading monitor v0.1 | once/session/ack-buy/ack-sell/status; WATCH→NEAR→READY→INVALIDATED; EXECUTED only via ack-buy; workspaces/artifacts/quant/trading/; MARKET_CLOSED/SYSTEM_UNAVAILABLE/NO_TRADE |
 | `tools/quant_p05_reconcile.py` | P0.5 dual-engine reconciliation | same frozen strategy+intents; attribution A–F; UNEXPLAINED residual fails P0.5 |
 | `docs/quant/README.md` | Implementation summary + 实操指南 (authoritative) | §2 development chain U0–P5.5; §3 architecture/data flow/frozen authority map; §4 honest implementation list; §5 daily operation; §6 restart admission rules & 禁改清单; §7 command cheatsheet & troubleshooting |
 | `zuaef-ashare-decision-agent-spec-v1.0-final/00_README.md` | Spec pack entry: definition, objectives, build order | "One-sentence definition"; "Highest-priority rule: Do not build a quant platform"; business outcomes = Decision Brief + Strategy Result only |
@@ -25,9 +27,9 @@ to one of these resources.
 | `benchmarks/quant/gen1/STATUS.md` | Four-proof state + freeze decisions | P5.5 ENGINEERING FREEZE 2026-09-02; proof table; frozen decisions; known limitations |
 | `profiles/quant-decision.toml` | Agent profile | plugin `quant`, allow_capabilities = true; env var contract |
 | `data/quant-cache/universe/csi500_subset.meta.json` | Live universe manifest (gitignored) | 37 symbols, selection "sorted codes stride 10", PIT limitation note, excluded lists |
-| `tools/quant_live_scan.py` (lines 55–145) | Live scanner internals | universe read from csi500_subset.meta.json; qt.gtimg.cn batch quotes; needs ≥25 daily bars |
-| `tools/quant_core.py` (lines 72–165) | History fetch + cache + rules | `fetch_history(symbol, adjust, start_date=20180101)`; cache key `<symbol>_<qfq | raw>`; sidecar meta;`fetch_csi500_constituents` (CSIndex 000905) |
-| `tools/quant_eval_qlib.py` (lines 82, 232–235) | Eval pipeline universe usage | rewrites `csi500_subset.txt` from meta; reads symbols from meta |
+| `plugins/zuaef-quant/zuaef_quant/scan_sidecar.py` | Live scanner internals | universe read from csi500_subset.meta.json; qt.gtimg.cn batch quotes; needs ≥25 daily bars |
+| `plugins/zuaef-quant/zuaef_quant/quant_core.py` (lines 72–165) | History fetch + cache + rules | `fetch_history(symbol, adjust, start_date=20180101)`; cache key `<symbol>_<qfq | raw>`; sidecar meta;`fetch_csi500_constituents` (CSIndex 000905) |
+| `plugins/zuaef-quant/zuaef_quant/eval_sidecar.py` | Eval pipeline universe usage | rewrites `csi500_subset.txt` from meta; reads symbols from meta |
 | `tools/quant_fetch_universe.py` | Universe builder | stride sampling of sorted CSI500 codes; ST & insufficient-lookback exclusion |
 | `plugins/zuaef-quant/zuaef_quant/toolset.py` (lines 29–271) | Plugin tools | `_run` subprocess isolation; evaluate_strategy/get_live_signals/record_decision_brief/record_trade_outcome |
 
@@ -38,7 +40,7 @@ to one of these resources.
 | `zuaef-ashare-decision-agent-spec-v1.0-final/01/03/06/07/08/09/10/11/12/13_*.md` | file inventory + README table of contents | full contents — concepts cite 00/02/04/05 only |
 | `docs/quant/dashboard.html` | header/title (observation board, self-contained, 72KB) | full page body |
 | `tools/quant_render_dashboard.py` | dashboard renderer (moved from workspace/artifacts; committed for cross-host portability) | full body not read
-| `tools/quant_core.py` / `quant_eval_qlib.py` full bodies | key functions cited above | full source |
+| `plugins/zuaef-quant/zuaef_quant/quant_core.py` / `eval_sidecar.py` full bodies | key functions cited above | full source |
 
 ## Verification notes
 

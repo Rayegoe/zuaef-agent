@@ -14,7 +14,6 @@ StrategySpec (numeric thresholds) and interpret the returned evidence.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +22,8 @@ from pydantic_ai.capabilities import Capability
 from zuaef_agent.models import CoreDeps
 from zuaef_agent.plugin_api import CompositionError, PluginBundle, PluginEnv
 
+from .runtime import QUANT_PYTHON_ENV
+from .runtime import resolve_quant_python as _runtime_resolve_quant_python
 from .toolset import make_toolset
 
 QUANT_INSTRUCTIONS = """\
@@ -261,16 +262,14 @@ Operating rules:
    exploration when one of those intents is the whole question.
 """
 
-#: Side-environment python used for evaluation/live scans (repo-relative).
-QUANT_PYTHON_ENV = "ZUAEF_QUANT_PYTHON"
-QUANT_PYTHON_DEFAULT = ".venv-quant/bin/python"
+def resolve_quant_python() -> Path:
+    """Thin validation adapter over the stdlib-only runtime path resolver.
 
-
-def resolve_quant_python(workspace_root: Path) -> Path:
-    from .toolset import REPO_ROOT
-
-    configured = os.getenv(QUANT_PYTHON_ENV)
-    path = Path(configured) if configured else REPO_ROOT / QUANT_PYTHON_DEFAULT
+    Path rules live in :mod:`zuaef_quant.runtime`; this wrapper only
+    translates an unavailable side environment into the composition-facing
+    error that plugin composition requires.
+    """
+    path = _runtime_resolve_quant_python()
     if not path.is_file():
         raise CompositionError(
             "quant plugin side environment missing: "
@@ -287,7 +286,7 @@ SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
 
 
 def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
-    quant_python = resolve_quant_python(env.workspace_root)
+    quant_python = resolve_quant_python()
     toolset = make_toolset(quant_python=quant_python, workspace_root=env.workspace_root)
     capability: Capability[CoreDeps] = Capability(
         id="quant-decision",
