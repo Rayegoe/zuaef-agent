@@ -1100,6 +1100,7 @@ def cmd_symbol_context(args, store: Store) -> int:
         "scan": {
             "last_scan_at": last_scan_at,
             "data_trust": state.get("data_trust") or "UNKNOWN",
+            "requested_market_day_status": scan_freshness["requested_market_day_status"],
             "freshness_status": scan_freshness["freshness_status"],
             "freshness_reason": scan_freshness["freshness_reason"],
         },

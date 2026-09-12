@@ -24,7 +24,7 @@ from zuaef_agent.models import CoreDeps
 
 from . import research as research_store
 from . import watchlist as watchlist_store
-from .freshness import market_date_of
+from .freshness import NON_TRADING_DAY, market_date_of, market_day_status
 from .runtime import package_parent, resolve_repo_root
 from .trading import read_trading_snapshot
 
@@ -299,19 +299,66 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
         )
 
     @toolset.tool_plain(defer_loading=True)
-    def run_live_scan() -> str:
+    def run_live_scan(recalculate_latest: bool = False) -> str:
         """Explicitly run today's deterministic candidate-pool scan
         (扫描/刷新/重新跑/今天信号/READY/NEAR): scan the resolved active
         universe with the frozen strategy and return bounded triggers,
         timestamps, scan metadata and latency.
+
+        On a non-trading day (weekend) no same-day scan can exist: the tool
+        returns a bounded NON_TRADING_DAY fact instead of executing and
+        never presents the previous day's quotes as a same-day scan. Only
+        when the user explicitly asks for a recalculation on the latest
+        valid market data (用最新有效行情重新算一次), call it again with
+        recalculate_latest=true — that result is labeled
+        RECALCULATION_ON_LATEST_VALID_MARKET_DATA: a diagnostic operation
+        over the quote dates in its payload, never today's scan.
 
         This is the same scan engine the monitor and the operator CLI use.
         Use it when the user asks to refresh today's signals;
         never fall back to shell, repo search or a hand-written script. An
         empty trigger list is a valid NO_TRADE result, not an error.
         """
+        snapshot = read_trading_snapshot(workspace_root)
+        requested = market_date_of(snapshot["now"])
+        non_trading = (
+            requested is not None and market_day_status(requested) == NON_TRADING_DAY
+        )
+        if non_trading and not recalculate_latest:
+            last_scan_date = market_date_of(snapshot["last_scan_at"])
+            return json.dumps(
+                {
+                    "status": NON_TRADING_DAY,
+                    "scan_executed": False,
+                    "requested_market_date": requested.isoformat(),
+                    "requested_market_day_status": NON_TRADING_DAY,
+                    "latest_market_data_date": snapshot["state"].get("day"),
+                    "last_scan_market_date": (
+                        last_scan_date.isoformat() if last_scan_date else None
+                    ),
+                    "freshness_status": snapshot["freshness"]["freshness_status"],
+                    "note": (
+                        "no same-day scan can exist on a non-trading day; "
+                        "the latest valid board is get_signal_board. A "
+                        "diagnostic recalculation over the latest valid "
+                        "market data is available via "
+                        "run_live_scan(recalculate_latest=true) only when "
+                        "the user explicitly asks for it"
+                    ),
+                },
+                ensure_ascii=False,
+            )
         data = _live_scan_payload(quant_python)
         data.setdefault("evidence_scope", "CANDIDATE_POOL")
+        if non_trading and recalculate_latest:
+            data["requested_market_date"] = requested.isoformat()
+            data["requested_market_day_status"] = NON_TRADING_DAY
+            data["scan_basis"] = "RECALCULATION_ON_LATEST_VALID_MARKET_DATA"
+            data["note"] = (
+                "diagnostic recalculation over the latest valid market "
+                "quotes, not a same-day scan; report the quote dates in "
+                "this payload as the evidence date"
+            )
         return json.dumps(data, ensure_ascii=False)
 
     @toolset.tool_plain
@@ -470,6 +517,8 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                 },
                 "ready": state.get("ready") or [],
                 "near": state.get("near") or [],
+                "symbols_scanned": state.get("symbols_scanned"),
+                "scan_conclusion": snapshot["scan_conclusion"],
                 "exit_alerts": state.get("exit_alerts") or [],
                 "positions": snapshot["positions"].get("open") or [],
                 "recent_material_events": snapshot["events"],
@@ -478,6 +527,9 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                 # facts the model must read before any "today" claim.
                 "requested_at": now.isoformat(),
                 "requested_market_date": freshness["requested_market_date"],
+                "requested_market_day_status": freshness[
+                    "requested_market_day_status"
+                ],
                 "data_as_of": state.get("as_of"),
                 "latest_market_data_date": state.get("day"),
                 "last_scan_market_date": (
@@ -492,6 +544,8 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                     "strategy profitability UNPROVEN (S3 frozen, PIT-contaminated universe)",
                     "READY/NEAR are deterministic facts from the frozen scan rules, not orders",
                     "READY/NEAR are current-day results only when freshness_status is FRESH",
+                    "empty READY/NEAR prove a zero-trigger result only when scan_conclusion is COMPLETED_ZERO_TRIGGER",
+                    "on a NON_TRADING_DAY no same-day scan result exists; the latest valid board is last_scan_market_date",
                     "ready/near are CANDIDATE_POOL evidence; positions/exit_alerts are TRADING_ACCOUNT evidence; neither is market-wide evidence",
                 ],
             },
@@ -508,14 +562,16 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
     @toolset.tool_plain(defer_loading=True)
     def get_signal_board() -> str:
         """Read today's deterministic opportunity board (今天机会/
-        READY/NEAR/盯盘/信号板): candidate-pool readiness, scan freshness
-        and scan metadata only.
+        READY/NEAR/盯盘/信号板): candidate-pool readiness, scan freshness,
+        the market-day status and scan-completion metadata only.
 
         Discovery vocabulary: 机会 候选 信号 READY NEAR 盯盘 今天 扫描 新鲜度.
         Evidence scope is CANDIDATE_POOL. READY/NEAR are deterministic scan
         facts, not orders, and are current-day results only when
-        freshness_status is FRESH. Positions, holdings, validation and
-        market-wide context are deliberately not part of this payload.
+        freshness_status is FRESH. scan_conclusion says whether empty
+        READY/NEAR are a completed zero-trigger result or a lack of valid
+        scan evidence. Positions, holdings, validation and market-wide
+        context are deliberately not part of this payload.
         """
         snapshot = read_trading_snapshot(workspace_root)
         state = snapshot["state"]
@@ -534,9 +590,13 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                 "ready": state.get("ready") or [],
                 "near": state.get("near") or [],
                 "symbols_scanned": state.get("symbols_scanned"),
+                "scan_conclusion": snapshot["scan_conclusion"],
                 "last_scan_at": last_scan_at,
                 "requested_at": snapshot["now"].isoformat(),
                 "requested_market_date": freshness["requested_market_date"],
+                "requested_market_day_status": freshness[
+                    "requested_market_day_status"
+                ],
                 "latest_market_data_date": state.get("day"),
                 "last_scan_market_date": (
                     market_date_of(last_scan_at).isoformat()
@@ -548,6 +608,8 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
                 "limitations": [
                     "READY/NEAR are CANDIDATE_POOL evidence from the frozen scan rules, not orders",
                     "READY/NEAR are current-day results only when freshness_status is FRESH",
+                    "empty READY/NEAR prove a zero-trigger result only when scan_conclusion is COMPLETED_ZERO_TRIGGER",
+                    "on a NON_TRADING_DAY no same-day scan result exists; the latest valid board is last_scan_market_date",
                     "this board says nothing about the user's holdings; use get_positions for that",
                 ],
             },

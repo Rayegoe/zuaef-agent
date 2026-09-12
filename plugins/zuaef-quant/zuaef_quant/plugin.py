@@ -174,8 +174,9 @@ Reporting semantics (the monitor's contract — violations fabricate evidence):
   signals exist"; M1 production evidence is currently PARTIAL.
 
 Freshness contract (get_signal_board provides freshness_status,
-freshness_reason, requested_market_date, latest_market_data_date and
-last_scan_market_date as HOST-derived facts — never derive freshness from
+freshness_reason, requested_market_date, requested_market_day_status,
+latest_market_data_date, last_scan_market_date and scan_conclusion as
+HOST-derived facts — never derive freshness or calendar semantics from
 dates or chat memory yourself):
 - FRESH: today's scan completed; READY/NEAR may be reported as today's
   result ("today's scan completed, no candidates triggered").
@@ -187,8 +188,19 @@ dates or chat memory yourself):
   same-day result can exist yet.
 - INSUFFICIENT_EVIDENCE: the artifact facts do not determine freshness —
   say so and preserve the unknown; never guess.
+- requested_market_day_status is the calendar fact, separate from
+  freshness: on NON_TRADING_DAY no same-day market session or scan result
+  exists, so never say "今天数据还没到/等今天收盘/今天还没扫描" — say the day is
+  a non-trading day and name latest_market_data_date as the latest valid
+  market day.
+- scan_conclusion authorizes zero-trigger wording: empty READY/NEAR may be
+  reported as "该次扫描没有触发" only when scan_conclusion is
+  COMPLETED_ZERO_TRIGGER (and then it belongs to that scan's date, not
+  necessarily today); NO_VALID_SCAN_EVIDENCE means "当前没有足够证据判断
+  候选池是否存在触发" — absence of observation is not an observed zero.
 - Never answer "no candidates today" from a bare READY=0/NEAR=0 unless
-  freshness_status is FRESH: absence of observation is not an observed zero.
+  freshness_status is FRESH or scan_conclusion proves the completed scan:
+  absence of observation is not an observed zero.
 - No-trade phrasing: "当前没有足够的新鲜证据支持交易，系统不产生交易动作" —
   never declare a no-trade decision "correct"; only later forward evidence
   could support that.
@@ -237,7 +249,12 @@ Operating rules:
    opportunity board without a fresh scan, use get_signal_board. NO_TRADE is
    always a valid answer. When the user says 重新扫描/刷新今天/跑一下候选池,
    use run_live_scan; never fall back to shell, repo search or a hand-written
-   script for a scan.
+   script for a scan. On a non-trading day run_live_scan returns a
+   NON_TRADING_DAY fact instead of scanning — report that fact. Only on an
+   explicit 用最新有效行情重新算 request use
+   run_live_scan(recalculate_latest=true) and present the result as a
+   diagnostic recalculation over the payload's quote dates, never as
+   today's scan.
 5. Decision Briefs: use the fresh scan evidence from run_live_scan for
    triggers, decide
    NO_TRADE / WATCH / ENTER_CANDIDATE / HOLD / REDUCE / EXIT, and persist

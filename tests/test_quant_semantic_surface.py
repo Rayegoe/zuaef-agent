@@ -141,6 +141,7 @@ def test_observe_tools_are_bounded_to_one_evidence_scope(tmp_path, monkeypatch):
     assert board["evidence_scope"] == "CANDIDATE_POOL"
     assert board["ready"] == ["601799"] and board["near"] == ["600015"]
     assert board["freshness_status"] == "FRESH"
+    assert board["scan_conclusion"] == "COMPLETED_WITH_TRIGGERS"
     # A narrow READY/NEAR question must not load the position/validation plane.
     assert "positions" not in board
     assert "validation_accounting" not in board
@@ -203,6 +204,60 @@ def test_run_live_scan_runs_the_shared_scan_engine(tmp_path, monkeypatch):
     assert calls[0][0] == "zuaef_quant.scan_sidecar"
     assert scan["evidence_scope"] == "CANDIDATE_POOL"
     assert scan["triggers"] == [{"symbol": "601799"}]
+
+
+def test_run_live_scan_refuses_to_scan_on_a_non_trading_day(tmp_path, monkeypatch):
+    """R1 acceptance Case B: 重新扫描一下今天 on the 2026-09-12 Saturday must
+    not execute a scan and must not present Friday's quotes as a same-day
+    scan — it returns the bounded NON_TRADING_DAY fact instead."""
+    import zuaef_quant.toolset as toolset_module
+    import zuaef_quant.trading as trading_module
+
+    toolset, workspace = _toolset(tmp_path, monkeypatch)
+    _write_trading_artifacts(workspace)
+    saturday = _dt.datetime(2026, 9, 12, 10, 0, tzinfo=TZ)
+    monkeypatch.setattr(trading_module, "now_market", lambda: saturday)
+
+    calls: list = []
+    monkeypatch.setattr(
+        toolset_module, "_run_module", lambda *a, **kw: calls.append(a) or "{}"
+    )
+    scan = json.loads(toolset.tools["run_live_scan"].function())
+    assert calls == [], "no sidecar scan may run on a non-trading day"
+    assert scan["status"] == "NON_TRADING_DAY"
+    assert scan["scan_executed"] is False
+    assert scan["requested_market_date"] == "2026-09-12"
+    assert scan["latest_market_data_date"] == "2026-09-11"
+    assert scan["last_scan_market_date"] == "2026-09-11"
+
+
+def test_run_live_scan_recalculate_latest_labels_the_diagnostic_scan(
+    tmp_path, monkeypatch
+):
+    """R1 acceptance M3: an explicit recalculation on the latest valid market
+    data MAY run, but must be labeled as a diagnostic recalculation, never
+    as today's scan."""
+    import zuaef_quant.toolset as toolset_module
+    import zuaef_quant.trading as trading_module
+
+    toolset, workspace = _toolset(tmp_path, monkeypatch)
+    _write_trading_artifacts(workspace)
+    saturday = _dt.datetime(2026, 9, 12, 10, 0, tzinfo=TZ)
+    monkeypatch.setattr(trading_module, "now_market", lambda: saturday)
+
+    calls: list[tuple[str, list[str]]] = []
+
+    def fake_run_module(module, args, quant_python, timeout):
+        calls.append((module, args))
+        return json.dumps({"triggers": [], "latest_quote_time": "20260911 150000"})
+
+    monkeypatch.setattr(toolset_module, "_run_module", fake_run_module)
+    scan = json.loads(toolset.tools["run_live_scan"].function(True))
+    assert len(calls) == 1 and calls[0][0] == "zuaef_quant.scan_sidecar"
+    assert scan["scan_basis"] == "RECALCULATION_ON_LATEST_VALID_MARKET_DATA"
+    assert scan["requested_market_date"] == "2026-09-12"
+    assert scan["requested_market_day_status"] == "NON_TRADING_DAY"
+    assert scan["latest_quote_time"] == "20260911 150000"
 
 
 def test_manage_watchlist_is_one_verified_write_interface(tmp_path, monkeypatch):

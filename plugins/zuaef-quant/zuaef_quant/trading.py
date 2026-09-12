@@ -23,7 +23,20 @@ from typing import Any
 from .freshness import derive_freshness, now_market
 from .validation import compute_validation_accounting
 
-__all__ = ["mark_to_market", "position_pnl", "read_trading_snapshot"]
+__all__ = [
+    "mark_to_market",
+    "position_pnl",
+    "read_trading_snapshot",
+    "scan_conclusion_of",
+]
+
+# Scan-conclusion vocabulary (post-P7 reliability closure R1.3): empty
+# READY/NEAR alone never proves a zero-trigger result — the host derives the
+# conclusion from scan-completeness facts so the model cannot misread
+# absence of observation as an observed zero.
+COMPLETED_ZERO_TRIGGER = "COMPLETED_ZERO_TRIGGER"
+COMPLETED_WITH_TRIGGERS = "COMPLETED_WITH_TRIGGERS"
+NO_VALID_SCAN_EVIDENCE = "NO_VALID_SCAN_EVIDENCE"
 
 
 def position_pnl(
@@ -112,6 +125,27 @@ def _resolve_last_scan_at(business_last_scan: Path, soak: list[dict]) -> str | N
     return max(candidates) if candidates else None
 
 
+def scan_conclusion_of(state: dict[str, Any], last_scan_at: str | None) -> str:
+    """Whether READY/NEAR emptiness is a proven zero-trigger result.
+
+    COMPLETED_ZERO_TRIGGER / COMPLETED_WITH_TRIGGERS are authorized only
+    when the artifacts prove a scan actually ran over symbols with passing
+    data trust (spec R1 §15: completed scan + symbols_scanned > 0 + data
+    evidence satisfies trust). data_trust FAIL/UNKNOWN means triggers were
+    suppressed fail closed (volume gate), so zero READY is gate evidence,
+    never strategy evidence — hence NO_VALID_SCAN_EVIDENCE. Anything else
+    (no scan record visible, symbols_scanned missing/0) also stays
+    NO_VALID_SCAN_EVIDENCE.
+    """
+    symbols = state.get("symbols_scanned")
+    scanned = isinstance(symbols, int) and not isinstance(symbols, bool) and symbols > 0
+    if not scanned or last_scan_at is None or state.get("data_trust") != "PASS":
+        return NO_VALID_SCAN_EVIDENCE
+    if state.get("ready") or state.get("near"):
+        return COMPLETED_WITH_TRIGGERS
+    return COMPLETED_ZERO_TRIGGER
+
+
 def read_trading_snapshot(workspace_root: Path) -> dict[str, Any]:
     """Single deterministic read of the canonical trading artifacts.
 
@@ -160,5 +194,6 @@ def read_trading_snapshot(workspace_root: Path) -> dict[str, Any]:
         "validation_accounting": validation_accounting,
         "last_scan_at": last_scan_at,
         "freshness": freshness,
+        "scan_conclusion": scan_conclusion_of(state, last_scan_at),
         "now": now,
     }

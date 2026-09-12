@@ -7,6 +7,7 @@ the side environment, file-native outcome recording.
 
 from __future__ import annotations
 
+import datetime as _dt
 import json
 from pathlib import Path
 
@@ -18,6 +19,11 @@ pytest.importorskip("zuaef_quant")
 
 from zuaef_quant.plugin import create_plugin, resolve_quant_python
 from zuaef_quant.toolset import SpecError, validate_spec
+
+# A fixed Friday afternoon (market tz): run_live_scan carries a
+# non-trading-day gate over the real clock, so clock-dependent tool tests
+# pin a trading day instead of silently flipping on weekends.
+FRIDAY_15 = _dt.datetime(2026, 9, 11, 15, 0, tzinfo=_dt.timezone(_dt.timedelta(hours=8)))
 
 VALID_SPEC = """\
 schema = 1
@@ -680,6 +686,9 @@ def test_candidate_and_symbol_tools_expose_evidence_scope(tmp_path, monkeypatch)
         "_run_module",
         lambda *a, **kw: json.dumps({"triggers": [], "universe_count": 50}),
     )
+    import zuaef_quant.trading as trading_module
+
+    monkeypatch.setattr(trading_module, "now_market", lambda: FRIDAY_15)
     live = json.loads(toolset.tools["run_live_scan"].function())
     assert live["evidence_scope"] == "CANDIDATE_POOL"
     assert live["universe_count"] == 50
@@ -797,6 +806,9 @@ def test_adversarial_scope_fixture_cannot_authorise_market_claim(tmp_path, monke
             {"triggers": [], "universe_count": 50, "down": 45, "up": 5}
         ),
     )
+    import zuaef_quant.trading as trading_module
+
+    monkeypatch.setattr(trading_module, "now_market", lambda: FRIDAY_15)
     candidate = json.loads(toolset.tools["run_live_scan"].function())
     assert candidate["evidence_scope"] == "CANDIDATE_POOL"
 

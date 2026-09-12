@@ -39,6 +39,18 @@ FRESHNESS_STATUSES = (
     INSUFFICIENT_EVIDENCE,
 )
 
+# Date-level market-calendar fact, separate from freshness (post-P7
+# reliability closure R1): whether a same-day A-share market session — and
+# therefore a same-day scan result — can exist at all. This is the agent-side
+# mirror of the monitor session clock's weekend branch (monitor.market_phase:
+# weekday >= 5 -> MARKET_CLOSED); this deployment has no exchange-holiday
+# calendar, so a weekday holiday honestly reads as a trading day whose data
+# has not arrived (STALE/NOT_SCANNED wording stays truthful there).
+TRADING_DAY = "TRADING_DAY"
+NON_TRADING_DAY = "NON_TRADING_DAY"
+
+MARKET_DAY_STATUSES = (TRADING_DAY, NON_TRADING_DAY)
+
 
 def now_market() -> _dt.datetime:
     """Current wall clock in the market timezone (tests monkeypatch this)."""
@@ -85,6 +97,26 @@ def _is_weekday(day: _dt.date) -> bool:
     return day.weekday() < 5
 
 
+def market_day_status(day: _dt.date) -> str:
+    """Deterministic date-level market-calendar fact (TRADING_DAY |
+    NON_TRADING_DAY): can this calendar date have a same-day market session
+    and scan result at all? Weekday rule only — the same authority as the
+    monitor session clock's weekend branch. Host-derived so the model never
+    has to infer calendar semantics (and never waits for a weekend close
+    that will never exist)."""
+    return TRADING_DAY if _is_weekday(day) else NON_TRADING_DAY
+
+
+def _scan_note(scanned: _dt.date | None) -> str:
+    """The last-completed-scan visibility note shared by STALE reasons."""
+    return (
+        f" (last completed scan: {scanned.isoformat()})"
+        if scanned is not None
+        else " (the last completed scan is not visible in the current "
+        "artifact context)"
+    )
+
+
 def derive_freshness(
     *,
     now: _dt.datetime,
@@ -99,14 +131,21 @@ def derive_freshness(
     a weekday before the first scan window. ``latest_market_data_date`` is
     the canonical ``state.day``; ``last_scan_at`` is the timestamp of the
     last completed scan (a soak record that actually scanned symbols).
+
+    The calendar fact (``requested_market_day_status``) is a separate
+    dimension from freshness: on a NON_TRADING_DAY the latest evidence
+    belongs to the previous trading day by definition — it is never
+    "today's data delayed".
     """
     requested = now.astimezone(MARKET_TZ).date()
     latest = _market_date(latest_market_data_date)
     scanned = _market_date(last_scan_at)
+    day_status = market_day_status(requested)
 
     def result(status: str, reason: str) -> dict[str, str]:
         return {
             "requested_market_date": requested.isoformat(),
+            "requested_market_day_status": day_status,
             "freshness_status": status,
             "freshness_reason": reason,
         }
@@ -129,6 +168,15 @@ def derive_freshness(
         # being unknown does not block the verdict — it only shapes the
         # reason, which must never claim "no scan ever happened" just
         # because the scan record is not visible in the bounded context.
+        if day_status == NON_TRADING_DAY:
+            # Calendar fact first: no same-day session exists, so the gap to
+            # the requested day is definitional, not a data delay.
+            return result(
+                STALE,
+                f"the requested day is a non-trading day — no same-day "
+                f"market session or scan result can exist for it; the "
+                f"latest valid market day is {latest.isoformat()}{_scan_note(scanned)}",
+            )
         if (
             now.astimezone(MARKET_TZ).time() < SCAN_WINDOW_START
             and _is_weekday(requested)
@@ -138,17 +186,11 @@ def derive_freshness(
                 "today has not reached the strategy's first scan window, so "
                 "no same-day scan result can exist yet",
             )
-        scan_note = (
-            f" (last completed scan: {scanned.isoformat()})"
-            if scanned is not None
-            else " (the last completed scan is not visible in the current "
-            "artifact context)"
-        )
         return result(
             STALE,
             f"latest market data is from {latest.isoformat()}, before the "
             "requested day; the current READY/NEAR records are not today's "
-            f"scan results{scan_note}",
+            f"scan results{_scan_note(scanned)}",
         )
     if scanned is None:
         return result(

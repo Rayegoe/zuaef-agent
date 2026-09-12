@@ -19,9 +19,12 @@ from zuaef_quant.freshness import (
     INSUFFICIENT_EVIDENCE,
     MARKET_NOT_OPEN,
     MARKET_TZ,
+    NON_TRADING_DAY,
     NOT_SCANNED,
     STALE,
+    TRADING_DAY,
     derive_freshness,
+    market_day_status,
 )
 from zuaef_quant.plugin import QUANT_INSTRUCTIONS, create_plugin
 from zuaef_quant.toolset import resolve_repo_root
@@ -32,6 +35,8 @@ from zuaef_agent.gateway.interaction_projection import (
 from zuaef_agent.plugin_api import PluginEnv
 
 WED = _dt.date(2026, 9, 9)  # a Wednesday
+SAT = _dt.date(2026, 9, 12)  # the 2026-09-12 production-failure Saturday
+SUN = _dt.date(2026, 9, 13)
 
 
 def _market_dt(day: _dt.date, hour: int, minute: int = 0) -> _dt.datetime:
@@ -175,6 +180,61 @@ def test_after_scan_window_stale_data_is_stale():
     assert result["freshness_status"] == STALE
 
 
+# ── R1: market-day calendar fact (post-P7 reliability closure) ─────────────
+
+
+def test_market_day_status_follows_the_session_clock_weekend_rule():
+    assert market_day_status(WED) == TRADING_DAY
+    assert market_day_status(SAT) == NON_TRADING_DAY
+    assert market_day_status(SUN) == NON_TRADING_DAY
+
+
+def test_saturday_stale_reason_states_the_calendar_fact():
+    """R1 acceptance Case A: on the 2026-09-12 failure date the freshness
+    payload must carry the non-trading-day fact plus the latest valid market
+    day — never a "today's data has not arrived yet" reading."""
+    result = _derive(
+        _market_dt(SAT, 10, 0),
+        _dt.date(2026, 9, 11).isoformat(),
+        _dt.date(2026, 9, 11).isoformat(),
+    )
+    assert result["freshness_status"] == STALE
+    assert result["requested_market_day_status"] == NON_TRADING_DAY
+    assert "non-trading day" in result["freshness_reason"]
+    assert "2026-09-11" in result["freshness_reason"]
+    # No same-day expectation may exist at all on a non-trading day.
+    assert "not today" not in result["freshness_reason"]
+
+
+def test_sunday_is_non_trading_day_with_previous_friday_evidence():
+    result = _derive(
+        _market_dt(SUN, 10, 0),
+        _dt.date(2026, 9, 11).isoformat(),
+        _dt.date(2026, 9, 11).isoformat(),
+    )
+    assert result["requested_market_day_status"] == NON_TRADING_DAY
+    assert result["freshness_status"] == STALE
+    assert "non-trading day" in result["freshness_reason"]
+
+
+def test_trading_days_project_trading_day_status():
+    result = _derive(_market_dt(WED, 14, 0), WED.isoformat(), WED.isoformat())
+    assert result["requested_market_day_status"] == TRADING_DAY
+    assert result["freshness_status"] == FRESH
+
+
+def test_trading_day_before_open_is_a_trading_day():
+    """Before-open on a TRADING_DAY keeps MARKET_NOT_OPEN (same-day data can
+    still arrive) — the calendar fact must not blur into the weekend rule."""
+    result = _derive(
+        _market_dt(WED, 8, 0),
+        _dt.date(2026, 9, 8).isoformat(),
+        _dt.date(2026, 9, 8).isoformat(),
+    )
+    assert result["requested_market_day_status"] == TRADING_DAY
+    assert result["freshness_status"] == MARKET_NOT_OPEN
+
+
 # ── get_trading_context carries the freshness contract ──────────────────────
 
 
@@ -215,25 +275,25 @@ def _write_trading_artifacts(
     day: str,
     scan_ts: str | None,
     business_scan_ts: str | None = None,
+    symbols_scanned: int | None = None,
+    data_trust: str | None = None,
 ):
     trading = workspace / "artifacts" / "quant" / "trading"
     trading.mkdir(parents=True, exist_ok=True)
-    (trading / "state.json").write_text(
-        json.dumps(
-            {
-                "as_of": "2026-09-04T19:10:35+08:00",
-                "day": day,
-                "status": "MARKET_CLOSED",
-                "data_trust": None,
-                "ready": [],
-                "near": [],
-                "exit_alerts": [],
-                "market_no_trade": False,
-                "system_unavailable": False,
-            }
-        ),
-        encoding="utf-8",
-    )
+    state = {
+        "as_of": "2026-09-04T19:10:35+08:00",
+        "day": day,
+        "status": "MARKET_CLOSED",
+        "data_trust": data_trust,
+        "ready": [],
+        "near": [],
+        "exit_alerts": [],
+        "market_no_trade": False,
+        "system_unavailable": False,
+    }
+    if symbols_scanned is not None:
+        state["symbols_scanned"] = symbols_scanned
+    (trading / "state.json").write_text(json.dumps(state), encoding="utf-8")
     soak_lines = []
     if scan_ts is not None:
         soak_lines.append(
@@ -326,6 +386,86 @@ def test_context_fresh_zero(tmp_path: Path, monkeypatch):
     assert data["freshness_status"] == FRESH
 
 
+# ── R1: board/context projections carry calendar + scan-completion facts ───
+
+
+def test_board_reports_non_trading_day_on_the_failure_scene(tmp_path, monkeypatch):
+    """R1 acceptance Case A payload facts: a Saturday request over Friday
+    artifacts — the board itself states the calendar fact and names the
+    latest valid market day, so the model cannot wait for a weekend close."""
+    toolset = _toolset(tmp_path, monkeypatch, _market_dt(SAT, 10, 0))
+    workspace = tmp_path / "workspace"
+    _write_trading_artifacts(
+        workspace,
+        day="2026-09-11",
+        scan_ts="2026-09-11T14:55:00+08:00",
+        symbols_scanned=50,
+        data_trust="PASS",
+    )
+    data = json.loads(toolset.tools["get_signal_board"].function())
+    assert data["requested_market_date"] == SAT.isoformat()
+    assert data["requested_market_day_status"] == NON_TRADING_DAY
+    assert data["freshness_status"] == STALE
+    assert "non-trading day" in data["freshness_reason"]
+    assert data["latest_market_data_date"] == "2026-09-11"
+    assert data["last_scan_market_date"] == "2026-09-11"
+    assert data["scan_conclusion"] == "COMPLETED_ZERO_TRIGGER"
+
+    context = json.loads(toolset.tools["get_trading_context"].function())
+    assert context["requested_market_day_status"] == NON_TRADING_DAY
+    assert context["scan_conclusion"] == "COMPLETED_ZERO_TRIGGER"
+
+
+def test_completed_scan_with_zero_triggers_is_a_proven_zero(tmp_path, monkeypatch):
+    toolset = _toolset(tmp_path, monkeypatch, _market_dt(WED, 15, 0))
+    _write_trading_artifacts(
+        tmp_path / "workspace",
+        day=WED.isoformat(),
+        scan_ts=f"{WED.isoformat()}T10:05:00+08:00",
+        symbols_scanned=50,
+        data_trust="PASS",
+    )
+    data = json.loads(toolset.tools["get_signal_board"].function())
+    assert data["freshness_status"] == FRESH
+    assert data["symbols_scanned"] == 50
+    assert data["scan_conclusion"] == "COMPLETED_ZERO_TRIGGER"
+
+
+def test_zero_scanned_symbols_is_never_a_zero_trigger_result(tmp_path, monkeypatch):
+    """The reproduced production scene: READY=[] NEAR=[] symbols_scanned=0
+    data_trust=UNKNOWN must read as no valid scan evidence, never as a
+    proven zero-trigger conclusion (R1 acceptance Case D)."""
+    toolset = _toolset(tmp_path, monkeypatch, _market_dt(WED, 14, 0))
+    _write_trading_artifacts(
+        tmp_path / "workspace",
+        day=WED.isoformat(),
+        scan_ts=None,
+        symbols_scanned=0,
+        data_trust="UNKNOWN",
+    )
+    data = json.loads(toolset.tools["get_signal_board"].function())
+    assert data["ready"] == [] and data["near"] == []
+    assert data["symbols_scanned"] == 0
+    assert data["scan_conclusion"] == "NO_VALID_SCAN_EVIDENCE"
+
+
+def test_failed_data_trust_suppresses_zero_trigger_authorization(
+    tmp_path, monkeypatch
+):
+    """A FAIL volume gate suppresses triggers fail closed, so an empty board
+    is gate evidence, never strategy evidence (spec R1 §15)."""
+    toolset = _toolset(tmp_path, monkeypatch, _market_dt(WED, 15, 0))
+    _write_trading_artifacts(
+        tmp_path / "workspace",
+        day=WED.isoformat(),
+        scan_ts=f"{WED.isoformat()}T10:05:00+08:00",
+        symbols_scanned=50,
+        data_trust="FAIL",
+    )
+    data = json.loads(toolset.tools["get_signal_board"].function())
+    assert data["scan_conclusion"] == "NO_VALID_SCAN_EVIDENCE"
+
+
 # ── T5–T8: instruction-level semantic constraints ────────────────────────────
 
 
@@ -366,6 +506,18 @@ def test_freshness_contract_references_host_derived_fields():
     assert "HOST-derived facts" in QUANT_INSTRUCTIONS
     assert "freshness_status" in QUANT_INSTRUCTIONS
     assert "absence of observation is not an observed zero" in QUANT_INSTRUCTIONS
+
+
+def test_instructions_carry_calendar_and_scan_conclusion_contract():
+    """R1.4: the corrected facts are host-owned; the instructions only bind
+    how to read them (non-trading day never waits for a close; empty
+    READY/NEAR alone proves nothing)."""
+    assert "requested_market_day_status" in QUANT_INSTRUCTIONS
+    assert "NON_TRADING_DAY" in QUANT_INSTRUCTIONS
+    assert "等今天收盘" in QUANT_INSTRUCTIONS  # the forbidden weekend-wait stays named
+    assert "scan_conclusion" in QUANT_INSTRUCTIONS
+    assert "COMPLETED_ZERO_TRIGGER" in QUANT_INSTRUCTIONS
+    assert "recalculate_latest" in QUANT_INSTRUCTIONS
 
 
 def test_projection_stays_quant_free():
