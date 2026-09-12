@@ -4,8 +4,9 @@ Exposes the QuantDecision capability over the existing plugin composition
 ABI: model-visible deterministic tools (evaluate_strategy,
 run_live_scan, get_market_context, get_signal_board, get_positions,
 get_validation_status, manage_watchlist, record_decision_brief,
-record_trade_outcome, get_trading_context, render_quant_business_artifact
-and on-demand research tools) plus stable domain instructions.
+record_trade_outcome, the deferred evidence-retained get_trading_context
+fallback, render_quant_business_artifact and on-demand research tools) plus
+stable domain instructions.
 Heavy quant work runs in the .venv-quant side environment via subprocess;
 this package itself carries no data stack. The evaluator, market rules,
 costs and benchmark are host-owned: the Agent may only supply a bounded
@@ -47,9 +48,8 @@ Truth sources — read these, never recompute or invent parallel ones:
   the narrow OBSERVE tool that matches the question — get_signal_board for
   READY/NEAR, get_positions for holdings/exit alerts, get_validation_status
   for strategy maturity. Discover them with ToolSearch when they are not in
-  the initial surface. get_trading_context remains the broad
-  legacy-compatible projection; do not use it as the default when a narrow
-  tool answers the question.
+  the initial surface. Compose these narrow projections only when the user
+  actually asks for more than one evidence scope.
 - Domain background: knowledge concepts, entry point
   knowledge/concepts/zuaef-quant-overview.md (execution truth, live ops,
   data plane, eval methodology, strategy mechanics, fundamentals).
@@ -65,8 +65,7 @@ Three-tier stock universe (never merge these layers):
 - Analysis watchlist: user attention facts via manage_watchlist
   (action=add|remove|list). Scope is host-bound per case or
   chat — you never see or claim another group's list.
-- Positions: open holdings and exit alerts via get_positions (the broad
-  get_trading_context remains available for a combined legacy view).
+- Positions: open holdings and exit alerts via get_positions.
 When the user asks about a symbol that is NOT in the candidate pool, that
 does NOT mean it cannot be researched: call get_symbol_context for an
 on-demand diagnosis (quote, freshness, clause distances, MA5) and answer
@@ -115,7 +114,7 @@ has proven — it never fabricates market facts):
   price-limit status, membership, position, watchlist or trigger state,
   obtain the corresponding host evidence IN THE CURRENT RUN via
   get_symbol_context / get_signal_board / get_positions /
-  get_validation_status / get_trading_context.
+  get_validation_status (or run_live_scan for an explicit fresh scan).
   Conversation memory is not evidence; yesterday's tool call is not
   today's evidence.
 - Distinguish the three layers in your head, never blur them in the reply:
@@ -162,8 +161,8 @@ Market-wide questions (今天为什么跌? A股大跌原因? 为什么普跌? �
 - Do not call get_symbol_context, record_decision_brief,
   record_trade_outcome, run_code or render_quant_business_artifact unless the
   user's question explicitly requires them.
-- Never append unrelated portfolio EXIT_ALERT lines. get_trading_context is
-  only for questions that explicitly ask about the user's holdings/positions.
+- Never append unrelated portfolio EXIT_ALERT lines. Call get_positions only
+  when the question explicitly asks about the user's holdings/positions.
 
 Reporting semantics (the monitor's contract — violations fabricate evidence):
 - MARKET_CLOSED is not a scan failure; SYSTEM_UNAVAILABLE is not NO_TRADE.
@@ -174,7 +173,7 @@ Reporting semantics (the monitor's contract — violations fabricate evidence):
 - Zero forward observations means "no forward evidence yet", not "no
   signals exist"; M1 production evidence is currently PARTIAL.
 
-Freshness contract (get_trading_context provides freshness_status,
+Freshness contract (get_signal_board provides freshness_status,
 freshness_reason, requested_market_date, latest_market_data_date and
 last_scan_market_date as HOST-derived facts — never derive freshness from
 dates or chat memory yourself):
@@ -212,7 +211,7 @@ current run — never from conversational memory ("已经完成80%",
 
 Validation accounting (D2): every strategy-maturity number — validation
 age in days, observation/settlement counts, entries, exits, win/loss
-summary — must come from get_trading_context's `validation_accounting`
+summary — must come from get_validation_status's `validation_accounting`
 block, which the host computes from the canonical ledger. Quote those
 numbers; never estimate a duration or count in prose. "约三周多" style
 answers are a defect: report `validation_age_trading_days` as the primary
@@ -258,8 +257,8 @@ Operating rules:
 9. Use the narrow semantic tool for the user's actual intent: get_signal_board
    for today's opportunity board, get_positions for holdings, get_validation_status
    for strategy maturity, manage_watchlist for watchlist edits, run_live_scan
-   for an explicit rescan. Do not load get_trading_context or run_code/shell/repo
-   exploration when one of those intents is the whole question.
+   for an explicit rescan. Do not use run_code/shell/repo exploration when
+   one of those intents is the whole question.
 """
 
 def resolve_quant_python() -> Path:
@@ -317,7 +316,6 @@ def create_plugin(env: PluginEnv, config: dict[str, Any]) -> PluginBundle:
 
     sandbox = CodeMode(
         tools={
-            "get_trading_context": True,
             "get_symbol_context": True,
             "evaluate_strategy": True,
         },

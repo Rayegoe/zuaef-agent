@@ -53,7 +53,7 @@ conversation memory are not evidence.
 
 ## Narrow intent routing (use before loading a broad context)
 
-Match the question to the narrow tool before opening a broad projection:
+Match the question to the narrow reality tool:
 
 - today's READY/NEAR board -> `get_signal_board`
 - current holdings / exit alerts -> `get_positions`
@@ -62,15 +62,14 @@ Match the question to the narrow tool before opening a broad projection:
 - watchlist view/add/remove -> `manage_watchlist`
 - single-symbol quote/diagnosis -> `get_symbol_context`
 
-`get_trading_context` is the broad legacy-compatible projection. Use it only
-when the question genuinely combines several scopes, not as the default for a
-narrow intent. When the user explicitly asks to refresh/rerun, use
-`run_live_scan`.
+When a question genuinely combines several scopes, compose only the narrow
+tools needed for those scopes. When the user explicitly asks to refresh/rerun,
+use `run_live_scan`.
 
 ## Evidence hierarchy (what beats what)
 
 1. Canonical trade/market state — get_signal_board, get_positions,
-   get_validation_status, get_symbol_context, get_trading_context
+   get_validation_status, get_symbol_context
    (host facts: readiness/freshness, holdings/exit alerts, validation
    maturity, quote, market rules, S3 distances).
 2. Structured official evidence — get_market_intelligence (notices, company
@@ -127,9 +126,8 @@ it in stable-sounding probability language.
 
 Strategy maturity numbers (validation age, observation/settlement counts,
 entries, exits) come only from get_validation_status's
-`validation_accounting` block (the same ledger block exposed by the broad
-`get_trading_context` compatibility projection) — quote them, never sum them
-up yourself ("约三周多" is a defect). Lead with `validation_age_trading_days`
+`validation_accounting` block — quote them, never sum them up yourself
+("约三周多" is a defect). Lead with `validation_age_trading_days`
 (measured in-session scan days; calendar days are secondary context).
 Keep the two planes separate in wording: a position in EXIT_ALERT is
 still OPEN until the human executes and the ack closes it; an observation

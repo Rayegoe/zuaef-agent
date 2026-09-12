@@ -79,13 +79,17 @@ DETERMINISTIC_EVENTS = {
 #: a delivery tool inside a bridge-triggered run is an authority violation.
 DELIVERY_TOOLS = {"report_to_telegram", "send_artifact_to_supervisor"}
 
-RUN_PROMPT = """\
+RUN_PROMPTS = {
+    "NEW_READY": """\
 A canonical Quant Runtime material event has occurred.
 
 Event:
 {event_json}
 
-First call get_trading_context. Use canonical trading facts as truth.
+First call get_signal_board. Use the event and the current candidate-pool
+signal-board facts as truth. If the current board no longer shows the symbol
+as READY, explain the difference honestly; the durable event still occurred,
+so do not block the explanation or erase it.
 
 Explain in concise Chinese, suitable for a Telegram message:
 1. What changed
@@ -102,7 +106,35 @@ Do not:
 - create a second trading ledger
 - You have no delivery authority. Do not send, report, or deliver anything \
 anywhere — the bridge delivers your explanation. Explain only.
-"""
+""",
+    "POSITION_EXIT_ALERT": """\
+A canonical Quant Runtime material event has occurred.
+
+Event:
+{event_json}
+
+First call get_positions. Use the event and the current position/exit-alert
+facts as truth. If the current position projection no longer contains the
+alerted position, explain the difference honestly; the durable event still
+occurred, so do not block the explanation or erase it.
+
+Explain in concise Chinese, suitable for a Telegram message:
+1. What changed
+2. Why it matters
+3. What deterministic rule caused it
+4. Current position/state
+5. What the human needs to decide now
+
+Do not:
+- invent missing facts
+- claim profitability
+- turn NEAR into READY
+- treat SYSTEM_UNAVAILABLE as NO_TRADE
+- create a second trading ledger
+- You have no delivery authority. Do not send, report, or deliver anything \
+anywhere — the bridge delivers your explanation. Explain only.
+""",
+}
 
 
 class BridgeError(RuntimeError):
@@ -276,12 +308,15 @@ def agent_explanation(alert: dict, settings: AgentSettings) -> Any:
     .receipt for the delivery-authority guard). Raises on composition/run
     failure (caller degrades to deterministic copy, spec §22.1)."""
     event_json = json.dumps(alert, ensure_ascii=False)
+    prompt = RUN_PROMPTS.get(alert.get("type"))
+    if prompt is None:
+        raise BridgeError(f"no Agent prompt for event type {alert.get('type')!r}")
     run_id = uuid.uuid4().hex
     conversation_id = f"quant-bridge-{alert.get('day')}-{alert.get('type')}-{alert.get('symbol')}-{run_id[:8]}"
     outcome = start_profile_run(
         settings=settings,
         profile=PROFILE,
-        prompt=RUN_PROMPT.format(event_json=event_json),
+        prompt=prompt.format(event_json=event_json),
         conversation_id=conversation_id,
         run_id=run_id,
         surface="telegram",

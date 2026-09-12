@@ -1,0 +1,193 @@
+{
+  "schema_version": "1.0",
+  "recorded_at": "2026-09-12",
+  "baseline_commit": "5bb2ad653af3f8fbc79eff7c04fcf43e4c712472",
+  "tested_tree": "P7.3 caller-migration working tree before get_trading_context retirement",
+  "model": "deepseek/deepseek-v4-flash-0731",
+  "status": "TRADING_CONTEXT_RETAINED_WITH_EVIDENCE",
+  "phase_evidence": [
+    {
+      "phase": "P7.1",
+      "commit": "4cd0a598706011ba80672508b35439b685e78b92",
+      "verdict": "PASS",
+      "summary": "Watchlist aliases retired after W1/W2/W3 reached manage_watchlist; raw per-run metrics were not promoted into the repository before this report and are not reconstructed."
+    },
+    {
+      "phase": "P7.2",
+      "commit": "5bb2ad653af3f8fbc79eff7c04fcf43e4c712472",
+      "verdict": "PASS",
+      "summary": "get_live_signals retired after L1/L2/L3 and the broad-opportunity probe reached the narrow scan/board paths; raw per-run metrics were not promoted into the repository before this report and are not reconstructed."
+    }
+  ],
+  "p7_3_runs": [
+    {
+      "key": "T1",
+      "prompt": "策略现在验证到什么程度？",
+      "surface": "start_profile_run/telegram; isolated workspace and state",
+      "run_id": "ca6de238cf1c4baf8971a5dfdc641382",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_calls": 2,
+      "input_tokens": 44053,
+      "output_tokens": 702,
+      "reasoning_tokens": 486,
+      "cache_read_tokens": 15616,
+      "wall_clock_ms": 133600,
+      "tool_sequence": ["search_tools", "get_validation_status"],
+      "legacy_usage": false,
+      "generic_escape": false,
+      "verdict": "PASS"
+    },
+    {
+      "key": "T2",
+      "prompt": "我现在持有什么？",
+      "surface": "start_profile_run/telegram; isolated workspace and state",
+      "run_id": "6d2c6db17143443aa9d7b56d7d8cfdb1",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_calls": 2,
+      "input_tokens": 42660,
+      "output_tokens": 487,
+      "reasoning_tokens": 383,
+      "cache_read_tokens": 14592,
+      "wall_clock_ms": 13700,
+      "tool_sequence": ["search_tools", "get_positions"],
+      "legacy_usage": false,
+      "generic_escape": false,
+      "verdict": "PASS"
+    },
+    {
+      "key": "T3",
+      "prompt": "给我一个完整的当前交易状态总结。",
+      "surface": "start_profile_run/telegram; isolated workspace and state",
+      "run_id": "81c2e36ff2484d408de38d6dcd48fa46",
+      "execution_state": "completed",
+      "requests": 3,
+      "tool_calls": 4,
+      "input_tokens": 45456,
+      "output_tokens": 1745,
+      "reasoning_tokens": 1610,
+      "cache_read_tokens": 0,
+      "wall_clock_ms": 64800,
+      "tool_sequence": [
+        "search_tools",
+        "get_validation_status",
+        "get_signal_board",
+        "get_positions"
+      ],
+      "legacy_usage": false,
+      "generic_escape": false,
+      "verdict": "PASS"
+    },
+    {
+      "key": "E1_SUPPRESSED",
+      "event_type": "NEW_READY",
+      "surface": "zuaef_quant.bridge.run_tick; recording Telegram fake; isolated artifacts/state",
+      "run_id": "e6648ed6edee43d4b74f7c0ae3309049",
+      "execution_state": "completed",
+      "requests": 6,
+      "tool_calls": 4,
+      "input_tokens": 93944,
+      "output_tokens": 5996,
+      "reasoning_tokens": 5558,
+      "cache_read_tokens": 46336,
+      "wall_clock_ms": 158426,
+      "tool_sequence": [
+        "search_tools",
+        "get_signal_board",
+        "get_positions",
+        "get_symbol_context"
+      ],
+      "legacy_usage": false,
+      "generic_escape": false,
+      "delivery_tool_effect": false,
+      "bridge_checkpoint": true,
+      "verdict": "PASS"
+    },
+    {
+      "key": "E2_SUPPRESSED",
+      "event_type": "POSITION_EXIT_ALERT",
+      "surface": "zuaef_quant.bridge.run_tick; recording Telegram fake; isolated artifacts/state",
+      "run_id": "1bde575e668e4872a344d0d870e08502",
+      "execution_state": "completed",
+      "requests": 4,
+      "tool_calls": 2,
+      "input_tokens": 56522,
+      "output_tokens": 2637,
+      "reasoning_tokens": 2303,
+      "cache_read_tokens": 48896,
+      "wall_clock_ms": 38094,
+      "tool_sequence": ["search_tools", "get_positions"],
+      "legacy_usage": false,
+      "generic_escape": false,
+      "delivery_tool_effect": false,
+      "bridge_checkpoint": true,
+      "fixture_note": "The isolated current projection contained an EXIT_ALERT position.",
+      "verdict": "PASS"
+    },
+    {
+      "key": "E1_REAL_SEND",
+      "event_type": "NEW_READY",
+      "surface": "zuaef-quant bridge once; production Telegram contract",
+      "run_id": "6f8d0110b3fd44678a157d006b862592",
+      "execution_state": "completed",
+      "requests": 4,
+      "tool_calls": 3,
+      "input_tokens": 66869,
+      "output_tokens": 4858,
+      "reasoning_tokens": 4336,
+      "cache_read_tokens": 0,
+      "wall_clock_ms": 130109,
+      "tool_sequence": ["search_tools", "get_signal_board", "get_symbol_context"],
+      "legacy_usage": false,
+      "generic_escape": false,
+      "delivery_tool_effect": false,
+      "bridge_checkpoint": true,
+      "event_identity": "NEW_READY:601799:2026-09-12T16:18:01+08:00",
+      "verdict": "PASS"
+    },
+    {
+      "key": "E2_REAL_SEND",
+      "event_type": "POSITION_EXIT_ALERT",
+      "surface": "zuaef-quant bridge once; production Telegram contract",
+      "run_id": "cda06485ef8d4dfa9c5094e492865f44",
+      "execution_state": "completed",
+      "requests": 4,
+      "tool_calls": 3,
+      "input_tokens": 66209,
+      "output_tokens": 3340,
+      "reasoning_tokens": 3062,
+      "cache_read_tokens": 16384,
+      "wall_clock_ms": 38885,
+      "tool_sequence": ["search_tools", "get_positions", "get_trading_context"],
+      "legacy_usage": true,
+      "generic_escape": false,
+      "delivery_tool_effect": false,
+      "bridge_checkpoint": true,
+      "event_identity": "POSITION_EXIT_ALERT:601799:2026-09-12T16:27:09+08:00",
+      "fixture_note": "The production projection honestly contained no open position; after that missing result the model loaded the broad tool.",
+      "verdict": "SURFACE_GAP_STOP"
+    }
+  ],
+  "retirement_gate": {
+    "required": "T3 and both bridge event shapes complete with zero get_trading_context calls",
+    "observed": "E2_REAL_SEND called get_trading_context after get_positions returned no current position",
+    "decision": "KEEP get_trading_context deferred; do not run P7.4 final freeze"
+  },
+  "verification": {
+    "focused": "89 passed, 1 skipped",
+    "operator_production_replay_scan": "38 passed, 2 skipped",
+    "market_symbol_trading_validation_watchlist": "35 passed, 5 skipped",
+    "manifest_integrity": "3 passed",
+    "ruff": "passed",
+    "preexisting_research": "17 passed, 1 failed: mocked market-intel feed result missing count",
+    "environment_collection_gaps": [
+      "test_quant_hydration.py: pandas absent from main .venv",
+      "test_quant_v31.py: pandas absent from main .venv"
+    ]
+  },
+  "final_matrix": {
+    "status": "NOT_RUN_BY_STOP_RULE",
+    "reason": "P7.3 retirement gate failed before C1-C12/B1-B2."
+  }
+}

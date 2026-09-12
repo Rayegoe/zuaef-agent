@@ -24,14 +24,16 @@ The first P2 slice has been implemented: `get_signal_board`, `get_positions`,
 semantic tools over the existing Quant implementation, deferred through
 ToolSearch, with deterministic contract tests and bounded display vocabulary.
 
-P2.1 closure is also implemented:
+P2.1 closure is also implemented, and P7 has partially retired that transition
+surface:
 
 - `get_market_context()` exists and is discovered as the market-wide reality
   surface.
-- Legacy broad/alias tools (`get_trading_context`, `get_live_signals`,
-  `get_analysis_watchlist`, `update_analysis_watchlist`) remain callable and
-  tested, but are now deferred compatibility-only; they no longer have a
-  resident model-visibility advantage over the narrow surface.
+- P7.1 retired `get_analysis_watchlist` and `update_analysis_watchlist`; P7.2
+  retired `get_live_signals`.
+- `get_trading_context` remains callable, tested and deferred. An actual
+  Telegram E2 canary required it after `get_positions`, so P7.3 stopped with
+  `TRADING_CONTEXT_RETAINED_WITH_EVIDENCE` and P7.4 was not started.
 
 P3 (real-model canary) has now been executed on the local tested tree through
 the Gateway bridge seam and passed: **`P3_FULL_PASS`**. The record is in
@@ -47,8 +49,9 @@ and raw matrix evidence [`P4_QUANT_CANARY_RESULTS.json`](./P4_QUANT_CANARY_RESUL
 P4 reported one non-blocking model-side discovery observation (an extra
 `get_trading_context` read in one Canary 1 attempt; expected narrow tool still
 reached, no generic escape or substitution). P5 has since been executed (see
-below); P6 (Shadow Product Layer retirement) is executed and closed; P7
-(legacy tool deletion) is READY but not started. P4 did not redesign Runtime
+below); P6 (Shadow Product Layer retirement) is executed and closed. P7.1 and
+P7.2 retired three aliases; P7.3 retained the remaining deferred broad tool
+under its real-canary stop rule. P4 did not redesign Runtime
 or introduce a Domain
 Framework / Action Registry / Workflow DSL.
 
@@ -71,8 +74,10 @@ contains developer/audit/benchmark tooling only (see
 [`P6_SHADOW_LAYER_RETIREMENT_REPORT.md`](./P6_SHADOW_LAYER_RETIREMENT_REPORT.md)).
 The P6 closure then deleted the last root product workflow (`quant_daily.sh`)
 and removed the operator layer's reverse dependencies on the model-facing
-layers (see [`P6_CLOSURE_REPORT.md`](./P6_CLOSURE_REPORT.md)). P7 (legacy
-model-tool retirement) is READY but not started.
+layers (see [`P6_CLOSURE_REPORT.md`](./P6_CLOSURE_REPORT.md)). P7.1/P7.2 are
+executed; P7.3 stopped with `get_trading_context` retained by actual Telegram
+E2 evidence, and P7.4 was not started (see
+[`P7_SEMANTIC_SURFACE_REPORT.md`](./P7_SEMANTIC_SURFACE_REPORT.md)).
 
 ---
 
@@ -324,8 +329,11 @@ Record only intents with demonstrated demand. Do not invent interfaces to fill t
 
 ## 9. Legacy surface retirement
 
-`get_trading_context` and `get_live_signals` remain compatibility tools in the first phase. They are
-resident but are no longer the default answer for a narrow intent.
+The first phase kept `get_trading_context` and `get_live_signals` as deferred
+fallbacks rather than defaults for narrow intents. P7.2 later retired
+`get_live_signals`. P7.3 migrated known broad-context callers but retained
+`get_trading_context` when an actual Telegram E2 canary demonstrated fallback
+use after `get_positions`.
 
 Migration order:
 
@@ -349,6 +357,10 @@ legacy tool
 ```
 
 The goal is not more tools. It is: one user intent loads only the reality surface it actually needs.
+
+Current outcome: the three aliases with replacement proof are deleted;
+`get_trading_context` remains deferred with evidence, and the final-freeze
+phase did not run. See `P7_SEMANTIC_SURFACE_REPORT.md`.
 
 ---
 
@@ -502,7 +514,7 @@ Do not optimize for one tool call. `分析今天大跌并说明对持仓影响` 
 | P4 | **Executed** — consolidate domain engines behind the P3-proven interface (report + raw canary evidence) |
 | P5 / P5.8 | **Executed** — operator CLI plus monitor/bridge/scan/core production authority moved into `zuaef_quant` |
 | P6 | **Executed + closed** — Shadow Product Layer retired; root daily workflow deleted; operator layer neutral (closure report) |
-| P7 | READY (not started) — retire legacy model tools using the P7 caller baseline in `P6_CLOSURE_REPORT.md` |
+| P7 | **Partial / stopped by evidence** — P7.1/P7.2 retired three aliases; P7.3 retained deferred `get_trading_context` after the actual Telegram E2 canary; P7.4 not started |
 
 P2 must not move 500 KB of Quant code first. Prove the interface, then refactor the implementation.
 

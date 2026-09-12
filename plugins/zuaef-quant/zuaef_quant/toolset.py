@@ -500,12 +500,10 @@ def make_toolset(*, quant_python: Path, workspace_root: Path) -> AbstractToolset
 
 
     # --- narrow semantic OBSERVE tools (Domain Surface Refoundation P2) -----
-    # These are intent-oriented projections over the same canonical trading
-    # artifacts as get_trading_context. They are deferred so the initial tool
-    # surface stays small; ToolSearch reveals the tools matching the user's
-    # vocabulary, and the narrow payload keeps the model from loading other
-    # scopes. get_trading_context remains resident as the legacy-compatible
-    # broad projection until the real-model canary retires it.
+    # These intent-oriented projections read the canonical trading artifacts.
+    # They are deferred so the initial tool surface stays small; ToolSearch
+    # reveals the tool matching the user's vocabulary, and each payload keeps
+    # unrelated evidence scopes out of the model context.
 
     @toolset.tool_plain(defer_loading=True)
     def get_signal_board() -> str:

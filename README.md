@@ -548,6 +548,8 @@ and the real-model P3 canary passed (`P3_FULL_PASS`, see
 [`docs/domain-surface/P3_QUANT_CANARY_REPORT.md`](docs/domain-surface/P3_QUANT_CANARY_REPORT.md)).
 P4 engine consolidation, P5/P5.8/P5.9 and P6 are executed; the P6 closure
 deleted the last root product workflow and removed the operator layer's
-reverse dependencies on the model-facing layers. P7 (legacy model-tool
-retirement) is READY but not started (see
-[`docs/domain-surface/P6_CLOSURE_REPORT.md`](docs/domain-surface/P6_CLOSURE_REPORT.md)).
+reverse dependencies on the model-facing layers. P7.1/P7.2 retired three
+zero-caller semantic aliases. P7.3 migrated broad-context callers, but an
+actual Telegram E2 canary required `get_trading_context`; the tool remains
+deferred and P7.4 was not started under the stop rule (see
+[`docs/domain-surface/P7_SEMANTIC_SURFACE_REPORT.md`](docs/domain-surface/P7_SEMANTIC_SURFACE_REPORT.md)).

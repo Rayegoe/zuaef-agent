@@ -45,8 +45,8 @@ Evidence** — 新工具 `get_market_context`(bounded、read-only、`defer_loadi
 有限条市场新闻;任何缺失保持 `null/missing`,**不得用 candidate pool / watchlist / positions
 代替全市场证据**。④ **Claim Scope Invariant** — 现有 quant tools 返回 `evidence_scope`
 (`CANDIDATE_POOL` / `TRADING_ACCOUNT` / `SINGLE_SYMBOL` / `SINGLE_SYMBOL_NEWS` /
-`A_SHARE_MARKET_WIDE`);`get_trading_context` 用 `scope_map` 区分 READY/NEAR(候选池)与
-positions/EXIT(账户)。claim scope 不得大于 supporting evidence;prediction alignment 不是
+`A_SHARE_MARKET_WIDE`);`get_signal_board` 只给 READY/NEAR(候选池),`get_positions` 只给
+positions/EXIT(账户),`get_validation_status` 只给验证成熟度。claim scope 不得大于 supporting evidence;prediction alignment 不是
 causal validation;previous assistant prose 不是 evidence。市场原因回答按 OBSERVED /
 INTERPRETATION / UNKNOWN 分层,默认不追加无关持仓 EXIT_ALERT。单测见
 `tests/test_fast_actions.py`、`tests/test_quant_market_context.py`、`tests/test_quant_plugin.py`、
@@ -122,7 +122,7 @@ C Qlib 局限/D-E bug/F 无法解释),**任何 UNEXPLAINED 残留 = P0.5 失败*
 `trading/alerts.jsonl` durable 事件流 → `zuaef_quant.bridge`（oneshot+systemd timer，byte 游标 +
 独立 delivered_ids，E1/E2 Agent 解释、E3/E4/E5 确定性文案、SYSTEM_RECOVERED 确定性证据、T10 日报）→
 zuaef-telegram（文本/文档投递）→ Supervisor。Dashboard/`/api/quant/now` 与
-`get_trading_context`（含 host 派生 freshness 5 态）同源只读。完整契约与教训见
+`get_signal_board` / `get_positions`（含 host 派生 freshness 5 态）同源只读。完整契约与教训见
 `workspace/knowledge/concepts/quant-telegram-workbench.md`。
 
 **部署**：`cp ops/systemd/zuaef-quant-bridge.{service,timer} ~/.config/systemd/user/ &&
@@ -253,9 +253,9 @@ Live Decision Product    FIRST PROOF PASS(交互式;watcher 有意未建)
 ### P3 — QuantDecision 接入 ZUAEF ✅
 
 - `plugins/zuaef-quant`(workspace 成员,`zuaef.plugins` 入口点 `quant`):轻量 `Capability(id="quant-decision")` + 领域指令(证据层级/真相来源/报告语义/操作守则)+ 确定性工具,**Core 零业务改动**。重活在侧环境 subprocess 执行,插件包自身不背 akshare/qlib。
-- 工具:`evaluate_strategy`(纯数值参数、白名单校验、返回有界证据)/ `run_live_scan`(确定性扫描,LLM 永不扫全市场)/ `get_market_context`(bounded market-wide 证据,`defer_loading`,替代候选池外推全市场)/ `record_decision_brief`(六种 action 枚举,实测 signal→brief 延迟)/ `record_trade_outcome`(canonical ack,仅记录人类已成交事实、不下单;venue=paper/real;Phase 1 仅全仓平仓)/ `get_trading_context`(只读 canonical trading 上下文,不重算市况、不重推触发)/ `render_quant_business_artifact`(确定性渲染业务 HTML 到 `artifacts/quant/delivery/`)。
+- 工具:`evaluate_strategy`(纯数值参数、白名单校验、返回有界证据)/ `run_live_scan`(确定性扫描,LLM 永不扫全市场)/ `get_market_context`(bounded market-wide 证据,`defer_loading`,替代候选池外推全市场)/ `get_signal_board`(候选池+freshness)/ `get_positions`(持仓+退警)/ `get_validation_status`(ledger 派生验证成熟度)/ `record_decision_brief`(六种 action 枚举,实测 signal→brief 延迟)/ `record_trade_outcome`(canonical ack,仅记录人类已成交事实、不下单;venue=paper/real;Phase 1 仅全仓平仓)/ `render_quant_business_artifact`(确定性渲染业务 HTML 到 `artifacts/quant/delivery/`)。
 - **真实失败③:首个版本让模型提交整段 TOML 字符串,弱模型不会调** → 改为普通数值参数(默认值即基线),一次工具调用即可完成 mutation。
-- Profile `profiles/quant-decision.toml`(`allow_capabilities = true`);22 个插件契约测试(白名单越界、canonical ack 路由与宿主拒绝原样透传、get_trading_context 只读投影、渲染落点等)。
+- Profile `profiles/quant-decision.toml`(`allow_capabilities = true`);插件契约测试覆盖白名单越界、canonical ack 路由与宿主拒绝原样透传、窄投影范围/freshness、渲染落点等。
 
 ### P4 — 三轮真实模型进化 ✅
 

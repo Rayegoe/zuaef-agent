@@ -50,7 +50,7 @@ code_mode = false
 # P2.1-B: legacy broad/alias tools are implementation-compatible but must not
 # retain a resident model-visibility advantage over the narrow surface.
 # P7.1 retired the watchlist aliases and P7.2 retired get_live_signals;
-# get_trading_context retires in P7.3.
+# P7.3 actual Telegram E2 evidence retained get_trading_context as deferred.
 LEGACY_DEFERRED = {
     "get_trading_context",
 }

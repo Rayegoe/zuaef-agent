@@ -50,7 +50,8 @@ Market/Data ──> zuaef_quant.monitor (M1, 45s)             # 确定性扫描 
    workspace/artifacts/quant/trading/                     # state/positions/opportunities/
                   │                                       # alerts.jsonl/soak.jsonl/forward.json
                   ├────────────> zuaef_quant.dashboard.render（静态 business.html + /api/quant/now）
-                  ├────────────> get_trading_context（模型只读上下文，含 freshness 5 态）
+                  ├────────────> get_signal_board / get_positions / get_validation_status
+                  │              （按意图隔离的模型只读投影，前两者含 freshness 5 态）
                   ▼
    alerts.jsonl（durable 事件流）
                   │
@@ -82,7 +83,7 @@ Market/Data ──> zuaef_quant.monitor (M1, 45s)             # 确定性扫描 
 3. **ordered, line-by-line, checkpoint-after-delivery**。发送成功才把游标推进到
    该行行尾（原子 tmp+rename）；Telegram 失败 → 游标不动，下 tick 原地重试；
    Agent 失败 → 降级确定性文案即视为已投递（§22.1）。
-4. **freshness 由 host 派生**（freshness.py）：`get_trading_context` 返回
+4. **freshness 由 host 派生**（freshness.py）：`get_signal_board` / `get_positions` 返回
    `freshness_status/freshness_reason`，模型禁止自己从日期推断新旧；
    STALE 判定只看数据日，不要求 scan 可见（"未见 scan 记录"≠"从未扫描"）。
 5. **事件只在状态跃迁时发射**；LIVE_CONNECTION_LOST/DATA_UNTRUSTED monitor 侧

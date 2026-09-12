@@ -1,4 +1,4 @@
-"""Freshness derivation for the Quant trading context — Quant Freshness &
+"""Freshness derivation for Quant trading projections — Quant Freshness &
 Natural Response Spec v0.1 §3–§5.
 
 Pure derivation over facts the host already has (canonical trading
@@ -6,10 +6,11 @@ artifacts); no second state store, no persistence. Core principle:
 
     absence of observation != observed zero
 
-The model never derives freshness itself: ``get_trading_context`` provides
-``freshness_status`` / ``freshness_reason`` (plus the requested/data/scan
-dates) as tool facts, and the plugin instructions forbid interpreting a
-stale READY/NEAR count as a current-day result unless the status is FRESH.
+The model never derives freshness itself: ``get_signal_board`` and
+``get_positions`` provide ``freshness_status`` / ``freshness_reason`` (plus
+their requested/data/scan facts), and the plugin instructions forbid
+interpreting a stale READY/NEAR count as a current-day result unless the
+status is FRESH.
 """
 
 from __future__ import annotations

@@ -12,9 +12,10 @@ gen1 benchmark, the canonical M1 trading state
 Semantic-surface ownership and migration sequencing are tracked in
 `docs/domain-surface/SPEC.md`, `QUANT_INTENT_MATRIX.md` and
 `QUANT_AUTHORITY_MAP.md`. The narrow intent tools are deferred and discovered
-through ToolSearch. Legacy broad/alias tools remain callable and tested but
-are deferred compatibility-only, so they do not hold a resident visibility
-advantage over the narrow semantic surface.
+through ToolSearch. P7.1/P7.2 retired the watchlist aliases and
+`get_live_signals`. The broad `get_trading_context` fallback remains callable,
+tested and deferred because the P7.3 actual Telegram E2 canary required it
+after `get_positions`; see `docs/domain-surface/P7_SEMANTIC_SURFACE_REPORT.md`.
 P5 adds the deterministic operator CLI owned by this package:
 
 ```text

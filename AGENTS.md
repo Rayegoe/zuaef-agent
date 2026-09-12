@@ -15,7 +15,7 @@ Authoritative context:
 - `docs/architecture/NORTH_STAR.md` — full North Star, six principles, current-state audit, and admission test.
 - `docs/architecture/CONSOLIDATION_SPEC.md` — current consolidation work order: Host Control Plane, command grammar, Gateway ownership, Quant ownership.
 - `docs/domain-surface/SPEC.md` — domain semantic-surface rules: `Intent -> Semantic Affordance -> Reality`; "More affordances. Less machinery."
-- `docs/domain-surface/P3_QUANT_CANARY_REPORT.md` — real-model P3 surface evidence; `docs/domain-surface/P4_ENGINE_CONSOLIDATION_REPORT.md` — P4 engine consolidation; `docs/domain-surface/P5_OPERATOR_SURFACE_REPORT.md` — P5 deterministic operator surface; `docs/domain-surface/P5_8_PRODUCTION_AUTHORITY_REPORT.md` — monitor/bridge production authority moved into `zuaef_quant`; `docs/domain-surface/P6_SHADOW_LAYER_RETIREMENT_REPORT.md` — root wrapper retirement; `docs/domain-surface/P6_CLOSURE_REPORT.md` — pre-P7 boundary closure (P6 complete; P7 READY, not started).
+- `docs/domain-surface/P3_QUANT_CANARY_REPORT.md` — real-model P3 surface evidence; `docs/domain-surface/P4_ENGINE_CONSOLIDATION_REPORT.md` — P4 engine consolidation; `docs/domain-surface/P5_OPERATOR_SURFACE_REPORT.md` — P5 deterministic operator surface; `docs/domain-surface/P5_8_PRODUCTION_AUTHORITY_REPORT.md` — monitor/bridge production authority moved into `zuaef_quant`; `docs/domain-surface/P6_SHADOW_LAYER_RETIREMENT_REPORT.md` — root wrapper retirement; `docs/domain-surface/P6_CLOSURE_REPORT.md` — pre-P7 boundary closure; `docs/domain-surface/P7_SEMANTIC_SURFACE_REPORT.md` — P7.1/P7.2 retirement and the P7.3 real-canary stop (`get_trading_context` retained with evidence; P7.4 not started).
 
 Hard constraints:
 

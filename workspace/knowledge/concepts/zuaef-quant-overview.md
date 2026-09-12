@@ -63,7 +63,9 @@ ZUAEF Agent Core（业务域中立，零量化改动）
             ├─ run_live_scan                      ┼─ subprocess 隔离（.venv-quant Python 3.12）
             ├─ record_decision_brief              │
             ├─ record_trade_outcome               │（canonical ack：仅记录事实，不下单）
-            ├─ get_trading_context                ├─ 只读 canonical trading 上下文（artifacts/quant/trading/）
+            ├─ get_signal_board/get_positions/   ├─ 窄化只读 canonical trading 投影
+            │  get_validation_status             │（候选池/账户/验证成熟度各自隔离）
+            ├─ get_trading_context               │（P7.3 真实 E2 证据保留的 deferred fallback）
             └─ render_quant_business_artifact     ┘─ 确定性渲染业务 HTML（artifacts/quant/delivery/）
                  └─ 确定性工具：quant_core / quant_eval_qlib / quant_live_scan / quant_trading_monitor / quant_render_business_dashboard
                       └─ 数据面：akshare 1.18.94（腾讯历史/新浪快照/CSIndex 成分/qt.gtimg.cn 实时）
@@ -93,7 +95,7 @@ Trading Workbench（详见 concepts/quant-telegram-workbench.md）
 │    durable alerts → E1/E2 Agent 解释（interpretation-only，bridge 是唯一投递权威）
 │    E3/E4/E5 确定性文案；SYSTEM_RECOVERED 确定性证据；T10 日报复用 Dashboard verdict
 ├─ freshness 契约（host 派生 5 态：FRESH/NOT_SCANNED/STALE/MARKET_NOT_OPEN/INSUFFICIENT_EVIDENCE）
-│    get_trading_context 直接给 freshness 事实，模型禁止自推新旧
+│    get_signal_board / get_positions 直接给 freshness 事实，模型禁止自推新旧
 └─ zuaef-telegram：send_document + send_artifact_to_supervisor（host 固定收件人/范围，
      operator self-delivery 无 approval；客户外发审批边界不动）
 

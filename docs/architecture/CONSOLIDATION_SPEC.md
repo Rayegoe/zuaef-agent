@@ -448,8 +448,11 @@ audit/benchmark/diagnostic/developer tooling. See
 `docs/domain-surface/P6_SHADOW_LAYER_RETIREMENT_REPORT.md`. The P6 closure then
 deleted the last root product workflow (`quant_daily.sh`) and removed the
 operator layer's reverse dependencies on the model-facing layers
-(`docs/domain-surface/P6_CLOSURE_REPORT.md`); P7 (legacy model-tool retirement)
-is READY but not started.
+(`docs/domain-surface/P6_CLOSURE_REPORT.md`). P7.1/P7.2 retired the watchlist
+aliases and `get_live_signals`. P7.3 migrated broad-context callers, but the
+actual Telegram E2 canary used `get_trading_context` after `get_positions`;
+the broad tool remains deferred and P7.4 was not started under the recorded
+stop rule (`docs/domain-surface/P7_SEMANTIC_SURFACE_REPORT.md`).
 
 ### 9.1 Current evidence
 

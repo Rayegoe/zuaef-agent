@@ -2412,7 +2412,7 @@ document.addEventListener('click', (e)=>{
   const act = btn.dataset.act;
   if(act === 'ask'){
     const sym = btn.dataset.symbol || '当前标的';
-    const promptText = `分析${sym}：先调用 get_trading_context 读取 canonical trading 事实，再解释当前 deterministic 状态（触发条件、风险、失效条件），区分 Runtime/Agent/Human 三态；不要宣称盈利能力，不要把 SYSTEM_UNAVAILABLE 说成 NO_TRADE。`;
+    const promptText = `分析${sym}：先调用 get_symbol_context 读取该标的的当前事实；如果问题涉及已有持仓或退警，再调用 get_positions。解释当前 deterministic 状态（触发条件、风险、失效条件），区分 Runtime/Agent/Human 三态；不要宣称盈利能力，不要把 SYSTEM_UNAVAILABLE 说成 NO_TRADE。`;
     (navigator.clipboard?.writeText(promptText) || Promise.reject()).then(
       ()=>{ btn.textContent = '已复制提示词'; setTimeout(()=>{btn.textContent='Ask Agent';}, 1500); },
       ()=>{ window.prompt('复制以下提示词发给 Agent:', promptText); });

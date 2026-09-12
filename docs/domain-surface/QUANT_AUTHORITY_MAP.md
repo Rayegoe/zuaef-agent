@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | P6 shadow product layer retired — `tools/` contains developer/audit/benchmark tooling only; zero root production authority and zero root compatibility wrappers |
+| Status | P6 shadow product layer retired; P7.1/P7.2 retired three model-tool aliases; P7.3 retained deferred `get_trading_context` after actual Telegram E2 canary evidence; P7.4 not started |
 | Baseline | `main@cf581e5` plus P2/P2.1 surface, P3 canary, P4 engine consolidation, P5 operator surface, P5.8/P5.9 authority extraction and P6 retirement |
 | Date | 2026-09-12 |
 
@@ -107,21 +107,21 @@ semantic affordances over the existing deterministic implementation:
 | `get_signal_board` | canonical `state.json` + freshness | CANDIDATE_POOL | none |
 | `get_positions` | `state.json` live projection / `positions.json` | TRADING_ACCOUNT | none |
 | `get_validation_status` | `validation.py` accounting + PIT limitation | TRADING_ACCOUNT | none |
-| `run_live_scan` | same scan script/engine as `get_live_signals` | CANDIDATE_POOL | scan-side state update only |
-| `manage_watchlist` | same `watchlist.py` write path as legacy alias | user attention facts | local verified write |
+| `run_live_scan` | canonical scan script/engine | CANDIDATE_POOL | scan-side state update only |
+| `manage_watchlist` | canonical `watchlist.py` write path | user attention facts | local verified write |
 
-Legacy compatibility retained, now deferred from resident surface (P2.1-B):
+P7 retirement result:
 
 ```text
-get_trading_context        broad mixed compatibility projection (deferred)
-get_live_signals           broad scan evidence (deferred; same engine as run_live_scan)
-get_analysis_watchlist     list semantics compatibility (deferred)
-update_analysis_watchlist  add/remove alias delegating to the same write path (deferred)
+get_analysis_watchlist     retired in P7.1
+update_analysis_watchlist  retired in P7.1
+get_live_signals           retired in P7.2
+get_trading_context        broad mixed fallback retained and deferred in P7.3
 ```
 
-The legacy tools are not removed and remain callable/tested in P2.1, but they no longer gain a
-resident model-visibility advantage. They may be retired only after the P3 real-model canary proves
-the narrow surface preserves outcome quality.
+The actual Telegram E2 canary used `get_trading_context` after the narrow
+`get_positions` read, so the P7 stop rule preserved this last broad fallback.
+See `P7_SEMANTIC_SURFACE_REPORT.md` for the run and tool-effect evidence.
 
 ---
 
@@ -157,8 +157,10 @@ P3 real-model canary was executed and recorded in
 expected semantic paths and zero generic escapes. **P4 is authorized and has now been executed**
 (see `P4_ENGINE_CONSOLIDATION_REPORT.md`): the frozen entry decision, the position P&L mark and
 the forward-evidence count projection each have one production authority. The P4 work kept the
-semantic surface, legacy compatibility tool names, model discovery topology and all user-visible
-behavior unchanged. P5/P6/P7 remain gated.
+semantic surface, compatibility tool names, model discovery topology and all user-visible
+behavior unchanged. P5/P6 were subsequently executed. P7.1/P7.2 retired three
+aliases; P7.3 retained the deferred broad fallback with real-canary evidence,
+and P7.4 was not started.
 
 ## 6. P4 consolidation refresh
 
@@ -169,7 +171,7 @@ behavior unchanged. P5/P6/P7 remain gated.
 | position mark-to-market P&L | `zuaef_quant.trading.position_pnl` / `mark_to_market` | four in-module monitor P&L formulas (live projection, exit alert, attention row, settlement) |
 | validation forward counts | `zuaef_quant.validation.forward_evidence_counts` | dashboard's private `forward.json` settled-count parse |
 | positions projection | `zuaef_quant.monitor._write_summary` state projection (single writer/projector); read surfaces (`get_positions`, `get_trading_context`, dashboard) consume the artifact | P5.8 moved implementation to domain package; no duplicate projection found |
-| watchlist write | `zuaef_quant.watchlist.update_symbols_in` | none found; all add/remove aliases already delegate to it |
+| watchlist write | `zuaef_quant.watchlist.update_symbols_in` | none found; former add/remove aliases retired in P7.1 |
 | market context | `zuaef_quant.market_context collect()` (P5.9 single adapter) | none found; root wrapper deleted in P6 |
 | symbol context | `zuaef_quant.monitor symbol-context` host op | P5.8 moved implementation; root wrapper deleted in P6 |
 | strategy evaluation / market intel | `zuaef_quant.eval_sidecar` / `zuaef_quant.market_intel`, bounded subprocess | P5.9 moved implementation; root wrappers deleted in P6 |

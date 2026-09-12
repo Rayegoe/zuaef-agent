@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | P2 + P2.1 implemented; P3 real-model canary PASS; P4 engine consolidation executed (see `P4_ENGINE_CONSOLIDATION_REPORT.md`); P5/P6 executed and P6 closed (see `P6_CLOSURE_REPORT.md`); P7 READY, not started |
+| Status | P7.1/P7.2 retired three aliases; P7.3 migrated broad-context callers but retained deferred `get_trading_context` after an actual Telegram E2 canary required it; P7.4 not started (`TRADING_CONTEXT_RETAINED_WITH_EVIDENCE`) |
 | Baseline | local working tree @ `cf581e5` plus P0–P4 patches |
 | Date | 2026-09-12 |
 
@@ -14,7 +14,7 @@ Legend:
 
 - `native` — existing first-class semantic tool.
 - `P2 new` — added in the first semantic-surface slice; deferred via ToolSearch.
-- `legacy compat` — callable and tested, deferred from the resident surface; not preferred for narrow intents.
+- `retained fallback` — callable and tested, deferred from the resident surface; retained by real-canary evidence.
 - `P3 PASS` — real-model canary reached the expected semantic tool on the Gateway bridge seam.
 
 | User intent | Semantic tool | Reality source | Side effect | Status |
@@ -30,10 +30,7 @@ Legend:
 | 评估这个参数组合 / 回测这个策略 | `evaluate_strategy(spec)` | host-owned evaluator | child artifact write | existing |
 | 我今天 32.5 买了 100 股 002415 | `record_trade_outcome(...)` | canonical trading ledger | local fact write | existing; explicit human fact only |
 | 把这个判断记录下来 | `record_decision_brief(...)` | briefs directory | local artifact write | existing |
-| Broad compatibility / full mixed context | `get_trading_context()` | canonical trading artifacts | none | legacy compat, deferred-only |
-| Scan evidence before the narrow split | `get_live_signals()` | frozen scan engine | scan-side state update | legacy compat, deferred-only; same engine as `run_live_scan` |
-| Analysis watchlist add/remove compatibility | `update_analysis_watchlist(action, symbols)` | watchlist files | local verified write | legacy compat, deferred-only alias of `manage_watchlist` |
-| Watchlist read compatibility | `get_analysis_watchlist()` | watchlist files | none | legacy compat, deferred-only alias for list semantics |
+| Broad compatibility / full mixed context | `get_trading_context()` | canonical trading artifacts | none | retained fallback, deferred-only; P7.3 actual Telegram E2 evidence |
 
 ## Narrow-intent coverage summary
 
@@ -84,4 +81,6 @@ P4 engine consolidation has now been executed: the expected semantic tools remai
 the P4 real-model matrix re-verified them (expected tool 9/9, zero generic escapes), and the
 one non-blocking Canary 1 extra legacy read is recorded in `P4_ENGINE_CONSOLIDATION_REPORT.md`.
 P5 and P6 have since been executed (P6 closed by the pre-P7 boundary cleanup,
-see `P6_CLOSURE_REPORT.md`); P7 is READY but not started.
+see `P6_CLOSURE_REPORT.md`). P7.1/P7.2 retired three aliases. P7.3 stopped
+after an actual Telegram E2 canary used the deferred broad fallback following
+`get_positions`; see `P7_SEMANTIC_SURFACE_REPORT.md`. P7.4 was not started.

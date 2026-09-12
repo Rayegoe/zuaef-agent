@@ -119,10 +119,19 @@ def test_e1_new_ready_runs_agent_and_pushes_presentation(dirs, monkeypatch):
     assert not st["pending_recovery"]
 
 
-def test_agent_run_prompt_carries_event_and_no_delivery_authority(dirs, monkeypatch):
+@pytest.mark.parametrize(
+    ("event_type", "expected_tool"),
+    [
+        ("NEW_READY", "get_signal_board"),
+        ("POSITION_EXIT_ALERT", "get_positions"),
+    ],
+)
+def test_agent_run_prompt_uses_event_specific_narrow_tool_and_keeps_no_delivery_authority(
+    dirs, monkeypatch, event_type, expected_tool
+):
     trading, state = dirs
     _write_alerts(trading, [{
-        "ts": "2026-09-09T10:00:01+08:00", "type": "NEW_READY", "symbol": "601799",
+        "ts": "2026-09-09T10:00:01+08:00", "type": event_type, "symbol": "601799",
         "day": "2026-09-09", "price": 74.88, "what": "NEAR -> READY", "why": "x",
     }])
     prompts = []
@@ -135,9 +144,10 @@ def test_agent_run_prompt_carries_event_and_no_delivery_authority(dirs, monkeypa
     qb.run_tick(now=IN_SESSION, trading_dir=trading, state_dir=state,
                 client=FakeClient(), settings=object())
     assert prompts, "agent run must be triggered"
-    assert "get_trading_context" in prompts[0]
+    assert expected_tool in prompts[0]
+    assert "get_trading_context" not in prompts[0]
     assert "no delivery authority" in prompts[0]
-    assert "NEW_READY" in prompts[0]
+    assert event_type in prompts[0]
 
 
 def test_agent_failure_degrades_to_deterministic_fallback(dirs, monkeypatch):
@@ -304,7 +314,7 @@ def test_delivery_guard_ignores_non_delivery_and_unsettled_effects(dirs, monkeyp
         "day": "2026-09-09", "price": 74.88, "what": "NEAR -> READY", "why": "x",
     }])
     effects = [
-        SimpleNamespace(tool_name="get_trading_context", status="completed"),
+        SimpleNamespace(tool_name="get_signal_board", status="completed"),
         SimpleNamespace(tool_name="report_to_telegram", status="started"),  # never settled
     ]
     client = FakeClient()
